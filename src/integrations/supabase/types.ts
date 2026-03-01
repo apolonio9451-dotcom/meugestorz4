@@ -14,16 +14,257 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      client_subscriptions: {
+        Row: {
+          amount: number
+          client_id: string
+          company_id: string
+          created_at: string
+          end_date: string
+          id: string
+          payment_status: string
+          plan_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_id: string
+          company_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          payment_status?: string
+          plan_id: string
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          payment_status?: string
+          plan_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_subscriptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          address: string | null
+          company_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_memberships: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_memberships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      has_company_role: {
+        Args: {
+          _company_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_company_admin_or_owner: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_company_member: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "admin" | "operator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +391,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "admin", "operator"],
+    },
   },
 } as const
