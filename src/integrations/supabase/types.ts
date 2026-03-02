@@ -263,6 +263,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          url: string
         }
         Insert: {
           company_id: string
@@ -270,6 +271,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          url?: string
         }
         Update: {
           company_id?: string
@@ -277,6 +279,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          url?: string
         }
         Relationships: [
           {

@@ -1,0 +1,1 @@
+ALTER TABLE public.servers ADD COLUMN url TEXT NOT NULL DEFAULT '';
