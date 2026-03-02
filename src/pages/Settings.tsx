@@ -31,9 +31,9 @@ export default function Settings() {
     brand_name: "",
     login_slug: "",
     logo_url: null,
-    primary_color: "#00db49",
-    secondary_color: "#00c0f5",
-    background_color: "#0357a5",
+    primary_color: "#1a8cff",
+    secondary_color: "#00c8ff",
+    background_color: "#0a1628",
   });
 
   useEffect(() => {

@@ -61,19 +61,29 @@ export function applyBrandColors(colors: {
   // Accent from secondary
   root.style.setProperty("--accent", secondary);
 
+  // Secondary color
+  const secVariants = generateColorVariants(secondary);
+  root.style.setProperty("--accent", secondary);
+  root.style.setProperty("--accent-foreground", "0 0% 100%");
+
   // Background-derived
-  root.style.setProperty("--background", bgVariants.base);
-  root.style.setProperty("--card", bgVariants.light);
-  root.style.setProperty("--popover", bgVariants.light);
-  root.style.setProperty("--secondary", bgVariants.light);
-  root.style.setProperty("--muted", bgVariants.light);
-  root.style.setProperty("--input", bgVariants.light);
-  root.style.setProperty("--border", `${parseInt(bg.split(" ")[0])} 15% 18%`);
-  root.style.setProperty("--sidebar-background", bgVariants.dark);
-  root.style.setProperty("--sidebar-border", bgVariants.light);
-  root.style.setProperty("--sidebar-accent", bgVariants.light);
-  root.style.setProperty("--glass-bg", bgVariants.light);
-  root.style.setProperty("--glass-border", `${parseInt(bg.split(" ")[0])} 25% 22%`);
+  const bgH = parseInt(bg.split(" ")[0]);
+  const bgS = parseInt(bg.split(" ")[1]);
+  const bgL = parseInt(bg.split(" ")[2]);
+  root.style.setProperty("--background", `${bgH} ${bgS}% ${bgL}%`);
+  root.style.setProperty("--card", `${bgH} ${Math.max(bgS - 10, 5)}% ${Math.min(bgL + 5, 20)}%`);
+  root.style.setProperty("--popover", `${bgH} ${Math.max(bgS - 10, 5)}% ${Math.min(bgL + 5, 20)}%`);
+  root.style.setProperty("--secondary", `${bgH} ${Math.max(bgS - 15, 5)}% ${Math.min(bgL + 9, 25)}%`);
+  root.style.setProperty("--muted", `${bgH} ${Math.max(bgS - 20, 5)}% ${Math.min(bgL + 9, 25)}%`);
+  root.style.setProperty("--muted-foreground", `${bgH} 10% 50%`);
+  root.style.setProperty("--input", `${bgH} ${Math.max(bgS - 20, 5)}% ${Math.min(bgL + 7, 22)}%`);
+  root.style.setProperty("--border", `${bgH} 15% ${Math.min(bgL + 11, 25)}%`);
+  root.style.setProperty("--sidebar-background", `${bgH} ${bgS}% ${Math.max(bgL - 2, 3)}%`);
+  root.style.setProperty("--sidebar-border", `${bgH} 20% ${Math.min(bgL + 7, 22)}%`);
+  root.style.setProperty("--sidebar-accent", `${bgH} ${Math.max(bgS - 15, 5)}% ${Math.min(bgL + 7, 22)}%`);
+  root.style.setProperty("--sidebar-foreground", `${bgH} 15% 65%`);
+  root.style.setProperty("--glass-bg", `${bgH} ${Math.max(bgS - 10, 5)}% ${Math.min(bgL + 7, 22)}%`);
+  root.style.setProperty("--glass-border", `${bgH} 25% ${Math.min(bgL + 15, 28)}%`);
 }
 
 export function useBrandColors() {
