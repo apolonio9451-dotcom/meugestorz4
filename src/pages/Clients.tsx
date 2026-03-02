@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon } from "lucide-react";
+import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 
 interface Client {
@@ -559,22 +559,18 @@ export default function Clients() {
                   </DropdownMenu>
                 </div>
 
-                {/* WhatsApp */}
+                {/* Cobrança */}
                 {client.whatsapp && (
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{client.whatsapp}</span>
-                    </div>
+                  <div className="flex items-center justify-end text-sm">
                     <a
-                      href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}`}
+                      href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Passando para lembrar sobre o pagamento da sua assinatura. Podemos ajudar?")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors text-xs font-semibold"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 text-warning hover:bg-warning/25 transition-colors text-xs font-semibold"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Phone className="w-3 h-3" />
-                      WhatsApp
+                      <DollarSign className="w-3 h-3" />
+                      Cobrar
                     </a>
                   </div>
                 )}
