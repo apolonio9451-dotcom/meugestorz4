@@ -40,6 +40,7 @@ import {
   TrendingUp,
   History,
   Users,
+  ShieldCheck,
 } from "lucide-react";
 
 interface Reseller {
@@ -63,12 +64,13 @@ interface CreditTransaction {
 }
 
 export default function Resellers() {
-  const { companyId } = useAuth();
+  const { companyId, userRole } = useAuth();
   const { toast } = useToast();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [companyCredits, setCompanyCredits] = useState<number>(0);
 
   // Dialogs
   const [showCreate, setShowCreate] = useState(false);
@@ -80,6 +82,16 @@ export default function Resellers() {
   // Form
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
   const [creditForm, setCreditForm] = useState({ amount: "", type: "purchase", description: "" });
+
+  const fetchCompanyCredits = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("companies")
+      .select("credit_balance")
+      .eq("id", companyId)
+      .single();
+    if (data) setCompanyCredits(data.credit_balance);
+  };
 
   const fetchResellers = async () => {
     if (!companyId) return;
@@ -94,10 +106,17 @@ export default function Resellers() {
 
   useEffect(() => {
     fetchResellers();
+    fetchCompanyCredits();
   }, [companyId]);
 
   const handleCreate = async () => {
     if (!companyId || !form.name.trim()) return;
+
+    if (companyCredits <= 0) {
+      toast({ title: "Sem créditos", description: "Adicione créditos ao painel para criar novos revendedores.", variant: "destructive" });
+      return;
+    }
+
     const { error } = await supabase.from("resellers").insert({
       company_id: companyId,
       name: form.name,
@@ -108,10 +127,17 @@ export default function Resellers() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
+      // Deduct 1 credit
+      await supabase
+        .from("companies")
+        .update({ credit_balance: companyCredits - 1 })
+        .eq("id", companyId);
+
       toast({ title: "Revendedor criado com sucesso" });
       setShowCreate(false);
       setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
       fetchResellers();
+      fetchCompanyCredits();
     }
   };
 
@@ -211,6 +237,20 @@ export default function Resellers() {
   const totalCredits = resellers.reduce((s, r) => s + r.credit_balance, 0);
   const activeCount = resellers.filter((r) => r.status === "active").length;
 
+  const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
+
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-2">
+          <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto" />
+          <h2 className="text-xl font-bold text-foreground">Acesso Restrito</h2>
+          <p className="text-muted-foreground text-sm">Apenas administradores e proprietários podem acessar esta página.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -218,9 +258,19 @@ export default function Resellers() {
           <h1 className="text-2xl font-display font-bold text-foreground">Revendedores</h1>
           <p className="text-muted-foreground text-sm mt-1">Gerencie seus revendedores e créditos de revenda</p>
         </div>
-        <Button onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }} className="gap-2">
-          <Plus className="w-4 h-4" /> Novo Revendedor
-        </Button>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm font-mono">
+            <Coins className="w-4 h-4 text-primary" />
+            {companyCredits} crédito{companyCredits !== 1 ? "s" : ""} disponíve{companyCredits !== 1 ? "is" : "l"}
+          </Badge>
+          <Button
+            onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }}
+            className="gap-2"
+            disabled={companyCredits <= 0}
+          >
+            <Plus className="w-4 h-4" /> Novo Revendedor
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

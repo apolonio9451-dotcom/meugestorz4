@@ -199,6 +199,7 @@ export type Database = {
         Row: {
           auto_block_days: number | null
           created_at: string
+          credit_balance: number
           id: string
           name: string
           updated_at: string
@@ -206,6 +207,7 @@ export type Database = {
         Insert: {
           auto_block_days?: number | null
           created_at?: string
+          credit_balance?: number
           id?: string
           name: string
           updated_at?: string
@@ -213,6 +215,7 @@ export type Database = {
         Update: {
           auto_block_days?: number | null
           created_at?: string
+          credit_balance?: number
           id?: string
           name?: string
           updated_at?: string
