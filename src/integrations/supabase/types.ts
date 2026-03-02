@@ -130,7 +130,6 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
-          reseller_id: string | null
           server: string | null
           status: string
           updated_at: string
@@ -148,7 +147,6 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
-          reseller_id?: string | null
           server?: string | null
           status?: string
           updated_at?: string
@@ -166,7 +164,6 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
-          reseller_id?: string | null
           server?: string | null
           status?: string
           updated_at?: string
@@ -178,13 +175,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "clients_reseller_id_fkey"
-            columns: ["reseller_id"]
-            isOneToOne: false
-            referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
         ]
@@ -357,7 +347,6 @@ export type Database = {
           notes: string | null
           status: string
           updated_at: string
-          user_id: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -370,7 +359,6 @@ export type Database = {
           notes?: string | null
           status?: string
           updated_at?: string
-          user_id?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -383,7 +371,6 @@ export type Database = {
           notes?: string | null
           status?: string
           updated_at?: string
-          user_id?: string | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -480,8 +467,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_reseller_company_id: { Args: { _user_id: string }; Returns: string }
-      get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_company_role: {
         Args: {
