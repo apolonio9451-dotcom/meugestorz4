@@ -10,8 +10,9 @@ import {
   Ban,
   CheckCircle2,
   Eye,
-  User,
+  UserCog,
 } from "lucide-react";
+import { getResellerRole, roleLabels, type ResellerRole } from "@/pages/Resellers";
 
 interface Reseller {
   id: string;
@@ -22,6 +23,10 @@ interface Reseller {
   status: string;
   notes: string;
   created_at: string;
+  can_resell: boolean;
+  can_create_subreseller: boolean;
+  can_create_trial: boolean;
+  level: number;
 }
 
 interface ResellerCardProps {
@@ -32,7 +37,14 @@ interface ResellerCardProps {
   onHistory: (r: Reseller) => void;
   onToggleStatus: (r: Reseller) => void;
   onViewClients: (r: Reseller) => void;
+  onChangeRole: (r: Reseller) => void;
 }
+
+const roleBadgeColors: Record<ResellerRole, string> = {
+  master: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  reseller: "bg-primary/15 text-primary border-primary/30",
+  trial_only: "bg-muted text-muted-foreground border-border",
+};
 
 export default function ResellerCard({
   reseller: r,
@@ -42,15 +54,17 @@ export default function ResellerCard({
   onHistory,
   onToggleStatus,
   onViewClients,
+  onChangeRole,
 }: ResellerCardProps) {
   const isActive = r.status === "active";
   const initials = r.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const role = getResellerRole(r);
 
   return (
     <Card className={`group transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 border ${isActive ? "border-border hover:border-primary/30" : "border-destructive/30 opacity-80"}`}>
       <CardContent className="p-0">
-        {/* Top section with avatar and info */}
-        <div className="flex items-start gap-3 p-4 pb-3">
+        {/* Header */}
+        <div className="flex items-start gap-3 p-4 pb-2">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isActive ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"}`}>
             {initials}
           </div>
@@ -64,6 +78,17 @@ export default function ResellerCard({
             {r.email && <p className="text-[11px] text-muted-foreground truncate">{r.email}</p>}
             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
           </div>
+        </div>
+
+        {/* Role badge - clickable */}
+        <div className="px-4 pb-2">
+          <button
+            onClick={() => onChangeRole(r)}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-all hover:opacity-80 cursor-pointer ${roleBadgeColors[role]}`}
+          >
+            <UserCog className="w-3 h-3" />
+            {roleLabels[role]}
+          </button>
         </div>
 
         {/* Credit bar */}
