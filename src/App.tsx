@@ -16,6 +16,7 @@ import Financial from "@/pages/Financial";
 import WinBack from "@/pages/WinBack";
 import Marketing from "@/pages/Marketing";
 import Resellers from "@/pages/Resellers";
+import SettingsPage from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
             <Route path="/dashboard/resellers" element={<DashboardRoute><Resellers /></DashboardRoute>} />
+            <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
