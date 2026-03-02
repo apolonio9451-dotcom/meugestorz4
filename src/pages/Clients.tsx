@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw } from "lucide-react";
-import { addDays, addMonths, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -242,18 +242,39 @@ export default function Clients() {
     if (error) toast.error(error.message); else { toast.success("Cliente excluído!"); fetchClients(); fetchMacKeys(); }
   };
 
-  const handleRenew = async (clientId: string, months: number) => {
+  const handleRenew = async (clientId: string, days: number) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
     const currentEnd = parseISO(sub.end_date);
     const baseDate = currentEnd > new Date() ? currentEnd : new Date();
-    const newEnd = addMonths(baseDate, months);
+    const newEnd = addDays(baseDate, days);
     const { error } = await supabase
       .from("client_subscriptions")
       .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
-    else { toast.success(`Renovado por +${months} ${months === 1 ? "mês" : "meses"}!`); fetchSubscriptions(); }
+    else { toast.success(`Renovado por +${days} dias!`); fetchSubscriptions(); }
+  };
+
+  const handleRenewSameDate = async (clientId: string) => {
+    const sub = subscriptions[clientId];
+    if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
+    const currentEnd = parseISO(sub.end_date);
+    const dayOfMonth = currentEnd.getDate();
+    let newEnd = new Date(currentEnd);
+    newEnd.setMonth(newEnd.getMonth() + 1);
+    newEnd.setDate(dayOfMonth);
+    if (newEnd <= new Date()) {
+      newEnd = new Date();
+      newEnd.setMonth(newEnd.getMonth() + 1);
+      newEnd.setDate(dayOfMonth);
+    }
+    const { error } = await supabase
+      .from("client_subscriptions")
+      .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
+      .eq("id", sub.id);
+    if (error) toast.error(error.message);
+    else { toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); }
   };
 
   const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "" }]);
@@ -581,13 +602,16 @@ export default function Clients() {
                       </DropdownMenuItem>
                       {sub && (
                         <>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 1)}>
+                          <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}>
+                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}>
                             <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 2)}>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}>
                             <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 3)}>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}>
                             <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
                           </DropdownMenuItem>
                         </>
