@@ -61,6 +61,7 @@ export default function Clients() {
   const [formPlanId, setFormPlanId] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formEndDate, setFormEndDate] = useState<Date | undefined>(undefined);
+  const [servers, setServers] = useState<{ id: string; name: string }[]>([]);
 
   const fetchClients = async () => {
     if (!companyId) return;
@@ -124,7 +125,17 @@ export default function Clients() {
     setPlans(data || []);
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); }, [companyId]);
+  const fetchServers = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("servers")
+      .select("id, name")
+      .eq("company_id", companyId)
+      .order("name");
+    setServers(data || []);
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); }, [companyId]);
 
   const openDialog = (client?: Client) => {
     if (client) {
@@ -365,9 +376,9 @@ export default function Clients() {
                     <Select name="server" defaultValue={editing?.server || ""}>
                       <SelectTrigger><SelectValue placeholder="Selecione o servidor" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="servidor1">Servidor 1</SelectItem>
-                        <SelectItem value="servidor2">Servidor 2</SelectItem>
-                        <SelectItem value="servidor3">Servidor 3</SelectItem>
+                        {servers.map(s => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
