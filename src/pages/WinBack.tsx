@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Search, MessageCircle, UserX, Clock, RefreshCw, Users } from "lucide-react";
+import { Search, MessageCircle, UserX, Clock, RefreshCw, Users, Megaphone, List } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CampaignTemplates from "@/components/winback/CampaignTemplates";
 
 interface WinBackClient {
   id: string;
@@ -166,103 +168,122 @@ export default function WinBack() {
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="glass-card border-border/30 cursor-pointer" onClick={() => setFilter("all")}>
-          <CardContent className="p-4">
-            <Users className="w-4 h-4 text-muted-foreground mb-1" />
-            <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-lg font-display font-bold text-foreground">{stats.total}</p>
-          </CardContent>
-        </Card>
-        <Card className={`glass-card border-border/30 cursor-pointer ${filter === "45" ? "ring-1 ring-primary" : ""}`} onClick={() => setFilter(filter === "45" ? "all" : "45")}>
-          <CardContent className="p-4">
-            <Clock className="w-4 h-4 text-muted-foreground mb-1" />
-            <p className="text-xs text-muted-foreground">45-59 dias</p>
-            <p className="text-lg font-display font-bold text-foreground">{stats.d45}</p>
-          </CardContent>
-        </Card>
-        <Card className={`glass-card border-border/30 cursor-pointer ${filter === "60" ? "ring-1 ring-warning" : ""}`} onClick={() => setFilter(filter === "60" ? "all" : "60")}>
-          <CardContent className="p-4">
-            <Clock className="w-4 h-4 text-warning mb-1" />
-            <p className="text-xs text-muted-foreground">60-89 dias</p>
-            <p className="text-lg font-display font-bold text-warning">{stats.d60}</p>
-          </CardContent>
-        </Card>
-        <Card className={`glass-card border-border/30 cursor-pointer ${filter === "90" ? "ring-1 ring-destructive" : ""}`} onClick={() => setFilter(filter === "90" ? "all" : "90")}>
-          <CardContent className="p-4">
-            <UserX className="w-4 h-4 text-destructive mb-1" />
-            <p className="text-xs text-muted-foreground">90+ dias</p>
-            <p className="text-lg font-display font-bold text-destructive">{stats.d90}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="clients" className="w-full">
+        <TabsList className="bg-muted/50">
+          <TabsTrigger value="clients" className="gap-2">
+            <List className="w-4 h-4" />
+            Clientes
+          </TabsTrigger>
+          <TabsTrigger value="campaign" className="gap-2">
+            <Megaphone className="w-4 h-4" />
+            Campanha Guiada
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome ou WhatsApp..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+        <TabsContent value="clients" className="space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="glass-card border-border/30 cursor-pointer" onClick={() => setFilter("all")}>
+              <CardContent className="p-4">
+                <Users className="w-4 h-4 text-muted-foreground mb-1" />
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-lg font-display font-bold text-foreground">{stats.total}</p>
+              </CardContent>
+            </Card>
+            <Card className={`glass-card border-border/30 cursor-pointer ${filter === "45" ? "ring-1 ring-primary" : ""}`} onClick={() => setFilter(filter === "45" ? "all" : "45")}>
+              <CardContent className="p-4">
+                <Clock className="w-4 h-4 text-muted-foreground mb-1" />
+                <p className="text-xs text-muted-foreground">45-59 dias</p>
+                <p className="text-lg font-display font-bold text-foreground">{stats.d45}</p>
+              </CardContent>
+            </Card>
+            <Card className={`glass-card border-border/30 cursor-pointer ${filter === "60" ? "ring-1 ring-warning" : ""}`} onClick={() => setFilter(filter === "60" ? "all" : "60")}>
+              <CardContent className="p-4">
+                <Clock className="w-4 h-4 text-warning mb-1" />
+                <p className="text-xs text-muted-foreground">60-89 dias</p>
+                <p className="text-lg font-display font-bold text-warning">{stats.d60}</p>
+              </CardContent>
+            </Card>
+            <Card className={`glass-card border-border/30 cursor-pointer ${filter === "90" ? "ring-1 ring-destructive" : ""}`} onClick={() => setFilter(filter === "90" ? "all" : "90")}>
+              <CardContent className="p-4">
+                <UserX className="w-4 h-4 text-destructive mb-1" />
+                <p className="text-xs text-muted-foreground">90+ dias</p>
+                <p className="text-lg font-display font-bold text-destructive">{stats.d90}</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Table */}
-      <Card className="glass-card border-border/30">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Servidor</TableHead>
-                <TableHead>Último Plano</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-center">Vencido há</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum cliente para repescagem</TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>{client.server || "—"}</TableCell>
-                    <TableCell>{client.last_plan}</TableCell>
-                    <TableCell className="text-right">{client.last_amount > 0 ? fmt(client.last_amount) : "—"}</TableCell>
-                    <TableCell className="text-center">{daysBadge(client.days_expired)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className={client.status === "inactive" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}>
-                        {client.status === "inactive" ? "Inativo" : "Vencido"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Enviar WhatsApp" onClick={() => handleWhatsApp(client)}>
-                          <MessageCircle className="w-4 h-4 text-success" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Reativar cliente" onClick={() => handleReactivate(client)}>
-                          <RefreshCw className="w-4 h-4 text-primary" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          {/* Search */}
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou WhatsApp..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Table */}
+          <Card className="glass-card border-border/30">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Servidor</TableHead>
+                    <TableHead>Último Plano</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-center">Vencido há</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                    </TableRow>
+                  ) : filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum cliente para repescagem</TableCell>
+                    </TableRow>
+                  ) : (
+                    filtered.map((client) => (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell>{client.server || "—"}</TableCell>
+                        <TableCell>{client.last_plan}</TableCell>
+                        <TableCell className="text-right">{client.last_amount > 0 ? fmt(client.last_amount) : "—"}</TableCell>
+                        <TableCell className="text-center">{daysBadge(client.days_expired)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={client.status === "inactive" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}>
+                            {client.status === "inactive" ? "Inativo" : "Vencido"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Enviar WhatsApp" onClick={() => handleWhatsApp(client)}>
+                              <MessageCircle className="w-4 h-4 text-success" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Reativar cliente" onClick={() => handleReactivate(client)}>
+                              <RefreshCw className="w-4 h-4 text-primary" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="campaign">
+          <CampaignTemplates companyId={companyId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
