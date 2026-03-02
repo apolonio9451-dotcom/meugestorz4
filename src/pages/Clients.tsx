@@ -244,6 +244,8 @@ export default function Clients() {
     setFormMacKeys(updated);
   };
 
+  const getDaysRemaining = (endDate: string) => differenceInDays(parseISO(endDate), new Date());
+
   const searchFiltered = clients.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) || 
     (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(search.toLowerCase()))
@@ -283,8 +285,6 @@ export default function Clients() {
     { key: "a_vencer", label: "A Vencer", color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
     { key: "vencidos", label: "Vencidos", color: "bg-destructive/20 text-destructive border-destructive/30" },
   ];
-
-  const getDaysRemaining = (endDate: string) => differenceInDays(parseISO(endDate), new Date());
 
   const getBarColor = (days: number) => {
     if (days <= 0) return "bg-destructive";
