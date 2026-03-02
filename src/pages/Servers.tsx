@@ -163,7 +163,7 @@ export default function Servers() {
 
       {/* Block delete modal */}
       <Dialog open={blockDeleteModal} onOpenChange={setBlockDeleteModal}>
-        <DialogContent aria-describedby={undefined} className="border-warning/30 shadow-[0_0_30px_-5px_hsl(var(--warning)/0.2)]">
+        <DialogContent aria-describedby={undefined} className="border-warning/30 shadow-[0_0_30px_-5px_hsl(var(--warning)/0.2)] rounded-2xl">
           <DialogHeader>
             <div className="mx-auto w-12 h-12 rounded-full bg-warning/15 border border-warning/30 flex items-center justify-center mb-3">
               <AlertTriangle className="w-6 h-6 text-warning" />
@@ -182,8 +182,7 @@ export default function Servers() {
             </p>
           </div>
           <Button
-            variant="outline"
-            className="w-full mt-2 border-warning/30 text-warning hover:bg-warning/10"
+            className="w-full mt-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
             onClick={() => setBlockDeleteModal(false)}
           >
             Entendi
