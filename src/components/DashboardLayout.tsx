@@ -15,7 +15,7 @@ import {
   DollarSign,
   RotateCcw,
   Megaphone,
-  
+  UserCog,
   ChevronDown,
   Settings,
 } from "lucide-react";
@@ -32,7 +32,7 @@ const navItems = [
   },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
-  
+  { href: "/dashboard/resellers", label: "Painel Master", icon: UserCog },
   {
     label: "Configurações",
     icon: Settings,
