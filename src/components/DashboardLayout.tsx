@@ -23,16 +23,8 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
-  {
-    label: "Financeiro",
-    icon: DollarSign,
-    children: [
-      { href: "/dashboard/subscriptions", label: "Assinaturas", icon: FileText },
-    ],
-  },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: UserCog },
   {
     label: "Configurações",
     icon: Settings,
