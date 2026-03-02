@@ -10,10 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign } from "lucide-react";
-import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw } from "lucide-react";
+import { addDays, addMonths, differenceInCalendarDays, format, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -240,6 +240,20 @@ export default function Clients() {
     if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
     const { error } = await supabase.from("clients").delete().eq("id", id);
     if (error) toast.error(error.message); else { toast.success("Cliente excluído!"); fetchClients(); fetchMacKeys(); }
+  };
+
+  const handleRenew = async (clientId: string, months: number) => {
+    const sub = subscriptions[clientId];
+    if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
+    const currentEnd = parseISO(sub.end_date);
+    const baseDate = currentEnd > new Date() ? currentEnd : new Date();
+    const newEnd = addMonths(baseDate, months);
+    const { error } = await supabase
+      .from("client_subscriptions")
+      .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
+      .eq("id", sub.id);
+    if (error) toast.error(error.message);
+    else { toast.success(`Renovado por +${months} ${months === 1 ? "mês" : "meses"}!`); fetchSubscriptions(); }
   };
 
   const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "" }]);
@@ -565,6 +579,20 @@ export default function Clients() {
                       <DropdownMenuItem onClick={() => openDialog(client)}>
                         <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
                       </DropdownMenuItem>
+                      {sub && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 1)}>
+                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 2)}>
+                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 3)}>
+                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
                         <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
                       </DropdownMenuItem>
