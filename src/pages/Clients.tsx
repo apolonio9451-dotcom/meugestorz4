@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw, MessageCircle } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 
 interface Client {
@@ -64,6 +64,10 @@ export default function Clients() {
   const [servers, setServers] = useState<{ id: string; name: string }[]>([]);
   const [formBirthDate, setFormBirthDate] = useState<Date | undefined>(undefined);
   const [messageTemplates, setMessageTemplates] = useState<Record<string, string>>({});
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
+  const [welcomeData, setWelcomeData] = useState<{
+    name: string; planName: string; amount: string; endDate: string; user: string; password: string; whatsapp: string;
+  } | null>(null);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -270,7 +274,9 @@ export default function Clients() {
       }
     }
 
-    toast.success(editing ? "Cliente atualizado!" : "Cliente adicionado!");
+    const isNew = !editing;
+    const selectedPlan = plans.find(p => p.id === formPlanId);
+
     setLoading(false);
     setDialogOpen(false);
     setEditing(null);
@@ -281,6 +287,21 @@ export default function Clients() {
     fetchClients();
     fetchMacKeys();
     fetchSubscriptions();
+
+    if (isNew) {
+      setWelcomeData({
+        name: payload.name,
+        planName: selectedPlan?.name || "—",
+        amount: formAmount ? parseFloat(formAmount).toFixed(2).replace(".", ",") : "0,00",
+        endDate: formEndDate ? format(formEndDate, "dd/MM/yyyy") : "—",
+        user: payload.iptv_user,
+        password: payload.iptv_password,
+        whatsapp: payload.whatsapp,
+      });
+      setWelcomeModalOpen(true);
+    } else {
+      toast.success("Cliente atualizado!");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -747,6 +768,59 @@ export default function Clients() {
           })}
         </div>
       )}
+
+      {/* Welcome Modal */}
+      <Dialog open={welcomeModalOpen} onOpenChange={setWelcomeModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Cliente Criado!
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Envie uma mensagem de boas-vindas via WhatsApp com os dados de acesso.
+            </p>
+          </DialogHeader>
+
+          {welcomeData && (
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-1 text-sm">
+              <p>Cliente: <strong>{welcomeData.name}</strong></p>
+              <p>Plano: <strong>{welcomeData.planName}</strong></p>
+              <p>Valor: <strong>R$ {welcomeData.amount}</strong></p>
+              <p>Vencimento: <strong>{welcomeData.endDate}</strong></p>
+              <p>Usuário: <strong>{welcomeData.user || "—"}</strong></p>
+              <p>Senha: <strong>{welcomeData.password || "—"}</strong></p>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              onClick={() => {
+                if (welcomeData?.whatsapp) {
+                  const msg = `Olá ${welcomeData.name}! 🎉\n\nSeus dados de acesso:\n\n📋 Plano: ${welcomeData.planName}\n💰 Valor: R$ ${welcomeData.amount}\n📅 Vencimento: ${welcomeData.endDate}\n👤 Usuário: ${welcomeData.user || "—"}\n🔑 Senha: ${welcomeData.password || "—"}\n\nBem-vindo!`;
+                  const phone = welcomeData.whatsapp.replace(/\D/g, "");
+                  window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+                } else {
+                  toast.error("WhatsApp não informado para este cliente.");
+                }
+                setWelcomeModalOpen(false);
+                setWelcomeData(null);
+              }}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Enviar Boas-vindas WhatsApp
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { setWelcomeModalOpen(false); setWelcomeData(null); }}
+            >
+              Pular
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
