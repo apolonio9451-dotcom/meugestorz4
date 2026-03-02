@@ -267,6 +267,16 @@ export default function Clients() {
     return sub ? getDaysRemaining(sub.end_date) : null;
   };
 
+  const getClientActiveDays = (clientId: string) => {
+    const sub = subscriptions[clientId];
+    if (!sub) return null;
+    const days = getDaysRemaining(sub.end_date);
+    if (days === null || days <= 0) return null;
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return null;
+    return differenceInCalendarDays(new Date(), parseISO(client.created_at));
+  };
+
   const filtered = searchFiltered.filter((c) => {
     const days = getClientDays(c.id);
     switch (filter) {
@@ -275,6 +285,10 @@ export default function Clients() {
       case "vence_amanha": return days !== null && days === 1;
       case "a_vencer": return days !== null && days >= 2 && days <= 7;
       case "vencidos": return days !== null && days < 0;
+      case "followup": {
+        const activeDays = getClientActiveDays(c.id);
+        return activeDays !== null && activeDays >= 15;
+      }
       default: return true;
     }
   });
@@ -286,11 +300,13 @@ export default function Clients() {
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
     a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d >= 2 && d <= 7; }).length,
     vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
+    followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15; }).length,
   };
 
   const filters = [
     { key: "todos", label: "Todos", color: "bg-muted text-muted-foreground" },
     { key: "ativos", label: "Ativos", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    { key: "followup", label: "Follow-up", color: "bg-primary/20 text-primary border-primary/30" },
     { key: "vence_hoje", label: "Vence Hoje", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
     { key: "vence_amanha", label: "Vence Amanhã", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
     { key: "a_vencer", label: "A Vencer", color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
