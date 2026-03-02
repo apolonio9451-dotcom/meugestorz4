@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { differenceInDays, parseISO } from "date-fns";
 import {
   LayoutDashboard,
   Users,
@@ -22,6 +23,8 @@ import {
   KeyRound,
   ShieldCheck,
   Store,
+  Clock,
+  MessageCircle,
 } from "lucide-react";
 
 const navItems = [
@@ -59,12 +62,13 @@ const navItems = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId } = useAuth();
+  const { signOut, user, companyId, userRole } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("ClientHub");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
 
   useEffect(() => {
     if (!companyId) return;
@@ -77,7 +81,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       if (data?.brand_name) setBrandName(data.brand_name);
       if (data?.logo_url) setBrandLogo(data.logo_url);
     };
+
+    const fetchSubscription = async () => {
+      const { data } = await supabase
+        .from("saas_subscriptions")
+        .select("end_date, status")
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .order("end_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.end_date) {
+        const days = differenceInDays(parseISO(data.end_date), new Date());
+        setSubscriptionDaysLeft(days);
+      }
+    };
+
     fetchBrand();
+    fetchSubscription();
   }, [companyId]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
@@ -129,7 +150,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Building2 className="w-4 h-4 text-primary" />
             </div>
           )}
-          <span className="font-display font-bold text-lg text-foreground truncate">{brandName}</span>
+        <div className="flex flex-col min-w-0">
+          <span className="font-display font-bold text-lg text-foreground truncate leading-tight">{brandName}</span>
+          {userRole && (
+            <span className="text-[10px] font-medium text-muted-foreground truncate">{userRole}</span>
+          )}
+        </div>
           <button className="lg:hidden ml-auto text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
@@ -257,6 +283,42 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </h2>
         </header>
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          {subscriptionDaysLeft !== null && subscriptionDaysLeft <= 15 && (
+            <div className={cn(
+              "mb-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3 border",
+              subscriptionDaysLeft <= 3
+                ? "bg-destructive/10 border-destructive/30 text-destructive"
+                : subscriptionDaysLeft <= 7
+                  ? "bg-warning/10 border-warning/30 text-warning"
+                  : "bg-primary/10 border-primary/30 text-primary"
+            )}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Clock className="w-5 h-5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">
+                    {subscriptionDaysLeft <= 0
+                      ? "Sua plataforma expirou!"
+                      : `Sua plataforma vence em ${subscriptionDaysLeft} dia${subscriptionDaysLeft !== 1 ? "s" : ""}`}
+                  </p>
+                  <div className="w-full max-w-xs mt-1.5">
+                    <div className="h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          subscriptionDaysLeft <= 3 ? "bg-destructive" : subscriptionDaysLeft <= 7 ? "bg-warning" : "bg-primary"
+                        )}
+                        style={{ width: `${Math.max(0, Math.min(100, (subscriptionDaysLeft / 30) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button className="flex items-center gap-2 shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                <MessageCircle className="w-4 h-4" />
+                Renovar assinatura
+              </button>
+            </div>
+          )}
           <div className="animate-fade-in">
             {children}
           </div>
