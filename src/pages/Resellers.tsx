@@ -64,12 +64,19 @@ export default function Resellers() {
   const [accessForm, setAccessForm] = useState({ email: "", password: "" });
 
   const fetchResellers = async () => {
-    if (!companyId) return;
-    const { data } = await supabase
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+    const { data, error } = await supabase
       .from("resellers")
       .select("*")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Erro ao buscar revendedores:", error);
+      toast({ title: "Erro ao carregar revendedores", description: error.message, variant: "destructive" });
+    }
     if (data) setResellers(data as Reseller[]);
     setLoading(false);
   };
@@ -77,12 +84,26 @@ export default function Resellers() {
   useEffect(() => { fetchResellers(); }, [companyId]);
 
   const handleCreate = async () => {
-    if (!companyId || !form.name.trim()) return;
+    if (!form.name.trim()) {
+      toast({ title: "Preencha o nome do revendedor", variant: "destructive" });
+      return;
+    }
+    if (!companyId) {
+      toast({ title: "Erro", description: "Empresa não carregada. Recarregue a página.", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase.from("resellers").insert({
       company_id: companyId, name: form.name, email: form.email, whatsapp: form.whatsapp, notes: form.notes,
     });
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else { toast({ title: "Revendedor criado" }); setShowCreate(false); setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); fetchResellers(); }
+    if (error) {
+      console.error("Erro ao criar revendedor:", error);
+      toast({ title: "Erro ao criar revendedor", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Revendedor criado com sucesso!" });
+      setShowCreate(false);
+      setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
+      fetchResellers();
+    }
   };
 
   const handleUpdate = async () => {
