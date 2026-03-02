@@ -1,5 +1,6 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
@@ -46,10 +47,26 @@ const navItems = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user } = useAuth();
+  const { signOut, user, companyId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [brandName, setBrandName] = useState("ClientHub");
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!companyId) return;
+    const fetchBrand = async () => {
+      const { data } = await supabase
+        .from("company_settings")
+        .select("brand_name, logo_url")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (data?.brand_name) setBrandName(data.brand_name);
+      if (data?.logo_url) setBrandLogo(data.logo_url);
+    };
+    fetchBrand();
+  }, [companyId]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
     navItems.forEach((item) => {
@@ -91,10 +108,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border/50">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-            <Building2 className="w-4 h-4 text-primary" />
-          </div>
-          <span className="font-display font-bold text-lg text-foreground">ClientHub</span>
+          {brandLogo ? (
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
+              <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
+              <Building2 className="w-4 h-4 text-primary" />
+            </div>
+          )}
+          <span className="font-display font-bold text-lg text-foreground truncate">{brandName}</span>
           <button className="lg:hidden ml-auto text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
