@@ -11,6 +11,7 @@ import { Plus, Server, Trash2 } from "lucide-react";
 interface ServerItem {
   id: string;
   name: string;
+  url: string;
   cost_per_credit: number;
   created_at: string;
 }
@@ -39,10 +40,11 @@ export default function Servers() {
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const name = (form.get("name") as string).trim();
+    const url = (form.get("url") as string).trim();
     const costPerCredit = form.get("cost_per_credit") as string;
     if (!name) { toast.error("Nome é obrigatório"); setLoading(false); return; }
 
-    const { error } = await supabase.from("servers").insert({ name, company_id: companyId, cost_per_credit: parseFloat(costPerCredit) || 0 });
+    const { error } = await supabase.from("servers").insert({ name, url, company_id: companyId, cost_per_credit: parseFloat(costPerCredit) || 0 });
     if (error) { toast.error(error.message); } else { toast.success("Servidor adicionado!"); setDialogOpen(false); fetchServers(); }
     setLoading(false);
   };
@@ -70,15 +72,19 @@ export default function Servers() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Nome do Servidor *</Label>
-                <Input name="name" required placeholder="Ex: Servidor 1" />
+                <Label>Nome *</Label>
+                <Input name="name" required placeholder="Servidor Premium" />
               </div>
               <div className="space-y-1.5">
-                <Label>Custo por Crédito (R$) *</Label>
-                <Input name="cost_per_credit" required placeholder="0.00" type="number" step="0.01" />
+                <Label>URL</Label>
+                <Input name="url" placeholder="http://servidor.tv" />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Salvando..." : "Salvar"}
+              <div className="space-y-1.5">
+                <Label>Valor do Crédito (R$) *</Label>
+                <Input name="cost_per_credit" required placeholder="2.00" type="number" step="0.01" />
+              </div>
+              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" disabled={loading}>
+                <Plus className="w-4 h-4 mr-2" /> {loading ? "Salvando..." : "Criar Servidor"}
               </Button>
             </form>
           </DialogContent>
