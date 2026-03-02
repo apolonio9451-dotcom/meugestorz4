@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
+  userRole: string | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -15,20 +16,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const roleLabels: Record<string, string> = {
+  owner: "Proprietário",
+  admin: "Administrador",
+  operator: "Operador",
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchCompanyId = async (userId: string) => {
+  const fetchCompanyData = async (userId: string) => {
     const { data } = await supabase
       .from("company_memberships")
-      .select("company_id")
+      .select("company_id, role")
       .eq("user_id", userId)
       .limit(1)
       .single();
-    if (data) setCompanyId(data.company_id);
+    if (data) {
+      setCompanyId(data.company_id);
+      setUserRole(roleLabels[data.role] || data.role);
+    }
   };
 
   useEffect(() => {
@@ -37,9 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchCompanyId(session.user.id), 0);
+          setTimeout(() => fetchCompanyData(session.user.id), 0);
         } else {
           setCompanyId(null);
+          setUserRole(null);
         }
         setLoading(false);
       }
@@ -49,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchCompanyId(session.user.id);
+        fetchCompanyData(session.user.id);
       }
       setLoading(false);
     });
@@ -77,10 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setCompanyId(null);
+    setUserRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, userRole, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
