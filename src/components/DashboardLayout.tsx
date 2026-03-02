@@ -19,11 +19,23 @@ import {
   UserCog,
   ChevronDown,
   Settings,
+  KeyRound,
+  ShieldCheck,
+  Store,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
+  {
+    label: "Gestão de Acessos",
+    icon: KeyRound,
+    children: [
+      { href: "/dashboard/users", label: "Usuários", icon: UserCog },
+      { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
+      { href: "/dashboard/resellers", label: "Revendas", icon: Store },
+    ],
+  },
   {
     label: "Financeiro",
     icon: DollarSign,
