@@ -97,9 +97,9 @@ export default function Clients() {
       server: form.get("server") as string,
       iptv_user: form.get("iptv_user") as string,
       iptv_password: form.get("iptv_password") as string,
-      phone: form.get("phone") as string,
-      address: form.get("address") as string,
-      status: form.get("status") as string,
+      phone: "",
+      address: "",
+      status: "active",
       company_id: companyId,
     };
 
@@ -198,14 +198,6 @@ export default function Clients() {
                       <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Telefone</Label>
-                    <Input name="phone" placeholder="Telefone fixo" defaultValue={editing?.phone || ""} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Endereço</Label>
-                    <Input name="address" placeholder="Endereço completo" defaultValue={editing?.address || ""} />
-                  </div>
                 </div>
               </div>
               <div>
@@ -226,17 +218,6 @@ export default function Clients() {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Status</p>
-                <Select name="status" defaultValue={editing?.status || "active"}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="inactive">Inativo</SelectItem>
-                    <SelectItem value="suspended">Suspenso</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Salvando..." : "Salvar"}
