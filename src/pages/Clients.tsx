@@ -63,6 +63,7 @@ export default function Clients() {
   const [formEndDate, setFormEndDate] = useState<Date | undefined>(undefined);
   const [servers, setServers] = useState<{ id: string; name: string }[]>([]);
   const [formBirthDate, setFormBirthDate] = useState<Date | undefined>(undefined);
+  const [messageTemplates, setMessageTemplates] = useState<Record<string, string>>({});
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -135,7 +136,51 @@ export default function Clients() {
     setServers(data || []);
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); }, [companyId]);
+  const fetchMessageTemplates = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("message_templates")
+      .select("category, message")
+      .eq("company_id", companyId);
+    const map: Record<string, string> = {};
+    (data || []).forEach((t) => { map[t.category] = t.message; });
+    setMessageTemplates(map);
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); }, [companyId]);
+
+  const getMessageCategory = (days: number | null): string => {
+    if (days === null) return "vencidos";
+    if (days < 0) return "vencidos";
+    if (days === 0) return "vence_hoje";
+    if (days === 1) return "vence_amanha";
+    if (days <= 7) return "a_vencer";
+    return "a_vencer";
+  };
+
+  const buildCobrancaMessage = (client: Client, sub: Subscription | undefined, days: number | null): string => {
+    const category = getMessageCategory(days);
+    const defaultMessages: Record<string, string> = {
+      vence_hoje: "Olá {nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
+      vence_amanha: "Olá {nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
+      a_vencer: "Olá {nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
+      vencidos: "Olá {nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
+      followup: "Olá {nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
+    };
+    let msg = messageTemplates[category] || defaultMessages[category] || defaultMessages.vencidos;
+    const clientMks = macKeys[client.id] || [];
+    msg = msg
+      .replace(/{nome}/g, client.name || "")
+      .replace(/{plano}/g, sub?.plan_name || "")
+      .replace(/{valor}/g, sub ? Number(sub.amount).toFixed(2).replace(".", ",") : "")
+      .replace(/{vencimento}/g, sub ? format(parseISO(sub.end_date), "dd/MM/yyyy") : "")
+      .replace(/{dias}/g, days !== null ? String(Math.abs(days)) : "")
+      .replace(/{mac}/g, clientMks[0]?.mac || "")
+      .replace(/{usuario}/g, client.iptv_user || "")
+      .replace(/{senha}/g, client.iptv_password || "")
+      .replace(/{servidor}/g, client.server || "");
+    return msg;
+  };
 
   const openDialog = (client?: Client) => {
     if (client) {
@@ -641,7 +686,7 @@ export default function Clients() {
                   <div>{days !== null && getExpiryBadge(days)}</div>
                   {client.whatsapp && (
                     <a
-                      href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Passando para lembrar sobre o pagamento da sua assinatura. Podemos ajudar?")}`}
+                      href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(buildCobrancaMessage(client, sub, days))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 text-warning hover:bg-warning/25 transition-colors text-xs font-semibold"
