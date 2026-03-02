@@ -11,9 +11,20 @@ import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
 import Plans from "@/pages/Plans";
 import Subscriptions from "@/pages/Subscriptions";
+import Servers from "@/pages/Servers";
+import Financial from "@/pages/Financial";
+import WinBack from "@/pages/WinBack";
+import Marketing from "@/pages/Marketing";
+import Resellers from "@/pages/Resellers";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const DashboardRoute = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <DashboardLayout>{children}</DashboardLayout>
+  </ProtectedRoute>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -25,38 +36,14 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout><Dashboard /></DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/clients"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout><Clients /></DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/plans"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout><Plans /></DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/subscriptions"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout><Subscriptions /></DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/dashboard" element={<DashboardRoute><Dashboard /></DashboardRoute>} />
+            <Route path="/dashboard/clients" element={<DashboardRoute><Clients /></DashboardRoute>} />
+            <Route path="/dashboard/servers" element={<DashboardRoute><Servers /></DashboardRoute>} />
+            <Route path="/dashboard/plans" element={<DashboardRoute><Plans /></DashboardRoute>} />
+            <Route path="/dashboard/subscriptions" element={<DashboardRoute><Subscriptions /></DashboardRoute>} />
+            <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
+            <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
+            <Route path="/dashboard/resellers" element={<DashboardRoute><Resellers /></DashboardRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
