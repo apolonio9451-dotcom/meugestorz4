@@ -663,61 +663,61 @@ export default function Clients() {
             return (
               <div
                 key={client.id}
-                className="rounded-xl border border-border/60 bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden"
+                className="rounded-xl border border-primary/20 bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden shadow-[0_0_12px_-3px_hsl(var(--primary)/0.25)] hover:shadow-[0_0_20px_-3px_hsl(var(--primary)/0.4)] transition-all duration-300"
               >
-                {/* Row 1: Name + menu */}
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-display font-bold text-foreground text-base leading-tight">{client.name}</h3>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openDialog(client)}>
-                        <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
-                      </DropdownMenuItem>
-                      {sub && (
-                        <>
-                          <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
-                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {/* Row 1: Name + Cobrar + menu */}
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display font-bold text-foreground text-base leading-tight truncate flex-1">{client.name}</h3>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {client.whatsapp && (
+                      <a
+                        href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(buildCobrancaMessage(client, sub, days))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning/15 text-warning hover:bg-warning/25 border border-warning/30 transition-all text-xs font-bold shadow-[0_0_8px_-2px_hsl(var(--warning)/0.3)] hover:shadow-[0_0_14px_-2px_hsl(var(--warning)/0.5)]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DollarSign className="w-3.5 h-3.5" />
+                        Cobrar
+                      </a>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openDialog(client)}>
+                          <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        {sub && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
+                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
-                {/* Row 2: Expiry badge + Cobrar */}
-                <div className="flex items-center justify-between">
-                  <div>{days !== null && getExpiryBadge(days)}</div>
-                  {client.whatsapp && (
-                    <a
-                      href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(buildCobrancaMessage(client, sub, days))}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 text-warning hover:bg-warning/25 transition-colors text-xs font-semibold"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DollarSign className="w-3 h-3" />
-                      Cobrar
-                    </a>
-                  )}
-                </div>
+                {/* Row 2: Expiry badge */}
+                <div>{days !== null && getExpiryBadge(days)}</div>
 
                 {/* Row 3: Server + Plan + Price */}
                 <div className="flex items-center gap-2 flex-wrap">
