@@ -38,7 +38,6 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
   {
     label: "Financeiro",
     icon: DollarSign,
@@ -64,7 +63,7 @@ const navItems: NavItem[] = [
     icon: KeyRound,
     adminOnly: true,
     children: [
-      { href: "/dashboard/users", label: "Revendedores", icon: Store },
+      { href: "/dashboard/resellers", label: "Revendedores", icon: Store },
       { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
     ],
   },
