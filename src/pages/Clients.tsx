@@ -561,9 +561,21 @@ export default function Clients() {
 
                 {/* WhatsApp */}
                 {client.whatsapp && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>{client.whatsapp}</span>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{client.whatsapp}</span>
+                    </div>
+                    <a
+                      href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors text-xs font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Phone className="w-3 h-3" />
+                      WhatsApp
+                    </a>
                   </div>
                 )}
 
