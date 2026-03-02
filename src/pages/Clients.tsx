@@ -343,11 +343,11 @@ export default function Clients() {
   const filters = [
     { key: "todos", label: "Todos", color: "bg-muted text-muted-foreground" },
     { key: "ativos", label: "Ativos", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-    { key: "followup", label: "Follow-up", color: "bg-primary/20 text-primary border-primary/30" },
     { key: "vence_hoje", label: "Vence Hoje", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
     { key: "vence_amanha", label: "Vence Amanhã", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
     { key: "a_vencer", label: "A Vencer", color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
     { key: "vencidos", label: "Vencidos", color: "bg-destructive/20 text-destructive border-destructive/30" },
+    { key: "followup", label: "Follow-up", color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50 shadow-[0_0_8px_rgba(0,255,255,0.3)]" },
   ];
 
   const getBarColor = (days: number) => {
