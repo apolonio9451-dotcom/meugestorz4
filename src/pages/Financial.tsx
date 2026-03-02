@@ -94,13 +94,31 @@ export default function Financial() {
 
   const serverProfits = useMemo(() => {
     return servers.map((srv) => {
-      const revenue = subs
-        .filter((s) => s.payment_status === "paid" && s.clients?.server === srv.name)
+      const serverSubs = subs.filter((s) => s.clients?.server === srv.name);
+      const clientCount = new Set(serverSubs.map((s) => s.clients?.name)).size;
+      const revenue = serverSubs
+        .filter((s) => s.payment_status === "paid")
         .reduce((sum, s) => sum + Number(s.amount), 0);
       const cost = Number(srv.cost_per_credit);
-      return { name: srv.name, revenue, cost, profit: revenue - cost };
+      const profit = revenue - cost;
+      const profitPerDay = profit / 30;
+      return { name: srv.name, credit: cost, clients: clientCount, revenue, cost, profit, profitPerDay };
     });
   }, [subs, servers]);
+
+  const serverTotals = useMemo(() => {
+    const t = serverProfits.reduce(
+      (acc, sp) => ({
+        clients: acc.clients + sp.clients,
+        revenue: acc.revenue + sp.revenue,
+        cost: acc.cost + sp.cost,
+        profit: acc.profit + sp.profit,
+        profitPerDay: acc.profitPerDay + sp.profitPerDay,
+      }),
+      { clients: 0, revenue: 0, cost: 0, profit: 0, profitPerDay: 0 }
+    );
+    return t;
+  }, [serverProfits]);
 
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -189,29 +207,48 @@ export default function Financial() {
             <TableHeader>
               <TableRow>
                 <TableHead>Servidor</TableHead>
-                <TableHead className="text-right">Faturamento</TableHead>
-                <TableHead className="text-right">Custo</TableHead>
-                <TableHead className="text-right">Lucro</TableHead>
+                <TableHead className="text-right">Crédito</TableHead>
+                <TableHead className="text-right">Clientes</TableHead>
+                <TableHead className="text-right">Receita/Mês</TableHead>
+                <TableHead className="text-right">Custo/Mês</TableHead>
+                <TableHead className="text-right">Lucro/Mês</TableHead>
+                <TableHead className="text-right">Lucro/Dia</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {serverProfits.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Nenhum servidor cadastrado
                   </TableCell>
                 </TableRow>
               ) : (
-                serverProfits.map((sp) => (
-                  <TableRow key={sp.name}>
-                    <TableCell className="font-medium">{sp.name}</TableCell>
-                    <TableCell className="text-right text-success">{fmt(sp.revenue)}</TableCell>
-                    <TableCell className="text-right text-destructive">{fmt(sp.cost)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${sp.profit >= 0 ? "text-success" : "text-destructive"}`}>
-                      {fmt(sp.profit)}
+                <>
+                  {serverProfits.map((sp) => (
+                    <TableRow key={sp.name}>
+                      <TableCell className="font-medium">{sp.name}</TableCell>
+                      <TableCell className="text-right">{fmt(sp.credit)}</TableCell>
+                      <TableCell className="text-right font-semibold">{sp.clients}</TableCell>
+                      <TableCell className="text-right font-semibold">{fmt(sp.revenue)}</TableCell>
+                      <TableCell className="text-right text-destructive">{fmt(sp.cost)}</TableCell>
+                      <TableCell className={`text-right font-semibold ${sp.profit >= 0 ? "text-success" : "text-destructive"}`}>
+                        {fmt(sp.profit)}
+                      </TableCell>
+                      <TableCell className="text-right">{fmt(sp.profitPerDay)}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t-2 border-border/50 bg-muted/20">
+                    <TableCell className="font-bold">Total</TableCell>
+                    <TableCell className="text-right">—</TableCell>
+                    <TableCell className="text-right font-bold">{serverTotals.clients}</TableCell>
+                    <TableCell className="text-right font-bold">{fmt(serverTotals.revenue)}</TableCell>
+                    <TableCell className="text-right font-bold text-destructive">{fmt(serverTotals.cost)}</TableCell>
+                    <TableCell className={`text-right font-bold ${serverTotals.profit >= 0 ? "text-success" : "text-destructive"}`}>
+                      {fmt(serverTotals.profit)}
                     </TableCell>
+                    <TableCell className="text-right font-bold">{fmt(serverTotals.profitPerDay)}</TableCell>
                   </TableRow>
-                ))
+                </>
               )}
             </TableBody>
           </Table>
