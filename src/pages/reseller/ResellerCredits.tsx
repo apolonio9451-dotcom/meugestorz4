@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useReseller } from "@/hooks/useReseller";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import {
 import { Coins } from "lucide-react";
 
 export default function ResellerCredits() {
-  const { reseller } = useAuth();
+  const { reseller } = useReseller();
   const [transactions, setTransactions] = useState<any[]>([]);
 
   useEffect(() => {

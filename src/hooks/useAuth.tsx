@@ -1,30 +1,16 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-
-interface ResellerData {
-  id: string;
-  name: string;
-  email: string;
-  whatsapp: string;
-  credit_balance: number;
-  status: string;
-  company_id: string;
-  level: number;
-  parent_reseller_id: string | null;
-}
+import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
   loading: boolean;
-  isReseller: boolean;
-  reseller: ResellerData | null;
   signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  refreshReseller: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,54 +19,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [reseller, setReseller] = useState<ResellerData | null>(null);
-  const [isReseller, setIsReseller] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = async (userId: string) => {
-    // Try company membership first (admin/owner)
-    const { data: membership } = await supabase
+  const fetchCompanyId = async (userId: string) => {
+    const { data } = await supabase
       .from("company_memberships")
       .select("company_id")
       .eq("user_id", userId)
       .limit(1)
       .single();
-
-    if (membership) {
-      setCompanyId(membership.company_id);
-      setIsReseller(false);
-      setReseller(null);
-      return;
-    }
-
-    // Try reseller
-    const { data: resellerData } = await supabase
-      .from("resellers")
-      .select("id, name, email, whatsapp, credit_balance, status, company_id, level, parent_reseller_id")
-      .eq("user_id", userId)
-      .limit(1)
-      .single();
-
-    if (resellerData) {
-      setReseller(resellerData);
-      setCompanyId(resellerData.company_id);
-      setIsReseller(true);
-    } else {
-      setCompanyId(null);
-      setIsReseller(false);
-      setReseller(null);
-    }
-  };
-
-  const refreshReseller = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("resellers")
-      .select("id, name, email, whatsapp, credit_balance, status, company_id, level, parent_reseller_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
-    if (data) setReseller(data);
+    if (data) setCompanyId(data.company_id);
   };
 
   useEffect(() => {
@@ -89,11 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchUserData(session.user.id), 0);
+          setTimeout(() => fetchCompanyId(session.user.id), 0);
         } else {
           setCompanyId(null);
-          setReseller(null);
-          setIsReseller(false);
         }
         setLoading(false);
       }
@@ -103,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserData(session.user.id);
+        fetchCompanyId(session.user.id);
       }
       setLoading(false);
     });
@@ -131,12 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setCompanyId(null);
-    setReseller(null);
-    setIsReseller(false);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, loading, isReseller, reseller, signUp, signIn, signOut, refreshReseller }}>
+    <AuthContext.Provider value={{ session, user, companyId, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

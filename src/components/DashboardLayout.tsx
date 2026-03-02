@@ -16,14 +16,12 @@ import {
   DollarSign,
   RotateCcw,
   Megaphone,
+  
   ChevronDown,
   Settings,
-  Coins,
-  History,
-  UserCog,
 } from "lucide-react";
 
-const adminNavItems = [
+const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
   {
@@ -36,6 +34,7 @@ const adminNavItems = [
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/master", label: "Painel Master", icon: Crown },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
+  
   {
     label: "Configurações",
     icon: Settings,
@@ -48,20 +47,11 @@ const adminNavItems = [
   },
 ];
 
-const resellerNavItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/my-clients", label: "Meus Clientes", icon: Users },
-  { href: "/dashboard/my-credits", label: "Meus Créditos", icon: History },
-];
-
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, isReseller, reseller } = useAuth();
+  const { signOut, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const navItems = isReseller ? resellerNavItems : adminNavItems;
-
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
     navItems.forEach((item) => {
@@ -84,18 +74,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const isActive = (href: string) => location.pathname === href;
 
-  const getPageTitle = () => {
-    for (const item of navItems) {
-      if ("children" in item && item.children) {
-        const child = item.children.find((c) => c.href === location.pathname);
-        if (child) return child.label;
-      } else if (item.href === location.pathname) {
-        return item.label;
-      }
-    }
-    return "Dashboard";
-  };
-
   return (
     <div className="min-h-screen flex bg-background">
       {/* Mobile overlay */}
@@ -116,28 +94,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       >
         <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border/50">
           <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-            {isReseller ? <UserCog className="w-4 h-4 text-primary" /> : <Building2 className="w-4 h-4 text-primary" />}
+            <Building2 className="w-4 h-4 text-primary" />
           </div>
-          <span className="font-display font-bold text-lg text-foreground">
-            {isReseller ? "Revendedor" : "ClientHub"}
-          </span>
+          <span className="font-display font-bold text-lg text-foreground">ClientHub</span>
           <button className="lg:hidden ml-auto text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Reseller credit balance */}
-        {isReseller && reseller && (
-          <div className="px-4 py-3 border-b border-sidebar-border/50">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-              <Coins className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-[10px] text-muted-foreground">Créditos</p>
-                <p className="text-sm font-bold font-mono text-primary">{reseller.credit_balance}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
@@ -172,6 +135,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     )}
                   >
                     <div className="relative ml-[1.65rem] mt-1 space-y-0.5 pb-1">
+                      {/* Vertical connecting line */}
                       <div
                         className={cn(
                           "absolute left-0 top-0 bottom-2 w-px transition-all duration-500",
@@ -180,6 +144,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       />
                       {item.children.map((child, idx) => (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+                          {/* Horizontal branch line */}
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
                           <Link
                             to={child.href}
@@ -226,7 +191,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         <div className="px-3 py-4 border-t border-sidebar-border/50">
           <div className="px-3 py-2 text-xs text-sidebar-foreground/50 truncate mb-2">
-            {isReseller ? reseller?.name : user?.email}
+            {user?.email}
           </div>
           <button
             onClick={handleSignOut}
@@ -245,7 +210,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Menu className="w-6 h-6 text-foreground" />
           </button>
           <h2 className="font-display font-semibold text-lg text-foreground">
-            {getPageTitle()}
+            {(() => {
+              for (const item of navItems) {
+                if ("children" in item && item.children) {
+                  const child = item.children.find((c) => c.href === location.pathname);
+                  if (child) return child.label;
+                } else if (item.href === location.pathname) {
+                  return item.label;
+                }
+              }
+              return "Dashboard";
+            })()}
           </h2>
         </header>
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
