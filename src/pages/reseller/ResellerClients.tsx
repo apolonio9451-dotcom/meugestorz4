@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useReseller } from "@/hooks/useReseller";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ interface Plan {
 }
 
 export default function ResellerClients() {
-  const { reseller, refreshReseller } = useReseller();
+  const { reseller, refreshReseller } = useAuth();
   const { toast } = useToast();
   const [clients, setClients] = useState<any[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -69,7 +69,6 @@ export default function ResellerClients() {
   const handleCreate = async () => {
     if (!reseller || !form.name.trim() || !form.plan_id) return;
 
-    // Check credits
     if (reseller.credit_balance < 1) {
       toast({ title: "Créditos insuficientes", description: "Você precisa de pelo menos 1 crédito para criar um cliente.", variant: "destructive" });
       return;
@@ -78,7 +77,6 @@ export default function ResellerClients() {
     const plan = plans.find((p) => p.id === form.plan_id);
     if (!plan) return;
 
-    // Create client
     const { data: newClient, error: cErr } = await supabase.from("clients").insert({
       company_id: reseller.company_id,
       reseller_id: reseller.id,
@@ -96,7 +94,6 @@ export default function ResellerClients() {
       return;
     }
 
-    // Create subscription
     const startDate = new Date().toISOString().split("T")[0];
     const endDate = new Date(Date.now() + plan.duration_days * 86400000).toISOString().split("T")[0];
 
@@ -110,10 +107,8 @@ export default function ResellerClients() {
       payment_status: "paid",
     });
 
-    // Deduct credit
     await supabase.from("resellers").update({ credit_balance: reseller.credit_balance - 1 }).eq("id", reseller.id);
 
-    // Log transaction
     await supabase.from("reseller_credit_transactions").insert({
       reseller_id: reseller.id,
       company_id: reseller.company_id,
@@ -132,12 +127,8 @@ export default function ResellerClients() {
   const handleUpdate = async () => {
     if (!selected) return;
     const { error } = await supabase.from("clients").update({
-      name: form.name,
-      whatsapp: form.whatsapp,
-      email: form.email,
-      iptv_user: form.iptv_user,
-      iptv_password: form.iptv_password,
-      notes: form.notes,
+      name: form.name, whatsapp: form.whatsapp, email: form.email,
+      iptv_user: form.iptv_user, iptv_password: form.iptv_password, notes: form.notes,
     }).eq("id", selected.id);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else { toast({ title: "Cliente atualizado" }); setShowEdit(false); fetchClients(); }

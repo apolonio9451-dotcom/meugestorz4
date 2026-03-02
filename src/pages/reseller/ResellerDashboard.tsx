@@ -1,20 +1,15 @@
 import { useState, useEffect } from "react";
-import { useReseller } from "@/hooks/useReseller";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Users, Coins, TrendingUp, FileText } from "lucide-react";
 
 export default function ResellerDashboard() {
-  const { reseller } = useReseller();
+  const { reseller } = useAuth();
   const [clientCount, setClientCount] = useState(0);
   const [activeSubCount, setActiveSubCount] = useState(0);
   const [recentClients, setRecentClients] = useState<any[]>([]);
