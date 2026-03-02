@@ -27,7 +27,6 @@ const navItems = [
     label: "Financeiro",
     icon: DollarSign,
     children: [
-      { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/subscriptions", label: "Assinaturas", icon: FileText },
     ],
   },
@@ -39,6 +38,7 @@ const navItems = [
     icon: Settings,
     children: [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
+      { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/settings", label: "Geral", icon: Settings },
     ],
   },
