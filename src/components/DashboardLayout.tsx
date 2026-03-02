@@ -17,6 +17,7 @@ import {
   Megaphone,
   UserCog,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
   { href: "/dashboard/resellers", label: "Revendedores", icon: UserCog },
+  { href: "/dashboard/settings", label: "Configurações", icon: Settings },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
