@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X } from "lucide-react";
+import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon } from "lucide-react";
 import { differenceInDays, format, parseISO } from "date-fns";
 
 interface Client {
@@ -52,6 +56,10 @@ export default function Clients() {
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [formMacKeys, setFormMacKeys] = useState<MacKey[]>([]);
+  const [plans, setPlans] = useState<{ id: string; name: string; price: number; duration_days: number }[]>([]);
+  const [formPlanId, setFormPlanId] = useState("");
+  const [formAmount, setFormAmount] = useState("");
+  const [formEndDate, setFormEndDate] = useState<Date | undefined>(undefined);
 
   const fetchClients = async () => {
     if (!companyId) return;
@@ -105,15 +113,38 @@ export default function Clients() {
     }
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); }, [companyId]);
+  const fetchPlans = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("subscription_plans")
+      .select("id, name, price, duration_days")
+      .eq("company_id", companyId)
+      .eq("is_active", true);
+    setPlans(data || []);
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); }, [companyId]);
 
   const openDialog = (client?: Client) => {
     if (client) {
       setEditing(client);
       setFormMacKeys(macKeys[client.id] || []);
+      const sub = subscriptions[client.id];
+      if (sub) {
+        setFormPlanId(sub.plan_id);
+        setFormAmount(String(sub.amount));
+        setFormEndDate(parseISO(sub.end_date));
+      } else {
+        setFormPlanId("");
+        setFormAmount("");
+        setFormEndDate(undefined);
+      }
     } else {
       setEditing(null);
       setFormMacKeys([]);
+      setFormPlanId("");
+      setFormAmount("");
+      setFormEndDate(undefined);
     }
     setDialogOpen(true);
   };
@@ -166,6 +197,18 @@ export default function Clients() {
           }))
         );
       }
+
+      // Save subscription
+      if (formPlanId && formEndDate) {
+        await supabase.from("client_subscriptions").delete().eq("client_id", clientId);
+        await supabase.from("client_subscriptions").insert({
+          client_id: clientId!,
+          company_id: companyId,
+          plan_id: formPlanId,
+          amount: parseFloat(formAmount) || 0,
+          end_date: format(formEndDate, "yyyy-MM-dd"),
+        });
+      }
     }
 
     toast.success(editing ? "Cliente atualizado!" : "Cliente adicionado!");
@@ -173,8 +216,12 @@ export default function Clients() {
     setDialogOpen(false);
     setEditing(null);
     setFormMacKeys([]);
+    setFormPlanId("");
+    setFormAmount("");
+    setFormEndDate(undefined);
     fetchClients();
     fetchMacKeys();
+    fetchSubscriptions();
   };
 
   const handleDelete = async (id: string) => {
@@ -234,7 +281,7 @@ export default function Clients() {
           <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground text-sm">{clients.length} clientes cadastrados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); } }}>
           <DialogTrigger asChild>
             <Button onClick={() => openDialog()}><Plus className="w-4 h-4 mr-2" /> Novo Cliente</Button>
           </DialogTrigger>
@@ -276,8 +323,65 @@ export default function Clients() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Servidor & Assinatura</p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label>Servidor</Label>
-                    <Input name="server" placeholder="Nome do servidor" defaultValue={editing?.server || ""} />
+                    <Label>Servidor *</Label>
+                    <Select name="server" defaultValue={editing?.server || ""}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o servidor" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="servidor1">Servidor 1</SelectItem>
+                        <SelectItem value="servidor2">Servidor 2</SelectItem>
+                        <SelectItem value="servidor3">Servidor 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Plano *</Label>
+                      <Select value={formPlanId} onValueChange={(v) => {
+                        setFormPlanId(v);
+                        const plan = plans.find(p => p.id === v);
+                        if (plan) setFormAmount(String(plan.price));
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {plans.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Valor (R$) *</Label>
+                      <Input
+                        value={formAmount}
+                        onChange={(e) => setFormAmount(e.target.value)}
+                        placeholder="30.00"
+                        type="number"
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Vencimento *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal", !formEndDate && "text-muted-foreground")}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formEndDate ? format(formEndDate, "dd/MM/yyyy") : "dd/mm/aaaa"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={formEndDate}
+                            onSelect={setFormEndDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
