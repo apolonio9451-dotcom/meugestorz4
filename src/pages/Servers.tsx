@@ -163,23 +163,31 @@ export default function Servers() {
 
       {/* Block delete modal */}
       <Dialog open={blockDeleteModal} onOpenChange={setBlockDeleteModal}>
-        <DialogContent aria-describedby={undefined}>
+        <DialogContent aria-describedby={undefined} className="border-warning/30 shadow-[0_0_30px_-5px_hsl(var(--warning)/0.2)]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-warning">
-              <AlertTriangle className="w-5 h-5" />
+            <div className="mx-auto w-12 h-12 rounded-full bg-warning/15 border border-warning/30 flex items-center justify-center mb-3">
+              <AlertTriangle className="w-6 h-6 text-warning" />
+            </div>
+            <DialogTitle className="text-center text-lg text-warning">
               Exclusão Bloqueada
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-2 text-center">
             <p className="text-sm text-muted-foreground">
               O servidor <strong className="text-foreground">{blockDeleteName}</strong> não pode ser excluído porque possui{" "}
-              <strong className="text-foreground">{blockDeleteCount} cliente{blockDeleteCount !== 1 ? "s" : ""}</strong> vinculado{blockDeleteCount !== 1 ? "s" : ""}.
+              <strong className="text-warning">{blockDeleteCount} cliente{blockDeleteCount !== 1 ? "s" : ""}</strong> vinculado{blockDeleteCount !== 1 ? "s" : ""}.
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground/70">
               Remova ou migre os clientes para outro servidor antes de excluir.
             </p>
           </div>
-          <Button className="w-full" onClick={() => setBlockDeleteModal(false)}>Entendi</Button>
+          <Button
+            variant="outline"
+            className="w-full mt-2 border-warning/30 text-warning hover:bg-warning/10"
+            onClick={() => setBlockDeleteModal(false)}
+          >
+            Entendi
+          </Button>
         </DialogContent>
       </Dialog>
     </div>
