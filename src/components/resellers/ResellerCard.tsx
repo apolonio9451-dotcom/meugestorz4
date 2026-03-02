@@ -39,15 +39,13 @@ interface ResellerCardProps {
   onToggleStatus: (r: Reseller) => void;
   onViewClients: (r: Reseller) => void;
   onChangeRole: (r: Reseller) => void;
-  onGenerateTrial: (r: Reseller) => void;
   onViewTrials: (r: Reseller) => void;
   trialCount?: number;
 }
 
 const roleBadgeColors: Record<ResellerRole, string> = {
-  master: "bg-amber-500/15 text-amber-500 border-amber-500/30",
-  reseller: "bg-primary/15 text-primary border-primary/30",
-  trial_only: "bg-muted text-muted-foreground border-border",
+  admin: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  user: "bg-muted text-muted-foreground border-border",
 };
 
 export default function ResellerCard({
@@ -59,7 +57,6 @@ export default function ResellerCard({
   onToggleStatus,
   onViewClients,
   onChangeRole,
-  onGenerateTrial,
   onViewTrials,
   trialCount = 0,
 }: ResellerCardProps) {
@@ -124,15 +121,6 @@ export default function ResellerCard({
         {/* Action buttons */}
         <div className="flex items-center justify-between px-3 py-2 mt-1 border-t border-border/50">
           <div className="flex items-center gap-0.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onGenerateTrial(r)}>
-                  <FlaskConical className="w-3.5 h-3.5 text-amber-500" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p className="text-xs">Gerar teste</p></TooltipContent>
-            </Tooltip>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onCredits(r)}>
