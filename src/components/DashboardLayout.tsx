@@ -27,6 +27,7 @@ const navItems = [
     label: "Financeiro",
     icon: DollarSign,
     children: [
+      { href: "/dashboard/financial", label: "Financeiro", icon: DollarSign },
       { href: "/dashboard/subscriptions", label: "Assinaturas", icon: FileText },
     ],
   },
