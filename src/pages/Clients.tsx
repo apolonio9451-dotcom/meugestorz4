@@ -633,7 +633,7 @@ export default function Clients() {
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all shrink-0 snap-start",
+                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border whitespace-nowrap transition-all shrink-0 snap-start",
                 isActive ? f.color + " ring-1 ring-current" : "bg-card text-muted-foreground border-border/60 hover:bg-muted/50"
               )}
             >
