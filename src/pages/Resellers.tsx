@@ -39,6 +39,8 @@ import {
   TrendingUp,
   ShieldCheck,
   Ban,
+  FlaskConical,
+  CheckCircle2,
 } from "lucide-react";
 import ResellerCard from "@/components/resellers/ResellerCard";
 
@@ -95,12 +97,20 @@ export default function Resellers() {
   const [showCredits, setShowCredits] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showRoleChange, setShowRoleChange] = useState(false);
+  const [showTrialGen, setShowTrialGen] = useState(false);
+  const [showTrials, setShowTrials] = useState(false);
   const [selected, setSelected] = useState<Reseller | null>(null);
   const [selectedRole, setSelectedRole] = useState<ResellerRole>("reseller");
+
+  // Trial clients per reseller
+  interface TrialClient { id: string; name: string; whatsapp: string; created_at: string; status: string; }
+  const [trialClients, setTrialClients] = useState<TrialClient[]>([]);
+  const [trialCounts, setTrialCounts] = useState<Record<string, number>>({});
 
   // Form
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
   const [creditForm, setCreditForm] = useState({ amount: "", type: "purchase", description: "" });
+  const [trialForm, setTrialForm] = useState({ name: "", whatsapp: "" });
 
   const fetchCompanyCredits = async () => {
     if (!companyId) return;
@@ -123,9 +133,24 @@ export default function Resellers() {
     setLoading(false);
   };
 
+  const fetchTrialCounts = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("clients")
+      .select("reseller_id")
+      .eq("company_id", companyId)
+      .eq("status", "trial");
+    if (data) {
+      const counts: Record<string, number> = {};
+      data.forEach((c: any) => { if (c.reseller_id) counts[c.reseller_id] = (counts[c.reseller_id] || 0) + 1; });
+      setTrialCounts(counts);
+    }
+  };
+
   useEffect(() => {
     fetchResellers();
     fetchCompanyCredits();
+    fetchTrialCounts();
   }, [companyId]);
 
   const isOwnerRole = userRole === "Proprietário";
@@ -254,6 +279,68 @@ export default function Resellers() {
 
   const handleViewClients = (r: Reseller) => {
     toast({ title: "Em breve", description: `Visualização de clientes do revendedor ${r.name} será implementada.` });
+  };
+
+  const openTrialGen = (r: Reseller) => {
+    setSelected(r);
+    setTrialForm({ name: "", whatsapp: "" });
+    setShowTrialGen(true);
+  };
+
+  const handleGenerateTrial = async () => {
+    if (!selected || !companyId || !trialForm.name.trim()) return;
+    const { error } = await supabase.from("clients").insert({
+      company_id: companyId,
+      reseller_id: selected.id,
+      name: trialForm.name,
+      whatsapp: trialForm.whatsapp,
+      status: "trial",
+    });
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Teste gerado com sucesso", description: "O acesso de teste foi criado sem consumir créditos." });
+      setShowTrialGen(false);
+      setTrialForm({ name: "", whatsapp: "" });
+      fetchTrialCounts();
+    }
+  };
+
+  const openTrials = async (r: Reseller) => {
+    setSelected(r);
+    const { data } = await supabase
+      .from("clients")
+      .select("id, name, whatsapp, created_at, status")
+      .eq("reseller_id", r.id)
+      .eq("status", "trial")
+      .order("created_at", { ascending: false });
+    if (data) setTrialClients(data);
+    setShowTrials(true);
+  };
+
+  const handleActivateTrial = async (clientId: string) => {
+    if (!companyId) return;
+    const { error } = await supabase.from("clients").update({ status: "active" }).eq("id", clientId);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      // Deduct 1 credit from reseller
+      if (selected) {
+        await supabase.from("resellers").update({ credit_balance: selected.credit_balance - 1 }).eq("id", selected.id);
+        await supabase.from("reseller_credit_transactions").insert({
+          reseller_id: selected.id,
+          company_id: companyId,
+          amount: -1,
+          type: "activation",
+          description: "Ativação de teste",
+        });
+      }
+      toast({ title: "Acesso ativado!", description: "1 crédito foi debitado do revendedor." });
+      // Refresh trials list
+      setTrialClients((prev) => prev.filter((c) => c.id !== clientId));
+      fetchResellers();
+      fetchTrialCounts();
+    }
   };
 
   const openRoleChange = (r: Reseller) => {
@@ -401,6 +488,9 @@ export default function Resellers() {
               onToggleStatus={handleToggleStatus}
               onViewClients={handleViewClients}
               onChangeRole={openRoleChange}
+              onGenerateTrial={openTrialGen}
+              onViewTrials={openTrials}
+              trialCount={trialCounts[r.id] || 0}
             />
           ))}
         </div>
@@ -556,6 +646,73 @@ export default function Resellers() {
             <Button variant="outline" onClick={() => setShowRoleChange(false)}>Cancelar</Button>
             <Button onClick={handleRoleChange}>Salvar Cargo</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Trial Dialog */}
+      <Dialog open={showTrialGen} onOpenChange={setShowTrialGen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="w-5 h-5 text-amber-500" />
+              Gerar Teste — {selected?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">O teste é gerado sem consumir créditos. Ao confirmar a venda, ative o acesso para debitar 1 crédito.</p>
+          <div className="space-y-4">
+            <div><Label>Nome do cliente *</Label><Input value={trialForm.name} onChange={(e) => setTrialForm({ ...trialForm, name: e.target.value })} /></div>
+            <div><Label>WhatsApp</Label><Input value={trialForm.whatsapp} onChange={(e) => setTrialForm({ ...trialForm, whatsapp: e.target.value })} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTrialGen(false)}>Cancelar</Button>
+            <Button onClick={handleGenerateTrial} className="gap-2">
+              <FlaskConical className="w-4 h-4" /> Gerar Teste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trials List Dialog */}
+      <Dialog open={showTrials} onOpenChange={setShowTrials}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="w-5 h-5 text-amber-500" />
+              Testes Pendentes — {selected?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-80 overflow-auto">
+            {trialClients.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">Nenhum teste pendente</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trialClients.map((tc) => (
+                    <TableRow key={tc.id}>
+                      <TableCell className="font-medium text-sm">{tc.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{tc.whatsapp || "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(tc.created_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" className="gap-1.5 h-7 text-xs" onClick={() => handleActivateTrial(tc.id)}>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Ativar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
