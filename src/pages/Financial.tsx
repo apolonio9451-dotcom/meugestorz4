@@ -51,14 +51,17 @@ export default function Financial() {
   const currentYear = new Date().getFullYear();
 
   const metrics = useMemo(() => {
+    // Recebido Hoje: assinaturas pagas cuja start_date é hoje
     const receivedToday = subs
       .filter((s) => s.payment_status === "paid" && s.start_date === today)
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
+    // Previsão do Dia: assinaturas pendentes que vencem hoje (precisam renovar)
     const forecastToday = subs
       .filter((s) => s.payment_status === "pending" && s.end_date === today)
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
+    // Total Recebido no Mês: todas as assinaturas pagas do mês atual
     const totalReceived = subs
       .filter((s) => {
         const d = new Date(s.start_date);
@@ -66,14 +69,26 @@ export default function Financial() {
       })
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
+    // Faturas em Aberto: pendentes + vencidas
     const openInvoices = subs
       .filter((s) => s.payment_status === "pending" || s.payment_status === "overdue")
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
-    const totalCosts = servers.reduce((sum, srv) => sum + Number(srv.cost_per_credit), 0);
-    const monthlyProfit = totalReceived - totalCosts;
+    // Receita Mensal Esperada: soma de TODAS as assinaturas ativas (não canceladas) do mês
+    const monthlyRevenue = subs
+      .filter((s) => {
+        const start = new Date(s.start_date);
+        const end = new Date(s.end_date);
+        const monthStart = new Date(currentYear, currentMonth, 1);
+        const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+        return s.payment_status !== "cancelled" && start <= monthEnd && end >= monthStart;
+      })
+      .reduce((sum, s) => sum + Number(s.amount), 0);
 
-    return { receivedToday, forecastToday, totalReceived, openInvoices, monthlyProfit };
+    const totalCosts = servers.reduce((sum, srv) => sum + Number(srv.cost_per_credit), 0);
+    const monthlyProfit = monthlyRevenue - totalCosts;
+
+    return { receivedToday, forecastToday, totalReceived, openInvoices, monthlyRevenue, monthlyProfit };
   }, [subs, servers, today, currentMonth, currentYear]);
 
   const chartData = useMemo(() => {
@@ -83,8 +98,11 @@ export default function Financial() {
       const label = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
       const total = subs
         .filter((s) => {
-          const sd = new Date(s.start_date);
-          return s.payment_status === "paid" && sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear();
+          const start = new Date(s.start_date);
+          const end = new Date(s.end_date);
+          const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
+          const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+          return s.payment_status !== "cancelled" && start <= mEnd && end >= mStart;
         })
         .reduce((sum, s) => sum + Number(s.amount), 0);
       months.push({ label, total });
@@ -94,11 +112,10 @@ export default function Financial() {
 
   const serverProfits = useMemo(() => {
     return servers.map((srv) => {
-      const serverSubs = subs.filter((s) => s.clients?.server === srv.name);
+      // Conta todas as assinaturas ativas (não canceladas) vinculadas ao servidor
+      const serverSubs = subs.filter((s) => s.clients?.server === srv.name && s.payment_status !== "cancelled");
       const clientCount = new Set(serverSubs.map((s) => s.clients?.name)).size;
-      const revenue = serverSubs
-        .filter((s) => s.payment_status === "paid")
-        .reduce((sum, s) => sum + Number(s.amount), 0);
+      const revenue = serverSubs.reduce((sum, s) => sum + Number(s.amount), 0);
       const cost = Number(srv.cost_per_credit);
       const profit = revenue - cost;
       const profitPerDay = profit / 30;
@@ -126,7 +143,7 @@ export default function Financial() {
   const metricCards = [
     { title: "Recebido Hoje", value: metrics.receivedToday, icon: DollarSign, trend: "up" as const },
     { title: "Previsão do Dia", value: metrics.forecastToday, icon: Clock, trend: "neutral" as const },
-    { title: "Total Recebido", value: metrics.totalReceived, icon: TrendingUp, trend: "up" as const },
+    { title: "Receita Mensal", value: metrics.monthlyRevenue, icon: TrendingUp, trend: "up" as const },
     { title: "Faturas em Aberto", value: metrics.openInvoices, icon: AlertCircle, trend: "down" as const },
     { title: "Lucro Mensal", value: metrics.monthlyProfit, icon: TrendingUp, trend: metrics.monthlyProfit >= 0 ? "up" as const : "down" as const },
     { title: "Total de Clientes", value: totalClients, icon: Users, trend: "neutral" as const, isCurrency: false },
