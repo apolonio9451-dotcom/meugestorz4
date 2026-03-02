@@ -262,7 +262,7 @@ export default function Clients() {
       case "ativos": return days !== null && days > 0;
       case "vence_hoje": return days !== null && days === 0;
       case "vence_amanha": return days !== null && days === 1;
-      case "a_vencer": return days !== null && days > 0 && days <= 7;
+      case "a_vencer": return days !== null && days >= 2 && days <= 7;
       case "vencidos": return days !== null && days < 0;
       default: return true;
     }
@@ -273,7 +273,7 @@ export default function Clients() {
     ativos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0; }).length,
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
-    a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0 && d <= 7; }).length,
+    a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d >= 2 && d <= 7; }).length,
     vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
   };
 
