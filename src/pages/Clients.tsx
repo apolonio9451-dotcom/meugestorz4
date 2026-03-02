@@ -536,12 +536,9 @@ export default function Clients() {
                 key={client.id}
                 className="rounded-xl border border-border/60 bg-card p-4 space-y-3 relative overflow-hidden"
               >
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-display font-bold text-foreground text-base">{client.name}</h3>
-                    {days !== null && getExpiryBadge(days)}
-                  </div>
+                {/* Row 1: Name + menu */}
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-display font-bold text-foreground text-base leading-tight">{client.name}</h3>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
@@ -559,9 +556,10 @@ export default function Clients() {
                   </DropdownMenu>
                 </div>
 
-                {/* Cobrança */}
-                {client.whatsapp && (
-                  <div className="flex items-center justify-end text-sm">
+                {/* Row 2: Expiry badge + Cobrar */}
+                <div className="flex items-center justify-between">
+                  <div>{days !== null && getExpiryBadge(days)}</div>
+                  {client.whatsapp && (
                     <a
                       href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent("Olá! Passando para lembrar sobre o pagamento da sua assinatura. Podemos ajudar?")}`}
                       target="_blank"
@@ -572,10 +570,10 @@ export default function Clients() {
                       <DollarSign className="w-3 h-3" />
                       Cobrar
                     </a>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* Badges: server + plan + price */}
+                {/* Row 3: Server + Plan + Price */}
                 <div className="flex items-center gap-2 flex-wrap">
                   {client.server && (
                     <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
@@ -589,7 +587,7 @@ export default function Clients() {
                   )}
                 </div>
 
-                {/* MAC & KEY */}
+                {/* Row 4: MAC & KEY */}
                 {clientMacKeys.length > 0 && (
                   <div className="space-y-1">
                     {clientMacKeys.map((mk, i) => (
@@ -601,7 +599,7 @@ export default function Clients() {
                   </div>
                 )}
 
-                {/* Progress bar */}
+                {/* Row 5: Progress bar + dates */}
                 {days !== null && sub && (
                   <div className="space-y-1.5 pt-1">
                     <div className="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
@@ -618,11 +616,6 @@ export default function Clients() {
                       <span>{format(parseISO(sub.end_date), "dd/MM/yyyy")}</span>
                     </div>
                   </div>
-                )}
-
-                {/* Red dot for expired */}
-                {days !== null && days <= 0 && (
-                  <div className="absolute bottom-3 right-3 w-2.5 h-2.5 rounded-full bg-destructive" />
                 )}
               </div>
             );
