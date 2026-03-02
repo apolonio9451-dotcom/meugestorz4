@@ -28,20 +28,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
   Coins,
   Search,
-  Pencil,
-  Trash2,
-  UserCog,
-  TrendingUp,
   History,
   Users,
+  TrendingUp,
   ShieldCheck,
+  Ban,
 } from "lucide-react";
+import ResellerCard from "@/components/resellers/ResellerCard";
 
 interface Reseller {
   id: string;
@@ -111,12 +110,10 @@ export default function Resellers() {
 
   const handleCreate = async () => {
     if (!companyId || !form.name.trim()) return;
-
     if (companyCredits <= 0) {
       toast({ title: "Sem créditos", description: "Adicione créditos ao painel para criar novos revendedores.", variant: "destructive" });
       return;
     }
-
     const { error } = await supabase.from("resellers").insert({
       company_id: companyId,
       name: form.name,
@@ -127,12 +124,7 @@ export default function Resellers() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      // Deduct 1 credit
-      await supabase
-        .from("companies")
-        .update({ credit_balance: companyCredits - 1 })
-        .eq("id", companyId);
-
+      await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
       toast({ title: "Revendedor criado com sucesso" });
       setShowCreate(false);
       setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
@@ -167,14 +159,26 @@ export default function Resellers() {
     }
   };
 
+  const handleToggleStatus = async (r: Reseller) => {
+    const newStatus = r.status === "active" ? "blocked" : "active";
+    const { error } = await supabase
+      .from("resellers")
+      .update({ status: newStatus })
+      .eq("id", r.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: newStatus === "active" ? "Revendedor desbloqueado" : "Revendedor bloqueado" });
+      fetchResellers();
+    }
+  };
+
   const handleAddCredits = async () => {
     if (!selected || !companyId || !creditForm.amount) return;
     const amount = parseInt(creditForm.amount);
     if (isNaN(amount) || amount === 0) return;
-
     const finalAmount = creditForm.type === "debit" ? -Math.abs(amount) : Math.abs(amount);
 
-    // Insert transaction
     const { error: txError } = await supabase.from("reseller_credit_transactions").insert({
       reseller_id: selected.id,
       company_id: companyId,
@@ -182,18 +186,15 @@ export default function Resellers() {
       type: creditForm.type,
       description: creditForm.description || (creditForm.type === "purchase" ? "Compra de créditos" : "Débito de créditos"),
     });
-
     if (txError) {
       toast({ title: "Erro", description: txError.message, variant: "destructive" });
       return;
     }
 
-    // Update balance
     const { error: upError } = await supabase
       .from("resellers")
       .update({ credit_balance: selected.credit_balance + finalAmount })
       .eq("id", selected.id);
-
     if (upError) {
       toast({ title: "Erro ao atualizar saldo", description: upError.message, variant: "destructive" });
     } else {
@@ -227,6 +228,10 @@ export default function Resellers() {
     setShowCredits(true);
   };
 
+  const handleViewClients = (r: Reseller) => {
+    toast({ title: "Em breve", description: `Visualização de clientes do revendedor ${r.name} será implementada.` });
+  };
+
   const filtered = resellers.filter(
     (r) =>
       r.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -236,6 +241,7 @@ export default function Resellers() {
 
   const totalCredits = resellers.reduce((s, r) => s + r.credit_balance, 0);
   const activeCount = resellers.filter((r) => r.status === "active").length;
+  const blockedCount = resellers.filter((r) => r.status === "blocked").length;
 
   const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
 
@@ -253,6 +259,7 @@ export default function Resellers() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Revendedores</h1>
@@ -261,7 +268,7 @@ export default function Resellers() {
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm font-mono">
             <Coins className="w-4 h-4 text-primary" />
-            {companyCredits} crédito{companyCredits !== 1 ? "s" : ""} disponíve{companyCredits !== 1 ? "is" : "l"}
+            {companyCredits} crédito{companyCredits !== 1 ? "s" : ""}
           </Badge>
           <Button
             onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }}
@@ -274,14 +281,14 @@ export default function Resellers() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
               <Users className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Total Revendedores</p>
+              <p className="text-xs text-muted-foreground">Total</p>
               <p className="text-xl font-bold text-foreground">{resellers.length}</p>
             </div>
           </CardContent>
@@ -294,6 +301,17 @@ export default function Resellers() {
             <div>
               <p className="text-xs text-muted-foreground">Ativos</p>
               <p className="text-xl font-bold text-foreground">{activeCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center">
+              <Ban className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Bloqueados</p>
+              <p className="text-xl font-bold text-foreground">{blockedCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -316,67 +334,27 @@ export default function Resellers() {
         <Input placeholder="Buscar revendedor..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
       </div>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>WhatsApp</TableHead>
-                <TableHead>Créditos</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum revendedor encontrado</TableCell></TableRow>
-              ) : (
-                filtered.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-foreground">{r.name}</p>
-                        {r.email && <p className="text-xs text-muted-foreground">{r.email}</p>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{r.whatsapp || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={r.credit_balance > 0 ? "default" : "secondary"} className="font-mono">
-                        {r.credit_balance}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={r.status === "active" ? "default" : "secondary"}>
-                        {r.status === "active" ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openCredits(r)} title="Gerenciar créditos">
-                          <Coins className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => openHistory(r)} title="Histórico">
-                          <History className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(r)} title="Editar">
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(r.id)} title="Excluir" className="text-destructive hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Cards Grid */}
+      {loading ? (
+        <p className="text-center text-muted-foreground py-8">Carregando...</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-muted-foreground py-8">Nenhum revendedor encontrado</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((r) => (
+            <ResellerCard
+              key={r.id}
+              reseller={r}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onCredits={openCredits}
+              onHistory={openHistory}
+              onToggleStatus={handleToggleStatus}
+              onViewClients={handleViewClients}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -410,7 +388,7 @@ export default function Resellers() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="blocked">Bloqueado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
