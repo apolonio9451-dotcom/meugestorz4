@@ -298,6 +298,47 @@ export type Database = {
           },
         ]
       }
+      credit_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          credit_cost_client: number
+          credit_cost_subreseller: number
+          credit_cost_trial: number
+          default_credit_value: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          credit_cost_client?: number
+          credit_cost_subreseller?: number
+          credit_cost_trial?: number
+          default_credit_value?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          credit_cost_client?: number
+          credit_cost_subreseller?: number
+          credit_cost_trial?: number
+          default_credit_value?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_templates: {
         Row: {
           category: string
@@ -493,6 +534,9 @@ export type Database = {
       }
       resellers: {
         Row: {
+          can_create_subreseller: boolean
+          can_create_trial: boolean
+          can_resell: boolean
           company_id: string
           created_at: string
           credit_balance: number
@@ -508,6 +552,9 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          can_create_subreseller?: boolean
+          can_create_trial?: boolean
+          can_resell?: boolean
           company_id: string
           created_at?: string
           credit_balance?: number
@@ -523,6 +570,9 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          can_create_subreseller?: boolean
+          can_create_trial?: boolean
+          can_resell?: boolean
           company_id?: string
           created_at?: string
           credit_balance?: number
