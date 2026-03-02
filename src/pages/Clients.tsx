@@ -443,11 +443,11 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-3 sm:space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground text-sm">{clients.length} clientes cadastrados</p>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Clientes</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm">{clients.length} clientes cadastrados</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); } }}>
           <DialogTrigger asChild>
@@ -624,7 +624,7 @@ export default function Clients() {
         <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
         {filters.map((f) => {
           const count = filterCounts[f.key as keyof typeof filterCounts];
           const isActive = filter === f.key;
@@ -633,7 +633,7 @@ export default function Clients() {
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all shrink-0",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all shrink-0 snap-start",
                 isActive ? f.color + " ring-1 ring-current" : "bg-card text-muted-foreground border-border/60 hover:bg-muted/50"
               )}
             >
@@ -654,7 +654,7 @@ export default function Clients() {
       {filtered.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">Nenhum cliente encontrado</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((client) => {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
@@ -663,7 +663,7 @@ export default function Clients() {
             return (
               <div
                 key={client.id}
-                className="rounded-xl border border-border/60 bg-card p-4 space-y-3 relative overflow-hidden"
+                className="rounded-xl border border-border/60 bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden"
               >
                 {/* Row 1: Name + menu */}
                 <div className="flex items-start justify-between gap-2">
