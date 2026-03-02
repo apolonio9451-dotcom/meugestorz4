@@ -23,7 +23,6 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
-  { href: "/dashboard/servers", label: "Servidores", icon: Server },
   {
     label: "Financeiro",
     icon: DollarSign,
@@ -35,7 +34,14 @@ const navItems = [
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
   { href: "/dashboard/resellers", label: "Revendedores", icon: UserCog },
-  { href: "/dashboard/settings", label: "Configurações", icon: Settings },
+  {
+    label: "Configurações",
+    icon: Settings,
+    children: [
+      { href: "/dashboard/servers", label: "Servidores", icon: Server },
+      { href: "/dashboard/settings", label: "Geral", icon: Settings },
+    ],
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -43,9 +49,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [financialOpen, setFinancialOpen] = useState(
-    location.pathname.startsWith("/dashboard/plans") || location.pathname.startsWith("/dashboard/subscriptions")
-  );
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
+    const open: Record<string, boolean> = {};
+    navItems.forEach((item) => {
+      if ("children" in item && item.children) {
+        if (item.children.some((c) => location.pathname.startsWith(c.href))) {
+          open[item.label] = true;
+        }
+      }
+    });
+    return open;
+  });
+
+  const toggleMenu = (label: string) =>
+    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
 
   const handleSignOut = async () => {
     await signOut();
@@ -83,7 +100,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               return (
                 <div key={item.label}>
                   <button
-                    onClick={() => setFinancialOpen(!financialOpen)}
+                    onClick={() => toggleMenu(item.label)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium transition-colors",
                       childActive
@@ -93,9 +110,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   >
                     <item.icon className="w-5 h-5" />
                     {item.label}
-                    <ChevronDown className={cn("w-4 h-4 ml-auto transition-transform", financialOpen && "rotate-180")} />
+                    <ChevronDown className={cn("w-4 h-4 ml-auto transition-transform", openMenus[item.label] && "rotate-180")} />
                   </button>
-                  {financialOpen && (
+                  {openMenus[item.label] && (
                     <div className="ml-4 mt-1 space-y-1">
                       {item.children.map((child) => (
                         <Link
