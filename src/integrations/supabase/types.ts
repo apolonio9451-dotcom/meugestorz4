@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_mac_keys: {
+        Row: {
+          client_id: string
+          company_id: string
+          created_at: string
+          id: string
+          key: string
+          mac: string
+        }
+        Insert: {
+          client_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          key?: string
+          mac?: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          key?: string
+          mac?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_mac_keys_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_mac_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_subscriptions: {
         Row: {
           amount: number
