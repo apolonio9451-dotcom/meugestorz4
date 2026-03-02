@@ -27,18 +27,18 @@ import {
   MessageCircle,
 } from "lucide-react";
 
-const navItems = [
+type NavItem = {
+  href?: string;
+  label: string;
+  icon: any;
+  children?: { href: string; label: string; icon: any }[];
+  adminOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
-  {
-    label: "Gestão de Acessos",
-    icon: KeyRound,
-    children: [
-      { href: "/dashboard/users", label: "Usuários", icon: UserCog },
-      { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
-      { href: "/dashboard/resellers", label: "Revendas", icon: Store },
-    ],
-  },
+  { href: "/dashboard/resellers", label: "Revendedores", icon: Store },
   {
     label: "Financeiro",
     icon: DollarSign,
@@ -57,6 +57,15 @@ const navItems = [
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
       { href: "/dashboard/settings", label: "Geral", icon: Settings },
+    ],
+  },
+  {
+    label: "Gestão de Acessos",
+    icon: KeyRound,
+    adminOnly: true,
+    children: [
+      { href: "/dashboard/users", label: "Usuários", icon: UserCog },
+      { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
     ],
   },
 ];
@@ -162,7 +171,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems
+            .filter((item) => !item.adminOnly || userRole === "Proprietário" || userRole === "Administrador")
+            .map((item) => {
             if ("children" in item && item.children) {
               const childActive = item.children.some((c) => isActive(c.href));
               const isOpen = openMenus[item.label];
