@@ -131,23 +131,27 @@ export default function Servers() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {servers.map((s) => (
-            <div key={s.id} className="flex items-center justify-between rounded-xl border border-primary/20 bg-card p-4 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_20px_-3px_hsl(var(--primary)/0.35)] transition-all duration-300">
+            <div
+              key={s.id}
+              className="flex items-center justify-between rounded-xl border border-primary/20 bg-card p-4 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_20px_-3px_hsl(var(--primary)/0.35)] transition-all duration-300 cursor-pointer"
+              onClick={() => { if (s.url) window.open(s.url.startsWith("http") ? s.url : `http://${s.url}`, "_blank"); }}
+            >
               <div className="flex flex-col">
                 <span className="font-semibold text-foreground">{s.name}</span>
-                {s.url && <span className="text-[11px] text-muted-foreground truncate max-w-[180px]">{s.url}</span>}
+                {s.url && <span className="text-[11px] text-primary/70 truncate max-w-[180px] underline underline-offset-2">{s.url}</span>}
                 <span className="text-xs text-muted-foreground">R$ {Number(s.cost_per_credit).toFixed(2).replace(".", ",")} / crédito</span>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <MoreVertical className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEdit(s)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
                     <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(s)}>
+                  <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(s); }}>
                     <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
                   </DropdownMenuItem>
                 </DropdownMenuContent>
