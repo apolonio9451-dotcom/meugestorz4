@@ -185,9 +185,14 @@ export default function Clients() {
 
   const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "" }]);
   const removeMacKey = (index: number) => setFormMacKeys(formMacKeys.filter((_, i) => i !== index));
+  const formatMac = (value: string) => {
+    const raw = value.replace(/[^a-fA-F0-9]/g, "").slice(0, 12);
+    return raw.match(/.{1,2}/g)?.join(":") || raw;
+  };
+
   const updateMacKey = (index: number, field: "mac" | "key", value: string) => {
     const updated = [...formMacKeys];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], [field]: field === "mac" ? formatMac(value) : value };
     setFormMacKeys(updated);
   };
 
@@ -302,7 +307,7 @@ export default function Clients() {
                   {formMacKeys.map((mk, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
-                        placeholder="MAC Address"
+                        placeholder="ee:b9:5a:ed:49:40"
                         value={mk.mac}
                         onChange={(e) => updateMacKey(index, "mac", e.target.value)}
                         className="text-sm"
