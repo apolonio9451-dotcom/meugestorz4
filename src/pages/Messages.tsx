@@ -77,6 +77,7 @@ export default function Messages() {
   const [templates, setTemplates] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("vence_hoje");
 
   useEffect(() => {
     if (!user) return;
@@ -162,11 +163,11 @@ export default function Messages() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="vence_hoje" className="w-full">
+      <Tabs defaultValue="vence_hoje" className="w-full" onValueChange={(v) => setActiveTab(v)}>
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
           {categories.map((cat) => (
-            <TabsTrigger key={cat.key} value={cat.key} className="text-xs">
-              <Badge variant="outline" className={`${cat.color} border text-xs`}>
+            <TabsTrigger key={cat.key} value={cat.key} className="text-xs data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              <Badge variant="outline" className={`border text-xs transition-colors ${activeTab === cat.key ? cat.color : "bg-muted/50 text-muted-foreground border-border"}`}>
                 {cat.label}
               </Badge>
             </TabsTrigger>
