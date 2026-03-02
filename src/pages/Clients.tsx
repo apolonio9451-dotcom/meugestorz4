@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 
 interface Client {
