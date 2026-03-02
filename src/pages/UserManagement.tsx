@@ -169,13 +169,13 @@ export default function UserManagement() {
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
-            Gestão de Usuários
+            Gestão de Revendedores
           </h1>
           <p className="text-sm text-muted-foreground">Adicione, remova e gerencie cargos dos membros da sua equipe.</p>
         </div>
         <Button onClick={() => setAddOpen(true)} className="gap-2">
           <UserPlus className="w-4 h-4" />
-          Novo Usuário
+          Novo Revendedor
         </Button>
       </div>
 
