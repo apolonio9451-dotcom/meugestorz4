@@ -17,6 +17,12 @@ interface Client {
   name: string;
   email: string;
   phone: string;
+  whatsapp: string;
+  cpf: string;
+  notes: string;
+  server: string;
+  iptv_user: string;
+  iptv_password: string;
   address: string;
   status: string;
   created_at: string;
@@ -50,6 +56,12 @@ export default function Clients() {
     const payload = {
       name: form.get("name") as string,
       email: form.get("email") as string,
+      whatsapp: form.get("whatsapp") as string,
+      cpf: form.get("cpf") as string,
+      notes: form.get("notes") as string,
+      server: form.get("server") as string,
+      iptv_user: form.get("iptv_user") as string,
+      iptv_password: form.get("iptv_password") as string,
       phone: form.get("phone") as string,
       address: form.get("address") as string,
       status: form.get("status") as string,
@@ -100,25 +112,67 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle>{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome</Label>
-                <Input name="name" required defaultValue={editing?.name || ""} />
+            <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dados Pessoais</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Nome *</Label>
+                    <Input name="name" required placeholder="Nome completo" defaultValue={editing?.name || ""} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>WhatsApp *</Label>
+                      <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Email</Label>
+                      <Input name="email" type="email" placeholder="email@exemplo.com" defaultValue={editing?.email || ""} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>CPF</Label>
+                      <Input name="cpf" placeholder="000.000.000-00" defaultValue={editing?.cpf || ""} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Observações</Label>
+                      <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input name="phone" placeholder="Telefone fixo" defaultValue={editing?.phone || ""} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Endereço</Label>
+                    <Input name="address" placeholder="Endereço completo" defaultValue={editing?.address || ""} />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input name="email" type="email" defaultValue={editing?.email || ""} />
+
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Servidor & Assinatura</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Servidor</Label>
+                    <Input name="server" placeholder="Nome do servidor" defaultValue={editing?.server || ""} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Usuário IPTV *</Label>
+                      <Input name="iptv_user" required placeholder="usuario_iptv" defaultValue={editing?.iptv_user || ""} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Senha IPTV *</Label>
+                      <Input name="iptv_password" required placeholder="senha_iptv" defaultValue={editing?.iptv_password || ""} />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input name="phone" defaultValue={editing?.phone || ""} />
-              </div>
-              <div className="space-y-2">
-                <Label>Endereço</Label>
-                <Input name="address" defaultValue={editing?.address || ""} />
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
+
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Status</p>
                 <Select name="status" defaultValue={editing?.status || "active"}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -128,6 +182,7 @@ export default function Clients() {
                   </SelectContent>
                 </Select>
               </div>
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Salvando..." : "Salvar"}
               </Button>
@@ -144,11 +199,11 @@ export default function Clients() {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden md:table-cell">Telefone</TableHead>
+                <TableHead className="hidden md:table-cell">WhatsApp</TableHead>
+                <TableHead className="hidden md:table-cell">Usuário IPTV</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
@@ -160,8 +215,8 @@ export default function Clients() {
                 filtered.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.email}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.phone}</TableCell>
+                    <TableCell className="hidden md:table-cell">{client.whatsapp}</TableCell>
+                    <TableCell className="hidden md:table-cell">{client.iptv_user}</TableCell>
                     <TableCell>{statusBadge(client.status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">

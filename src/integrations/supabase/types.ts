@@ -79,35 +79,53 @@ export type Database = {
         Row: {
           address: string | null
           company_id: string
+          cpf: string | null
           created_at: string
           email: string | null
           id: string
+          iptv_password: string | null
+          iptv_user: string | null
           name: string
+          notes: string | null
           phone: string | null
+          server: string | null
           status: string
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           address?: string | null
           company_id: string
+          cpf?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          iptv_password?: string | null
+          iptv_user?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
+          server?: string | null
           status?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           address?: string | null
           company_id?: string
+          cpf?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          iptv_password?: string | null
+          iptv_user?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
+          server?: string | null
           status?: string
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {
