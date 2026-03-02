@@ -1,16 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { MessageCircle, RefreshCw, Send } from "lucide-react";
+import { Clock, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const CAMPAIGN_STEPS = [
-  { key: "winback_day1", day: 1, label: "Dia 1" },
-  { key: "winback_day3", day: 3, label: "Dia 3" },
-  { key: "winback_day6", day: 6, label: "Dia 6" },
-  { key: "winback_day10", day: 10, label: "Dia 10" },
-  { key: "winback_day15", day: 15, label: "Dia 15" },
+  { key: "winback_day1", day: 1, label: "Dia 1", minGapDays: 0 },
+  { key: "winback_day3", day: 3, label: "Dia 3", minGapDays: 2 },
+  { key: "winback_day6", day: 6, label: "Dia 6", minGapDays: 3 },
+  { key: "winback_day10", day: 10, label: "Dia 10", minGapDays: 4 },
+  { key: "winback_day15", day: 15, label: "Dia 15", minGapDays: 5 },
 ];
 
 export interface WinBackClient {
@@ -29,13 +29,33 @@ interface Props {
   client: WinBackClient;
   companyId: string;
   currentStep: number;
+  lastSentAt: string | null;
   templates: Record<string, string>;
   onReactivated: (id: string) => void;
-  onStepAdvanced: (clientId: string, newStep: number) => void;
+  onStepAdvanced: (clientId: string, newStep: number, sentAt: string) => void;
 }
 
-export default function WinBackClientRow({ client, companyId, currentStep, templates, onReactivated, onStepAdvanced }: Props) {
+export default function WinBackClientRow({ client, companyId, currentStep, lastSentAt, templates, onReactivated, onStepAdvanced }: Props) {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const isStepAvailable = () => {
+    if (currentStep >= CAMPAIGN_STEPS.length) return false;
+    if (currentStep === 0) return true; // First step always available
+    const step = CAMPAIGN_STEPS[currentStep];
+    if (!lastSentAt) return true;
+    const daysSinceLast = Math.floor((Date.now() - new Date(lastSentAt).getTime()) / (1000 * 60 * 60 * 24));
+    return daysSinceLast >= step.minGapDays;
+  };
+
+  const getDaysUntilAvailable = () => {
+    if (currentStep >= CAMPAIGN_STEPS.length || currentStep === 0 || !lastSentAt) return 0;
+    const step = CAMPAIGN_STEPS[currentStep];
+    const daysSinceLast = Math.floor((Date.now() - new Date(lastSentAt).getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, step.minGapDays - daysSinceLast);
+  };
+
+  const available = isStepAvailable();
+  const daysLeft = getDaysUntilAvailable();
 
   const daysBadge = (days: number) => {
     if (days >= 90) return <Badge variant="outline" className="bg-destructive/10 text-destructive">{days}d</Badge>;
@@ -63,21 +83,26 @@ export default function WinBackClientRow({ client, companyId, currentStep, templ
       .replace(/{servidor}/g, client.server || "—");
 
     const phone = client.whatsapp.replace(/\D/g, "");
+    if (!available) {
+      toast.warning(`Aguarde mais ${daysLeft} dia(s) para enviar ${step.label}`);
+      return;
+    }
+
     window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, "_blank");
 
-    // Advance step
+    const nowISO = new Date().toISOString();
     const newStep = currentStep + 1;
     const { error } = await supabase
       .from("winback_campaign_progress")
       .upsert(
-        { company_id: companyId, client_id: client.id, current_step: newStep, last_sent_at: new Date().toISOString() },
+        { company_id: companyId, client_id: client.id, current_step: newStep, last_sent_at: nowISO },
         { onConflict: "company_id,client_id" }
       );
 
     if (error) {
       toast.error("Erro ao atualizar progresso");
     } else {
-      onStepAdvanced(client.id, newStep);
+      onStepAdvanced(client.id, newStep, nowISO);
       toast.success(`${step.label} enviado para ${client.name}`);
     }
   };
@@ -133,16 +158,23 @@ export default function WinBackClientRow({ client, companyId, currentStep, templ
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">
           {currentStep < CAMPAIGN_STEPS.length && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 text-xs text-primary hover:text-primary"
-              title={`Enviar ${stepInfo?.label}`}
-              onClick={handleSendCampaignMessage}
-            >
-              <Send className="w-3.5 h-3.5" />
-              {stepInfo?.label}
-            </Button>
+            available ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 text-xs text-primary hover:text-primary animate-pulse"
+                title={`Enviar ${stepInfo?.label}`}
+                onClick={handleSendCampaignMessage}
+              >
+                <Send className="w-3.5 h-3.5" />
+                {stepInfo?.label}
+              </Button>
+            ) : (
+              <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
+                <Clock className="w-3 h-3 mr-1" />
+                {daysLeft}d restante(s)
+              </Badge>
+            )
           )}
           <Button variant="ghost" size="icon" className="h-8 w-8" title="Reativar cliente" onClick={handleReactivate}>
             <RefreshCw className="w-4 h-4 text-primary" />

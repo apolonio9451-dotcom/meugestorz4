@@ -17,7 +17,7 @@ export default function WinBack() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "45" | "60" | "90">("all");
-  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [progress, setProgress] = useState<Record<string, { step: number; lastSentAt: string | null }>>({});
   const [templates, setTemplates] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function WinBack() {
     Promise.all([
       supabase.from("clients").select("id, name, whatsapp, server, status").eq("company_id", companyId),
       supabase.from("client_subscriptions").select("client_id, end_date, amount, subscription_plans(name)").eq("company_id", companyId).order("end_date", { ascending: false }),
-      supabase.from("winback_campaign_progress").select("client_id, current_step").eq("company_id", companyId),
+      supabase.from("winback_campaign_progress").select("client_id, current_step, last_sent_at").eq("company_id", companyId),
       supabase.from("message_templates").select("category, message").eq("company_id", companyId).like("category", "winback_%"),
     ]).then(([clientsRes, subsRes, progressRes, templatesRes]) => {
       const allClients = clientsRes.data || [];
@@ -35,8 +35,8 @@ export default function WinBack() {
       const today = new Date();
 
       // Build progress map
-      const pMap: Record<string, number> = {};
-      (progressRes.data || []).forEach((p: any) => { pMap[p.client_id] = p.current_step; });
+      const pMap: Record<string, { step: number; lastSentAt: string | null }> = {};
+      (progressRes.data || []).forEach((p: any) => { pMap[p.client_id] = { step: p.current_step, lastSentAt: p.last_sent_at }; });
       setProgress(pMap);
 
       // Build templates map
@@ -90,8 +90,8 @@ export default function WinBack() {
     d90: clients.filter((c) => c.days_expired >= 90).length,
   }), [clients]);
 
-  const handleStepAdvanced = (clientId: string, newStep: number) => {
-    setProgress((prev) => ({ ...prev, [clientId]: newStep }));
+  const handleStepAdvanced = (clientId: string, newStep: number, sentAt: string) => {
+    setProgress((prev) => ({ ...prev, [clientId]: { step: newStep, lastSentAt: sentAt } }));
   };
 
   const handleReactivated = (clientId: string) => {
@@ -176,7 +176,8 @@ export default function WinBack() {
                         key={client.id}
                         client={client}
                         companyId={companyId!}
-                        currentStep={progress[client.id] || 0}
+                        currentStep={progress[client.id]?.step || 0}
+                        lastSentAt={progress[client.id]?.lastSentAt || null}
                         templates={templates}
                         onReactivated={handleReactivated}
                         onStepAdvanced={handleStepAdvanced}
