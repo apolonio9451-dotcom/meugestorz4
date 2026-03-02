@@ -18,6 +18,8 @@ import Marketing from "@/pages/Marketing";
 import Resellers from "@/pages/Resellers";
 import SettingsPage from "@/pages/Settings";
 import Messages from "@/pages/Messages";
+import UserManagement from "@/pages/UserManagement";
+import AccessControl from "@/pages/AccessControl";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +49,8 @@ const App = () => (
             <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
             <Route path="/dashboard/resellers" element={<DashboardRoute><Resellers /></DashboardRoute>} />
+            <Route path="/dashboard/users" element={<DashboardRoute><UserManagement /></DashboardRoute>} />
+            <Route path="/dashboard/access-control" element={<DashboardRoute><AccessControl /></DashboardRoute>} />
             <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
             <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
             <Route path="*" element={<NotFound />} />
