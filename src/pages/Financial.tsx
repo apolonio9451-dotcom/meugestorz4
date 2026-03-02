@@ -74,14 +74,11 @@ export default function Financial() {
       .filter((s) => s.payment_status === "pending" || s.payment_status === "overdue")
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
-    // Receita Mensal Esperada: soma de TODAS as assinaturas ativas (não canceladas) do mês
+    // Receita Mensal: apenas assinaturas criadas/renovadas no mês atual (start_date no mês)
     const monthlyRevenue = subs
       .filter((s) => {
-        const start = new Date(s.start_date);
-        const end = new Date(s.end_date);
-        const monthStart = new Date(currentYear, currentMonth, 1);
-        const monthEnd = new Date(currentYear, currentMonth + 1, 0);
-        return s.payment_status !== "cancelled" && start <= monthEnd && end >= monthStart;
+        const d = new Date(s.start_date);
+        return s.payment_status !== "cancelled" && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       })
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
@@ -98,11 +95,8 @@ export default function Financial() {
       const label = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
       const total = subs
         .filter((s) => {
-          const start = new Date(s.start_date);
-          const end = new Date(s.end_date);
-          const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
-          const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-          return s.payment_status !== "cancelled" && start <= mEnd && end >= mStart;
+          const sd = new Date(s.start_date);
+          return s.payment_status !== "cancelled" && sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear();
         })
         .reduce((sum, s) => sum + Number(s.amount), 0);
       months.push({ label, total });
@@ -112,8 +106,11 @@ export default function Financial() {
 
   const serverProfits = useMemo(() => {
     return servers.map((srv) => {
-      // Conta todas as assinaturas ativas (não canceladas) vinculadas ao servidor
-      const serverSubs = subs.filter((s) => s.clients?.server === srv.name && s.payment_status !== "cancelled");
+      // Apenas assinaturas criadas/renovadas no mês atual vinculadas ao servidor
+      const serverSubs = subs.filter((s) => {
+        const sd = new Date(s.start_date);
+        return s.clients?.server === srv.name && s.payment_status !== "cancelled" && sd.getMonth() === currentMonth && sd.getFullYear() === currentYear;
+      });
       const clientCount = new Set(serverSubs.map((s) => s.clients?.name)).size;
       const revenue = serverSubs.reduce((sum, s) => sum + Number(s.amount), 0);
       const cost = Number(srv.cost_per_credit);
