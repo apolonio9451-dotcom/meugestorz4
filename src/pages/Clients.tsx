@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon } from "lucide-react";
-import { addDays, differenceInDays, format, parseISO } from "date-fns";
+import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -244,7 +244,7 @@ export default function Clients() {
     setFormMacKeys(updated);
   };
 
-  const getDaysRemaining = (endDate: string) => differenceInDays(parseISO(endDate), new Date());
+  const getDaysRemaining = (endDate: string) => differenceInCalendarDays(parseISO(endDate), new Date());
 
   const searchFiltered = clients.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) || 
