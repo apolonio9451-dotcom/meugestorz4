@@ -353,8 +353,10 @@ export type Database = {
           credit_balance: number
           email: string | null
           id: string
+          level: number
           name: string
           notes: string | null
+          parent_reseller_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -366,8 +368,10 @@ export type Database = {
           credit_balance?: number
           email?: string | null
           id?: string
+          level?: number
           name: string
           notes?: string | null
+          parent_reseller_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -379,8 +383,10 @@ export type Database = {
           credit_balance?: number
           email?: string | null
           id?: string
+          level?: number
           name?: string
           notes?: string | null
+          parent_reseller_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -392,6 +398,112 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resellers_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_plans: {
+        Row: {
+          allow_sub_resellers: boolean
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          max_clients: number
+          max_resellers: number
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          allow_sub_resellers?: boolean
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          max_clients?: number
+          max_resellers?: number
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_sub_resellers?: boolean
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          max_clients?: number
+          max_resellers?: number
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      saas_subscriptions: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          payment_status: string
+          saas_plan_id: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          company_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          payment_status?: string
+          saas_plan_id: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          payment_status?: string
+          saas_plan_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_subscriptions_saas_plan_id_fkey"
+            columns: ["saas_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
             referencedColumns: ["id"]
           },
         ]

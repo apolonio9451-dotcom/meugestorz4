@@ -12,6 +12,7 @@ import {
   X,
   Building2,
   Server,
+  Crown,
   DollarSign,
   RotateCcw,
   Megaphone,
@@ -31,6 +32,7 @@ const navItems = [
     ],
   },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
+  { href: "/dashboard/master", label: "Painel Master", icon: Crown },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
   
   {

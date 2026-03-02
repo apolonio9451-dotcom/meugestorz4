@@ -18,6 +18,7 @@ import Servers from "@/pages/Servers";
 import Financial from "@/pages/Financial";
 import WinBack from "@/pages/WinBack";
 import Marketing from "@/pages/Marketing";
+import MasterPanel from "@/pages/MasterPanel";
 
 import SettingsPage from "@/pages/Settings";
 import Messages from "@/pages/Messages";
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/dashboard/subscriptions" element={<DashboardRoute><Subscriptions /></DashboardRoute>} />
               <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
               <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
+              <Route path="/dashboard/master" element={<DashboardRoute><MasterPanel /></DashboardRoute>} />
               
               <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
               <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
