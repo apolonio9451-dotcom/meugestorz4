@@ -62,7 +62,9 @@ export type Database = {
           client_id: string
           company_id: string
           created_at: string
+          custom_price: number | null
           end_date: string
+          financial_notes: string | null
           id: string
           payment_status: string
           plan_id: string
@@ -74,7 +76,9 @@ export type Database = {
           client_id: string
           company_id: string
           created_at?: string
+          custom_price?: number | null
           end_date: string
+          financial_notes?: string | null
           id?: string
           payment_status?: string
           plan_id: string
@@ -86,7 +90,9 @@ export type Database = {
           client_id?: string
           company_id?: string
           created_at?: string
+          custom_price?: number | null
           end_date?: string
+          financial_notes?: string | null
           id?: string
           payment_status?: string
           plan_id?: string
@@ -191,18 +197,21 @@ export type Database = {
       }
       companies: {
         Row: {
+          auto_block_days: number | null
           created_at: string
           id: string
           name: string
           updated_at: string
         }
         Insert: {
+          auto_block_days?: number | null
           created_at?: string
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
+          auto_block_days?: number | null
           created_at?: string
           id?: string
           name?: string
@@ -301,6 +310,54 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_activity_logs: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          reseller_id: string
+        }
+        Insert: {
+          action: string
+          company_id: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          reseller_id: string
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          reseller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_activity_logs_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_credit_transactions: {
         Row: {
           amount: number
@@ -341,6 +398,47 @@ export type Database = {
             foreignKeyName: "reseller_credit_transactions_reseller_id_fkey"
             columns: ["reseller_id"]
             isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reseller_settings: {
+        Row: {
+          billing_message: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          reseller_id: string
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          billing_message?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          reseller_id: string
+          service_name?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_message?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          reseller_id?: string
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_settings_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
             referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
