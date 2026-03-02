@@ -22,6 +22,7 @@ import {
   KeyRound,
   ShieldCheck,
   Store,
+  History,
 } from "lucide-react";
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
       { href: "/dashboard/users", label: "Usuários", icon: UserCog },
       { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
       { href: "/dashboard/resellers", label: "Revendas", icon: Store },
+      { href: "/dashboard/credit-history", label: "Histórico de Créditos", icon: History },
     ],
   },
   {
