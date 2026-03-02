@@ -64,7 +64,7 @@ const navItems: NavItem[] = [
     icon: KeyRound,
     adminOnly: true,
     children: [
-      { href: "/dashboard/users", label: "Usuários", icon: UserCog },
+      { href: "/dashboard/users", label: "Revendedores", icon: Store },
       { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
     ],
   },
