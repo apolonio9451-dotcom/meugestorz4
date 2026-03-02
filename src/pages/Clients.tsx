@@ -662,10 +662,20 @@ export default function Clients() {
             const days = sub ? getDaysRemaining(sub.end_date) : null;
             const clientMacKeys = macKeys[client.id] || [];
 
+            const neonColor = days === null
+              ? "border-muted-foreground/20 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.15)] hover:shadow-[0_0_20px_-3px_hsl(var(--muted-foreground)/0.3)]"
+              : days < 0
+                ? "border-destructive/30 shadow-[0_0_12px_-3px_hsl(var(--destructive)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--destructive)/0.5)]"
+                : days === 0
+                  ? "border-orange-500/30 shadow-[0_0_12px_-3px_rgb(249_115_22/0.3)] hover:shadow-[0_0_20px_-3px_rgb(249_115_22/0.5)]"
+                  : days <= 7
+                    ? "border-yellow-500/30 shadow-[0_0_12px_-3px_rgb(234_179_8/0.3)] hover:shadow-[0_0_20px_-3px_rgb(234_179_8/0.5)]"
+                    : "border-emerald-500/30 shadow-[0_0_12px_-3px_rgb(16_185_129/0.3)] hover:shadow-[0_0_20px_-3px_rgb(16_185_129/0.5)]";
+
             return (
               <div
                 key={client.id}
-                className="rounded-xl border border-primary/20 bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden shadow-[0_0_12px_-3px_hsl(var(--primary)/0.25)] hover:shadow-[0_0_20px_-3px_hsl(var(--primary)/0.4)] transition-all duration-300"
+                className={`rounded-xl border bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden transition-all duration-300 ${neonColor}`}
               >
                 {/* Row 1: Name + menu */}
                 <div className="flex items-center justify-between gap-2">
