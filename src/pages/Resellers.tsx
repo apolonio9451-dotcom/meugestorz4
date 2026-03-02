@@ -59,18 +59,16 @@ interface Reseller {
   level: number;
 }
 
-export type ResellerRole = "reseller" | "master" | "trial_only";
+export type ResellerRole = "admin" | "user";
 
-export function getResellerRole(r: { can_resell: boolean; can_create_subreseller: boolean; can_create_trial: boolean }): ResellerRole {
-  if (r.can_resell && r.can_create_subreseller) return "master";
-  if (r.can_resell) return "reseller";
-  return "trial_only";
+export function getResellerRole(r: { can_resell: boolean; can_create_subreseller: boolean }): ResellerRole {
+  if (r.can_resell || r.can_create_subreseller) return "admin";
+  return "user";
 }
 
 export const roleLabels: Record<ResellerRole, string> = {
-  master: "Revendedor Master",
-  reseller: "Revendedor",
-  trial_only: "Somente Teste",
+  admin: "Administrador",
+  user: "Usuário",
 };
 
 interface CreditTransaction {
@@ -100,7 +98,7 @@ export default function Resellers() {
   const [showTrialGen, setShowTrialGen] = useState(false);
   const [showTrials, setShowTrials] = useState(false);
   const [selected, setSelected] = useState<Reseller | null>(null);
-  const [selectedRole, setSelectedRole] = useState<ResellerRole>("reseller");
+  const [selectedRole, setSelectedRole] = useState<ResellerRole>("user");
 
   // Trial clients per reseller
   interface TrialClient { id: string; name: string; whatsapp: string; created_at: string; status: string; }
@@ -111,6 +109,7 @@ export default function Resellers() {
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
   const [creditForm, setCreditForm] = useState({ amount: "", type: "purchase", description: "" });
   const [trialForm, setTrialForm] = useState({ name: "", whatsapp: "" });
+  const [trialResellerId, setTrialResellerId] = useState<string>("");
 
   const fetchCompanyCredits = async () => {
     if (!companyId) return;
@@ -281,17 +280,20 @@ export default function Resellers() {
     toast({ title: "Em breve", description: `Visualização de clientes do revendedor ${r.name} será implementada.` });
   };
 
-  const openTrialGen = (r: Reseller) => {
-    setSelected(r);
+  const openTrialGen = () => {
+    setSelected(null);
     setTrialForm({ name: "", whatsapp: "" });
     setShowTrialGen(true);
   };
 
+  
+
   const handleGenerateTrial = async () => {
-    if (!selected || !companyId || !trialForm.name.trim()) return;
+    if (!companyId || !trialForm.name.trim()) return;
+    const resId = trialResellerId && trialResellerId !== "none" ? trialResellerId : null;
     const { error } = await supabase.from("clients").insert({
       company_id: companyId,
-      reseller_id: selected.id,
+      reseller_id: resId,
       name: trialForm.name,
       whatsapp: trialForm.whatsapp,
       status: "trial",
@@ -302,6 +304,7 @@ export default function Resellers() {
       toast({ title: "Teste gerado com sucesso", description: "O acesso de teste foi criado sem consumir créditos." });
       setShowTrialGen(false);
       setTrialForm({ name: "", whatsapp: "" });
+      setTrialResellerId("");
       fetchTrialCounts();
     }
   };
@@ -352,9 +355,8 @@ export default function Resellers() {
   const handleRoleChange = async () => {
     if (!selected) return;
     const permissions = {
-      master: { can_resell: true, can_create_subreseller: true, can_create_trial: true },
-      reseller: { can_resell: true, can_create_subreseller: false, can_create_trial: true },
-      trial_only: { can_resell: false, can_create_subreseller: false, can_create_trial: true },
+      admin: { can_resell: true, can_create_subreseller: true, can_create_trial: true },
+      user: { can_resell: false, can_create_subreseller: false, can_create_trial: true },
     };
     const { error } = await supabase.from("resellers").update(permissions[selectedRole]).eq("id", selected.id);
     if (error) {
@@ -406,6 +408,13 @@ export default function Resellers() {
             <Coins className="w-4 h-4 text-primary" />
             {isOwner ? "∞" : companyCredits} crédito{!isOwner && companyCredits !== 1 ? "s" : "s"}
           </Badge>
+          <Button
+            variant="outline"
+            onClick={() => openTrialGen()}
+            className="gap-2"
+          >
+            <FlaskConical className="w-4 h-4" /> Gerar Teste
+          </Button>
           <Button
             onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }}
             className="gap-2"
@@ -488,7 +497,6 @@ export default function Resellers() {
               onToggleStatus={handleToggleStatus}
               onViewClients={handleViewClients}
               onChangeRole={openRoleChange}
-              onGenerateTrial={openTrialGen}
               onViewTrials={openTrials}
               trialCount={trialCounts[r.id] || 0}
             />
@@ -630,15 +638,13 @@ export default function Resellers() {
               <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as ResellerRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="master">Revendedor Master</SelectItem>
-                  <SelectItem value="reseller">Revendedor</SelectItem>
-                  <SelectItem value="trial_only">Somente Teste</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="user">Usuário</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-2">
-                {selectedRole === "master" && "Pode revender, criar sub-revendedores e gerar testes."}
-                {selectedRole === "reseller" && "Pode revender e gerar testes. Não cria sub-revendedores."}
-                {selectedRole === "trial_only" && "Pode apenas gerar acessos de teste."}
+                {selectedRole === "admin" && "Acesso completo: pode revender, criar sub-revendedores e acessar gestão de acessos."}
+                {selectedRole === "user" && "Acesso básico: pode apenas gerar testes. Sem acesso à gestão de acessos."}
               </p>
             </div>
           </div>
@@ -655,11 +661,23 @@ export default function Resellers() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FlaskConical className="w-5 h-5 text-amber-500" />
-              Gerar Teste — {selected?.name}
+              Gerar Teste
             </DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">O teste é gerado sem consumir créditos. Ao confirmar a venda, ative o acesso para debitar 1 crédito.</p>
           <div className="space-y-4">
+            <div>
+              <Label>Revendedor (opcional)</Label>
+              <Select value={trialResellerId} onValueChange={setTrialResellerId}>
+                <SelectTrigger><SelectValue placeholder="Sem revendedor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem revendedor</SelectItem>
+                  {resellers.filter(r => r.status === "active").map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Nome do cliente *</Label><Input value={trialForm.name} onChange={(e) => setTrialForm({ ...trialForm, name: e.target.value })} /></div>
             <div><Label>WhatsApp</Label><Input value={trialForm.whatsapp} onChange={(e) => setTrialForm({ ...trialForm, whatsapp: e.target.value })} /></div>
           </div>
