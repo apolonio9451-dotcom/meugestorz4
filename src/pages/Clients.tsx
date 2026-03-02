@@ -4,13 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock } from "lucide-react";
+import { differenceInDays, format, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -28,9 +28,19 @@ interface Client {
   created_at: string;
 }
 
+interface Subscription {
+  id: string;
+  client_id: string;
+  end_date: string;
+  amount: number;
+  plan_id: string;
+  plan_name?: string;
+}
+
 export default function Clients() {
   const { companyId } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
@@ -46,7 +56,32 @@ export default function Clients() {
     setClients(data || []);
   };
 
-  useEffect(() => { fetchClients(); }, [companyId]);
+  const fetchSubscriptions = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("client_subscriptions")
+      .select("id, client_id, end_date, amount, plan_id")
+      .eq("company_id", companyId);
+    
+    if (data) {
+      const planIds = [...new Set(data.map(s => s.plan_id))];
+      const { data: plans } = await supabase
+        .from("subscription_plans")
+        .select("id, name")
+        .in("id", planIds);
+      const planMap = Object.fromEntries((plans || []).map(p => [p.id, p.name]));
+
+      const map: Record<string, Subscription> = {};
+      for (const sub of data) {
+        if (!map[sub.client_id] || sub.end_date > map[sub.client_id].end_date) {
+          map[sub.client_id] = { ...sub, plan_name: planMap[sub.plan_id] || "Plano" };
+        }
+      }
+      setSubscriptions(map);
+    }
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); }, [companyId]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -88,13 +123,36 @@ export default function Clients() {
   };
 
   const filtered = clients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
+    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
   );
 
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = { active: "bg-success/10 text-success", inactive: "bg-muted text-muted-foreground", suspended: "bg-destructive/10 text-destructive" };
-    const labels: Record<string, string> = { active: "Ativo", inactive: "Inativo", suspended: "Suspenso" };
-    return <Badge variant="outline" className={map[status] || ""}>{labels[status] || status}</Badge>;
+  const getDaysRemaining = (endDate: string) => {
+    return differenceInDays(parseISO(endDate), new Date());
+  };
+
+  const getBarColor = (days: number) => {
+    if (days <= 0) return "bg-destructive";
+    if (days <= 3) return "bg-orange-500";
+    if (days <= 7) return "bg-yellow-500";
+    return "bg-emerald-500";
+  };
+
+  const getBarPercent = (days: number, max: number = 30) => {
+    if (days <= 0) return 0;
+    return Math.min(100, (days / max) * 100);
+  };
+
+  const getDaysLabel = (days: number) => {
+    if (days <= 0) return "Vencido";
+    if (days === 1) return "1 dia restante";
+    return `${days} dias restantes`;
+  };
+
+  const getExpiryBadge = (days: number) => {
+    if (days <= 0) return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] font-bold uppercase">Vencido</Badge>;
+    if (days <= 3) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] font-bold uppercase">Vence em {days}D</Badge>;
+    if (days <= 7) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] font-bold uppercase">Vence em {days}D</Badge>;
+    return null;
   };
 
   return (
@@ -150,7 +208,6 @@ export default function Clients() {
                   </div>
                 </div>
               </div>
-
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Servidor & Assinatura</p>
                 <div className="space-y-3">
@@ -170,7 +227,6 @@ export default function Clients() {
                   </div>
                 </div>
               </div>
-
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Status</p>
                 <Select name="status" defaultValue={editing?.status || "active"}>
@@ -182,7 +238,6 @@ export default function Clients() {
                   </SelectContent>
                 </Select>
               </div>
-
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Salvando..." : "Salvar"}
               </Button>
@@ -196,45 +251,92 @@ export default function Clients() {
         <Input placeholder="Buscar clientes..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-             <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">WhatsApp</TableHead>
-                <TableHead className="hidden md:table-cell">Usuário IPTV</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[100px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado</TableCell></TableRow>
-              ) : (
-                filtered.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.whatsapp}</TableCell>
-                    <TableCell className="hidden md:table-cell">{client.iptv_user}</TableCell>
-                    <TableCell>{statusBadge(client.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditing(client); setDialogOpen(true); }}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+      {filtered.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">Nenhum cliente encontrado</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((client) => {
+            const sub = subscriptions[client.id];
+            const days = sub ? getDaysRemaining(sub.end_date) : null;
+
+            return (
+              <div
+                key={client.id}
+                className="rounded-xl border border-border/60 bg-card p-4 space-y-3 relative overflow-hidden"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-display font-bold text-foreground text-base">{client.name}</h3>
+                    {days !== null && getExpiryBadge(days)}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => { setEditing(client); setDialogOpen(true); }}>
+                        <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
+                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* WhatsApp */}
+                {client.whatsapp && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>{client.whatsapp}</span>
+                  </div>
+                )}
+
+                {/* Badges: server + plan + price */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {client.server && (
+                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
+                      {client.server}
+                    </Badge>
+                  )}
+                  {sub && (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Progress bar */}
+                {days !== null && sub && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${getBarColor(days)}`}
+                        style={{ width: `${getBarPercent(days)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{getDaysLabel(days)}</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      <span>{format(parseISO(sub.end_date), "dd/MM/yyyy")}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Red dot for expired */}
+                {days !== null && days <= 0 && (
+                  <div className="absolute bottom-3 right-3 w-2.5 h-2.5 rounded-full bg-destructive" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
