@@ -81,7 +81,7 @@ interface CreditTransaction {
 }
 
 export default function Resellers() {
-  const { companyId, userRole } = useAuth();
+  const { companyId, userRole, user } = useAuth();
   const { toast } = useToast();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
@@ -97,6 +97,8 @@ export default function Resellers() {
   const [showRoleChange, setShowRoleChange] = useState(false);
   const [showTrialGen, setShowTrialGen] = useState(false);
   const [showTrials, setShowTrials] = useState(false);
+  const [showTrialLink, setShowTrialLink] = useState(false);
+  const [generatedTrialLink, setGeneratedTrialLink] = useState("");
   const [selected, setSelected] = useState<Reseller | null>(null);
   const [selectedRole, setSelectedRole] = useState<ResellerRole>("user");
 
@@ -289,20 +291,25 @@ export default function Resellers() {
   
 
   const handleGenerateTrial = async () => {
-    if (!companyId || !trialForm.name.trim()) return;
+    if (!companyId || !trialForm.name.trim() || !user) return;
     const resId = trialResellerId && trialResellerId !== "none" ? trialResellerId : null;
-    const { error } = await supabase.from("clients").insert({
+
+    const { data, error } = await supabase.from("trial_links").insert({
       company_id: companyId,
       reseller_id: resId,
-      name: trialForm.name,
-      whatsapp: trialForm.whatsapp,
-      status: "trial",
-    });
+      created_by: user.id,
+      client_name: trialForm.name,
+      client_whatsapp: trialForm.whatsapp,
+    }).select("token").single();
+
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Teste gerado com sucesso", description: "O acesso de teste foi criado sem consumir créditos." });
+      const baseUrl = window.location.origin;
+      const link = `${baseUrl}/trial/${data.token}`;
+      setGeneratedTrialLink(link);
       setShowTrialGen(false);
+      setShowTrialLink(true);
       setTrialForm({ name: "", whatsapp: "" });
       setTrialResellerId("");
       fetchTrialCounts();
@@ -686,6 +693,35 @@ export default function Resellers() {
             <Button onClick={handleGenerateTrial} className="gap-2">
               <FlaskConical className="w-4 h-4" /> Gerar Teste
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generated Trial Link Dialog */}
+      <Dialog open={showTrialLink} onOpenChange={setShowTrialLink}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-primary" />
+              Link de Teste Gerado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">O link abaixo é válido por <strong>7 dias</strong>. Compartilhe com o cliente para acesso temporário.</p>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={generatedTrialLink} className="font-mono text-xs" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(generatedTrialLink);
+                toast({ title: "Link copiado!" });
+              }}
+            >
+              Copiar
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowTrialLink(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
