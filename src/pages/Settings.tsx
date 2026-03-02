@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Settings as SettingsIcon, Upload, X, Loader2, Save } from "lucide-react";
-import { applyBrandColors } from "@/hooks/useBrandColors";
 
 interface CompanySettings {
   id?: string;
@@ -31,9 +30,9 @@ export default function Settings() {
     brand_name: "",
     login_slug: "",
     logo_url: null,
-    primary_color: "#1a8cff",
-    secondary_color: "#00c8ff",
-    background_color: "#0a1628",
+    primary_color: "#00db49",
+    secondary_color: "#00c0f5",
+    background_color: "#0357a5",
   });
 
   useEffect(() => {
@@ -102,11 +101,6 @@ export default function Settings() {
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      applyBrandColors({
-        primary_color: settings.primary_color,
-        secondary_color: settings.secondary_color,
-        background_color: settings.background_color,
-      });
       toast({ title: "Configurações salvas com sucesso!" });
     }
     setSaving(false);

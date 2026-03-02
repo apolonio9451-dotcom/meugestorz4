@@ -2,7 +2,6 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useBrandColors } from "@/hooks/useBrandColors";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -54,7 +53,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("ClientHub");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
-  useBrandColors();
 
   useEffect(() => {
     if (!companyId) return;
