@@ -18,7 +18,6 @@ import Servers from "@/pages/Servers";
 import Financial from "@/pages/Financial";
 import WinBack from "@/pages/WinBack";
 import Marketing from "@/pages/Marketing";
-import MasterPanel from "@/pages/MasterPanel";
 
 import SettingsPage from "@/pages/Settings";
 import Messages from "@/pages/Messages";
@@ -27,9 +26,6 @@ import ResellerAuth from "@/pages/reseller/ResellerAuth";
 import ResellerDashboard from "@/pages/reseller/ResellerDashboard";
 import ResellerClients from "@/pages/reseller/ResellerClients";
 import ResellerCredits from "@/pages/reseller/ResellerCredits";
-import ResellerSettings from "@/pages/reseller/ResellerSettings";
-import ResellerFinancial from "@/pages/reseller/ResellerFinancial";
-import ResellerLogs from "@/pages/reseller/ResellerLogs";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +59,6 @@ const App = () => (
               <Route path="/dashboard/subscriptions" element={<DashboardRoute><Subscriptions /></DashboardRoute>} />
               <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
               <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
-              <Route path="/dashboard/master" element={<DashboardRoute><MasterPanel /></DashboardRoute>} />
               
               <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
               <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
@@ -72,9 +67,6 @@ const App = () => (
               <Route path="/reseller" element={<ResellerRoute><ResellerDashboard /></ResellerRoute>} />
               <Route path="/reseller/clients" element={<ResellerRoute><ResellerClients /></ResellerRoute>} />
               <Route path="/reseller/credits" element={<ResellerRoute><ResellerCredits /></ResellerRoute>} />
-              <Route path="/reseller/financial" element={<ResellerRoute><ResellerFinancial /></ResellerRoute>} />
-              <Route path="/reseller/logs" element={<ResellerRoute><ResellerLogs /></ResellerRoute>} />
-              <Route path="/reseller/settings" element={<ResellerRoute><ResellerSettings /></ResellerRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ResellerProvider>

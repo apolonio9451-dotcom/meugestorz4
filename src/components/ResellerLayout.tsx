@@ -11,16 +11,12 @@ import {
   Coins,
   History,
   UserCog,
-  ScrollText,
 } from "lucide-react";
 
 const navItems = [
   { href: "/reseller", label: "Dashboard", icon: LayoutDashboard },
   { href: "/reseller/clients", label: "Meus Clientes", icon: Users },
-  { href: "/reseller/financial", label: "Financeiro", icon: Coins },
-  { href: "/reseller/credits", label: "Créditos", icon: History },
-  { href: "/reseller/logs", label: "Atividade", icon: ScrollText },
-  { href: "/reseller/settings", label: "Personalização", icon: UserCog },
+  { href: "/reseller/credits", label: "Meus Créditos", icon: History },
 ];
 
 export default function ResellerLayout({ children }: { children: ReactNode }) {

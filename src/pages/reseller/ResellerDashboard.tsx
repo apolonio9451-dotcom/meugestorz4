@@ -3,85 +3,59 @@ import { useReseller } from "@/hooks/useReseller";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Users, Coins, TrendingUp, FileText, AlertTriangle, UserPlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Users, Coins, TrendingUp, FileText } from "lucide-react";
 
 export default function ResellerDashboard() {
   const { reseller } = useReseller();
-  const navigate = useNavigate();
-  const [stats, setStats] = useState({ active: 0, expired: 0, blocked: 0, test: 0, revenue: 0 });
+  const [clientCount, setClientCount] = useState(0);
+  const [activeSubCount, setActiveSubCount] = useState(0);
   const [recentClients, setRecentClients] = useState<any[]>([]);
 
   useEffect(() => {
     if (!reseller) return;
 
     const fetchStats = async () => {
+      const { count } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .eq("reseller_id", reseller.id);
+      setClientCount(count || 0);
+
       const { data: clients } = await supabase
         .from("clients")
-        .select("id, name, status, created_at, client_subscriptions(end_date, amount)")
+        .select("id, name, status, created_at")
         .eq("reseller_id", reseller.id)
-        .order("created_at", { ascending: false });
-
-      if (!clients) return;
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (clients) setRecentClients(clients);
 
       const today = new Date().toISOString().split("T")[0];
-      let active = 0, expired = 0, blocked = 0, test = 0, revenue = 0;
-
-      clients.forEach((c: any) => {
-        if (c.status === "blocked") { blocked++; return; }
-        if (c.status === "test") { test++; return; }
-        const subs = c.client_subscriptions || [];
-        const hasActive = subs.some((s: any) => s.end_date >= today);
-        if (hasActive) {
-          active++;
-          subs.forEach((s: any) => { if (s.end_date >= today) revenue += Number(s.amount || 0); });
-        } else if (subs.length > 0) {
-          expired++;
-        }
-      });
-
-      setStats({ active, expired, blocked, test, revenue });
-      setRecentClients(clients.slice(0, 5));
+      const { count: subCount } = await supabase
+        .from("client_subscriptions")
+        .select("*", { count: "exact", head: true })
+        .gte("end_date", today);
+      setActiveSubCount(subCount || 0);
     };
 
     fetchStats();
   }, [reseller]);
 
-  const getClientStatus = (c: any) => {
-    if (c.status === "blocked") return "bloqueado";
-    if (c.status === "test") return "teste";
-    const today = new Date().toISOString().split("T")[0];
-    const subs = c.client_subscriptions || [];
-    return subs.some((s: any) => s.end_date >= today) ? "ativo" : "vencido";
-  };
-
-  const statusVariant = (s: string) => {
-    switch (s) {
-      case "ativo": return "default";
-      case "vencido": return "destructive";
-      case "bloqueado": return "secondary";
-      case "teste": return "outline";
-      default: return "secondary";
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Bem-vindo, {reseller?.name}!</h1>
-          <p className="text-muted-foreground text-sm mt-1">Resumo do seu painel de revenda</p>
-        </div>
-        <Button onClick={() => navigate("/reseller/clients")} className="gap-2">
-          <UserPlus className="w-4 h-4" /> Criar Cliente
-        </Button>
+      <div>
+        <h1 className="text-2xl font-display font-bold text-foreground">Bem-vindo, {reseller?.name}!</h1>
+        <p className="text-muted-foreground text-sm mt-1">Resumo do seu painel de revenda</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
@@ -95,23 +69,12 @@ export default function ResellerDashboard() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-chart-2/15 flex items-center justify-center">
-              <Users className="w-5 h-5 text-chart-2" />
+            <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Ativos</p>
-              <p className="text-xl font-bold text-foreground">{stats.active}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Vencidos</p>
-              <p className="text-xl font-bold text-foreground">{stats.expired}</p>
+              <p className="text-xs text-muted-foreground">Clientes</p>
+              <p className="text-xl font-bold text-foreground">{clientCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -121,19 +84,21 @@ export default function ResellerDashboard() {
               <FileText className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Teste / Bloq.</p>
-              <p className="text-xl font-bold text-foreground">{stats.test + stats.blocked}</p>
+              <p className="text-xs text-muted-foreground">Assinaturas Ativas</p>
+              <p className="text-xl font-bold text-foreground">{activeSubCount}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-chart-4/15 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-chart-4" />
+            <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Receita Est.</p>
-              <p className="text-xl font-bold text-foreground">R${stats.revenue.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">Status</p>
+              <Badge variant={reseller?.status === "active" ? "default" : "secondary"}>
+                {reseller?.status === "active" ? "Ativo" : "Inativo"}
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -160,20 +125,19 @@ export default function ResellerDashboard() {
                   </TableCell>
                 </TableRow>
               ) : (
-                recentClients.map((c) => {
-                  const st = getClientStatus(c);
-                  return (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium text-foreground">{c.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant(st)}>{st}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {new Date(c.created_at).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                recentClients.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium text-foreground">{c.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={c.status === "active" ? "default" : "secondary"}>
+                        {c.status === "active" ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
