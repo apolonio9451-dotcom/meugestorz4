@@ -624,7 +624,7 @@ export default function Clients() {
         <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:overflow-x-auto sm:scrollbar-hide sm:touch-pan-x sm:snap-x sm:snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
         {filters.map((f) => {
           const count = filterCounts[f.key as keyof typeof filterCounts];
           const isActive = filter === f.key;
