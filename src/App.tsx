@@ -49,7 +49,6 @@ const App = () => (
             <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
             <Route path="/dashboard/resellers" element={<DashboardRoute><Resellers /></DashboardRoute>} />
-            <Route path="/dashboard/users" element={<DashboardRoute><UserManagement /></DashboardRoute>} />
             <Route path="/dashboard/access-control" element={<DashboardRoute><AccessControl /></DashboardRoute>} />
             <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
             <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
