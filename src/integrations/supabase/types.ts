@@ -62,7 +62,9 @@ export type Database = {
           client_id: string
           company_id: string
           created_at: string
+          custom_price: number | null
           end_date: string
+          financial_notes: string | null
           id: string
           payment_status: string
           plan_id: string
@@ -74,7 +76,9 @@ export type Database = {
           client_id: string
           company_id: string
           created_at?: string
+          custom_price?: number | null
           end_date: string
+          financial_notes?: string | null
           id?: string
           payment_status?: string
           plan_id: string
@@ -86,7 +90,9 @@ export type Database = {
           client_id?: string
           company_id?: string
           created_at?: string
+          custom_price?: number | null
           end_date?: string
+          financial_notes?: string | null
           id?: string
           payment_status?: string
           plan_id?: string
@@ -130,6 +136,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          reseller_id: string | null
           server: string | null
           status: string
           updated_at: string
@@ -147,6 +154,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          reseller_id?: string | null
           server?: string | null
           status?: string
           updated_at?: string
@@ -164,6 +172,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          reseller_id?: string | null
           server?: string | null
           status?: string
           updated_at?: string
@@ -177,22 +186,32 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clients_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       companies: {
         Row: {
+          auto_block_days: number | null
           created_at: string
           id: string
           name: string
           updated_at: string
         }
         Insert: {
+          auto_block_days?: number | null
           created_at?: string
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
+          auto_block_days?: number | null
           created_at?: string
           id?: string
           name?: string
@@ -291,6 +310,54 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_activity_logs: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          reseller_id: string
+        }
+        Insert: {
+          action: string
+          company_id: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          reseller_id: string
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          reseller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_activity_logs_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reseller_credit_transactions: {
         Row: {
           amount: number
@@ -336,6 +403,47 @@ export type Database = {
           },
         ]
       }
+      reseller_settings: {
+        Row: {
+          billing_message: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          reseller_id: string
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          billing_message?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          reseller_id: string
+          service_name?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_message?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          reseller_id?: string
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_settings_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resellers: {
         Row: {
           company_id: string
@@ -343,10 +451,13 @@ export type Database = {
           credit_balance: number
           email: string | null
           id: string
+          level: number
           name: string
           notes: string | null
+          parent_reseller_id: string | null
           status: string
           updated_at: string
+          user_id: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -355,10 +466,13 @@ export type Database = {
           credit_balance?: number
           email?: string | null
           id?: string
+          level?: number
           name: string
           notes?: string | null
+          parent_reseller_id?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -367,10 +481,13 @@ export type Database = {
           credit_balance?: number
           email?: string | null
           id?: string
+          level?: number
           name?: string
           notes?: string | null
+          parent_reseller_id?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           whatsapp?: string | null
         }
         Relationships: [
@@ -379,6 +496,112 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resellers_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saas_plans: {
+        Row: {
+          allow_sub_resellers: boolean
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          max_clients: number
+          max_resellers: number
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          allow_sub_resellers?: boolean
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          max_clients?: number
+          max_resellers?: number
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_sub_resellers?: boolean
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          max_clients?: number
+          max_resellers?: number
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      saas_subscriptions: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          payment_status: string
+          saas_plan_id: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          company_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          payment_status?: string
+          saas_plan_id: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          payment_status?: string
+          saas_plan_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saas_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saas_subscriptions_saas_plan_id_fkey"
+            columns: ["saas_plan_id"]
+            isOneToOne: false
+            referencedRelation: "saas_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -467,6 +690,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_reseller_company_id: { Args: { _user_id: string }; Returns: string }
+      get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_company_role: {
         Args: {
