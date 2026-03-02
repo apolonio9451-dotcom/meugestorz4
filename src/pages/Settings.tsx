@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Upload, X, Loader2, Save } from "lucide-react";
+import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw } from "lucide-react";
 
 interface CompanySettings {
   id?: string;
@@ -294,8 +294,27 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end pt-4 border-t border-border">
+        {/* Actions */}
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSettings((prev) => ({
+                ...prev,
+                brand_name: "Meu gestor",
+                login_slug: "",
+                logo_url: null,
+                primary_color: "#00db49",
+                secondary_color: "#00c0f5",
+                background_color: "#0357a5",
+              }));
+              toast({ title: "Padrões restaurados", description: "Clique em Salvar para confirmar." });
+            }}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Restaurar Padrão
+          </Button>
           <Button onClick={handleSave} disabled={saving} className="min-w-[140px]">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
             Salvar Alterações
