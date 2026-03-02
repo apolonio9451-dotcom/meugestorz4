@@ -52,6 +52,7 @@ export default function Clients() {
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
@@ -243,9 +244,45 @@ export default function Clients() {
     setFormMacKeys(updated);
   };
 
-  const filtered = clients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
+  const searchFiltered = clients.filter(
+    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) || 
+    (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const getClientDays = (clientId: string) => {
+    const sub = subscriptions[clientId];
+    return sub ? getDaysRemaining(sub.end_date) : null;
+  };
+
+  const filtered = searchFiltered.filter((c) => {
+    const days = getClientDays(c.id);
+    switch (filter) {
+      case "ativos": return days !== null && days > 0;
+      case "vence_hoje": return days !== null && days === 0;
+      case "vence_amanha": return days !== null && days === 1;
+      case "a_vencer": return days !== null && days > 0 && days <= 7;
+      case "vencidos": return days !== null && days < 0;
+      default: return true;
+    }
+  });
+
+  const filterCounts = {
+    todos: searchFiltered.length,
+    ativos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0; }).length,
+    vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
+    vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
+    a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0 && d <= 7; }).length,
+    vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
+  };
+
+  const filters = [
+    { key: "todos", label: "Todos", color: "bg-muted text-muted-foreground" },
+    { key: "ativos", label: "Ativos", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    { key: "vence_hoje", label: "Vence Hoje", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+    { key: "vence_amanha", label: "Vence Amanhã", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+    { key: "a_vencer", label: "A Vencer", color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
+    { key: "vencidos", label: "Vencidos", color: "bg-destructive/20 text-destructive border-destructive/30" },
+  ];
 
   const getDaysRemaining = (endDate: string) => differenceInDays(parseISO(endDate), new Date());
 
@@ -438,9 +475,36 @@ export default function Clients() {
         </Dialog>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar clientes..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+        {filters.map((f) => {
+          const count = filterCounts[f.key as keyof typeof filterCounts];
+          const isActive = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all shrink-0",
+                isActive ? f.color + " ring-1 ring-current" : "bg-card text-muted-foreground border-border/60 hover:bg-muted/50"
+              )}
+            >
+              {f.label}
+              {count > 0 && (
+                <span className={cn(
+                  "inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1",
+                  isActive ? "bg-current/20" : "bg-muted"
+                )}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {filtered.length === 0 ? (
