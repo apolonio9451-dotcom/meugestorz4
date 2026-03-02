@@ -8,6 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Save, Info } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const categories = [
   {
@@ -121,34 +129,38 @@ export default function Messages() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Mensagens de Cobrança</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Configure as mensagens que serão enviadas ao clicar em "Cobrar" no card do cliente.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">Mensagens de Cobrança</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Configure as mensagens enviadas ao clicar em "Cobrar".
+          </p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Info className="w-4 h-4" />
+              Variáveis
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Variáveis disponíveis</DialogTitle>
+              <DialogDescription>
+                Use estas variáveis nos templates. Elas serão substituídas pelos dados reais do cliente.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 mt-2">
+              {variables.map((v) => (
+                <div key={v.tag} className="flex items-center gap-3 text-sm">
+                  <code className="bg-muted px-2 py-1 rounded font-mono text-xs min-w-[110px]">{v.tag}</code>
+                  <span className="text-muted-foreground">{v.desc}</span>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Variables reference */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Info className="w-4 h-4" /> Variáveis disponíveis
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Clique em uma variável para inserir no texto. Elas serão substituídas pelos dados reais do cliente.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {variables.map((v) => (
-              <div key={v.tag} className="text-xs">
-                <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{v.tag}</code>
-                <span className="text-muted-foreground ml-1">{v.desc}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       <Tabs defaultValue="vence_hoje" className="w-full">
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
@@ -164,13 +176,13 @@ export default function Messages() {
         {categories.map((cat) => (
           <TabsContent key={cat.key} value={cat.key}>
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
                   <Badge variant="outline" className={`${cat.color} border`}>
                     {cat.label}
                   </Badge>
                 </CardTitle>
-                <CardDescription>{cat.description}</CardDescription>
+                <CardDescription className="text-xs">{cat.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-1.5">
