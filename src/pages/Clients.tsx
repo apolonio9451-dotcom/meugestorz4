@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw } from "lucide-react";
-import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -62,7 +62,7 @@ export default function Clients() {
   const [formAmount, setFormAmount] = useState("");
   const [formEndDate, setFormEndDate] = useState<Date | undefined>(undefined);
   const [servers, setServers] = useState<{ id: string; name: string }[]>([]);
-
+  const [formBirthDate, setFormBirthDate] = useState<Date | undefined>(undefined);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -141,6 +141,7 @@ export default function Clients() {
     if (client) {
       setEditing(client);
       setFormMacKeys(macKeys[client.id] || []);
+      setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
       const sub = subscriptions[client.id];
       if (sub) {
         setFormPlanId(sub.plan_id);
@@ -154,6 +155,7 @@ export default function Clients() {
     } else {
       setEditing(null);
       setFormMacKeys([]);
+      setFormBirthDate(undefined);
       setFormPlanId("");
       setFormAmount("");
       setFormEndDate(undefined);
@@ -170,7 +172,7 @@ export default function Clients() {
       name: form.get("name") as string,
       email: form.get("email") as string,
       whatsapp: form.get("whatsapp") as string,
-      cpf: form.get("cpf") as string,
+      cpf: formBirthDate ? format(formBirthDate, "dd/MM/yyyy") : "",
       notes: form.get("notes") as string,
       server: form.get("server") as string,
       iptv_user: form.get("iptv_user") as string,
@@ -381,7 +383,7 @@ export default function Clients() {
           <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground text-sm">{clients.length} clientes cadastrados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); } }}>
           <DialogTrigger asChild>
             <Button onClick={() => openDialog()}><Plus className="w-4 h-4 mr-2" /> Novo Cliente</Button>
           </DialogTrigger>
@@ -409,8 +411,18 @@ export default function Clients() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>CPF</Label>
-                      <Input name="cpf" placeholder="000.000.000-00" defaultValue={editing?.cpf || ""} />
+                      <Label>Data de Nascimento</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formBirthDate && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formBirthDate ? format(formBirthDate, "dd/MM/yyyy") : "Selecione..."}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={formBirthDate} onSelect={setFormBirthDate} initialFocus className={cn("p-3 pointer-events-auto")} captionLayout="dropdown-buttons" fromYear={1940} toYear={new Date().getFullYear()} />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-1.5">
                       <Label>Observações</Label>
