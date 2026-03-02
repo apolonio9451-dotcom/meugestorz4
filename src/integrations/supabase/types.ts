@@ -785,6 +785,73 @@ export type Database = {
           },
         ]
       }
+      trial_links: {
+        Row: {
+          activated_at: string | null
+          client_id: string | null
+          client_name: string
+          client_whatsapp: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          reseller_id: string | null
+          status: string
+          token: string
+        }
+        Insert: {
+          activated_at?: string | null
+          client_id?: string | null
+          client_name: string
+          client_whatsapp?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          reseller_id?: string | null
+          status?: string
+          token?: string
+        }
+        Update: {
+          activated_at?: string | null
+          client_id?: string | null
+          client_name?: string
+          client_whatsapp?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          reseller_id?: string | null
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_links_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       winback_campaign_progress: {
         Row: {
           client_id: string
