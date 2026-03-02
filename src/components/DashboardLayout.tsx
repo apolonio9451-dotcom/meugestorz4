@@ -274,23 +274,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 glass-header flex items-center px-4 lg:px-6">
+        <header className="h-16 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-foreground" />
           </button>
-          <h2 className="font-display font-semibold text-lg text-foreground">
-            {(() => {
-              for (const item of navItems) {
-                if ("children" in item && item.children) {
-                  const child = item.children.find((c) => c.href === location.pathname);
-                  if (child) return child.label;
-                } else if (item.href === location.pathname) {
-                  return item.label;
-                }
-              }
-              return "Dashboard";
-            })()}
-          </h2>
+
+          {/* Centered brand name + logo */}
+          <div className="flex-1 flex items-center justify-center gap-2.5">
+            {brandLogo ? (
+              <div className="w-7 h-7 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
+                <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+                <Building2 className="w-3.5 h-3.5 text-primary" />
+              </div>
+            )}
+            <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
+          </div>
+
+          {/* Spacer to balance hamburger on mobile */}
+          <div className="w-6 lg:hidden" />
         </header>
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           {subscriptionDaysLeft !== null && subscriptionDaysLeft <= 15 && (
