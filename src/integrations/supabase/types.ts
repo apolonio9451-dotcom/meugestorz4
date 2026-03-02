@@ -259,18 +259,21 @@ export type Database = {
       servers: {
         Row: {
           company_id: string
+          cost_per_credit: number
           created_at: string
           id: string
           name: string
         }
         Insert: {
           company_id: string
+          cost_per_credit?: number
           created_at?: string
           id?: string
           name: string
         }
         Update: {
           company_id?: string
+          cost_per_credit?: number
           created_at?: string
           id?: string
           name?: string

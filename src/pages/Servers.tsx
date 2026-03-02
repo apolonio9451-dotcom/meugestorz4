@@ -11,6 +11,7 @@ import { Plus, Server, Trash2 } from "lucide-react";
 interface ServerItem {
   id: string;
   name: string;
+  cost_per_credit: number;
   created_at: string;
 }
 
@@ -38,9 +39,10 @@ export default function Servers() {
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const name = (form.get("name") as string).trim();
+    const costPerCredit = form.get("cost_per_credit") as string;
     if (!name) { toast.error("Nome é obrigatório"); setLoading(false); return; }
 
-    const { error } = await supabase.from("servers").insert({ name, company_id: companyId });
+    const { error } = await supabase.from("servers").insert({ name, company_id: companyId, cost_per_credit: parseFloat(costPerCredit) || 0 });
     if (error) { toast.error(error.message); } else { toast.success("Servidor adicionado!"); setDialogOpen(false); fetchServers(); }
     setLoading(false);
   };
@@ -71,6 +73,10 @@ export default function Servers() {
                 <Label>Nome do Servidor *</Label>
                 <Input name="name" required placeholder="Ex: Servidor 1" />
               </div>
+              <div className="space-y-1.5">
+                <Label>Custo por Crédito (R$) *</Label>
+                <Input name="cost_per_credit" required placeholder="0.00" type="number" step="0.01" />
+              </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Salvando..." : "Salvar"}
               </Button>
@@ -85,9 +91,9 @@ export default function Servers() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {servers.map((s) => (
             <div key={s.id} className="flex items-center justify-between rounded-xl border border-border/60 bg-card p-4">
-              <div className="flex items-center gap-3">
-                <Server className="w-5 h-5 text-primary" />
+              <div className="flex flex-col">
                 <span className="font-semibold text-foreground">{s.name}</span>
+                <span className="text-xs text-muted-foreground">R$ {Number(s.cost_per_credit).toFixed(2).replace(".", ",")} / crédito</span>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(s.id)}>
                 <Trash2 className="w-4 h-4" />
