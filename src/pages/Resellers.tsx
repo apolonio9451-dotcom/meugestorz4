@@ -108,9 +108,11 @@ export default function Resellers() {
     fetchCompanyCredits();
   }, [companyId]);
 
+  const isOwnerRole = userRole === "Proprietário";
+
   const handleCreate = async () => {
     if (!companyId || !form.name.trim()) return;
-    if (companyCredits <= 0) {
+    if (!isOwnerRole && companyCredits <= 0) {
       toast({ title: "Sem créditos", description: "Adicione créditos ao painel para criar novos revendedores.", variant: "destructive" });
       return;
     }
@@ -124,7 +126,9 @@ export default function Resellers() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
+      if (!isOwnerRole) {
+        await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
+      }
       toast({ title: "Revendedor criado com sucesso" });
       setShowCreate(false);
       setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
@@ -244,6 +248,8 @@ export default function Resellers() {
   const blockedCount = resellers.filter((r) => r.status === "blocked").length;
 
   const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
+  const isOwner = userRole === "Proprietário";
+  const hasCredits = isOwner || companyCredits > 0;
 
   if (!isAdmin) {
     return (
@@ -268,12 +274,12 @@ export default function Resellers() {
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm font-mono">
             <Coins className="w-4 h-4 text-primary" />
-            {companyCredits} crédito{companyCredits !== 1 ? "s" : ""}
+            {isOwner ? "∞" : companyCredits} crédito{!isOwner && companyCredits !== 1 ? "s" : "s"}
           </Badge>
           <Button
             onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }}
             className="gap-2"
-            disabled={companyCredits <= 0}
+            disabled={!hasCredits}
           >
             <Plus className="w-4 h-4" /> Novo Revendedor
           </Button>
