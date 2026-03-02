@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock } from "lucide-react";
+import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X } from "lucide-react";
 import { differenceInDays, format, parseISO } from "date-fns";
 
 interface Client {
@@ -37,14 +36,22 @@ interface Subscription {
   plan_name?: string;
 }
 
+interface MacKey {
+  id?: string;
+  mac: string;
+  key: string;
+}
+
 export default function Clients() {
   const { companyId } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
+  const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
+  const [formMacKeys, setFormMacKeys] = useState<MacKey[]>([]);
 
   const fetchClients = async () => {
     if (!companyId) return;
@@ -81,7 +88,35 @@ export default function Clients() {
     }
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); }, [companyId]);
+  const fetchMacKeys = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("client_mac_keys")
+      .select("id, client_id, mac, key")
+      .eq("company_id", companyId);
+    
+    if (data) {
+      const map: Record<string, MacKey[]> = {};
+      for (const mk of data) {
+        if (!map[mk.client_id]) map[mk.client_id] = [];
+        map[mk.client_id].push({ id: mk.id, mac: mk.mac, key: mk.key });
+      }
+      setMacKeys(map);
+    }
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); }, [companyId]);
+
+  const openDialog = (client?: Client) => {
+    if (client) {
+      setEditing(client);
+      setFormMacKeys(macKeys[client.id] || []);
+    } else {
+      setEditing(null);
+      setFormMacKeys([]);
+    }
+    setDialogOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -103,32 +138,64 @@ export default function Clients() {
       company_id: companyId,
     };
 
+    let clientId = editing?.id;
+
     if (editing) {
       const { error } = await supabase.from("clients").update(payload).eq("id", editing.id);
-      if (error) toast.error(error.message); else toast.success("Cliente atualizado!");
+      if (error) { toast.error(error.message); setLoading(false); return; }
     } else {
-      const { error } = await supabase.from("clients").insert(payload);
-      if (error) toast.error(error.message); else toast.success("Cliente adicionado!");
+      const { data, error } = await supabase.from("clients").insert(payload).select("id").single();
+      if (error) { toast.error(error.message); setLoading(false); return; }
+      clientId = data.id;
     }
+
+    // Save MAC & KEY entries
+    if (clientId) {
+      // Delete existing mac keys for this client
+      await supabase.from("client_mac_keys").delete().eq("client_id", clientId);
+      
+      // Insert new ones
+      const validMacKeys = formMacKeys.filter(mk => mk.mac.trim() || mk.key.trim());
+      if (validMacKeys.length > 0) {
+        await supabase.from("client_mac_keys").insert(
+          validMacKeys.map(mk => ({
+            client_id: clientId!,
+            company_id: companyId,
+            mac: mk.mac.trim(),
+            key: mk.key.trim(),
+          }))
+        );
+      }
+    }
+
+    toast.success(editing ? "Cliente atualizado!" : "Cliente adicionado!");
     setLoading(false);
     setDialogOpen(false);
     setEditing(null);
+    setFormMacKeys([]);
     fetchClients();
+    fetchMacKeys();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
     const { error } = await supabase.from("clients").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Cliente excluído!"); fetchClients(); }
+    if (error) toast.error(error.message); else { toast.success("Cliente excluído!"); fetchClients(); fetchMacKeys(); }
+  };
+
+  const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "" }]);
+  const removeMacKey = (index: number) => setFormMacKeys(formMacKeys.filter((_, i) => i !== index));
+  const updateMacKey = (index: number, field: "mac" | "key", value: string) => {
+    const updated = [...formMacKeys];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormMacKeys(updated);
   };
 
   const filtered = clients.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
   );
 
-  const getDaysRemaining = (endDate: string) => {
-    return differenceInDays(parseISO(endDate), new Date());
-  };
+  const getDaysRemaining = (endDate: string) => differenceInDays(parseISO(endDate), new Date());
 
   const getBarColor = (days: number) => {
     if (days <= 0) return "bg-destructive";
@@ -162,11 +229,11 @@ export default function Clients() {
           <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground text-sm">{clients.length} clientes cadastrados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); } }}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" /> Novo Cliente</Button>
+            <Button onClick={() => openDialog()}><Plus className="w-4 h-4 mr-2" /> Novo Cliente</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
@@ -219,6 +286,41 @@ export default function Clients() {
                   </div>
                 </div>
               </div>
+
+              {/* MAC & KEY Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">MAC & KEY</p>
+                  <Button type="button" variant="outline" size="sm" onClick={addMacKey} className="h-7 text-xs">
+                    <Plus className="w-3 h-3 mr-1" /> Adicionar
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {formMacKeys.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">Nenhum MAC & KEY adicionado</p>
+                  )}
+                  {formMacKeys.map((mk, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        placeholder="MAC Address"
+                        value={mk.mac}
+                        onChange={(e) => updateMacKey(index, "mac", e.target.value)}
+                        className="text-sm"
+                      />
+                      <Input
+                        placeholder="Key"
+                        value={mk.key}
+                        onChange={(e) => updateMacKey(index, "key", e.target.value)}
+                        className="text-sm"
+                      />
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeMacKey(index)}>
+                        <X className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Salvando..." : "Salvar"}
               </Button>
@@ -239,6 +341,7 @@ export default function Clients() {
           {filtered.map((client) => {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
+            const clientMacKeys = macKeys[client.id] || [];
 
             return (
               <div
@@ -258,7 +361,7 @@ export default function Clients() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditing(client); setDialogOpen(true); }}>
+                      <DropdownMenuItem onClick={() => openDialog(client)}>
                         <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
@@ -289,6 +392,18 @@ export default function Clients() {
                     </Badge>
                   )}
                 </div>
+
+                {/* MAC & KEY */}
+                {clientMacKeys.length > 0 && (
+                  <div className="space-y-1">
+                    {clientMacKeys.map((mk, i) => (
+                      <div key={mk.id || i} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Key className="w-3 h-3 shrink-0" />
+                        <span className="truncate font-mono">{mk.mac}{mk.key ? ` · ${mk.key}` : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Progress bar */}
                 {days !== null && sub && (
