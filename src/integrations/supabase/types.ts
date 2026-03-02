@@ -251,6 +251,53 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          background_color: string
+          brand_name: string
+          company_id: string
+          created_at: string
+          id: string
+          login_slug: string | null
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string
+          brand_name?: string
+          company_id: string
+          created_at?: string
+          id?: string
+          login_slug?: string | null
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string
+          brand_name?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          login_slug?: string | null
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_templates: {
         Row: {
           category: string
