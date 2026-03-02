@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, Phone, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon } from "lucide-react";
-import { differenceInDays, format, parseISO } from "date-fns";
+import { addDays, differenceInDays, format, parseISO } from "date-fns";
 
 interface Client {
   id: string;
@@ -377,7 +377,10 @@ export default function Clients() {
                       <Select value={formPlanId} onValueChange={(v) => {
                         setFormPlanId(v);
                         const plan = plans.find(p => p.id === v);
-                        if (plan) setFormAmount(String(plan.price));
+                        if (plan) {
+                          setFormAmount(String(plan.price));
+                          setFormEndDate(addDays(new Date(), plan.duration_days));
+                        }
                       }}>
                         <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
