@@ -18,30 +18,28 @@ import {
   UserCog,
   ChevronDown,
   Settings,
+  TrendingUp,
+  Radio,
+  Send,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clients", label: "Clientes", icon: Users },
+  { href: "/dashboard/servers", label: "Servidores", icon: Server },
   {
     label: "Financeiro",
     icon: DollarSign,
     children: [
-      { href: "/dashboard/subscriptions", label: "Assinaturas", icon: FileText },
+      { href: "/dashboard/subscriptions", label: "Faturas", icon: FileText },
+      { href: "/dashboard/financial", label: "Financeiro", icon: TrendingUp },
     ],
   },
-  { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
+  { href: "/dashboard/winback", label: "Capturas", icon: Radio },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
-  {
-    label: "Configurações",
-    icon: Settings,
-    children: [
-      { href: "/dashboard/servers", label: "Servidores", icon: Server },
-      { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
-      { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
-      { href: "/dashboard/settings", label: "Geral", icon: Settings },
-    ],
-  },
+  { href: "/dashboard/resellers", label: "Revendedores", icon: UserCog },
+  { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
+  { href: "/dashboard/messages", label: "Telegram", icon: Send },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
