@@ -51,7 +51,25 @@ interface Reseller {
   status: string;
   notes: string;
   created_at: string;
+  can_resell: boolean;
+  can_create_subreseller: boolean;
+  can_create_trial: boolean;
+  level: number;
 }
+
+export type ResellerRole = "reseller" | "master" | "trial_only";
+
+export function getResellerRole(r: { can_resell: boolean; can_create_subreseller: boolean; can_create_trial: boolean }): ResellerRole {
+  if (r.can_resell && r.can_create_subreseller) return "master";
+  if (r.can_resell) return "reseller";
+  return "trial_only";
+}
+
+export const roleLabels: Record<ResellerRole, string> = {
+  master: "Revendedor Master",
+  reseller: "Revendedor",
+  trial_only: "Somente Teste",
+};
 
 interface CreditTransaction {
   id: string;
@@ -76,7 +94,9 @@ export default function Resellers() {
   const [showEdit, setShowEdit] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showRoleChange, setShowRoleChange] = useState(false);
   const [selected, setSelected] = useState<Reseller | null>(null);
+  const [selectedRole, setSelectedRole] = useState<ResellerRole>("reseller");
 
   // Form
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
@@ -236,6 +256,29 @@ export default function Resellers() {
     toast({ title: "Em breve", description: `Visualização de clientes do revendedor ${r.name} será implementada.` });
   };
 
+  const openRoleChange = (r: Reseller) => {
+    setSelected(r);
+    setSelectedRole(getResellerRole(r));
+    setShowRoleChange(true);
+  };
+
+  const handleRoleChange = async () => {
+    if (!selected) return;
+    const permissions = {
+      master: { can_resell: true, can_create_subreseller: true, can_create_trial: true },
+      reseller: { can_resell: true, can_create_subreseller: false, can_create_trial: true },
+      trial_only: { can_resell: false, can_create_subreseller: false, can_create_trial: true },
+    };
+    const { error } = await supabase.from("resellers").update(permissions[selectedRole]).eq("id", selected.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `Cargo alterado para ${roleLabels[selectedRole]}` });
+      setShowRoleChange(false);
+      fetchResellers();
+    }
+  };
+
   const filtered = resellers.filter(
     (r) =>
       r.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -357,6 +400,7 @@ export default function Resellers() {
               onHistory={openHistory}
               onToggleStatus={handleToggleStatus}
               onViewClients={handleViewClients}
+              onChangeRole={openRoleChange}
             />
           ))}
         </div>
@@ -481,6 +525,37 @@ export default function Resellers() {
               </Table>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Change Dialog */}
+      <Dialog open={showRoleChange} onOpenChange={setShowRoleChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Cargo — {selected?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Cargo</Label>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as ResellerRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="master">Revendedor Master</SelectItem>
+                  <SelectItem value="reseller">Revendedor</SelectItem>
+                  <SelectItem value="trial_only">Somente Teste</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-2">
+                {selectedRole === "master" && "Pode revender, criar sub-revendedores e gerar testes."}
+                {selectedRole === "reseller" && "Pode revender e gerar testes. Não cria sub-revendedores."}
+                {selectedRole === "trial_only" && "Pode apenas gerar acessos de teste."}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRoleChange(false)}>Cancelar</Button>
+            <Button onClick={handleRoleChange}>Salvar Cargo</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
