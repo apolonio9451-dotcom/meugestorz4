@@ -298,17 +298,34 @@ export default function Settings() {
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <Button
             variant="outline"
-            onClick={() => {
-              setSettings((prev) => ({
-                ...prev,
+            onClick={async () => {
+              const defaults = {
                 brand_name: "Meu gestor",
                 login_slug: "",
                 logo_url: null,
-                primary_color: "#00db49",
-                secondary_color: "#00c0f5",
-                background_color: "#0357a5",
-              }));
-              toast({ title: "Padrões restaurados", description: "Clique em Salvar para confirmar." });
+                primary_color: "#2ba6d4",
+                secondary_color: "#242a33",
+                background_color: "#0f1319",
+              };
+              setSettings((prev) => ({ ...prev, ...defaults }));
+              // Auto-save defaults
+              if (settings.id && companyId) {
+                await supabase.from("company_settings").update({ ...defaults, company_id: companyId }).eq("id", settings.id);
+                // Apply CSS immediately
+                const root = document.documentElement;
+                root.style.removeProperty("--primary");
+                root.style.removeProperty("--ring");
+                root.style.removeProperty("--accent");
+                root.style.removeProperty("--sidebar-primary");
+                root.style.removeProperty("--sidebar-ring");
+                root.style.removeProperty("--glass-glow");
+                root.style.removeProperty("--secondary");
+                root.style.removeProperty("--muted");
+                root.style.removeProperty("--sidebar-accent");
+                root.style.removeProperty("--background");
+                root.style.removeProperty("--sidebar-background");
+              }
+              toast({ title: "Padrões restaurados e salvos!" });
             }}
             className="text-muted-foreground hover:text-foreground"
           >
