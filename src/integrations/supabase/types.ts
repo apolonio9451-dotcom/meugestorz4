@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_activity_logs: {
+        Row: {
+          action: string
+          client_id: string | null
+          client_name: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          details: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          client_id?: string | null
+          client_name?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          client_id?: string | null
+          client_name?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_activity_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_mac_keys: {
         Row: {
           client_id: string
