@@ -636,7 +636,7 @@ export default function Clients() {
                 "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border whitespace-nowrap transition-all duration-300 shrink-0 snap-start",
                 isActive
                   ? f.color + " ring-1 ring-current shadow-[0_0_12px_-3px_currentColor]"
-                  : "bg-card text-muted-foreground border-primary/20 hover:bg-muted/50 shadow-[0_0_8px_-3px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_14px_-3px_hsl(var(--primary)/0.3)]"
+                  : "bg-card text-foreground border-primary/20 hover:bg-muted/50 shadow-[0_0_8px_-3px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_14px_-3px_hsl(var(--primary)/0.3)]"
               )}
             >
               {f.label}
