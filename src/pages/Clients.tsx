@@ -12,8 +12,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw, MessageCircle } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, CalendarIcon, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Users } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Client {
   id: string;
@@ -47,12 +48,13 @@ interface MacKey {
 }
 
 export default function Clients() {
-  const { companyId } = useAuth();
+  const { companyId, user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("todos");
+  const [mainFilter, setMainFilter] = useState<"todos" | "status" | "vencidos" | "excluidos" | "log">("todos");
+  const [statusSubFilter, setStatusSubFilter] = useState<"ativos" | "vence_hoje" | "vence_amanha" | "a_vencer" | "followup">("ativos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,6 +66,7 @@ export default function Clients() {
   const [servers, setServers] = useState<{ id: string; name: string }[]>([]);
   const [formBirthDate, setFormBirthDate] = useState<Date | undefined>(undefined);
   const [messageTemplates, setMessageTemplates] = useState<Record<string, string>>({});
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
   const [welcomeData, setWelcomeData] = useState<{
     name: string; planName: string; amount: string; endDate: string; user: string; password: string; whatsapp: string;
@@ -151,7 +154,30 @@ export default function Clients() {
     setMessageTemplates(map);
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); }, [companyId]);
+  const fetchActivityLogs = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("client_activity_logs")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setActivityLogs(data || []);
+  };
+
+  const logActivity = async (action: string, clientName: string, clientId?: string, details?: string) => {
+    if (!companyId) return;
+    await supabase.from("client_activity_logs").insert({
+      company_id: companyId,
+      client_id: clientId || null,
+      client_name: clientName,
+      action,
+      details: details || "",
+      created_by: user?.id || null,
+    });
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); }, [companyId]);
 
   const getMessageCategory = (days: number | null): string => {
     if (days === null) return "vencidos";
@@ -289,6 +315,7 @@ export default function Clients() {
     fetchSubscriptions();
 
     if (isNew) {
+      await logActivity("criação", payload.name, clientId, `Plano: ${selectedPlan?.name || "—"}`);
       setWelcomeData({
         name: payload.name,
         planName: selectedPlan?.name || "—",
@@ -300,14 +327,22 @@ export default function Clients() {
       });
       setWelcomeModalOpen(true);
     } else {
+      await logActivity("edição", payload.name, clientId, "Dados do cliente atualizados");
       toast.success("Cliente atualizado!");
     }
+    fetchActivityLogs();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
-    const { error } = await supabase.from("clients").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Cliente excluído!"); fetchClients(); fetchMacKeys(); }
+    const client = clients.find(c => c.id === id);
+    const { error } = await supabase.from("clients").update({ status: "excluded" }).eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Cliente excluído!");
+      await logActivity("exclusão", client?.name || "", id, "Cliente movido para excluídos");
+      fetchClients(); fetchMacKeys(); fetchActivityLogs();
+    }
   };
 
   const handleRenew = async (clientId: string, days: number) => {
@@ -321,7 +356,11 @@ export default function Clients() {
       .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
-    else { toast.success(`Renovado por +${days} dias!`); fetchSubscriptions(); }
+    else {
+      const client = clients.find(c => c.id === clientId);
+      await logActivity("renovação", client?.name || "", clientId, `Renovado +${days} dias`);
+      toast.success(`Renovado por +${days} dias!`); fetchSubscriptions(); fetchActivityLogs();
+    }
   };
 
   const handleRenewSameDate = async (clientId: string) => {
@@ -342,7 +381,11 @@ export default function Clients() {
       .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
-    else { toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); }
+    else {
+      const client = clients.find(c => c.id === clientId);
+      await logActivity("renovação", client?.name || "", clientId, `Renovado para dia ${dayOfMonth}`);
+      toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); fetchActivityLogs();
+    }
   };
 
   const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "" }]);
@@ -360,9 +403,17 @@ export default function Clients() {
 
   const getDaysRemaining = (endDate: string) => differenceInCalendarDays(parseISO(endDate), new Date());
 
-  const searchFiltered = clients.filter(
+  // Separate excluded clients
+  const activeClients = clients.filter(c => c.status !== "excluded");
+  const excludedClients = clients.filter(c => c.status === "excluded");
+
+  const searchFiltered = activeClients.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) || 
     (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const searchFilteredExcluded = excludedClients.filter(
+    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
   );
 
   const getClientDays = (clientId: string) => {
@@ -380,40 +431,54 @@ export default function Clients() {
     return differenceInCalendarDays(new Date(), parseISO(client.created_at));
   };
 
-  const filtered = searchFiltered.filter((c) => {
-    const days = getClientDays(c.id);
-    switch (filter) {
-      case "ativos": return days !== null && days > 0;
-      case "vence_hoje": return days !== null && days === 0;
-      case "vence_amanha": return days !== null && days === 1;
-      case "a_vencer": return days !== null && days >= 2 && days <= 7;
-      case "vencidos": return days !== null && days < 0;
-      case "followup": {
-        const activeDays = getClientActiveDays(c.id);
-        return activeDays !== null && activeDays >= 15;
-      }
-      default: return true;
+  const filtered = (() => {
+    if (mainFilter === "excluidos") return searchFilteredExcluded;
+    if (mainFilter === "log") return [];
+    if (mainFilter === "vencidos") return searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; });
+    if (mainFilter === "status") {
+      return searchFiltered.filter((c) => {
+        const days = getClientDays(c.id);
+        switch (statusSubFilter) {
+          case "ativos": return days !== null && days > 0;
+          case "vence_hoje": return days !== null && days === 0;
+          case "vence_amanha": return days !== null && days === 1;
+          case "a_vencer": return days !== null && days >= 2 && days <= 7;
+          case "followup": {
+            const activeDays = getClientActiveDays(c.id);
+            return activeDays !== null && activeDays >= 15;
+          }
+          default: return true;
+        }
+      });
     }
-  });
+    return searchFiltered; // "todos"
+  })();
 
   const filterCounts = {
-    todos: searchFiltered.length,
+    todos: activeClients.length,
+    vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
+    excluidos: excludedClients.length,
     ativos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0; }).length,
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
     a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d >= 2 && d <= 7; }).length,
-    vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
     followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15; }).length,
   };
 
-  const filters = [
-    { key: "todos", label: "Todos", color: "bg-muted text-muted-foreground" },
-    { key: "ativos", label: "Ativos", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
-    { key: "vence_hoje", label: "Vence Hoje", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
-    { key: "vence_amanha", label: "Vence Amanhã", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-    { key: "a_vencer", label: "A Vencer", color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
-    { key: "vencidos", label: "Vencidos", color: "bg-destructive/20 text-destructive border-destructive/30" },
-    { key: "followup", label: "Follow-up", color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50 shadow-[0_0_8px_rgba(0,255,255,0.3)]" },
+  const mainBlocks = [
+    { key: "todos" as const, label: "Todos", icon: LayoutGrid, count: filterCounts.todos },
+    { key: "status" as const, label: "Status", icon: Activity, count: filterCounts.ativos },
+    { key: "vencidos" as const, label: "Vencidos", icon: AlertTriangle, count: filterCounts.vencidos },
+    { key: "excluidos" as const, label: "Excluídos", icon: Trash2, count: filterCounts.excluidos },
+    { key: "log" as const, label: "Log", icon: History, count: activityLogs.length },
+  ];
+
+  const statusSubFilters = [
+    { key: "ativos" as const, label: "Ativos", count: filterCounts.ativos, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    { key: "vence_hoje" as const, label: "Vence Hoje", count: filterCounts.vence_hoje, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+    { key: "vence_amanha" as const, label: "Vence Amanhã", count: filterCounts.vence_amanha, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+    { key: "a_vencer" as const, label: "A Vencer", count: filterCounts.a_vencer, color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
+    { key: "followup" as const, label: "Follow-up", count: filterCounts.followup, color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50" },
   ];
 
   const getBarColor = (days: number) => {
@@ -631,28 +696,30 @@ export default function Clients() {
         <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:overflow-x-auto sm:scrollbar-hide sm:touch-pan-x sm:snap-x sm:snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-        {filters.map((f) => {
-          const count = filterCounts[f.key as keyof typeof filterCounts];
-          const isActive = filter === f.key;
+      {/* Main filter blocks */}
+      <div className="grid grid-cols-5 gap-2">
+        {mainBlocks.map((block) => {
+          const Icon = block.icon;
+          const isActive = mainFilter === block.key;
           return (
             <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
+              key={block.key}
+              onClick={() => setMainFilter(block.key)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border whitespace-nowrap transition-all duration-300 shrink-0 snap-start",
+                "flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-semibold transition-all duration-300",
                 isActive
-                  ? f.color + " ring-1 ring-current shadow-[0_0_12px_-3px_currentColor]"
-                  : "bg-card text-white border-primary/20 hover:bg-muted/50 shadow-[0_0_8px_-3px_hsl(var(--primary)/0.15)] hover:shadow-[0_0_14px_-3px_hsl(var(--primary)/0.3)]"
+                  ? "bg-primary/15 border-primary/40 text-primary shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
+                  : "bg-card border-border/30 text-muted-foreground hover:bg-muted/50 hover:border-primary/20"
               )}
             >
-              {f.label}
-              {count > 0 && (
+              <Icon className="w-5 h-5" />
+              <span className="truncate max-w-full">{block.label}</span>
+              {block.count > 0 && (
                 <span className={cn(
                   "inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1",
-                  isActive ? "bg-current/20" : "bg-muted"
+                  isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
                 )}>
-                  {count}
+                  {block.count}
                 </span>
               )}
             </button>
@@ -660,7 +727,66 @@ export default function Clients() {
         })}
       </div>
 
-      {filtered.length === 0 ? (
+      {/* Status sub-filters (only visible when Status is selected) */}
+      {mainFilter === "status" && (
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {statusSubFilters.map((sf) => {
+            const isActive = statusSubFilter === sf.key;
+            return (
+              <button
+                key={sf.key}
+                onClick={() => setStatusSubFilter(sf.key)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all duration-300 shrink-0",
+                  isActive
+                    ? sf.color + " ring-1 ring-current shadow-[0_0_10px_-3px_currentColor]"
+                    : "bg-card text-muted-foreground border-border/30 hover:bg-muted/50"
+                )}
+              >
+                {sf.label}
+                {sf.count > 0 && (
+                  <span className={cn(
+                    "inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full text-[10px] font-bold px-1",
+                    isActive ? "bg-current/20" : "bg-muted"
+                  )}>
+                    {sf.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Log view */}
+      {mainFilter === "log" ? (
+        <div className="space-y-2">
+          {activityLogs.length === 0 ? (
+            <p className="text-center text-muted-foreground py-12">Nenhum registro de atividade</p>
+          ) : (
+            <ScrollArea className="h-[60vh]">
+              <div className="space-y-2 pr-2">
+                {activityLogs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/30 bg-card">
+                    <History className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">
+                        <span className="text-primary">{log.client_name}</span>
+                        {" — "}
+                        <span className="text-muted-foreground">{log.action}</span>
+                      </p>
+                      {log.details && <p className="text-xs text-muted-foreground mt-0.5">{log.details}</p>}
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">
+                        {format(parseISO(log.created_at), "dd/MM/yyyy HH:mm")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      ) : filtered.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">Nenhum cliente encontrado</p>
       ) : (
         <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
