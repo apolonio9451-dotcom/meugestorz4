@@ -258,10 +258,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-sidebar-border/50">
-          <div className="px-3 py-2 text-xs text-sidebar-foreground/50 truncate mb-2">
-            {user?.email}
-          </div>
+        <div className="px-3 py-4 border-t border-sidebar-border/50 space-y-1">
+          <Link
+            to="/dashboard/profile"
+            onClick={() => setSidebarOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium transition-all duration-200 group",
+              isActive("/dashboard/profile")
+                ? "bg-primary/15 text-primary border border-primary/20"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+              {user?.email?.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate">{user?.user_metadata?.full_name || "Meu Perfil"}</span>
+              <span className="block text-[10px] text-muted-foreground truncate">{user?.email}</span>
+            </div>
+          </Link>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"

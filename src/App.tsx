@@ -22,6 +22,7 @@ import UserManagement from "@/pages/UserManagement";
 import AccessControl from "@/pages/AccessControl";
 import NotFound from "@/pages/NotFound";
 import TrialAccess from "@/pages/TrialAccess";
+import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/dashboard/access-control" element={<DashboardRoute><AccessControl /></DashboardRoute>} />
             <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
             <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
+            <Route path="/dashboard/profile" element={<DashboardRoute><Profile /></DashboardRoute>} />
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
