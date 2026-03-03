@@ -466,7 +466,7 @@ export default function Clients() {
   };
 
   const mainBlocks = [
-    { key: "todos" as const, label: "Todos", icon: LayoutGrid, count: filterCounts.todos },
+    { key: "todos" as const, label: "Todos", icon: Users, count: filterCounts.todos },
     { key: "status" as const, label: "Status", icon: Activity, count: filterCounts.ativos },
     { key: "vencidos" as const, label: "Vencidos", icon: AlertTriangle, count: filterCounts.vencidos },
     { key: "excluidos" as const, label: "Excluídos", icon: Trash2, count: filterCounts.excluidos },
@@ -706,22 +706,19 @@ export default function Clients() {
               key={block.key}
               onClick={() => setMainFilter(block.key)}
               className={cn(
-                "flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-semibold transition-all duration-300",
+                "relative flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border text-[11px] font-semibold transition-all duration-300",
                 isActive
                   ? "bg-primary/15 border-primary/40 text-primary shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
                   : "bg-card border-border/30 text-muted-foreground hover:bg-muted/50 hover:border-primary/20"
               )}
             >
-              <Icon className="w-5 h-5" />
-              <span className="truncate max-w-full">{block.label}</span>
               {block.count > 0 && (
-                <span className={cn(
-                  "inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1",
-                  isActive ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                )}>
+                <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 bg-primary text-primary-foreground shadow-sm">
                   {block.count}
                 </span>
               )}
+              <Icon className="w-5 h-5" />
+              <span className="truncate max-w-full">{block.label}</span>
             </button>
           );
         })}
