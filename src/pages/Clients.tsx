@@ -417,7 +417,7 @@ export default function Clients() {
   ];
 
   const getBarColor = (days: number) => {
-    if (days <= 0) return "bg-destructive";
+    if (days <= 0) return "bg-destructive/60";
     if (days <= 1) return "bg-orange-500";
     if (days <= 7) return "bg-yellow-500";
     return "bg-emerald-500";
@@ -451,14 +451,14 @@ export default function Clients() {
 
   return (
     <div className="space-y-3 sm:space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground text-xs sm:text-sm">{clients.length} clientes cadastrados</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); } }}>
           <DialogTrigger asChild>
-            <Button onClick={() => openDialog()}><Plus className="w-4 h-4 mr-2" /> Novo Cliente</Button>
+            <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
