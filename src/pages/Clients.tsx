@@ -418,13 +418,20 @@ export default function Clients() {
 
   const getBarColor = (days: number) => {
     if (days <= 0) return "bg-destructive";
-    if (days <= 3) return "bg-orange-500";
+    if (days <= 1) return "bg-orange-500";
     if (days <= 7) return "bg-yellow-500";
     return "bg-emerald-500";
   };
 
+  const getBarTrackColor = (days: number) => {
+    if (days <= 0) return "bg-destructive/20";
+    if (days <= 1) return "bg-orange-500/20";
+    if (days <= 7) return "bg-yellow-500/20";
+    return "bg-emerald-500/20";
+  };
+
   const getBarPercent = (days: number, max: number = 30) => {
-    if (days <= 0) return 0;
+    if (days <= 0) return 100;
     return Math.min(100, (days / max) * 100);
   };
 
@@ -746,13 +753,13 @@ export default function Clients() {
                 {/* Row 5: Progress bar + dates */}
                 {days !== null && sub && (
                   <div className="space-y-1.5 pt-1">
-                    <div className="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                    <div className={cn("w-full h-1.5 rounded-full overflow-hidden", getBarTrackColor(days))}>
                       <div
                         className={`h-full rounded-full transition-all ${getBarColor(days)}`}
                         style={{ width: `${getBarPercent(days)}%` }}
                       />
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div className={cn("flex items-center justify-between text-[11px]", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         <span>{getDaysLabel(days)}</span>
