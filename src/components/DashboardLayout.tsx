@@ -105,9 +105,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       root.style.setProperty("--sidebar-ring", hsl);
       root.style.setProperty("--glass-glow", hsl);
     }
+    if (secondary) {
+      const hsl = hexToHsl(secondary);
+      root.style.setProperty("--secondary", hsl);
+      root.style.setProperty("--muted", hsl);
+      root.style.setProperty("--sidebar-accent", hsl);
+    }
     if (bg) {
       const hsl = hexToHsl(bg);
       root.style.setProperty("--background", hsl);
+      root.style.setProperty("--sidebar-background", hsl);
     }
   };
 
