@@ -35,6 +35,7 @@ type NavItem = {
   icon: any;
   children?: { href: string; label: string; icon: any }[];
   adminOnly?: boolean;
+  resellerOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -50,6 +51,7 @@ const navItems: NavItem[] = [
   },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
+  { href: "/dashboard/reseller-panel", label: "Revendedor", icon: Store, resellerOnly: true },
   {
     label: "Configurações",
     icon: Settings,
@@ -214,7 +216,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems
-            .filter((item) => !item.adminOnly || userRole === "Proprietário" || userRole === "Administrador")
+            .filter((item) => {
+              if (item.adminOnly && userRole !== "Proprietário" && userRole !== "Administrador") return false;
+              if (item.resellerOnly && userRole !== "Operador") return false;
+              return true;
+            })
             .map((item) => {
             if ("children" in item && item.children) {
               const childActive = item.children.some((c) => isActive(c.href));
