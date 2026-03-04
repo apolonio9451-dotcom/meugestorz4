@@ -66,7 +66,6 @@ const navItems: NavItem[] = [
     adminOnly: true,
     children: [
       { href: "/dashboard/resellers", label: "Revendedores", icon: Store },
-      { href: "/dashboard/trials", label: "Testes", icon: FlaskConical },
       { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
     ],
   },
