@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -45,8 +44,12 @@ import {
   UserCheck,
   Trash2,
   Copy,
+  Pencil,
+  Eye,
+  PercentCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import ResellerCard from "@/components/resellers/ResellerCard";
 import { differenceInHours, parseISO, format } from "date-fns";
 
 interface Reseller {
@@ -87,15 +90,6 @@ interface CreditTransaction {
   created_at: string;
 }
 
-interface TrialUser {
-  membership_id: string;
-  user_id: string;
-  trial_expires_at: string | null;
-  created_at: string;
-  profile_name: string;
-  profile_email: string;
-}
-
 interface PendingLink {
   id: string;
   token: string;
@@ -104,6 +98,8 @@ interface PendingLink {
   status: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function Resellers() {
   const { companyId, userRole, user } = useAuth();
   const { toast } = useToast();
@@ -111,7 +107,9 @@ export default function Resellers() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [companyCredits, setCompanyCredits] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Dialogs
   const [showCreate, setShowCreate] = useState(false);
@@ -119,19 +117,13 @@ export default function Resellers() {
   const [showCredits, setShowCredits] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showRoleChange, setShowRoleChange] = useState(false);
-  const [showTrials, setShowTrials] = useState(false);
   const [showTrialLink, setShowTrialLink] = useState(false);
   const [generatedTrialLink, setGeneratedTrialLink] = useState("");
   const [selected, setSelected] = useState<Reseller | null>(null);
   const [selectedRole, setSelectedRole] = useState<ResellerRole>("user");
 
-  // Trial users from company_memberships
-  const [trialUsers, setTrialUsers] = useState<TrialUser[]>([]);
+  // Trial links
   const [pendingLinks, setPendingLinks] = useState<PendingLink[]>([]);
-
-  // Legacy trial clients per reseller
-  interface TrialClient { id: string; name: string; whatsapp: string; created_at: string; status: string; }
-  const [trialClients, setTrialClients] = useState<TrialClient[]>([]);
   const [trialCounts, setTrialCounts] = useState<Record<string, number>>({});
 
   // Form
@@ -141,24 +133,15 @@ export default function Resellers() {
 
   const fetchCompanyCredits = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from("companies")
-      .select("credit_balance")
-      .eq("id", companyId)
-      .single();
+    const { data } = await supabase.from("companies").select("credit_balance").eq("id", companyId).single();
     if (data) setCompanyCredits(data.credit_balance);
   };
 
   const fetchResellers = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from("resellers")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.from("resellers").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
     if (!data) { setLoading(false); return; }
 
-    // Fetch trial expiry from company_memberships for trial resellers
     const trialResellers = data.filter(r => r.status === "trial" && r.user_id);
     if (trialResellers.length > 0) {
       const userIds = trialResellers.map(r => r.user_id!);
@@ -168,7 +151,6 @@ export default function Resellers() {
         .eq("company_id", companyId)
         .eq("is_trial", true)
         .in("user_id", userIds);
-      
       const expiryMap = new Map((memberships || []).map(m => [m.user_id, m.trial_expires_at]));
       data.forEach(r => {
         if (r.status === "trial" && r.user_id) {
@@ -176,18 +158,13 @@ export default function Resellers() {
         }
       });
     }
-
     setResellers(data);
     setLoading(false);
   };
 
   const fetchTrialCounts = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from("clients")
-      .select("reseller_id")
-      .eq("company_id", companyId)
-      .eq("status", "trial");
+    const { data } = await supabase.from("clients").select("reseller_id").eq("company_id", companyId).eq("status", "trial");
     if (data) {
       const counts: Record<string, number> = {};
       data.forEach((c: any) => { if (c.reseller_id) counts[c.reseller_id] = (counts[c.reseller_id] || 0) + 1; });
@@ -195,46 +172,9 @@ export default function Resellers() {
     }
   };
 
-  const fetchTrialUsers = async () => {
-    if (!companyId) return;
-    const { data: memberships } = await supabase
-      .from("company_memberships")
-      .select("id, user_id, trial_expires_at, created_at")
-      .eq("company_id", companyId)
-      .eq("is_trial", true)
-      .order("created_at", { ascending: false });
-
-    if (!memberships || memberships.length === 0) {
-      setTrialUsers([]);
-      return;
-    }
-
-    const userIds = memberships.map((m) => m.user_id);
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .in("id", userIds);
-
-    const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
-
-    setTrialUsers(memberships.map((m) => ({
-      membership_id: m.id,
-      user_id: m.user_id,
-      trial_expires_at: m.trial_expires_at,
-      created_at: m.created_at,
-      profile_name: profileMap.get(m.user_id)?.full_name || "Pendente",
-      profile_email: profileMap.get(m.user_id)?.email || "—",
-    })));
-  };
-
   const fetchPendingLinks = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from("trial_links")
-      .select("id, token, expires_at, created_at, status")
-      .eq("company_id", companyId)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.from("trial_links").select("id, token, expires_at, created_at, status").eq("company_id", companyId).eq("status", "pending").order("created_at", { ascending: false });
     if (data) setPendingLinks(data);
   };
 
@@ -242,31 +182,26 @@ export default function Resellers() {
     fetchResellers();
     fetchCompanyCredits();
     fetchTrialCounts();
-    fetchTrialUsers();
     fetchPendingLinks();
   }, [companyId]);
 
   const isOwnerRole = userRole === "Proprietário";
+  const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
+  const isOwner = userRole === "Proprietário";
+  const hasCredits = isOwner || companyCredits > 0;
 
+  // Handlers
   const handleCreate = async () => {
     if (!companyId || !form.name.trim()) return;
     if (!isOwnerRole && companyCredits <= 0) {
       toast({ title: "Sem créditos", description: "Adicione créditos ao painel para criar novos revendedores.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("resellers").insert({
-      company_id: companyId,
-      name: form.name,
-      email: form.email,
-      whatsapp: form.whatsapp,
-      notes: form.notes,
-    });
+    const { error } = await supabase.from("resellers").insert({ company_id: companyId, name: form.name, email: form.email, whatsapp: form.whatsapp, notes: form.notes });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      if (!isOwnerRole) {
-        await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
-      }
+      if (!isOwnerRole) await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
       toast({ title: "Revendedor criado com sucesso" });
       setShowCreate(false);
       setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
@@ -277,10 +212,7 @@ export default function Resellers() {
 
   const handleUpdate = async () => {
     if (!selected) return;
-    const { error } = await supabase
-      .from("resellers")
-      .update({ name: form.name, email: form.email, whatsapp: form.whatsapp, notes: form.notes, status: form.status })
-      .eq("id", selected.id);
+    const { error } = await supabase.from("resellers").update({ name: form.name, email: form.email, whatsapp: form.whatsapp, notes: form.notes, status: form.status }).eq("id", selected.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
@@ -303,10 +235,7 @@ export default function Resellers() {
 
   const handleToggleStatus = async (r: Reseller) => {
     const newStatus = r.status === "active" ? "blocked" : "active";
-    const { error } = await supabase
-      .from("resellers")
-      .update({ status: newStatus })
-      .eq("id", r.id);
+    const { error } = await supabase.from("resellers").update({ status: newStatus }).eq("id", r.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
@@ -320,23 +249,12 @@ export default function Resellers() {
     const amount = parseInt(creditForm.amount);
     if (isNaN(amount) || amount === 0) return;
     const finalAmount = creditForm.type === "debit" ? -Math.abs(amount) : Math.abs(amount);
-
     const { error: txError } = await supabase.from("reseller_credit_transactions").insert({
-      reseller_id: selected.id,
-      company_id: companyId,
-      amount: finalAmount,
-      type: creditForm.type,
+      reseller_id: selected.id, company_id: companyId, amount: finalAmount, type: creditForm.type,
       description: creditForm.description || (creditForm.type === "purchase" ? "Compra de créditos" : "Débito de créditos"),
     });
-    if (txError) {
-      toast({ title: "Erro", description: txError.message, variant: "destructive" });
-      return;
-    }
-
-    const { error: upError } = await supabase
-      .from("resellers")
-      .update({ credit_balance: selected.credit_balance + finalAmount })
-      .eq("id", selected.id);
+    if (txError) { toast({ title: "Erro", description: txError.message, variant: "destructive" }); return; }
+    const { error: upError } = await supabase.from("resellers").update({ credit_balance: selected.credit_balance + finalAmount }).eq("id", selected.id);
     if (upError) {
       toast({ title: "Erro ao atualizar saldo", description: upError.message, variant: "destructive" });
     } else {
@@ -349,11 +267,7 @@ export default function Resellers() {
 
   const openHistory = async (reseller: Reseller) => {
     setSelected(reseller);
-    const { data } = await supabase
-      .from("reseller_credit_transactions")
-      .select("*")
-      .eq("reseller_id", reseller.id)
-      .order("created_at", { ascending: false });
+    const { data } = await supabase.from("reseller_credit_transactions").select("*").eq("reseller_id", reseller.id).order("created_at", { ascending: false });
     if (data) setTransactions(data);
     setShowHistory(true);
   };
@@ -370,137 +284,39 @@ export default function Resellers() {
     setShowCredits(true);
   };
 
-  const handleViewClients = (r: Reseller) => {
-    toast({ title: "Em breve", description: `Visualização de clientes do revendedor ${r.name} será implementada.` });
-  };
-
   const handleGenerateTrialInstant = async () => {
     if (!companyId || !user) return;
     setTrialGenerating(true);
-
-    const { data, error } = await supabase.from("trial_links").insert({
-      company_id: companyId,
-      created_by: user.id,
-      client_name: "Pendente",
-    }).select("token").single();
-
+    const { data, error } = await supabase.from("trial_links").insert({ company_id: companyId, created_by: user.id, client_name: "Pendente" }).select("token").single();
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      const baseUrl = window.location.origin;
-      const link = `${baseUrl}/trial/${data.token}`;
+      const link = `${window.location.origin}/trial/${data.token}`;
       setGeneratedTrialLink(link);
       setShowTrialLink(true);
-      fetchTrialCounts();
       fetchPendingLinks();
     }
     setTrialGenerating(false);
   };
 
-  const openTrials = async (r: Reseller) => {
-    setSelected(r);
-    const { data } = await supabase
-      .from("clients")
-      .select("id, name, whatsapp, created_at, status")
-      .eq("reseller_id", r.id)
-      .eq("status", "trial")
-      .order("created_at", { ascending: false });
-    if (data) setTrialClients(data);
-    setShowTrials(true);
-  };
-
-  const handleActivateTrial = async (clientId: string) => {
-    if (!companyId) return;
-    const { error } = await supabase.from("clients").update({ status: "active" }).eq("id", clientId);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      if (selected) {
-        await supabase.from("resellers").update({ credit_balance: selected.credit_balance - 1 }).eq("id", selected.id);
-        await supabase.from("reseller_credit_transactions").insert({
-          reseller_id: selected.id,
-          company_id: companyId,
-          amount: -1,
-          type: "activation",
-          description: "Ativação de teste",
-        });
-      }
-      toast({ title: "Acesso ativado!", description: "1 crédito foi debitado do revendedor." });
-      setTrialClients((prev) => prev.filter((c) => c.id !== clientId));
-      fetchResellers();
-      fetchTrialCounts();
-    }
-  };
-
-  const handleActivateTrialUser = async (trialUser: TrialUser) => {
-    const { error } = await supabase
-      .from("company_memberships")
-      .update({ is_trial: false, trial_expires_at: null })
-      .eq("id", trialUser.membership_id);
-
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: `${trialUser.profile_name} ativado com acesso completo!` });
-      fetchTrialUsers();
-      fetchResellers();
-    }
-  };
-
   const handleActivateTrialReseller = async (r: Reseller) => {
     if (!companyId) return;
-
-    // Check credits (owner has infinite)
     if (!isOwnerRole && companyCredits <= 0) {
       toast({ title: "Sem créditos", description: "Saldo insuficiente para ativar este revendedor.", variant: "destructive" });
       return;
     }
-
-    // Update reseller status to active with permissions
-    const { error: resErr } = await supabase
-      .from("resellers")
-      .update({ status: "active", can_resell: true, can_create_trial: true })
-      .eq("id", r.id);
-
-    if (resErr) {
-      toast({ title: "Erro", description: resErr.message, variant: "destructive" });
-      return;
-    }
-
-    // Debit 1 credit from company (if not owner)
+    const { error: resErr } = await supabase.from("resellers").update({ status: "active", can_resell: true, can_create_trial: true }).eq("id", r.id);
+    if (resErr) { toast({ title: "Erro", description: resErr.message, variant: "destructive" }); return; }
     if (!isOwnerRole) {
       await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
       setCompanyCredits(companyCredits - 1);
     }
-
-    // Also update company_membership
     if (r.user_id) {
-      await supabase
-        .from("company_memberships")
-        .update({ is_trial: false, trial_expires_at: null })
-        .eq("user_id", r.user_id)
-        .eq("company_id", companyId);
+      await supabase.from("company_memberships").update({ is_trial: false, trial_expires_at: null }).eq("user_id", r.user_id).eq("company_id", companyId);
     }
-
     toast({ title: `${r.name} ativado com acesso completo!`, description: isOwnerRole ? "" : "1 crédito debitado." });
     fetchResellers();
-    fetchTrialUsers();
     fetchCompanyCredits();
-  };
-
-  const handleRemoveTrialUser = async (trialUser: TrialUser) => {
-    if (!confirm(`Remover acesso de teste de ${trialUser.profile_name}?`)) return;
-    const { error } = await supabase
-      .from("company_memberships")
-      .delete()
-      .eq("id", trialUser.membership_id);
-
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Acesso removido" });
-      fetchTrialUsers();
-    }
   };
 
   const openRoleChange = (r: Reseller) => {
@@ -535,21 +351,43 @@ export default function Resellers() {
     return { label: `${hours}h`, expired: false };
   };
 
-  const filtered = resellers.filter(
-    (r) =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.whatsapp?.includes(search)
-  );
+  // Filtered & paginated data
+  const filtered = useMemo(() => {
+    return resellers.filter((r) => {
+      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
+        r.email?.toLowerCase().includes(search.toLowerCase()) ||
+        r.whatsapp?.includes(search);
+      const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [resellers, search, statusFilter]);
 
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
+
+  // KPI calculations
   const totalCredits = resellers.reduce((s, r) => s + r.credit_balance, 0);
   const activeCount = resellers.filter((r) => r.status === "active").length;
   const blockedCount = resellers.filter((r) => r.status === "blocked").length;
   const trialResellersCount = resellers.filter((r) => r.status === "trial").length;
+  const activeClients = Object.values(trialCounts).reduce((a, b) => a + b, 0);
+  const conversionRate = resellers.length > 0 ? Math.round((activeCount / resellers.length) * 100) : 0;
 
-  const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
-  const isOwner = userRole === "Proprietário";
-  const hasCredits = isOwner || companyCredits > 0;
+  // Status badge helper
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[11px]">Ativo</Badge>;
+      case "blocked":
+        return <Badge variant="destructive" className="text-[11px]">Bloqueado</Badge>;
+      case "trial":
+        return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[11px]">Teste</Badge>;
+      default:
+        return <Badge variant="outline" className="text-[11px]">{status}</Badge>;
+    }
+  };
 
   if (!isAdmin) {
     return (
@@ -564,246 +402,234 @@ export default function Resellers() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Revendedores</h1>
-          <p className="text-muted-foreground text-sm mt-1">Gerencie seus revendedores e créditos de revenda</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm font-mono">
-            <Coins className="w-4 h-4 text-primary" />
-            {isOwner ? "∞" : companyCredits} crédito{!isOwner && companyCredits !== 1 ? "s" : "s"}
-          </Badge>
-          <Button
-            variant="outline"
-            onClick={handleGenerateTrialInstant}
-            disabled={trialGenerating}
-            className="gap-2"
-          >
-            <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
-          </Button>
-          <Button
-            onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }}
-            className="gap-2"
-            disabled={!hasCredits}
-          >
-            <Plus className="w-4 h-4" /> Novo Revendedor
-          </Button>
-        </div>
+    <div className="p-6 space-y-6">
+      {/* Page Title */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Revendedores</h1>
+        <p className="text-sm text-muted-foreground mt-1">Gerencie sua rede de revendedores, créditos e testes</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary" />
+      {/* 1. KPI Cards - 6 columns */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: "Total Revendedores", value: resellers.length, icon: Users, color: "text-primary" },
+          { label: "Ativos", value: activeCount, icon: TrendingUp, color: "text-emerald-400" },
+          { label: "Bloqueados", value: blockedCount, icon: Ban, color: "text-destructive" },
+          { label: "Créditos Disponíveis", value: isOwner ? "∞" : companyCredits, icon: Coins, color: "text-primary" },
+          { label: "Testes Ativos", value: trialResellersCount, icon: FlaskConical, color: "text-amber-400" },
+          { label: "Conversão %", value: `${conversionRate}%`, icon: PercentCircle, color: "text-emerald-400" },
+        ].map((kpi, i) => (
+          <div key={i} className="h-[110px] rounded-lg border border-border bg-card flex flex-col justify-center items-center p-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
+              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">{kpi.label}</span>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-xl font-bold text-foreground">{resellers.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Ativos</p>
-              <p className="text-xl font-bold text-foreground">{activeCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center">
-              <Ban className="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Bloqueados</p>
-              <p className="text-xl font-bold text-foreground">{blockedCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
-              <Coins className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Créditos</p>
-              <p className="text-xl font-bold text-foreground">{totalCredits}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center">
-              <FlaskConical className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Em Teste</p>
-              <p className="text-xl font-bold text-foreground">{trialResellersCount}</p>
-            </div>
-          </CardContent>
-        </Card>
+            <span className="text-[28px] font-bold text-foreground leading-none">{kpi.value}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Trial Users Section */}
-      {(trialUsers.length > 0 || pendingLinks.length > 0) && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FlaskConical className="w-5 h-5 text-primary" />
-              Gerenciamento de Testes
-              <Badge variant="outline" className="ml-auto text-xs">
-                {trialUsers.length} cadastrado{trialUsers.length !== 1 ? "s" : ""} · {pendingLinks.length} pendente{pendingLinks.length !== 1 ? "s" : ""}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Active trial users */}
-            {trialUsers.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Usuários em Teste</p>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead className="text-center">Tempo Restante</TableHead>
-                      <TableHead>Cadastro</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {trialUsers.map((t) => {
-                      const time = getTimeLeft(t.trial_expires_at);
-                      return (
-                        <TableRow key={t.membership_id}>
-                          <TableCell className="font-medium text-sm">{t.profile_name}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{t.profile_email}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="outline"
-                              className={
-                                time.expired
-                                  ? "bg-destructive/10 text-destructive border-destructive/30"
-                                  : "bg-primary/10 text-primary border-primary/30"
-                              }
+      {/* 2. Action Bar */}
+      <div className="flex items-center justify-end h-14 gap-3">
+        <Button onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }} className="gap-2" disabled={!hasCredits}>
+          <Plus className="w-4 h-4" /> Novo Revendedor
+        </Button>
+        <Button variant="secondary" onClick={handleGenerateTrialInstant} disabled={trialGenerating} className="gap-2">
+          <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
+        </Button>
+        <Button variant="outline" onClick={() => openCredits(resellers[0])} disabled={resellers.length === 0} className="gap-2">
+          <Coins className="w-4 h-4" /> Comprar Créditos
+        </Button>
+      </div>
+
+      {/* 3. Reseller Table */}
+      <div className="rounded-lg border border-border bg-card">
+        {/* Table header with search and filter */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="relative w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Buscar revendedor..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Filtrar status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="blocked">Bloqueados</SelectItem>
+              <SelectItem value="trial">Em Teste</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {loading ? (
+          <p className="text-center text-muted-foreground py-12 text-sm">Carregando...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-12 text-sm">Nenhum revendedor encontrado</p>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Créditos</TableHead>
+                  <TableHead className="text-center">Testes</TableHead>
+                  <TableHead className="text-center">Clientes Ativos</TableHead>
+                  <TableHead>Data Cadastro</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginated.map((r) => (
+                  <TableRow key={r.id} className="group">
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm text-foreground">{r.name}</p>
+                        {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(r.status)}</TableCell>
+                    <TableCell className="text-center">
+                      <span className={`font-mono text-sm font-bold ${r.credit_balance > 0 ? "text-primary" : "text-destructive"}`}>
+                        {r.credit_balance}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-mono text-sm">{trialCounts[r.id] || 0}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-mono text-sm">—</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {format(parseISO(r.created_at), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                        {r.status === "trial" ? (
+                          <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleActivateTrialReseller(r)}>
+                            <UserCheck className="w-3.5 h-3.5" /> Ativar
+                          </Button>
+                        ) : (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
+                              <Coins className="w-3.5 h-3.5 text-primary" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className={`h-7 w-7 ${r.status === "active" ? "hover:text-destructive" : "hover:text-primary"}`}
+                              onClick={() => handleToggleStatus(r)}
+                              title={r.status === "active" ? "Bloquear" : "Desbloquear"}
                             >
-                              <Clock className="w-3 h-3 mr-1" />
-                              {time.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {format(parseISO(t.created_at), "dd/MM/yyyy")}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                size="sm"
-                                className="gap-1.5 h-7 text-xs"
-                                onClick={() => handleActivateTrialUser(t)}
-                              >
-                                <UserCheck className="w-3.5 h-3.5" /> Ativar
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => handleRemoveTrialUser(t)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {/* Pending links */}
-            {pendingLinks.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Links Aguardando Cadastro</p>
-                <div className="space-y-2">
-                  {pendingLinks.map((link) => {
-                    const time = getTimeLeft(link.expires_at);
-                    const fullUrl = `${window.location.origin}/trial/${link.token}`;
-                    return (
-                      <div key={link.id} className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
-                            /trial/{link.token.substring(0, 12)}...
-                          </code>
-                          <Badge
-                            variant="outline"
-                            className={time.expired ? "bg-destructive/10 text-destructive text-xs" : "bg-muted text-muted-foreground text-xs"}
-                          >
-                            <Clock className="w-3 h-3 mr-1" />
-                            {time.label}
-                          </Badge>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 h-7 text-xs shrink-0"
-                          onClick={() => {
-                            navigator.clipboard.writeText(fullUrl);
-                            toast({ title: "Link copiado!" });
-                          }}
-                        >
-                          <Copy className="w-3 h-3" /> Copiar
+                              {r.status === "active" ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            </Button>
+                          </>
+                        )}
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openHistory(r)} title="Histórico">
+                          <History className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => handleDelete(r.id)} title="Excluir">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                    );
-                  })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+                <span className="text-xs text-muted-foreground">
+                  Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} de {filtered.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      size="icon"
+                      variant={page === currentPage ? "default" : "ghost"}
+                      className="h-8 w-8 text-xs"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar revendedor..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </>
+        )}
       </div>
 
-      {/* Cards Grid */}
-      {loading ? (
-        <p className="text-center text-muted-foreground py-8">Carregando...</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-center text-muted-foreground py-8">Nenhum revendedor encontrado</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((r) => (
-            <ResellerCard
-              key={r.id}
-              reseller={r}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              onCredits={openCredits}
-              onHistory={openHistory}
-              onToggleStatus={handleToggleStatus}
-              onViewClients={handleViewClients}
-              onChangeRole={openRoleChange}
-              onViewTrials={openTrials}
-              onActivateTrial={handleActivateTrialReseller}
-              trialCount={trialCounts[r.id] || 0}
-            />
-          ))}
+      {/* 4. Trial Links Table */}
+      {pendingLinks.length > 0 && (
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <FlaskConical className="w-4 h-4 text-amber-400" />
+              Links de Teste Pendentes
+              <Badge variant="outline" className="text-[10px] ml-1">{pendingLinks.length}</Badge>
+            </h2>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Link</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead>Expira em</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingLinks.map((link) => {
+                const time = getTimeLeft(link.expires_at);
+                const fullUrl = `${window.location.origin}/trial/${link.token}`;
+                return (
+                  <TableRow key={link.id}>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono">/trial/{link.token.substring(0, 16)}...</code>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{format(parseISO(link.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{format(parseISO(link.expires_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={time.expired ? "bg-destructive/10 text-destructive text-[11px]" : "bg-amber-500/10 text-amber-400 text-[11px]"}>
+                        <Clock className="w-3 h-3 mr-1" />
+                        {time.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 h-7 text-xs"
+                        onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}
+                      >
+                        <Copy className="w-3 h-3" /> Copiar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
+
+      {/* ===== DIALOGS ===== */}
 
       {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -908,13 +734,9 @@ export default function Resellers() {
                 <TableBody>
                   {transactions.map((tx) => (
                     <TableRow key={tx.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(tx.created_at).toLocaleDateString("pt-BR")}
-                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(tx.created_at).toLocaleDateString("pt-BR")}</TableCell>
                       <TableCell>
-                        <Badge variant={tx.amount > 0 ? "default" : "destructive"} className="text-xs">
-                          {tx.amount > 0 ? "Crédito" : "Débito"}
-                        </Badge>
+                        <Badge variant={tx.amount > 0 ? "default" : "destructive"} className="text-xs">{tx.amount > 0 ? "Crédito" : "Débito"}</Badge>
                       </TableCell>
                       <TableCell className="font-mono font-medium">{tx.amount > 0 ? `+${tx.amount}` : tx.amount}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{tx.description || "—"}</TableCell>
@@ -930,9 +752,7 @@ export default function Resellers() {
       {/* Role Change Dialog */}
       <Dialog open={showRoleChange} onOpenChange={setShowRoleChange}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alterar Cargo — {selected?.name}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Alterar Cargo — {selected?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Cargo</Label>
@@ -968,64 +788,13 @@ export default function Resellers() {
           <p className="text-sm text-muted-foreground">O link abaixo é válido por <strong>7 dias</strong>. Compartilhe com o cliente para acesso temporário.</p>
           <div className="flex items-center gap-2">
             <Input readOnly value={generatedTrialLink} className="font-mono text-xs" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(generatedTrialLink);
-                toast({ title: "Link copiado!" });
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(generatedTrialLink); toast({ title: "Link copiado!" }); }}>
               Copiar
             </Button>
           </div>
           <DialogFooter>
             <Button onClick={() => setShowTrialLink(false)}>Fechar</Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Trials List Dialog */}
-      <Dialog open={showTrials} onOpenChange={setShowTrials}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FlaskConical className="w-5 h-5 text-amber-500" />
-              Testes Pendentes — {selected?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-80 overflow-auto">
-            {trialClients.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8 text-sm">Nenhum teste pendente</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>WhatsApp</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {trialClients.map((tc) => (
-                    <TableRow key={tc.id}>
-                      <TableCell className="font-medium text-sm">{tc.name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{tc.whatsapp || "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(tc.created_at).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" className="gap-1.5 h-7 text-xs" onClick={() => handleActivateTrial(tc.id)}>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Ativar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
     </div>
