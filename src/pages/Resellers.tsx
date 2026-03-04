@@ -62,6 +62,8 @@ interface Reseller {
   can_create_subreseller: boolean;
   can_create_trial: boolean;
   level: number;
+  trial_expires_at?: string | null;
+  user_id?: string | null;
 }
 
 export type ResellerRole = "admin" | "user";
@@ -154,7 +156,28 @@ export default function Resellers() {
       .select("*")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false });
-    if (data) setResellers(data);
+    if (!data) { setLoading(false); return; }
+
+    // Fetch trial expiry from company_memberships for trial resellers
+    const trialResellers = data.filter(r => r.status === "trial" && r.user_id);
+    if (trialResellers.length > 0) {
+      const userIds = trialResellers.map(r => r.user_id!);
+      const { data: memberships } = await supabase
+        .from("company_memberships")
+        .select("user_id, trial_expires_at")
+        .eq("company_id", companyId)
+        .eq("is_trial", true)
+        .in("user_id", userIds);
+      
+      const expiryMap = new Map((memberships || []).map(m => [m.user_id, m.trial_expires_at]));
+      data.forEach(r => {
+        if (r.status === "trial" && r.user_id) {
+          (r as any).trial_expires_at = expiryMap.get(r.user_id) || null;
+        }
+      });
+    }
+
+    setResellers(data);
     setLoading(false);
   };
 
@@ -420,7 +443,35 @@ export default function Resellers() {
     } else {
       toast({ title: `${trialUser.profile_name} ativado com acesso completo!` });
       fetchTrialUsers();
+      fetchResellers();
     }
+  };
+
+  const handleActivateTrialReseller = async (r: Reseller) => {
+    if (!companyId) return;
+    // Update reseller status to active
+    const { error: resErr } = await supabase
+      .from("resellers")
+      .update({ status: "active" })
+      .eq("id", r.id);
+
+    if (resErr) {
+      toast({ title: "Erro", description: resErr.message, variant: "destructive" });
+      return;
+    }
+
+    // Also update company_membership
+    if (r.user_id) {
+      await supabase
+        .from("company_memberships")
+        .update({ is_trial: false, trial_expires_at: null })
+        .eq("user_id", r.user_id)
+        .eq("company_id", companyId);
+    }
+
+    toast({ title: `${r.name} ativado com acesso completo!` });
+    fetchResellers();
+    fetchTrialUsers();
   };
 
   const handleRemoveTrialUser = async (trialUser: TrialUser) => {
@@ -480,6 +531,7 @@ export default function Resellers() {
   const totalCredits = resellers.reduce((s, r) => s + r.credit_balance, 0);
   const activeCount = resellers.filter((r) => r.status === "active").length;
   const blockedCount = resellers.filter((r) => r.status === "blocked").length;
+  const trialResellersCount = resellers.filter((r) => r.status === "trial").length;
 
   const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
   const isOwner = userRole === "Proprietário";
@@ -581,7 +633,7 @@ export default function Resellers() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Em Teste</p>
-              <p className="text-xl font-bold text-foreground">{trialUsers.length}</p>
+              <p className="text-xl font-bold text-foreground">{trialResellersCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -732,6 +784,7 @@ export default function Resellers() {
               onViewClients={handleViewClients}
               onChangeRole={openRoleChange}
               onViewTrials={openTrials}
+              onActivateTrial={handleActivateTrialReseller}
               trialCount={trialCounts[r.id] || 0}
             />
           ))}
