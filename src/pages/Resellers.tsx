@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -41,8 +41,13 @@ import {
   Ban,
   FlaskConical,
   CheckCircle2,
+  Clock,
+  UserCheck,
+  Trash2,
+  Copy,
 } from "lucide-react";
 import ResellerCard from "@/components/resellers/ResellerCard";
+import { differenceInHours, parseISO, format } from "date-fns";
 
 interface Reseller {
   id: string;
@@ -80,6 +85,23 @@ interface CreditTransaction {
   created_at: string;
 }
 
+interface TrialUser {
+  membership_id: string;
+  user_id: string;
+  trial_expires_at: string | null;
+  created_at: string;
+  profile_name: string;
+  profile_email: string;
+}
+
+interface PendingLink {
+  id: string;
+  token: string;
+  expires_at: string;
+  created_at: string;
+  status: string;
+}
+
 export default function Resellers() {
   const { companyId, userRole, user } = useAuth();
   const { toast } = useToast();
@@ -95,14 +117,17 @@ export default function Resellers() {
   const [showCredits, setShowCredits] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showRoleChange, setShowRoleChange] = useState(false);
-  
   const [showTrials, setShowTrials] = useState(false);
   const [showTrialLink, setShowTrialLink] = useState(false);
   const [generatedTrialLink, setGeneratedTrialLink] = useState("");
   const [selected, setSelected] = useState<Reseller | null>(null);
   const [selectedRole, setSelectedRole] = useState<ResellerRole>("user");
 
-  // Trial clients per reseller
+  // Trial users from company_memberships
+  const [trialUsers, setTrialUsers] = useState<TrialUser[]>([]);
+  const [pendingLinks, setPendingLinks] = useState<PendingLink[]>([]);
+
+  // Legacy trial clients per reseller
   interface TrialClient { id: string; name: string; whatsapp: string; created_at: string; status: string; }
   const [trialClients, setTrialClients] = useState<TrialClient[]>([]);
   const [trialCounts, setTrialCounts] = useState<Record<string, number>>({});
@@ -147,10 +172,55 @@ export default function Resellers() {
     }
   };
 
+  const fetchTrialUsers = async () => {
+    if (!companyId) return;
+    const { data: memberships } = await supabase
+      .from("company_memberships")
+      .select("id, user_id, trial_expires_at, created_at")
+      .eq("company_id", companyId)
+      .eq("is_trial", true)
+      .order("created_at", { ascending: false });
+
+    if (!memberships || memberships.length === 0) {
+      setTrialUsers([]);
+      return;
+    }
+
+    const userIds = memberships.map((m) => m.user_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+
+    const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+
+    setTrialUsers(memberships.map((m) => ({
+      membership_id: m.id,
+      user_id: m.user_id,
+      trial_expires_at: m.trial_expires_at,
+      created_at: m.created_at,
+      profile_name: profileMap.get(m.user_id)?.full_name || "Pendente",
+      profile_email: profileMap.get(m.user_id)?.email || "—",
+    })));
+  };
+
+  const fetchPendingLinks = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("trial_links")
+      .select("id, token, expires_at, created_at, status")
+      .eq("company_id", companyId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    if (data) setPendingLinks(data);
+  };
+
   useEffect(() => {
     fetchResellers();
     fetchCompanyCredits();
     fetchTrialCounts();
+    fetchTrialUsers();
+    fetchPendingLinks();
   }, [companyId]);
 
   const isOwnerRole = userRole === "Proprietário";
@@ -299,6 +369,7 @@ export default function Resellers() {
       setGeneratedTrialLink(link);
       setShowTrialLink(true);
       fetchTrialCounts();
+      fetchPendingLinks();
     }
     setTrialGenerating(false);
   };
@@ -321,7 +392,6 @@ export default function Resellers() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      // Deduct 1 credit from reseller
       if (selected) {
         await supabase.from("resellers").update({ credit_balance: selected.credit_balance - 1 }).eq("id", selected.id);
         await supabase.from("reseller_credit_transactions").insert({
@@ -333,10 +403,38 @@ export default function Resellers() {
         });
       }
       toast({ title: "Acesso ativado!", description: "1 crédito foi debitado do revendedor." });
-      // Refresh trials list
       setTrialClients((prev) => prev.filter((c) => c.id !== clientId));
       fetchResellers();
       fetchTrialCounts();
+    }
+  };
+
+  const handleActivateTrialUser = async (trialUser: TrialUser) => {
+    const { error } = await supabase
+      .from("company_memberships")
+      .update({ is_trial: false, trial_expires_at: null })
+      .eq("id", trialUser.membership_id);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `${trialUser.profile_name} ativado com acesso completo!` });
+      fetchTrialUsers();
+    }
+  };
+
+  const handleRemoveTrialUser = async (trialUser: TrialUser) => {
+    if (!confirm(`Remover acesso de teste de ${trialUser.profile_name}?`)) return;
+    const { error } = await supabase
+      .from("company_memberships")
+      .delete()
+      .eq("id", trialUser.membership_id);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Acesso removido" });
+      fetchTrialUsers();
     }
   };
 
@@ -360,6 +458,16 @@ export default function Resellers() {
       setShowRoleChange(false);
       fetchResellers();
     }
+  };
+
+  const getTimeLeft = (expiresAt: string | null) => {
+    if (!expiresAt) return { label: "Sem prazo", expired: false };
+    const hours = differenceInHours(parseISO(expiresAt), new Date());
+    if (hours <= 0) return { label: "Expirado", expired: true };
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    if (days > 0) return { label: `${days}d ${remainingHours}h`, expired: false };
+    return { label: `${hours}h`, expired: false };
   };
 
   const filtered = resellers.filter(
@@ -421,7 +529,7 @@ export default function Resellers() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
@@ -461,12 +569,143 @@ export default function Resellers() {
               <Coins className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Créditos em Circulação</p>
+              <p className="text-xs text-muted-foreground">Créditos</p>
               <p className="text-xl font-bold text-foreground">{totalCredits}</p>
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center">
+              <FlaskConical className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Em Teste</p>
+              <p className="text-xl font-bold text-foreground">{trialUsers.length}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Trial Users Section */}
+      {(trialUsers.length > 0 || pendingLinks.length > 0) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FlaskConical className="w-5 h-5 text-primary" />
+              Gerenciamento de Testes
+              <Badge variant="outline" className="ml-auto text-xs">
+                {trialUsers.length} cadastrado{trialUsers.length !== 1 ? "s" : ""} · {pendingLinks.length} pendente{pendingLinks.length !== 1 ? "s" : ""}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Active trial users */}
+            {trialUsers.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Usuários em Teste</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-center">Tempo Restante</TableHead>
+                      <TableHead>Cadastro</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {trialUsers.map((t) => {
+                      const time = getTimeLeft(t.trial_expires_at);
+                      return (
+                        <TableRow key={t.membership_id}>
+                          <TableCell className="font-medium text-sm">{t.profile_name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{t.profile_email}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge
+                              variant="outline"
+                              className={
+                                time.expired
+                                  ? "bg-destructive/10 text-destructive border-destructive/30"
+                                  : "bg-primary/10 text-primary border-primary/30"
+                              }
+                            >
+                              <Clock className="w-3 h-3 mr-1" />
+                              {time.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {format(parseISO(t.created_at), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs"
+                                onClick={() => handleActivateTrialUser(t)}
+                              >
+                                <UserCheck className="w-3.5 h-3.5" /> Ativar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleRemoveTrialUser(t)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* Pending links */}
+            {pendingLinks.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Links Aguardando Cadastro</p>
+                <div className="space-y-2">
+                  {pendingLinks.map((link) => {
+                    const time = getTimeLeft(link.expires_at);
+                    const fullUrl = `${window.location.origin}/trial/${link.token}`;
+                    return (
+                      <div key={link.id} className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
+                            /trial/{link.token.substring(0, 12)}...
+                          </code>
+                          <Badge
+                            variant="outline"
+                            className={time.expired ? "bg-destructive/10 text-destructive text-xs" : "bg-muted text-muted-foreground text-xs"}
+                          >
+                            <Clock className="w-3 h-3 mr-1" />
+                            {time.label}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 h-7 text-xs shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(fullUrl);
+                            toast({ title: "Link copiado!" });
+                          }}
+                        >
+                          <Copy className="w-3 h-3" /> Copiar
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search */}
       <div className="relative max-w-sm">
@@ -649,8 +888,6 @@ export default function Resellers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Generate Trial Dialog removed - now instant */}
 
       {/* Generated Trial Link Dialog */}
       <Dialog open={showTrialLink} onOpenChange={setShowTrialLink}>
