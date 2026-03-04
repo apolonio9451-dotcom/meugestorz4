@@ -449,15 +449,28 @@ export default function Resellers() {
 
   const handleActivateTrialReseller = async (r: Reseller) => {
     if (!companyId) return;
-    // Update reseller status to active
+
+    // Check credits (owner has infinite)
+    if (!isOwnerRole && companyCredits <= 0) {
+      toast({ title: "Sem créditos", description: "Saldo insuficiente para ativar este revendedor.", variant: "destructive" });
+      return;
+    }
+
+    // Update reseller status to active with permissions
     const { error: resErr } = await supabase
       .from("resellers")
-      .update({ status: "active" })
+      .update({ status: "active", can_resell: true, can_create_trial: true })
       .eq("id", r.id);
 
     if (resErr) {
       toast({ title: "Erro", description: resErr.message, variant: "destructive" });
       return;
+    }
+
+    // Debit 1 credit from company (if not owner)
+    if (!isOwnerRole) {
+      await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
+      setCompanyCredits(companyCredits - 1);
     }
 
     // Also update company_membership
@@ -469,9 +482,10 @@ export default function Resellers() {
         .eq("company_id", companyId);
     }
 
-    toast({ title: `${r.name} ativado com acesso completo!` });
+    toast({ title: `${r.name} ativado com acesso completo!`, description: isOwnerRole ? "" : "1 crédito debitado." });
     fetchResellers();
     fetchTrialUsers();
+    fetchCompanyCredits();
   };
 
   const handleRemoveTrialUser = async (trialUser: TrialUser) => {
