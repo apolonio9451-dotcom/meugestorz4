@@ -589,11 +589,6 @@ export default function Resellers() {
                               </Button>
                             )}
                             {r.status === "active" && (
-                              <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" disabled={!canGenerateAccess} onClick={() => handleGenerateAccess(r)} title={!canGenerateAccess ? "Saldo insuficiente" : "Gerar acesso"}>
-                                <Key className="w-3.5 h-3.5" /> Acesso
-                              </Button>
-                            )}
-                            {r.status === "active" && (
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
                                 <Coins className="w-3.5 h-3.5 text-primary" />
                               </Button>
@@ -688,11 +683,6 @@ export default function Resellers() {
                       {r.status === "overdue" && (
                         <Button size="sm" variant="outline" className="gap-1 h-8 text-xs flex-1 border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
                           <CalendarClock className="w-3.5 h-3.5" /> Renovar
-                        </Button>
-                      )}
-                      {r.status === "active" && (
-                        <Button size="sm" variant="outline" className="gap-1 h-8 text-xs flex-1" disabled={!canGenerateAccess} onClick={() => handleGenerateAccess(r)}>
-                          <Key className="w-3.5 h-3.5" /> Acesso
                         </Button>
                       )}
                       {r.status === "active" && (
