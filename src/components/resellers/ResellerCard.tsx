@@ -15,7 +15,18 @@ import {
   Clock,
   UserCheck,
 } from "lucide-react";
-import { getResellerRole, roleLabels, type ResellerRole } from "@/pages/Resellers";
+
+type ResellerRole = "admin" | "user";
+
+function getResellerRole(r: { can_resell: boolean; can_create_subreseller: boolean }): ResellerRole {
+  if (r.can_resell || r.can_create_subreseller) return "admin";
+  return "user";
+}
+
+const roleLabels: Record<ResellerRole, string> = {
+  admin: "Administrador",
+  user: "Usuário",
+};
 import { differenceInHours, parseISO } from "date-fns";
 
 interface Reseller {
