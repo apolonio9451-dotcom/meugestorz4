@@ -50,6 +50,9 @@ import {
   AlertTriangle,
   CalendarClock,
   CreditCard,
+  MoreVertical,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
@@ -61,7 +64,7 @@ interface Reseller {
   email: string;
   whatsapp: string;
   credit_balance: number;
-  status: string; // trial | expired | active | overdue
+  status: string;
   notes: string;
   created_at: string;
   can_resell: boolean;
@@ -125,7 +128,6 @@ function getDaysRemaining(r: Reseller): { days: number; label: string } {
   return { days: 0, label: "0 dias" };
 }
 
-// === CONSTANTS ===
 const ITEMS_PER_PAGE = 10;
 
 // === COMPONENT ===
@@ -174,7 +176,6 @@ export default function Resellers() {
       .order("created_at", { ascending: false });
     if (!data) { setLoading(false); return; }
 
-    // Enrich trial resellers with expiry from memberships
     const trialResellers = data.filter(r => r.status === "trial" && r.user_id);
     if (trialResellers.length > 0) {
       const userIds = trialResellers.map(r => r.user_id!);
@@ -192,7 +193,6 @@ export default function Resellers() {
       });
     }
 
-    // Auto-expire trials that passed 7 days
     const now = new Date();
     for (const r of data) {
       if (r.status === "trial" && (r as any).trial_expires_at) {
@@ -202,7 +202,6 @@ export default function Resellers() {
           r.status = "expired";
         }
       }
-      // Auto-overdue active subscriptions that expired
       if (r.status === "active" && r.subscription_expires_at) {
         const subExpires = parseISO(r.subscription_expires_at);
         if (now > subExpires) {
@@ -274,7 +273,6 @@ export default function Resellers() {
       return;
     }
 
-    // Remove trial flag from membership if exists
     if (selected.user_id) {
       await supabase
         .from("company_memberships")
@@ -298,7 +296,6 @@ export default function Resellers() {
   const handleAddCredits = async () => {
     if (!selected || !companyId || !creditForm.amount) return;
 
-    // REGRA CRÍTICA: só pode adicionar créditos se assinatura ativa
     if (selected.status !== "active") {
       toast({
         title: "Ação bloqueada",
@@ -345,7 +342,6 @@ export default function Resellers() {
       return;
     }
 
-    // Debit 1 credit
     if (!isOwner) {
       await supabase.from("resellers").update({ credit_balance: r.credit_balance - 1 }).eq("id", r.id);
       await supabase.from("reseller_credit_transactions").insert({
@@ -453,7 +449,6 @@ export default function Resellers() {
   // === KPIs ===
   const activeCount = resellers.filter(r => r.status === "active").length;
   const trialCount = resellers.filter(r => r.status === "trial").length;
-  const expiredCount = resellers.filter(r => r.status === "expired").length;
   const overdueCount = resellers.filter(r => r.status === "overdue").length;
 
   // === RENDER ===
@@ -471,49 +466,48 @@ export default function Resellers() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Revendedores</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Revendedores</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Centro de gerenciamento de revenda, créditos e acessos
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2">
-            <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
-          </Button>
-        </div>
+        <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 w-full sm:w-auto">
+          <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
+        </Button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* KPI Cards - compact on mobile */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {[
           { label: "Total", value: resellers.length, icon: Users, color: "text-primary" },
-          { label: "Assinatura Ativa", value: activeCount, icon: CheckCircle2, color: "text-emerald-400" },
-          { label: "Em Teste", value: trialCount, icon: FlaskConical, color: "text-amber-400" },
+          { label: "Ativos", value: activeCount, icon: CheckCircle2, color: "text-emerald-400" },
+          { label: "Teste", value: trialCount, icon: FlaskConical, color: "text-amber-400" },
           { label: "Vencidos", value: overdueCount, icon: AlertTriangle, color: "text-orange-400" },
         ].map((kpi, i) => (
-          <div key={i} className="h-[100px] rounded-lg border border-border bg-card flex flex-col justify-center items-center p-4">
-            <div className="flex items-center gap-1.5 mb-2">
-              <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
-              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">{kpi.label}</span>
+          <div key={i} className="rounded-lg border border-border bg-card flex flex-col justify-center items-center p-2 sm:p-4">
+            <div className="flex items-center gap-1 mb-1 sm:mb-2">
+              <kpi.icon className={`w-3 h-3 sm:w-4 sm:h-4 ${kpi.color}`} />
+              <span className="text-[9px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider hidden sm:inline">{kpi.label}</span>
             </div>
-            <span className="text-[28px] font-bold text-foreground leading-none">{kpi.value}</span>
+            <span className="text-lg sm:text-[28px] font-bold text-foreground leading-none">{kpi.value}</span>
+            <span className="text-[9px] text-muted-foreground font-medium mt-0.5 sm:hidden">{kpi.label}</span>
           </div>
         ))}
       </div>
 
-      {/* Reseller Table */}
+      {/* Search & Filter */}
       <div className="rounded-lg border border-border bg-card">
-        <div className="flex items-center justify-between p-4 border-b border-border gap-3">
-          <div className="relative w-72">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 sm:p-4 border-b border-border gap-2 sm:gap-3">
+          <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar revendedor..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+            <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44 h-9">
+            <SelectTrigger className="w-full sm:w-44 h-9">
               <SelectValue placeholder="Filtrar status" />
             </SelectTrigger>
             <SelectContent>
@@ -532,124 +526,201 @@ export default function Resellers() {
           <p className="text-center text-muted-foreground py-12 text-sm">Nenhum revendedor encontrado</p>
         ) : (
           <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Dias Restantes</TableHead>
-                  <TableHead className="text-center">Créditos</TableHead>
-                  <TableHead>Data Cadastro</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginated.map((r) => {
-                  const remaining = getDaysRemaining(r);
-                  const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+            {/* Desktop Table - hidden on mobile */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Dias Restantes</TableHead>
+                    <TableHead className="text-center">Créditos</TableHead>
+                    <TableHead>Data Cadastro</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginated.map((r) => {
+                    const remaining = getDaysRemaining(r);
+                    const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
 
-                  return (
-                    <TableRow key={r.id} className="group">
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-sm text-foreground">{r.name}</p>
-                          {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
-                          {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(r.status)}</TableCell>
-                      <TableCell className="text-center">
-                        <span className={`font-mono text-sm font-semibold ${
+                    return (
+                      <TableRow key={r.id} className="group">
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm text-foreground">{r.name}</p>
+                            {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
+                            {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(r.status)}</TableCell>
+                        <TableCell className="text-center">
+                          <span className={`font-mono text-sm font-semibold ${
+                            remaining.days <= 3 && remaining.days > 0 ? "text-orange-400" :
+                            remaining.days === 0 ? "text-destructive" :
+                            "text-foreground"
+                          }`}>
+                            {remaining.label}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={`font-mono text-sm font-bold ${r.credit_balance > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                            {isOwner && r.status === "active" ? "∞" : r.credit_balance}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(parseISO(r.created_at), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                            {(r.status === "trial" || r.status === "expired") && (
+                              <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleRenewSubscription(r)}>
+                                <CreditCard className="w-3.5 h-3.5" /> Ativar
+                              </Button>
+                            )}
+                            {r.status === "overdue" && (
+                              <Button size="sm" variant="outline" className="gap-1 h-7 text-xs border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
+                                <CalendarClock className="w-3.5 h-3.5" /> Renovar
+                              </Button>
+                            )}
+                            {r.status === "active" && (
+                              <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" disabled={!canGenerateAccess} onClick={() => handleGenerateAccess(r)} title={!canGenerateAccess ? "Saldo insuficiente" : "Gerar acesso"}>
+                                <Key className="w-3.5 h-3.5" /> Acesso
+                              </Button>
+                            )}
+                            {r.status === "active" && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
+                                <Coins className="w-3.5 h-3.5 text-primary" />
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openHistory(r)} title="Histórico">
+                              <History className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => openDelete(r)} title="Excluir">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards - shown only on mobile */}
+            <div className="md:hidden divide-y divide-border">
+              {paginated.map((r) => {
+                const remaining = getDaysRemaining(r);
+                const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+
+                return (
+                  <div key={r.id} className="p-3 space-y-3">
+                    {/* Top: Name + Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
+                        {r.email && (
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <Mail className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{r.email}</span>
+                          </p>
+                        )}
+                        {r.whatsapp && (
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Phone className="w-3 h-3 shrink-0" />
+                            {r.whatsapp}
+                          </p>
+                        )}
+                      </div>
+                      {getStatusBadge(r.status)}
+                    </div>
+
+                    {/* Info row: days, credits, date */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-md bg-muted/50 p-2 text-center">
+                        <p className="text-[9px] text-muted-foreground uppercase font-medium">Dias</p>
+                        <p className={`text-sm font-bold font-mono ${
                           remaining.days <= 3 && remaining.days > 0 ? "text-orange-400" :
                           remaining.days === 0 ? "text-destructive" :
                           "text-foreground"
                         }`}>
                           {remaining.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className={`font-mono text-sm font-bold ${r.credit_balance > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 p-2 text-center">
+                        <p className="text-[9px] text-muted-foreground uppercase font-medium">Créditos</p>
+                        <p className={`text-sm font-bold font-mono ${r.credit_balance > 0 ? "text-primary" : "text-muted-foreground"}`}>
                           {isOwner && r.status === "active" ? "∞" : r.credit_balance}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(parseISO(r.created_at), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                          {/* Ativar Assinatura - for trial/expired */}
-                          {(r.status === "trial" || r.status === "expired") && (
-                            <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleRenewSubscription(r)}>
-                              <CreditCard className="w-3.5 h-3.5" /> Ativar
-                            </Button>
-                          )}
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 p-2 text-center">
+                        <p className="text-[9px] text-muted-foreground uppercase font-medium">Cadastro</p>
+                        <p className="text-[11px] font-medium text-foreground">
+                          {format(parseISO(r.created_at), "dd/MM/yy")}
+                        </p>
+                      </div>
+                    </div>
 
-                          {/* Renovar - for overdue */}
-                          {r.status === "overdue" && (
-                            <Button size="sm" variant="outline" className="gap-1 h-7 text-xs border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
-                              <CalendarClock className="w-3.5 h-3.5" /> Renovar
-                            </Button>
-                          )}
-
-                          {/* Gerar Acesso - only active with credits */}
-                          {r.status === "active" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1 h-7 text-xs"
-                              disabled={!canGenerateAccess}
-                              onClick={() => handleGenerateAccess(r)}
-                              title={!canGenerateAccess ? "Saldo insuficiente" : "Gerar acesso"}
-                            >
-                              <Key className="w-3.5 h-3.5" /> Acesso
-                            </Button>
-                          )}
-
-                          {/* Credits - only active */}
-                          {r.status === "active" && (
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
-                              <Coins className="w-3.5 h-3.5 text-primary" />
-                            </Button>
-                          )}
-
-                          {/* Edit */}
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-
-                          {/* History */}
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openHistory(r)} title="Histórico">
-                            <History className="w-3.5 h-3.5" />
-                          </Button>
-
-                          {/* Delete */}
-                          <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => openDelete(r)} title="Excluir">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {(r.status === "trial" || r.status === "expired") && (
+                        <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => handleRenewSubscription(r)}>
+                          <CreditCard className="w-3.5 h-3.5" /> Ativar
+                        </Button>
+                      )}
+                      {r.status === "overdue" && (
+                        <Button size="sm" variant="outline" className="gap-1 h-8 text-xs flex-1 border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
+                          <CalendarClock className="w-3.5 h-3.5" /> Renovar
+                        </Button>
+                      )}
+                      {r.status === "active" && (
+                        <Button size="sm" variant="outline" className="gap-1 h-8 text-xs flex-1" disabled={!canGenerateAccess} onClick={() => handleGenerateAccess(r)}>
+                          <Key className="w-3.5 h-3.5" /> Acesso
+                        </Button>
+                      )}
+                      {r.status === "active" && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openCredits(r)}>
+                          <Coins className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(r)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openHistory(r)}>
+                        <History className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => openDelete(r)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-                <span className="text-xs text-muted-foreground">
-                  Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} de {filtered.length}
+              <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-t border-border">
+                <span className="text-[10px] sm:text-xs text-muted-foreground">
+                  {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} de {filtered.length}
                 </span>
                 <div className="flex items-center gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button key={page} size="icon" variant={page === currentPage ? "default" : "ghost"} className="h-8 w-8 text-xs" onClick={() => setCurrentPage(page)}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).slice(
+                    Math.max(0, currentPage - 3),
+                    currentPage + 2
+                  ).map(page => (
+                    <Button key={page} size="icon" variant={page === currentPage ? "default" : "ghost"} className="h-7 w-7 sm:h-8 sm:w-8 text-xs" onClick={() => setCurrentPage(page)}>
                       {page}
                     </Button>
                   ))}
-                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-8 sm:w-8" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
@@ -659,66 +730,111 @@ export default function Resellers() {
         )}
       </div>
 
-      {/* Trial Links Table */}
+      {/* Trial Links - Mobile-friendly */}
       {pendingLinks.length > 0 && (
         <div className="rounded-lg border border-border bg-card">
-          <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <FlaskConical className="w-4 h-4 text-amber-400" />
-              Links de Teste Pendentes
+              Links de Teste
               <Badge variant="outline" className="text-[10px] ml-1">{pendingLinks.length}</Badge>
             </h2>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Link</TableHead>
-                <TableHead>Criado em</TableHead>
-                <TableHead>Expira em</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pendingLinks.map((link) => {
-                const time = getTimeLeft(link.expires_at);
-                const fullUrl = `${window.location.origin}/trial/${link.token}`;
-                return (
-                  <TableRow key={link.id}>
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono">/trial/{link.token.substring(0, 16)}...</code>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{format(parseISO(link.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{format(parseISO(link.expires_at), "dd/MM/yyyy HH:mm")}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={time.expired ? "bg-destructive/10 text-destructive text-[11px]" : "bg-amber-500/10 text-amber-400 text-[11px]"}>
-                        <Clock className="w-3 h-3 mr-1" />
-                        {time.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}>
-                          <Copy className="w-3 h-3" /> Copiar
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={async () => {
-                          const { error } = await supabase.from("trial_links").delete().eq("id", link.id);
-                          if (error) {
-                            toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
-                          } else {
-                            toast({ title: "Link excluído!" });
-                            fetchResellers();
-                          }
-                        }}>
-                          <Trash2 className="w-3 h-3" /> Excluir
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+
+          {/* Desktop trial table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Link</TableHead>
+                  <TableHead>Criado em</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ação</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingLinks.map((link) => {
+                  const time = getTimeLeft(link.expires_at);
+                  const fullUrl = `${window.location.origin}/trial/${link.token}`;
+                  return (
+                    <TableRow key={link.id}>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono">/trial/{link.token.substring(0, 16)}...</code>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{format(parseISO(link.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{format(parseISO(link.expires_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={time.expired ? "bg-destructive/10 text-destructive text-[11px]" : "bg-amber-500/10 text-amber-400 text-[11px]"}>
+                          <Clock className="w-3 h-3 mr-1" />
+                          {time.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}>
+                            <Copy className="w-3 h-3" /> Copiar
+                          </Button>
+                          <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={async () => {
+                            const { error } = await supabase.from("trial_links").delete().eq("id", link.id);
+                            if (error) {
+                              toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+                            } else {
+                              toast({ title: "Link excluído!" });
+                              fetchPendingLinks();
+                            }
+                          }}>
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile trial cards */}
+          <div className="sm:hidden divide-y divide-border">
+            {pendingLinks.map((link) => {
+              const time = getTimeLeft(link.expires_at);
+              const fullUrl = `${window.location.origin}/trial/${link.token}`;
+              return (
+                <div key={link.id} className="p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <code className="text-[10px] bg-muted px-2 py-1 rounded font-mono truncate flex-1">
+                      /trial/{link.token.substring(0, 12)}...
+                    </code>
+                    <Badge variant="outline" className={`shrink-0 text-[10px] ${time.expired ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-400"}`}>
+                      <Clock className="w-2.5 h-2.5 mr-1" />
+                      {time.label}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Criado: {format(parseISO(link.created_at), "dd/MM/yy HH:mm")}</span>
+                    <span>Expira: {format(parseISO(link.expires_at), "dd/MM/yy HH:mm")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="gap-1 h-7 text-xs flex-1" onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}>
+                      <Copy className="w-3 h-3" /> Copiar
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1 h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10" onClick={async () => {
+                      const { error } = await supabase.from("trial_links").delete().eq("id", link.id);
+                      if (error) {
+                        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "Link excluído!" });
+                        fetchPendingLinks();
+                      }
+                    }}>
+                      <Trash2 className="w-3 h-3" /> Excluir
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
