@@ -100,7 +100,7 @@ type ResellerStatus = "trial" | "expired" | "active" | "overdue";
 const STATUS_CONFIG: Record<ResellerStatus, { label: string; color: string; dot: string }> = {
   trial: { label: "Em Teste", color: "bg-amber-500/15 text-amber-400 border-amber-500/30", dot: "bg-amber-400" },
   expired: { label: "Expirado", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30", dot: "bg-zinc-500" },
-  active: { label: "Assinatura Ativa", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
+  active: { label: "Ativo", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
   overdue: { label: "Vencido", color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
 };
 
@@ -114,18 +114,18 @@ function getStatusBadge(status: string) {
   );
 }
 
-function getDaysRemaining(r: Reseller): { days: number; label: string } {
+function getDaysRemaining(r: Reseller): { days: number; label: string; expiryDate: string | null } {
   if (r.status === "trial") {
-    if (!r.trial_expires_at) return { days: 0, label: "0 dias" };
+    if (!r.trial_expires_at) return { days: 0, label: "0 dias", expiryDate: null };
     const days = Math.max(0, differenceInDays(parseISO(r.trial_expires_at), new Date()));
-    return { days, label: `${days} dia${days !== 1 ? "s" : ""}` };
+    return { days, label: `${days} dia${days !== 1 ? "s" : ""}`, expiryDate: format(parseISO(r.trial_expires_at), "dd/MM/yyyy") };
   }
   if (r.status === "active") {
-    if (!r.subscription_expires_at) return { days: 0, label: "—" };
+    if (!r.subscription_expires_at) return { days: 0, label: "—", expiryDate: null };
     const days = Math.max(0, differenceInDays(parseISO(r.subscription_expires_at), new Date()));
-    return { days, label: `${days} dia${days !== 1 ? "s" : ""}` };
+    return { days, label: `${days} dia${days !== 1 ? "s" : ""}`, expiryDate: format(parseISO(r.subscription_expires_at), "dd/MM/yyyy") };
   }
-  return { days: 0, label: "0 dias" };
+  return { days: 0, label: "0 dias", expiryDate: null };
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -555,17 +555,22 @@ export default function Resellers() {
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-center">
-                          <span className={`font-mono text-sm font-semibold ${
-                            remaining.days <= 3 && remaining.days > 0 ? "text-orange-400" :
-                            remaining.days === 0 ? "text-destructive" :
-                            "text-foreground"
-                          }`}>
-                            {remaining.label}
-                          </span>
+                          <div>
+                            <span className={`font-mono text-sm font-semibold ${
+                              remaining.days <= 3 && remaining.days > 0 ? "text-orange-400" :
+                              remaining.days === 0 ? "text-destructive" :
+                              "text-foreground"
+                            }`}>
+                              {remaining.label}
+                            </span>
+                            {remaining.expiryDate && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{remaining.expiryDate}</p>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <span className={`font-mono text-sm font-bold ${r.credit_balance > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                            {isOwner && r.status === "active" ? "∞" : r.credit_balance}
+                            {r.credit_balance}
                           </span>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
@@ -591,6 +596,11 @@ export default function Resellers() {
                             {r.status === "active" && (
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
                                 <Coins className="w-3.5 h-3.5 text-primary" />
+                              </Button>
+                            )}
+                            {r.status === "active" && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleRenewSubscription(r)} title="Renovar assinatura">
+                                <CalendarClock className="w-3.5 h-3.5 text-emerald-400" />
                               </Button>
                             )}
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
@@ -650,11 +660,14 @@ export default function Resellers() {
                         }`}>
                           {remaining.label}
                         </p>
+                        {remaining.expiryDate && (
+                          <p className="text-[8px] text-muted-foreground mt-0.5">{remaining.expiryDate}</p>
+                        )}
                       </div>
                       <div className="rounded-md bg-muted/50 p-2 text-center">
                         <p className="text-[9px] text-muted-foreground uppercase font-medium">Créditos</p>
                         <p className={`text-sm font-bold font-mono ${r.credit_balance > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                          {isOwner && r.status === "active" ? "∞" : r.credit_balance}
+                          {r.credit_balance}
                         </p>
                       </div>
                       <div className="rounded-md bg-muted/50 p-2 text-center">
@@ -685,6 +698,11 @@ export default function Resellers() {
                       {r.status === "active" && (
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openCredits(r)}>
                           <Coins className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      )}
+                      {r.status === "active" && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleRenewSubscription(r)}>
+                          <CalendarClock className="w-3.5 h-3.5 text-emerald-400" />
                         </Button>
                       )}
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(r)}>
