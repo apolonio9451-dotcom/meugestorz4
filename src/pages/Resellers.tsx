@@ -697,9 +697,22 @@ export default function Resellers() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}>
-                        <Copy className="w-3 h-3" /> Copiar
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}>
+                          <Copy className="w-3 h-3" /> Copiar
+                        </Button>
+                        <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={async () => {
+                          const { error } = await supabase.from("trial_links").delete().eq("id", link.id);
+                          if (error) {
+                            toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+                          } else {
+                            toast({ title: "Link excluído!" });
+                            fetchResellers();
+                          }
+                        }}>
+                          <Trash2 className="w-3 h-3" /> Excluir
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
