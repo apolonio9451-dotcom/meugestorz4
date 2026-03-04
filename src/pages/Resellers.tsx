@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
   Coins,
+  CirclePlus,
   Search,
   History,
   Users,
@@ -589,8 +590,9 @@ export default function Resellers() {
                               </Button>
                             )}
                             {r.status === "active" && (
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
-                                <Coins className="w-3.5 h-3.5 text-primary" />
+                              <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs" onClick={() => openCredits(r)} title="Adicionar créditos">
+                                <CirclePlus className="w-3.5 h-3.5 text-primary" />
+                                <span className="hidden lg:inline">Créditos</span>
                               </Button>
                             )}
                             {r.status === "active" && (
@@ -686,8 +688,9 @@ export default function Resellers() {
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openCredits(r)}>
-                          <Coins className="w-3.5 h-3.5 text-primary" />
+                        <Button size="sm" variant="ghost" className="gap-1 h-8 text-xs px-2" onClick={() => openCredits(r)} title="Adicionar créditos">
+                          <CirclePlus className="w-4 h-4 text-primary" />
+                          <span className="text-[10px]">Créditos</span>
                         </Button>
                       )}
                       {r.status === "active" && (
