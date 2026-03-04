@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -45,12 +44,16 @@ import {
   Trash2,
   Copy,
   Pencil,
-  Eye,
-  PercentCircle,
+  Key,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
+  CalendarClock,
+  CreditCard,
 } from "lucide-react";
-import { differenceInHours, parseISO, format } from "date-fns";
+import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
+
+// === TYPES ===
 
 interface Reseller {
   id: string;
@@ -58,7 +61,7 @@ interface Reseller {
   email: string;
   whatsapp: string;
   credit_balance: number;
-  status: string;
+  status: string; // trial | expired | active | overdue
   notes: string;
   created_at: string;
   can_resell: boolean;
@@ -66,20 +69,9 @@ interface Reseller {
   can_create_trial: boolean;
   level: number;
   trial_expires_at?: string | null;
+  subscription_expires_at?: string | null;
   user_id?: string | null;
 }
-
-export type ResellerRole = "admin" | "user";
-
-export function getResellerRole(r: { can_resell: boolean; can_create_subreseller: boolean }): ResellerRole {
-  if (r.can_resell || r.can_create_subreseller) return "admin";
-  return "user";
-}
-
-export const roleLabels: Record<ResellerRole, string> = {
-  admin: "Administrador",
-  user: "Usuário",
-};
 
 interface CreditTransaction {
   id: string;
@@ -98,7 +90,45 @@ interface PendingLink {
   status: string;
 }
 
+// === STATUS HELPERS ===
+
+type ResellerStatus = "trial" | "expired" | "active" | "overdue";
+
+const STATUS_CONFIG: Record<ResellerStatus, { label: string; color: string; dot: string }> = {
+  trial: { label: "Em Teste", color: "bg-amber-500/15 text-amber-400 border-amber-500/30", dot: "bg-amber-400" },
+  expired: { label: "Expirado", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30", dot: "bg-zinc-500" },
+  active: { label: "Assinatura Ativa", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
+  overdue: { label: "Vencido", color: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400" },
+};
+
+function getStatusBadge(status: string) {
+  const config = STATUS_CONFIG[status as ResellerStatus] || STATUS_CONFIG.expired;
+  return (
+    <Badge variant="outline" className={`${config.color} text-[11px] gap-1.5`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+      {config.label}
+    </Badge>
+  );
+}
+
+function getDaysRemaining(r: Reseller): { days: number; label: string } {
+  if (r.status === "trial") {
+    if (!r.trial_expires_at) return { days: 0, label: "0 dias" };
+    const days = Math.max(0, differenceInDays(parseISO(r.trial_expires_at), new Date()));
+    return { days, label: `${days} dia${days !== 1 ? "s" : ""}` };
+  }
+  if (r.status === "active") {
+    if (!r.subscription_expires_at) return { days: 0, label: "—" };
+    const days = Math.max(0, differenceInDays(parseISO(r.subscription_expires_at), new Date()));
+    return { days, label: `${days} dia${days !== 1 ? "s" : ""}` };
+  }
+  return { days: 0, label: "0 dias" };
+}
+
+// === CONSTANTS ===
 const ITEMS_PER_PAGE = 10;
+
+// === COMPONENT ===
 
 export default function Resellers() {
   const { companyId, userRole, user } = useAuth();
@@ -108,40 +138,43 @@ export default function Resellers() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [companyCredits, setCompanyCredits] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Dialogs
-  const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showRoleChange, setShowRoleChange] = useState(false);
   const [showTrialLink, setShowTrialLink] = useState(false);
+  const [showActivate, setShowActivate] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [generatedTrialLink, setGeneratedTrialLink] = useState("");
   const [selected, setSelected] = useState<Reseller | null>(null);
-  const [selectedRole, setSelectedRole] = useState<ResellerRole>("user");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // Trial links
   const [pendingLinks, setPendingLinks] = useState<PendingLink[]>([]);
-  const [trialCounts, setTrialCounts] = useState<Record<string, number>>({});
 
-  // Form
-  const [form, setForm] = useState({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
+  // Forms
   const [creditForm, setCreditForm] = useState({ amount: "", type: "purchase", description: "" });
+  const [activateDays, setActivateDays] = useState("30");
   const [trialGenerating, setTrialGenerating] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", email: "", whatsapp: "" });
 
-  const fetchCompanyCredits = async () => {
-    if (!companyId) return;
-    const { data } = await supabase.from("companies").select("credit_balance").eq("id", companyId).single();
-    if (data) setCompanyCredits(data.credit_balance);
-  };
+  const isOwner = userRole === "Proprietário";
+  const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
+
+  // === DATA FETCHING ===
 
   const fetchResellers = async () => {
     if (!companyId) return;
-    const { data } = await supabase.from("resellers").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("resellers")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false });
     if (!data) { setLoading(false); return; }
 
+    // Enrich trial resellers with expiry from memberships
     const trialResellers = data.filter(r => r.status === "trial" && r.user_id);
     if (trialResellers.length > 0) {
       const userIds = trialResellers.map(r => r.user_id!);
@@ -158,136 +191,57 @@ export default function Resellers() {
         }
       });
     }
-    setResellers(data);
-    setLoading(false);
-  };
 
-  const fetchTrialCounts = async () => {
-    if (!companyId) return;
-    const { data } = await supabase.from("clients").select("reseller_id").eq("company_id", companyId).eq("status", "trial");
-    if (data) {
-      const counts: Record<string, number> = {};
-      data.forEach((c: any) => { if (c.reseller_id) counts[c.reseller_id] = (counts[c.reseller_id] || 0) + 1; });
-      setTrialCounts(counts);
+    // Auto-expire trials that passed 7 days
+    const now = new Date();
+    for (const r of data) {
+      if (r.status === "trial" && (r as any).trial_expires_at) {
+        const expires = parseISO((r as any).trial_expires_at);
+        if (now > expires) {
+          await supabase.from("resellers").update({ status: "expired" }).eq("id", r.id);
+          r.status = "expired";
+        }
+      }
+      // Auto-overdue active subscriptions that expired
+      if (r.status === "active" && r.subscription_expires_at) {
+        const subExpires = parseISO(r.subscription_expires_at);
+        if (now > subExpires) {
+          await supabase.from("resellers").update({ status: "overdue" }).eq("id", r.id);
+          r.status = "overdue";
+        }
+      }
     }
+
+    setResellers(data as Reseller[]);
+    setLoading(false);
   };
 
   const fetchPendingLinks = async () => {
     if (!companyId) return;
-    const { data } = await supabase.from("trial_links").select("id, token, expires_at, created_at, status").eq("company_id", companyId).eq("status", "pending").order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("trial_links")
+      .select("id, token, expires_at, created_at, status")
+      .eq("company_id", companyId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
     if (data) setPendingLinks(data);
   };
 
   useEffect(() => {
     fetchResellers();
-    fetchCompanyCredits();
-    fetchTrialCounts();
     fetchPendingLinks();
   }, [companyId]);
 
-  const isOwnerRole = userRole === "Proprietário";
-  const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
-  const isOwner = userRole === "Proprietário";
-  const hasCredits = isOwner || companyCredits > 0;
+  // === HANDLERS ===
 
-  // Handlers
-  const handleCreate = async () => {
-    if (!companyId || !form.name.trim()) return;
-    if (!isOwnerRole && companyCredits <= 0) {
-      toast({ title: "Sem créditos", description: "Adicione créditos ao painel para criar novos revendedores.", variant: "destructive" });
-      return;
-    }
-    const { error } = await supabase.from("resellers").insert({ company_id: companyId, name: form.name, email: form.email, whatsapp: form.whatsapp, notes: form.notes });
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      if (!isOwnerRole) await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
-      toast({ title: "Revendedor criado com sucesso" });
-      setShowCreate(false);
-      setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
-      fetchResellers();
-      fetchCompanyCredits();
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!selected) return;
-    const { error } = await supabase.from("resellers").update({ name: form.name, email: form.email, whatsapp: form.whatsapp, notes: form.notes, status: form.status }).eq("id", selected.id);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Revendedor atualizado" });
-      setShowEdit(false);
-      fetchResellers();
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este revendedor?")) return;
-    const { error } = await supabase.from("resellers").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Revendedor excluído" });
-      fetchResellers();
-    }
-  };
-
-  const handleToggleStatus = async (r: Reseller) => {
-    const newStatus = r.status === "active" ? "blocked" : "active";
-    const { error } = await supabase.from("resellers").update({ status: newStatus }).eq("id", r.id);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: newStatus === "active" ? "Revendedor desbloqueado" : "Revendedor bloqueado" });
-      fetchResellers();
-    }
-  };
-
-  const handleAddCredits = async () => {
-    if (!selected || !companyId || !creditForm.amount) return;
-    const amount = parseInt(creditForm.amount);
-    if (isNaN(amount) || amount === 0) return;
-    const finalAmount = creditForm.type === "debit" ? -Math.abs(amount) : Math.abs(amount);
-    const { error: txError } = await supabase.from("reseller_credit_transactions").insert({
-      reseller_id: selected.id, company_id: companyId, amount: finalAmount, type: creditForm.type,
-      description: creditForm.description || (creditForm.type === "purchase" ? "Compra de créditos" : "Débito de créditos"),
-    });
-    if (txError) { toast({ title: "Erro", description: txError.message, variant: "destructive" }); return; }
-    const { error: upError } = await supabase.from("resellers").update({ credit_balance: selected.credit_balance + finalAmount }).eq("id", selected.id);
-    if (upError) {
-      toast({ title: "Erro ao atualizar saldo", description: upError.message, variant: "destructive" });
-    } else {
-      toast({ title: `${finalAmount > 0 ? "Créditos adicionados" : "Créditos debitados"} com sucesso` });
-      setShowCredits(false);
-      setCreditForm({ amount: "", type: "purchase", description: "" });
-      fetchResellers();
-    }
-  };
-
-  const openHistory = async (reseller: Reseller) => {
-    setSelected(reseller);
-    const { data } = await supabase.from("reseller_credit_transactions").select("*").eq("reseller_id", reseller.id).order("created_at", { ascending: false });
-    if (data) setTransactions(data);
-    setShowHistory(true);
-  };
-
-  const openEdit = (r: Reseller) => {
-    setSelected(r);
-    setForm({ name: r.name, email: r.email || "", whatsapp: r.whatsapp || "", notes: r.notes || "", status: r.status });
-    setShowEdit(true);
-  };
-
-  const openCredits = (r: Reseller) => {
-    setSelected(r);
-    setCreditForm({ amount: "", type: "purchase", description: "" });
-    setShowCredits(true);
-  };
-
-  const handleGenerateTrialInstant = async () => {
+  const handleGenerateTrial = async () => {
     if (!companyId || !user) return;
     setTrialGenerating(true);
-    const { data, error } = await supabase.from("trial_links").insert({ company_id: companyId, created_by: user.id, client_name: "Pendente" }).select("token").single();
+    const { data, error } = await supabase
+      .from("trial_links")
+      .insert({ company_id: companyId, created_by: user.id, client_name: "Pendente" })
+      .select("token")
+      .single();
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
@@ -299,44 +253,171 @@ export default function Resellers() {
     setTrialGenerating(false);
   };
 
-  const handleActivateTrialReseller = async (r: Reseller) => {
-    if (!companyId) return;
-    if (!isOwnerRole && companyCredits <= 0) {
-      toast({ title: "Sem créditos", description: "Saldo insuficiente para ativar este revendedor.", variant: "destructive" });
+  const handleActivateSubscription = async () => {
+    if (!selected || !companyId) return;
+    const days = parseInt(activateDays);
+    if (isNaN(days) || days <= 0) return;
+
+    const expiresAt = addDays(new Date(), days).toISOString();
+    const { error } = await supabase
+      .from("resellers")
+      .update({
+        status: "active",
+        subscription_expires_at: expiresAt,
+        can_resell: true,
+        can_create_trial: true,
+      })
+      .eq("id", selected.id);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
     }
-    const { error: resErr } = await supabase.from("resellers").update({ status: "active", can_resell: true, can_create_trial: true }).eq("id", r.id);
-    if (resErr) { toast({ title: "Erro", description: resErr.message, variant: "destructive" }); return; }
-    if (!isOwnerRole) {
-      await supabase.from("companies").update({ credit_balance: companyCredits - 1 }).eq("id", companyId);
-      setCompanyCredits(companyCredits - 1);
+
+    // Remove trial flag from membership if exists
+    if (selected.user_id) {
+      await supabase
+        .from("company_memberships")
+        .update({ is_trial: false, trial_expires_at: null })
+        .eq("user_id", selected.user_id)
+        .eq("company_id", companyId);
     }
-    if (r.user_id) {
-      await supabase.from("company_memberships").update({ is_trial: false, trial_expires_at: null }).eq("user_id", r.user_id).eq("company_id", companyId);
-    }
-    toast({ title: `${r.name} ativado com acesso completo!`, description: isOwnerRole ? "" : "1 crédito debitado." });
+
+    toast({ title: `Assinatura ativada para ${selected.name}`, description: `${days} dias de acesso.` });
+    setShowActivate(false);
+    setActivateDays("30");
     fetchResellers();
-    fetchCompanyCredits();
   };
 
-  const openRoleChange = (r: Reseller) => {
+  const handleRenewSubscription = async (r: Reseller) => {
     setSelected(r);
-    setSelectedRole(getResellerRole(r));
-    setShowRoleChange(true);
+    setActivateDays("30");
+    setShowActivate(true);
   };
 
-  const handleRoleChange = async () => {
-    if (!selected) return;
-    const permissions = {
-      admin: { can_resell: true, can_create_subreseller: true, can_create_trial: true },
-      user: { can_resell: false, can_create_subreseller: false, can_create_trial: true },
-    };
-    const { error } = await supabase.from("resellers").update(permissions[selectedRole]).eq("id", selected.id);
+  const handleAddCredits = async () => {
+    if (!selected || !companyId || !creditForm.amount) return;
+
+    // REGRA CRÍTICA: só pode adicionar créditos se assinatura ativa
+    if (selected.status !== "active") {
+      toast({
+        title: "Ação bloqueada",
+        description: "Só é possível adicionar créditos para revendedores com Assinatura Ativa.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amount = parseInt(creditForm.amount);
+    if (isNaN(amount) || amount === 0) return;
+    const finalAmount = creditForm.type === "debit" ? -Math.abs(amount) : Math.abs(amount);
+
+    const { error: txError } = await supabase.from("reseller_credit_transactions").insert({
+      reseller_id: selected.id,
+      company_id: companyId,
+      amount: finalAmount,
+      type: creditForm.type,
+      description: creditForm.description || (creditForm.type === "purchase" ? "Compra de créditos" : "Débito de créditos"),
+    });
+    if (txError) { toast({ title: "Erro", description: txError.message, variant: "destructive" }); return; }
+
+    const { error: upError } = await supabase
+      .from("resellers")
+      .update({ credit_balance: selected.credit_balance + finalAmount })
+      .eq("id", selected.id);
+    if (upError) {
+      toast({ title: "Erro ao atualizar saldo", description: upError.message, variant: "destructive" });
+    } else {
+      toast({ title: `${finalAmount > 0 ? "Créditos adicionados" : "Créditos debitados"} com sucesso` });
+      setShowCredits(false);
+      setCreditForm({ amount: "", type: "purchase", description: "" });
+      fetchResellers();
+    }
+  };
+
+  const handleGenerateAccess = async (r: Reseller) => {
+    if (r.status !== "active") {
+      toast({ title: "Bloqueado", description: "Assinatura deve estar ativa para gerar acesso.", variant: "destructive" });
+      return;
+    }
+    if (r.credit_balance <= 0 && !isOwner) {
+      toast({ title: "Sem créditos", description: "Saldo insuficiente. Compre créditos para gerar acesso.", variant: "destructive" });
+      return;
+    }
+
+    // Debit 1 credit
+    if (!isOwner) {
+      await supabase.from("resellers").update({ credit_balance: r.credit_balance - 1 }).eq("id", r.id);
+      await supabase.from("reseller_credit_transactions").insert({
+        reseller_id: r.id,
+        company_id: companyId!,
+        amount: -1,
+        type: "activation",
+        description: "Geração de acesso",
+      });
+    }
+
+    toast({ title: "Acesso gerado com sucesso!", description: isOwner ? "" : "1 crédito debitado." });
+    fetchResellers();
+  };
+
+  const openCredits = (r: Reseller) => {
+    if (r.status !== "active") {
+      toast({ title: "Ação bloqueada", description: "Só é possível gerenciar créditos para revendedores com Assinatura Ativa.", variant: "destructive" });
+      return;
+    }
+    setSelected(r);
+    setCreditForm({ amount: "", type: "purchase", description: "" });
+    setShowCredits(true);
+  };
+
+  const openHistory = async (r: Reseller) => {
+    setSelected(r);
+    const { data } = await supabase
+      .from("reseller_credit_transactions")
+      .select("*")
+      .eq("reseller_id", r.id)
+      .order("created_at", { ascending: false });
+    if (data) setTransactions(data);
+    setShowHistory(true);
+  };
+
+  const openDelete = (r: Reseller) => {
+    setSelected(r);
+    setDeleteConfirmText("");
+    setShowDelete(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selected || deleteConfirmText !== "EXCLUIR") return;
+    const { error } = await supabase.from("resellers").delete().eq("id", selected.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Cargo alterado para ${roleLabels[selectedRole]}` });
-      setShowRoleChange(false);
+      toast({ title: "Cadastro excluído com sucesso" });
+      setShowDelete(false);
+      fetchResellers();
+    }
+  };
+
+  const openEdit = (r: Reseller) => {
+    setSelected(r);
+    setEditForm({ name: r.name, email: r.email || "", whatsapp: r.whatsapp || "" });
+    setShowEdit(true);
+  };
+
+  const handleEdit = async () => {
+    if (!selected) return;
+    const { error } = await supabase.from("resellers").update({
+      name: editForm.name,
+      email: editForm.email,
+      whatsapp: editForm.whatsapp,
+    }).eq("id", selected.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Dados atualizados" });
+      setShowEdit(false);
       fetchResellers();
     }
   };
@@ -351,10 +432,12 @@ export default function Resellers() {
     return { label: `${hours}h`, expired: false };
   };
 
-  // Filtered & paginated data
+  // === FILTERING & PAGINATION ===
+
   const filtered = useMemo(() => {
     return resellers.filter((r) => {
-      const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
+      const matchesSearch =
+        r.name.toLowerCase().includes(search.toLowerCase()) ||
         r.email?.toLowerCase().includes(search.toLowerCase()) ||
         r.whatsapp?.includes(search);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
@@ -367,27 +450,13 @@ export default function Resellers() {
 
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
 
-  // KPI calculations
-  const totalCredits = resellers.reduce((s, r) => s + r.credit_balance, 0);
-  const activeCount = resellers.filter((r) => r.status === "active").length;
-  const blockedCount = resellers.filter((r) => r.status === "blocked").length;
-  const trialResellersCount = resellers.filter((r) => r.status === "trial").length;
-  const activeClients = Object.values(trialCounts).reduce((a, b) => a + b, 0);
-  const conversionRate = resellers.length > 0 ? Math.round((activeCount / resellers.length) * 100) : 0;
+  // === KPIs ===
+  const activeCount = resellers.filter(r => r.status === "active").length;
+  const trialCount = resellers.filter(r => r.status === "trial").length;
+  const expiredCount = resellers.filter(r => r.status === "expired").length;
+  const overdueCount = resellers.filter(r => r.status === "overdue").length;
 
-  // Status badge helper
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[11px]">Ativo</Badge>;
-      case "blocked":
-        return <Badge variant="destructive" className="text-[11px]">Bloqueado</Badge>;
-      case "trial":
-        return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[11px]">Teste</Badge>;
-      default:
-        return <Badge variant="outline" className="text-[11px]">{status}</Badge>;
-    }
-  };
+  // === RENDER ===
 
   if (!isAdmin) {
     return (
@@ -403,23 +472,30 @@ export default function Resellers() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Revendedores</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gerencie sua rede de revendedores, créditos e testes</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Revendedores</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Centro de gerenciamento de revenda, créditos e acessos
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2">
+            <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
+          </Button>
+        </div>
       </div>
 
-      {/* 1. KPI Cards - 6 columns */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Revendedores", value: resellers.length, icon: Users, color: "text-primary" },
-          { label: "Ativos", value: activeCount, icon: TrendingUp, color: "text-emerald-400" },
-          { label: "Bloqueados", value: blockedCount, icon: Ban, color: "text-destructive" },
-          { label: "Créditos Disponíveis", value: isOwner ? "∞" : companyCredits, icon: Coins, color: "text-primary" },
-          { label: "Testes Ativos", value: trialResellersCount, icon: FlaskConical, color: "text-amber-400" },
-          { label: "Conversão %", value: `${conversionRate}%`, icon: PercentCircle, color: "text-emerald-400" },
+          { label: "Total", value: resellers.length, icon: Users, color: "text-primary" },
+          { label: "Assinatura Ativa", value: activeCount, icon: CheckCircle2, color: "text-emerald-400" },
+          { label: "Em Teste", value: trialCount, icon: FlaskConical, color: "text-amber-400" },
+          { label: "Vencidos", value: overdueCount, icon: AlertTriangle, color: "text-orange-400" },
         ].map((kpi, i) => (
-          <div key={i} className="h-[110px] rounded-lg border border-border bg-card flex flex-col justify-center items-center p-4">
+          <div key={i} className="h-[100px] rounded-lg border border-border bg-card flex flex-col justify-center items-center p-4">
             <div className="flex items-center gap-1.5 mb-2">
               <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
               <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">{kpi.label}</span>
@@ -429,36 +505,23 @@ export default function Resellers() {
         ))}
       </div>
 
-      {/* 2. Action Bar */}
-      <div className="flex items-center justify-end h-14 gap-3">
-        <Button onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }} className="gap-2" disabled={!hasCredits}>
-          <Plus className="w-4 h-4" /> Novo Revendedor
-        </Button>
-        <Button variant="secondary" onClick={handleGenerateTrialInstant} disabled={trialGenerating} className="gap-2">
-          <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
-        </Button>
-        <Button variant="outline" onClick={() => openCredits(resellers[0])} disabled={resellers.length === 0} className="gap-2">
-          <Coins className="w-4 h-4" /> Comprar Créditos
-        </Button>
-      </div>
-
-      {/* 3. Reseller Table */}
+      {/* Reseller Table */}
       <div className="rounded-lg border border-border bg-card">
-        {/* Table header with search and filter */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border gap-3">
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Buscar revendedor..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 h-9">
+            <SelectTrigger className="w-44 h-9">
               <SelectValue placeholder="Filtrar status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="active">Ativos</SelectItem>
-              <SelectItem value="blocked">Bloqueados</SelectItem>
               <SelectItem value="trial">Em Teste</SelectItem>
+              <SelectItem value="active">Assinatura Ativa</SelectItem>
+              <SelectItem value="expired">Expirado</SelectItem>
+              <SelectItem value="overdue">Vencido</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -474,72 +537,100 @@ export default function Resellers() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Dias Restantes</TableHead>
                   <TableHead className="text-center">Créditos</TableHead>
-                  <TableHead className="text-center">Testes</TableHead>
-                  <TableHead className="text-center">Clientes Ativos</TableHead>
                   <TableHead>Data Cadastro</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map((r) => (
-                  <TableRow key={r.id} className="group">
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{r.name}</p>
-                        {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(r.status)}</TableCell>
-                    <TableCell className="text-center">
-                      <span className={`font-mono text-sm font-bold ${r.credit_balance > 0 ? "text-primary" : "text-destructive"}`}>
-                        {r.credit_balance}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="font-mono text-sm">{trialCounts[r.id] || 0}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="font-mono text-sm">—</span>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {format(parseISO(r.created_at), "dd/MM/yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                        {r.status === "trial" ? (
-                          <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleActivateTrialReseller(r)}>
-                            <UserCheck className="w-3.5 h-3.5" /> Ativar
-                          </Button>
-                        ) : (
-                          <>
+                {paginated.map((r) => {
+                  const remaining = getDaysRemaining(r);
+                  const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+
+                  return (
+                    <TableRow key={r.id} className="group">
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-sm text-foreground">{r.name}</p>
+                          {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
+                          {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(r.status)}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={`font-mono text-sm font-semibold ${
+                          remaining.days <= 3 && remaining.days > 0 ? "text-orange-400" :
+                          remaining.days === 0 ? "text-destructive" :
+                          "text-foreground"
+                        }`}>
+                          {remaining.label}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={`font-mono text-sm font-bold ${r.credit_balance > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                          {isOwner && r.status === "active" ? "∞" : r.credit_balance}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {format(parseISO(r.created_at), "dd/MM/yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                          {/* Ativar Assinatura - for trial/expired */}
+                          {(r.status === "trial" || r.status === "expired") && (
+                            <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleRenewSubscription(r)}>
+                              <CreditCard className="w-3.5 h-3.5" /> Ativar
+                            </Button>
+                          )}
+
+                          {/* Renovar - for overdue */}
+                          {r.status === "overdue" && (
+                            <Button size="sm" variant="outline" className="gap-1 h-7 text-xs border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
+                              <CalendarClock className="w-3.5 h-3.5" /> Renovar
+                            </Button>
+                          )}
+
+                          {/* Gerar Acesso - only active with credits */}
+                          {r.status === "active" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7 text-xs"
+                              disabled={!canGenerateAccess}
+                              onClick={() => handleGenerateAccess(r)}
+                              title={!canGenerateAccess ? "Saldo insuficiente" : "Gerar acesso"}
+                            >
+                              <Key className="w-3.5 h-3.5" /> Acesso
+                            </Button>
+                          )}
+
+                          {/* Credits - only active */}
+                          {r.status === "active" && (
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openCredits(r)} title="Créditos">
                               <Coins className="w-3.5 h-3.5 text-primary" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className={`h-7 w-7 ${r.status === "active" ? "hover:text-destructive" : "hover:text-primary"}`}
-                              onClick={() => handleToggleStatus(r)}
-                              title={r.status === "active" ? "Bloquear" : "Desbloquear"}
-                            >
-                              {r.status === "active" ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                            </Button>
-                          </>
-                        )}
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openHistory(r)} title="Histórico">
-                          <History className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => handleDelete(r.id)} title="Excluir">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          )}
+
+                          {/* Edit */}
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* History */}
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openHistory(r)} title="Histórico">
+                            <History className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* Delete */}
+                          <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => openDelete(r)} title="Excluir">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
 
@@ -554,13 +645,7 @@ export default function Resellers() {
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      size="icon"
-                      variant={page === currentPage ? "default" : "ghost"}
-                      className="h-8 w-8 text-xs"
-                      onClick={() => setCurrentPage(page)}
-                    >
+                    <Button key={page} size="icon" variant={page === currentPage ? "default" : "ghost"} className="h-8 w-8 text-xs" onClick={() => setCurrentPage(page)}>
                       {page}
                     </Button>
                   ))}
@@ -574,7 +659,7 @@ export default function Resellers() {
         )}
       </div>
 
-      {/* 4. Trial Links Table */}
+      {/* Trial Links Table */}
       {pendingLinks.length > 0 && (
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between p-4 border-b border-border">
@@ -612,12 +697,7 @@ export default function Resellers() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 h-7 text-xs"
-                        onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}
-                      >
+                      <Button variant="ghost" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => { navigator.clipboard.writeText(fullUrl); toast({ title: "Link copiado!" }); }}>
                         <Copy className="w-3 h-3" /> Copiar
                       </Button>
                     </TableCell>
@@ -631,46 +711,30 @@ export default function Resellers() {
 
       {/* ===== DIALOGS ===== */}
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      {/* Activate/Renew Subscription Dialog */}
+      <Dialog open={showActivate} onOpenChange={setShowActivate}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Novo Revendedor</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              {selected?.status === "overdue" ? "Renovar Assinatura" : "Ativar Assinatura"} — {selected?.name}
+            </DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
-            <div><Label>Nome *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div>
-            <div><Label>Observações</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-            <Button onClick={handleCreate}>Criar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialog */}
-      <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Editar Revendedor</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div><Label>Nome *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Email</Label><Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div>
-            <div><Label>Observações</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+            <div className="rounded-lg bg-muted/50 p-4 space-y-1">
+              <p className="text-xs text-muted-foreground">Status atual</p>
+              {selected && getStatusBadge(selected.status)}
+            </div>
             <div>
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="blocked">Bloqueado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Duração da assinatura (dias)</Label>
+              <Input type="number" min="1" value={activateDays} onChange={(e) => setActivateDays(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
-            <Button onClick={handleUpdate}>Salvar</Button>
+            <Button variant="outline" onClick={() => setShowActivate(false)}>Cancelar</Button>
+            <Button onClick={handleActivateSubscription}>
+              {selected?.status === "overdue" ? "Renovar" : "Ativar Assinatura"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -684,6 +748,12 @@ export default function Resellers() {
               Gerenciar Créditos — {selected?.name}
             </DialogTitle>
           </DialogHeader>
+          {selected?.status !== "active" && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Créditos só podem ser gerenciados com Assinatura Ativa.
+            </div>
+          )}
           <div className="text-center py-2">
             <p className="text-xs text-muted-foreground">Saldo Atual</p>
             <p className="text-3xl font-bold font-mono text-primary">{selected?.credit_balance ?? 0}</p>
@@ -704,7 +774,9 @@ export default function Resellers() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCredits(false)}>Cancelar</Button>
-            <Button onClick={handleAddCredits}>{creditForm.type === "purchase" ? "Adicionar" : "Debitar"}</Button>
+            <Button onClick={handleAddCredits} disabled={selected?.status !== "active"}>
+              {creditForm.type === "purchase" ? "Adicionar" : "Debitar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -749,29 +821,55 @@ export default function Resellers() {
         </DialogContent>
       </Dialog>
 
-      {/* Role Change Dialog */}
-      <Dialog open={showRoleChange} onOpenChange={setShowRoleChange}>
+      {/* Edit Dialog */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Alterar Cargo — {selected?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Editar — {selected?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            <div><Label>Nome</Label><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></div>
+            <div><Label>Email</Label><Input value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} /></div>
+            <div><Label>WhatsApp</Label><Input value={editForm.whatsapp} onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
+            <Button onClick={handleEdit}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Secure Delete Dialog */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Excluir Cadastro
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-4 space-y-2">
+              <p className="text-sm font-semibold text-destructive">⚠️ Essa ação é irreversível</p>
+              <div className="text-sm text-foreground space-y-1">
+                <p><strong>Nome:</strong> {selected?.name}</p>
+                <p><strong>Email:</strong> {selected?.email || "—"}</p>
+                <p><strong>WhatsApp:</strong> {selected?.whatsapp || "—"}</p>
+              </div>
+            </div>
             <div>
-              <Label>Cargo</Label>
-              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as ResellerRole)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="user">Usuário</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-2">
-                {selectedRole === "admin" && "Acesso completo: pode revender, criar sub-revendedores e acessar gestão de acessos."}
-                {selectedRole === "user" && "Acesso básico: pode apenas gerar testes. Sem acesso à gestão de acessos."}
-              </p>
+              <Label>Digite <strong>EXCLUIR</strong> para confirmar</Label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder="EXCLUIR"
+                className="mt-1"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRoleChange(false)}>Cancelar</Button>
-            <Button onClick={handleRoleChange}>Salvar Cargo</Button>
+            <Button variant="outline" onClick={() => setShowDelete(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteConfirmText !== "EXCLUIR"}>
+              Confirmar Exclusão
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -785,16 +883,13 @@ export default function Resellers() {
               Link de Teste Gerado
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">O link abaixo é válido por <strong>7 dias</strong>. Compartilhe com o cliente para acesso temporário.</p>
-          <div className="flex items-center gap-2">
-            <Input readOnly value={generatedTrialLink} className="font-mono text-xs" />
-            <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(generatedTrialLink); toast({ title: "Link copiado!" }); }}>
-              Copiar
+          <p className="text-sm text-muted-foreground">O link abaixo é válido por <strong>7 dias</strong>. Compartilhe com o revendedor para acesso temporário.</p>
+          <div className="relative">
+            <Input readOnly value={generatedTrialLink} className="pr-20 font-mono text-xs" />
+            <Button size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 gap-1 h-7" onClick={() => { navigator.clipboard.writeText(generatedTrialLink); toast({ title: "Link copiado!" }); }}>
+              <Copy className="w-3 h-3" /> Copiar
             </Button>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setShowTrialLink(false)}>Fechar</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

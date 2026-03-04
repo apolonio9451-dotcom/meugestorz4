@@ -614,6 +614,7 @@ export type Database = {
           notes: string | null
           parent_reseller_id: string | null
           status: string
+          subscription_expires_at: string | null
           updated_at: string
           user_id: string | null
           whatsapp: string | null
@@ -632,6 +633,7 @@ export type Database = {
           notes?: string | null
           parent_reseller_id?: string | null
           status?: string
+          subscription_expires_at?: string | null
           updated_at?: string
           user_id?: string | null
           whatsapp?: string | null
@@ -650,6 +652,7 @@ export type Database = {
           notes?: string | null
           parent_reseller_id?: string | null
           status?: string
+          subscription_expires_at?: string | null
           updated_at?: string
           user_id?: string | null
           whatsapp?: string | null

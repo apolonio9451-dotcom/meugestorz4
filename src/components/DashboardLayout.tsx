@@ -62,15 +62,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/settings", label: "Geral", icon: Settings },
     ],
   },
-  {
-    label: "Gestão de Acessos",
-    icon: KeyRound,
-    adminOnly: true,
-    children: [
-      { href: "/dashboard/resellers", label: "Revendedores", icon: Store },
-      { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
-    ],
-  },
+  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
