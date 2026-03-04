@@ -95,7 +95,7 @@ export default function Resellers() {
   const [showCredits, setShowCredits] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showRoleChange, setShowRoleChange] = useState(false);
-  const [showTrialGen, setShowTrialGen] = useState(false);
+  
   const [showTrials, setShowTrials] = useState(false);
   const [showTrialLink, setShowTrialLink] = useState(false);
   const [generatedTrialLink, setGeneratedTrialLink] = useState("");
@@ -110,8 +110,7 @@ export default function Resellers() {
   // Form
   const [form, setForm] = useState({ name: "", email: "", whatsapp: "", notes: "", status: "active" });
   const [creditForm, setCreditForm] = useState({ amount: "", type: "purchase", description: "" });
-  const [trialForm, setTrialForm] = useState({ name: "", whatsapp: "" });
-  const [trialResellerId, setTrialResellerId] = useState<string>("");
+  const [trialGenerating, setTrialGenerating] = useState(false);
 
   const fetchCompanyCredits = async () => {
     if (!companyId) return;
@@ -282,24 +281,14 @@ export default function Resellers() {
     toast({ title: "Em breve", description: `Visualização de clientes do revendedor ${r.name} será implementada.` });
   };
 
-  const openTrialGen = () => {
-    setSelected(null);
-    setTrialForm({ name: "", whatsapp: "" });
-    setShowTrialGen(true);
-  };
-
-  
-
-  const handleGenerateTrial = async () => {
-    if (!companyId || !trialForm.name.trim() || !user) return;
-    const resId = trialResellerId && trialResellerId !== "none" ? trialResellerId : null;
+  const handleGenerateTrialInstant = async () => {
+    if (!companyId || !user) return;
+    setTrialGenerating(true);
 
     const { data, error } = await supabase.from("trial_links").insert({
       company_id: companyId,
-      reseller_id: resId,
       created_by: user.id,
-      client_name: trialForm.name,
-      client_whatsapp: trialForm.whatsapp,
+      client_name: "Pendente",
     }).select("token").single();
 
     if (error) {
@@ -308,12 +297,10 @@ export default function Resellers() {
       const baseUrl = window.location.origin;
       const link = `${baseUrl}/trial/${data.token}`;
       setGeneratedTrialLink(link);
-      setShowTrialGen(false);
       setShowTrialLink(true);
-      setTrialForm({ name: "", whatsapp: "" });
-      setTrialResellerId("");
       fetchTrialCounts();
     }
+    setTrialGenerating(false);
   };
 
   const openTrials = async (r: Reseller) => {
@@ -417,10 +404,11 @@ export default function Resellers() {
           </Badge>
           <Button
             variant="outline"
-            onClick={() => openTrialGen()}
+            onClick={handleGenerateTrialInstant}
+            disabled={trialGenerating}
             className="gap-2"
           >
-            <FlaskConical className="w-4 h-4" /> Gerar Teste
+            <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
           </Button>
           <Button
             onClick={() => { setForm({ name: "", email: "", whatsapp: "", notes: "", status: "active" }); setShowCreate(true); }}
@@ -662,40 +650,7 @@ export default function Resellers() {
         </DialogContent>
       </Dialog>
 
-      {/* Generate Trial Dialog */}
-      <Dialog open={showTrialGen} onOpenChange={setShowTrialGen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FlaskConical className="w-5 h-5 text-amber-500" />
-              Gerar Teste
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-xs text-muted-foreground">O teste é gerado sem consumir créditos. Ao confirmar a venda, ative o acesso para debitar 1 crédito.</p>
-          <div className="space-y-4">
-            <div>
-              <Label>Revendedor (opcional)</Label>
-              <Select value={trialResellerId} onValueChange={setTrialResellerId}>
-                <SelectTrigger><SelectValue placeholder="Sem revendedor" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem revendedor</SelectItem>
-                  {resellers.filter(r => r.status === "active").map(r => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Nome do cliente *</Label><Input value={trialForm.name} onChange={(e) => setTrialForm({ ...trialForm, name: e.target.value })} /></div>
-            <div><Label>WhatsApp</Label><Input value={trialForm.whatsapp} onChange={(e) => setTrialForm({ ...trialForm, whatsapp: e.target.value })} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTrialGen(false)}>Cancelar</Button>
-            <Button onClick={handleGenerateTrial} className="gap-2">
-              <FlaskConical className="w-4 h-4" /> Gerar Teste
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Generate Trial Dialog removed - now instant */}
 
       {/* Generated Trial Link Dialog */}
       <Dialog open={showTrialLink} onOpenChange={setShowTrialLink}>

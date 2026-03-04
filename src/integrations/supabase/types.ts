@@ -275,21 +275,30 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          is_trial: boolean
           role: Database["public"]["Enums"]["app_role"]
+          trial_expires_at: string | null
+          trial_link_id: string | null
           user_id: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
+          is_trial?: boolean
           role?: Database["public"]["Enums"]["app_role"]
+          trial_expires_at?: string | null
+          trial_link_id?: string | null
           user_id: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
+          is_trial?: boolean
           role?: Database["public"]["Enums"]["app_role"]
+          trial_expires_at?: string | null
+          trial_link_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -298,6 +307,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_memberships_trial_link_id_fkey"
+            columns: ["trial_link_id"]
+            isOneToOne: false
+            referencedRelation: "trial_links"
             referencedColumns: ["id"]
           },
         ]
@@ -847,11 +863,12 @@ export type Database = {
           reseller_id: string | null
           status: string
           token: string
+          user_id: string | null
         }
         Insert: {
           activated_at?: string | null
           client_id?: string | null
-          client_name: string
+          client_name?: string
           client_whatsapp?: string | null
           company_id: string
           created_at?: string
@@ -861,6 +878,7 @@ export type Database = {
           reseller_id?: string | null
           status?: string
           token?: string
+          user_id?: string | null
         }
         Update: {
           activated_at?: string | null
@@ -875,6 +893,7 @@ export type Database = {
           reseller_id?: string | null
           status?: string
           token?: string
+          user_id?: string | null
         }
         Relationships: [
           {

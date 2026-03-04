@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { FlaskConical, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { differenceInDays, differenceInHours, parseISO } from "date-fns";
+import { differenceInHours, parseISO } from "date-fns";
 
 export default function TrialAccess() {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "valid" | "expired" | "not_found" | "activated">("loading");
   const [trialData, setTrialData] = useState<{
     client_name: string;
@@ -55,6 +57,10 @@ export default function TrialAccess() {
     : 0;
   const daysLeft = Math.floor(hoursLeft / 24);
 
+  const handleStartTrial = () => {
+    navigate(`/auth?trial=${token}`);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -73,7 +79,9 @@ export default function TrialAccess() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Acesso de Teste</h1>
-                <p className="text-muted-foreground text-sm mt-1">Olá, <strong>{trialData.client_name}</strong></p>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Você tem acesso temporário ao sistema para avaliação.
+                </p>
               </div>
               <div className="rounded-lg bg-primary/10 border border-primary/20 p-4">
                 <div className="flex items-center justify-center gap-2 text-primary">
@@ -83,10 +91,13 @@ export default function TrialAccess() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center">
-                <CheckCircle2 className="w-4 h-4 text-primary" />
-                Seu acesso temporário está ativo
-              </div>
+              <Button onClick={handleStartTrial} className="w-full gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Cadastrar e Iniciar Teste
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Crie sua conta para acessar o sistema em modo teste. O acesso completo será liberado após ativação pelo administrador.
+              </p>
             </div>
           )}
 
@@ -98,10 +109,10 @@ export default function TrialAccess() {
               <div>
                 <h1 className="text-xl font-bold text-foreground">Acesso Expirado</h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                  O período de teste de <strong>{trialData.client_name}</strong> expirou.
+                  O período de teste expirou.
                 </p>
               </div>
-              <p className="text-sm text-muted-foreground">Entre em contato com o revendedor para ativar seu acesso.</p>
+              <p className="text-sm text-muted-foreground">Entre em contato com o administrador para ativar seu acesso.</p>
             </div>
           )}
 
@@ -113,9 +124,12 @@ export default function TrialAccess() {
               <div>
                 <h1 className="text-xl font-bold text-foreground">Acesso Ativado</h1>
                 <p className="text-muted-foreground text-sm mt-1">
-                  O acesso de <strong>{trialData.client_name}</strong> foi ativado com sucesso.
+                  Este acesso já foi ativado. Faça login normalmente.
                 </p>
               </div>
+              <Button onClick={() => navigate("/auth")} variant="outline" className="w-full">
+                Ir para Login
+              </Button>
             </div>
           )}
 

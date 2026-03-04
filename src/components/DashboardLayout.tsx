@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import TrialBanner from "@/components/trials/TrialBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ import {
   Store,
   Clock,
   MessageCircle,
+  FlaskConical,
 } from "lucide-react";
 
 type NavItem = {
@@ -64,6 +66,7 @@ const navItems: NavItem[] = [
     adminOnly: true,
     children: [
       { href: "/dashboard/resellers", label: "Revendedores", icon: Store },
+      { href: "/dashboard/trials", label: "Testes", icon: FlaskConical },
       { href: "/dashboard/access-control", label: "Controle de Acessos", icon: ShieldCheck },
     ],
   },
@@ -330,6 +333,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        <TrialBanner />
         <header className="h-16 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-foreground" />

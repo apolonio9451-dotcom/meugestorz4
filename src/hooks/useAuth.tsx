@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
   userRole: string | null;
+  isTrial: boolean;
+  trialExpiresAt: string | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -27,18 +28,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isTrial, setIsTrial] = useState(false);
+  const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchCompanyData = async (userId: string) => {
     const { data } = await supabase
       .from("company_memberships")
-      .select("company_id, role")
+      .select("company_id, role, is_trial, trial_expires_at")
       .eq("user_id", userId)
       .limit(1)
       .single();
     if (data) {
       setCompanyId(data.company_id);
       setUserRole(roleLabels[data.role] || data.role);
+      setIsTrial(data.is_trial || false);
+      setTrialExpiresAt(data.trial_expires_at || null);
     }
   };
 
@@ -52,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setCompanyId(null);
           setUserRole(null);
+          setIsTrial(false);
+          setTrialExpiresAt(null);
         }
         setLoading(false);
       }
@@ -90,10 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setCompanyId(null);
     setUserRole(null);
+    setIsTrial(false);
+    setTrialExpiresAt(null);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, userRole, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, userRole, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
