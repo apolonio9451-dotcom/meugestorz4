@@ -1,17 +1,42 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Zap, Mail, Lock, User, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Zap, Mail, Lock, User, Building2, FlaskConical, Clock } from "lucide-react";
+import { differenceInHours, parseISO } from "date-fns";
 
 export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const trialToken = searchParams.get("trial");
+  const [trialInfo, setTrialInfo] = useState<{ expires_at: string; company_id: string; id: string } | null>(null);
+
+  useEffect(() => {
+    if (trialToken) {
+      supabase
+        .from("trial_links")
+        .select("id, expires_at, company_id, status")
+        .eq("token", trialToken)
+        .eq("status", "pending")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setTrialInfo(data);
+        });
+    }
+  }, [trialToken]);
+
+  const hoursLeft = trialInfo?.expires_at
+    ? Math.max(0, differenceInHours(parseISO(trialInfo.expires_at), new Date()))
+    : 0;
+  const daysLeft = Math.floor(hoursLeft / 24);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -27,14 +52,39 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const { error } = await signUp(
-      form.get("email") as string,
-      form.get("password") as string,
-      form.get("fullName") as string,
-      form.get("companyName") as string
-    );
-    if (error) toast.error(error.message);
-    else toast.success("Conta criada! Verifique seu email para confirmar.");
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+    const fullName = form.get("fullName") as string;
+    const companyName = form.get("companyName") as string;
+
+    if (trialToken && trialInfo) {
+      // Trial signup: create user with trial metadata
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            company_name: companyName,
+            is_trial: true,
+            trial_token: trialToken,
+            trial_company_id: trialInfo.company_id,
+            trial_link_id: trialInfo.id,
+            trial_expires_at: trialInfo.expires_at,
+          },
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Conta de teste criada! Verifique seu email para confirmar.");
+      }
+    } else {
+      const { error } = await signUp(email, password, fullName, companyName);
+      if (error) toast.error(error.message);
+      else toast.success("Conta criada! Verifique seu email para confirmar.");
+    }
     setLoading(false);
   };
 
@@ -50,10 +100,29 @@ export default function Auth() {
           <p className="text-muted-foreground mt-1">Gestão inteligente de assinaturas</p>
         </div>
 
-        <Tabs defaultValue="login">
+        {/* Trial Banner */}
+        {trialToken && trialInfo && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 mb-4 text-center space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <FlaskConical className="w-5 h-5 text-primary" />
+              <span className="font-semibold text-foreground">Cadastro de Teste</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-primary">
+              <Clock className="w-4 h-4" />
+              <span>
+                {daysLeft > 0 ? `${daysLeft}d ${hoursLeft % 24}h restantes` : `${hoursLeft}h restantes`}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Cadastre-se para acessar o sistema em modo teste. O acesso completo será liberado pelo administrador.
+            </p>
+          </div>
+        )}
+
+        <Tabs defaultValue={trialToken ? "register" : "login"}>
           <TabsList className="grid w-full grid-cols-2 mb-4 bg-secondary">
             <TabsTrigger value="login">Entrar</TabsTrigger>
-            <TabsTrigger value="register">Criar Conta</TabsTrigger>
+            <TabsTrigger value="register">{trialToken ? "Criar Conta (Teste)" : "Criar Conta"}</TabsTrigger>
           </TabsList>
 
           {/* Login */}
@@ -97,14 +166,19 @@ export default function Auth() {
                       className="pl-10 bg-input border-border text-foreground placeholder:text-muted-foreground h-12 rounded-xl" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-foreground font-semibold">Nome da empresa</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input name="companyName" required placeholder="Minha Empresa"
-                      className="pl-10 bg-input border-border text-foreground placeholder:text-muted-foreground h-12 rounded-xl" />
+                {!trialToken && (
+                  <div className="space-y-2">
+                    <Label className="text-foreground font-semibold">Nome da empresa</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input name="companyName" required placeholder="Minha Empresa"
+                        className="pl-10 bg-input border-border text-foreground placeholder:text-muted-foreground h-12 rounded-xl" />
+                    </div>
                   </div>
-                </div>
+                )}
+                {trialToken && (
+                  <input type="hidden" name="companyName" value="Trial" />
+                )}
                 <div className="space-y-2">
                   <Label className="text-foreground font-semibold">Email</Label>
                   <div className="relative">
@@ -123,7 +197,7 @@ export default function Auth() {
                 </div>
                 <Button type="submit" disabled={loading}
                   className="w-full h-12 rounded-xl text-base font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-[0_0_20px_hsl(180_100%_50%/0.3)]">
-                  {loading ? "Criando..." : "Criar Conta"}
+                  {loading ? "Criando..." : trialToken ? "Criar Conta de Teste" : "Criar Conta"}
                 </Button>
               </form>
             </div>
