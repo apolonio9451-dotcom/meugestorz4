@@ -134,11 +134,12 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { companyId, userRole, user } = useAuth();
+  const { companyId, userRole, user, isTrial } = useAuth();
   const { toast } = useToast();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [companyCredits, setCompanyCredits] = useState<number>(0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -227,15 +228,37 @@ export default function Resellers() {
     if (data) setPendingLinks(data);
   };
 
+  const fetchCompanyCredits = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("companies")
+      .select("credit_balance")
+      .eq("id", companyId)
+      .single();
+    if (data) setCompanyCredits(data.credit_balance);
+  };
+
   useEffect(() => {
     fetchResellers();
     fetchPendingLinks();
+    fetchCompanyCredits();
   }, [companyId]);
 
   // === HANDLERS ===
 
   const handleGenerateTrial = async () => {
     if (!companyId || !user) return;
+
+    if (isTrial) {
+      toast({ title: "Bloqueado", description: "Contas em teste não podem gerar acessos de revendedores.", variant: "destructive" });
+      return;
+    }
+
+    if (companyCredits <= 0 && !isOwner) {
+      toast({ title: "Sem créditos", description: "É necessário ter pelo menos 1 crédito para gerar acesso de revendedor.", variant: "destructive" });
+      return;
+    }
+
     setTrialGenerating(true);
     const { data, error } = await supabase
       .from("trial_links")
@@ -454,13 +477,17 @@ export default function Resellers() {
 
   // === RENDER ===
 
-  if (!isAdmin) {
+  if (!isAdmin || isTrial) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-2">
           <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto" />
           <h2 className="text-xl font-bold text-foreground">Acesso Restrito</h2>
-          <p className="text-muted-foreground text-sm">Apenas administradores e proprietários podem acessar esta página.</p>
+          <p className="text-muted-foreground text-sm">
+            {isTrial
+              ? "Contas em teste não têm acesso à gestão de revendedores."
+              : "Apenas administradores e proprietários podem acessar esta página."}
+          </p>
         </div>
       </div>
     );
