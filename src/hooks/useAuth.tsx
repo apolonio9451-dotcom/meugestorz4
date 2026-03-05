@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   companyId: string | null;
   userRole: string | null;
+  resellerCredits: number | null;
   isTrial: boolean;
   trialExpiresAt: string | null;
   loading: boolean;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [resellerCredits, setResellerCredits] = useState<number | null>(null);
   const [isTrial, setIsTrial] = useState(false);
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (resellerData) {
       // Reseller should use reseller company context (not trial signup company)
       setCompanyId(resellerData.company_id);
+      setResellerCredits(resellerData.credit_balance);
       setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
 
       const resellerIsTrial = resellerData.status === "trial";
@@ -113,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (payload) => {
           const reseller = payload.new as { company_id: string; credit_balance: number; status: string };
           setCompanyId(reseller.company_id);
+          setResellerCredits(reseller.credit_balance);
           setUserRole(reseller.credit_balance > 0 ? "Admin" : "Usuário");
           if (reseller.status !== "trial") {
             setIsTrial(false);
@@ -150,12 +154,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setCompanyId(null);
     setUserRole(null);
+    setResellerCredits(null);
     setIsTrial(false);
     setTrialExpiresAt(null);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, userRole, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, userRole, resellerCredits, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

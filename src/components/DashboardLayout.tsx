@@ -66,7 +66,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, userRole, isTrial } = useAuth();
+  const { signOut, user, companyId, userRole, resellerCredits, isTrial } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -393,7 +393,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   "w-5 h-5 transition-all duration-200",
                   isActive(item.href!) ? "text-primary" : "group-hover:scale-110"
                 )} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.href === "/dashboard/resellers" && resellerCredits !== null && (
+                  <span className="ml-auto text-[10px] font-bold font-mono bg-primary/15 text-primary border border-primary/30 rounded-full px-2 py-0.5">
+                    {resellerCredits}
+                  </span>
+                )}
               </Link>
             );
           })}
