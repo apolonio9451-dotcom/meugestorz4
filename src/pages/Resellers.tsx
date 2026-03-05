@@ -467,9 +467,14 @@ export default function Resellers() {
 
   const manageableResellers = useMemo(() => {
     if (!user?.id) return resellers;
-    // Never allow managing yourself as a reseller entry
-    return resellers.filter((r) => r.user_id !== user.id);
-  }, [resellers, user?.id]);
+    const currentEmail = user.email?.toLowerCase();
+    // Never show yourself in the resellers list
+    return resellers.filter((r) => {
+      if (r.user_id === user.id) return false;
+      if (currentEmail && r.email?.toLowerCase() === currentEmail) return false;
+      return true;
+    });
+  }, [resellers, user?.id, user?.email]);
 
   const filtered = useMemo(() => {
     return manageableResellers.filter((r) => {
