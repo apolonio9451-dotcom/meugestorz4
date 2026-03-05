@@ -301,8 +301,7 @@ export default function Resellers() {
       await supabase
         .from("company_memberships")
         .update({ is_trial: false, trial_expires_at: null })
-        .eq("user_id", selected.user_id)
-        .eq("company_id", companyId);
+        .eq("user_id", selected.user_id);
     }
 
     toast({ title: `Assinatura ativada para ${selected.name}`, description: `${days} dias de acesso.` });
