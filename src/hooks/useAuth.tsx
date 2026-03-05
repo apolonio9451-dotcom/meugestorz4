@@ -89,6 +89,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Realtime: update role when reseller credits change
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('reseller-role-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'resellers',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newBalance = (payload.new as any).credit_balance;
+          setUserRole(newBalance > 0 ? "Admin" : "Usuário");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const signUp = async (email: string, password: string, fullName: string, companyName: string) => {
     const { error } = await supabase.auth.signUp({
       email,
