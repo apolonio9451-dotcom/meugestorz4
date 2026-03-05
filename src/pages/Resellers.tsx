@@ -254,7 +254,8 @@ export default function Resellers() {
       return;
     }
 
-    if (companyCredits <= 0 && !isOwner) {
+    const effectiveCredits = resellerCredits !== null ? resellerCredits : companyCredits;
+    if (effectiveCredits <= 0 && !isOwner) {
       toast({ title: "Sem créditos", description: "É necessário ter pelo menos 1 crédito para gerar acesso de revendedor.", variant: "destructive" });
       return;
     }
