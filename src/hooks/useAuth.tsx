@@ -33,30 +33,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchCompanyData = async (userId: string) => {
-    const { data } = await supabase
+    // 1) Base membership (fallback)
+    const { data: membership } = await supabase
       .from("company_memberships")
       .select("company_id, role, is_trial, trial_expires_at")
       .eq("user_id", userId)
       .limit(1)
       .single();
-    if (data) {
-      setCompanyId(data.company_id);
-      setIsTrial(data.is_trial || false);
-      setTrialExpiresAt(data.trial_expires_at || null);
 
-      // Check if user is a reseller (has a record in resellers table)
-      const { data: resellerData } = await supabase
-        .from("resellers")
-        .select("id, credit_balance")
-        .eq("user_id", userId)
-        .maybeSingle();
+    // 2) Reseller row is the source of truth for reseller users
+    const { data: resellerData } = await supabase
+      .from("resellers")
+      .select("id, company_id, credit_balance, status")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-      if (resellerData) {
-        // Reseller: show as "Admin" or "Usuário" based on credits
-        setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
-      } else {
-        setUserRole(roleLabels[data.role] || data.role);
-      }
+    if (resellerData) {
+      // Reseller should use reseller company context (not trial signup company)
+      setCompanyId(resellerData.company_id);
+      setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
+
+      const resellerIsTrial = resellerData.status === "trial";
+      setIsTrial(resellerIsTrial);
+      setTrialExpiresAt(resellerIsTrial ? membership?.trial_expires_at || null : null);
+      return;
+    }
+
+    if (membership) {
+      setCompanyId(membership.company_id);
+      setIsTrial(membership.is_trial || false);
+      setTrialExpiresAt(membership.trial_expires_at || null);
+      setUserRole(roleLabels[membership.role] || membership.role);
     }
   };
 
@@ -89,23 +96,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Realtime: update role when reseller credits change
+  // Realtime: update reseller context instantly when credits/status change
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel('reseller-role-sync')
+      .channel("reseller-role-sync")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'resellers',
+          event: "UPDATE",
+          schema: "public",
+          table: "resellers",
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          const newBalance = (payload.new as any).credit_balance;
-          setUserRole(newBalance > 0 ? "Admin" : "Usuário");
+          const reseller = payload.new as { company_id: string; credit_balance: number; status: string };
+          setCompanyId(reseller.company_id);
+          setUserRole(reseller.credit_balance > 0 ? "Admin" : "Usuário");
+          if (reseller.status !== "trial") {
+            setIsTrial(false);
+            setTrialExpiresAt(null);
+          } else {
+            setIsTrial(true);
+          }
         }
       )
       .subscribe();
