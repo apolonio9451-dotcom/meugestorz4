@@ -465,8 +465,14 @@ export default function Resellers() {
 
   // === FILTERING & PAGINATION ===
 
+  const manageableResellers = useMemo(() => {
+    if (!user?.id) return resellers;
+    // Never allow managing yourself as a reseller entry
+    return resellers.filter((r) => r.user_id !== user.id);
+  }, [resellers, user?.id]);
+
   const filtered = useMemo(() => {
-    return resellers.filter((r) => {
+    return manageableResellers.filter((r) => {
       const matchesSearch =
         r.name.toLowerCase().includes(search.toLowerCase()) ||
         r.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -474,7 +480,7 @@ export default function Resellers() {
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [resellers, search, statusFilter]);
+  }, [manageableResellers, search, statusFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -482,9 +488,9 @@ export default function Resellers() {
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
 
   // === KPIs ===
-  const activeCount = resellers.filter(r => r.status === "active").length;
-  const trialCount = resellers.filter(r => r.status === "trial").length;
-  const overdueCount = resellers.filter(r => r.status === "overdue").length;
+  const activeCount = manageableResellers.filter(r => r.status === "active").length;
+  const trialCount = manageableResellers.filter(r => r.status === "trial").length;
+  const overdueCount = manageableResellers.filter(r => r.status === "overdue").length;
 
   // === RENDER ===
 
