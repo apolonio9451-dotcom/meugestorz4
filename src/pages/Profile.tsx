@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { User, Mail, KeyRound, Loader2, ShieldCheck, MessageCircle, UserCog } from "lucide-react";
 
 function md5(str: string): string {
   // Simple hash for Gravatar — we use a basic approach
@@ -32,6 +32,45 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
+
+  useEffect(() => {
+    const fetchAdmin = async () => {
+      if (!user) return;
+      const { data: membership } = await supabase
+        .from("company_memberships")
+        .select("trial_link_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (membership?.trial_link_id) {
+        const { data: trialLink } = await supabase
+          .from("trial_links")
+          .select("created_by")
+          .eq("id", membership.trial_link_id)
+          .maybeSingle();
+
+        if (trialLink?.created_by) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", trialLink.created_by)
+            .maybeSingle();
+
+          const { data: reseller } = await supabase
+            .from("resellers")
+            .select("whatsapp")
+            .eq("user_id", trialLink.created_by)
+            .maybeSingle();
+
+          if (profile) {
+            setAdminInfo({ name: profile.full_name || "Admin", whatsapp: reseller?.whatsapp || null });
+          }
+        }
+      }
+    };
+    fetchAdmin();
+  }, [user]);
 
   const email = user?.email || "";
   const fullName = user?.user_metadata?.full_name || "";
@@ -101,6 +140,37 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Admin Info Card */}
+      {adminInfo && (
+        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <UserCog className="w-5 h-5 text-primary" />
+              Seu Administrador
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-foreground">{adminInfo.name}</p>
+                <p className="text-xs text-muted-foreground">Entre em contato para suporte ou renovação</p>
+              </div>
+              {adminInfo.whatsapp && (
+                <a
+                  href={`https://wa.me/${adminInfo.whatsapp.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp
+                </a>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Password Reset Card */}
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
