@@ -281,7 +281,18 @@ export default function Resellers() {
     const days = parseInt(activateDays);
     if (isNaN(days) || days <= 0) return;
 
-    const expiresAt = addDays(new Date(), days).toISOString();
+    // If still in trial, add remaining trial days to the activation period
+    let totalDays = days;
+    if (selected.status === "trial" && (selected as any).trial_expires_at) {
+      const trialEnd = parseISO((selected as any).trial_expires_at);
+      const now = new Date();
+      if (trialEnd > now) {
+        const remainingDays = differenceInDays(trialEnd, now);
+        totalDays += remainingDays;
+      }
+    }
+
+    const expiresAt = addDays(new Date(), totalDays).toISOString();
     const { error } = await supabase
       .from("resellers")
       .update({
@@ -304,7 +315,8 @@ export default function Resellers() {
         .eq("user_id", selected.user_id);
     }
 
-    toast({ title: `Assinatura ativada para ${selected.name}`, description: `${days} dias de acesso.` });
+    const extraMsg = totalDays > days ? ` (${days} + ${totalDays - days} dias restantes do teste)` : "";
+    toast({ title: `Assinatura ativada para ${selected.name}`, description: `${totalDays} dias de acesso${extraMsg}.` });
     setShowActivate(false);
     setActivateDays("30");
     fetchResellers();
