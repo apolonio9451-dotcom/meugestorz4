@@ -116,16 +116,41 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId || !user) return;
     const fetchBrand = async () => {
-      const { data } = await supabase
-        .from("company_settings")
-        .select("brand_name, logo_url, primary_color, secondary_color, background_color")
-        .eq("company_id", companyId)
+      // Check if user is a reseller first
+      const { data: resellerData } = await supabase
+        .from("resellers")
+        .select("id, credit_balance")
+        .eq("user_id", user.id)
         .maybeSingle();
-      if (data?.brand_name) setBrandName(data.brand_name);
-      if (data?.logo_url) setBrandLogo(data.logo_url);
-      if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
+
+      if (resellerData) {
+        // Reseller: fetch from reseller_settings
+        const { data: resellerSettings } = await supabase
+          .from("reseller_settings")
+          .select("service_name, logo_url, primary_color")
+          .eq("reseller_id", resellerData.id)
+          .maybeSingle();
+
+        if (resellerSettings?.service_name) {
+          setBrandName(resellerSettings.service_name);
+        } else {
+          setBrandName("Meu gestor");
+        }
+        if (resellerSettings?.logo_url) setBrandLogo(resellerSettings.logo_url);
+        if (resellerSettings?.primary_color) applyThemeColors(resellerSettings.primary_color);
+      } else {
+        // Regular user: fetch from company_settings
+        const { data } = await supabase
+          .from("company_settings")
+          .select("brand_name, logo_url, primary_color, secondary_color, background_color")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        if (data?.brand_name) setBrandName(data.brand_name);
+        if (data?.logo_url) setBrandLogo(data.logo_url);
+        if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
+      }
     };
 
     const fetchSubscription = async () => {
@@ -283,7 +308,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems
             .filter((item) => {
-              const isAdminUser = userRole === "Proprietário" || userRole === "Administrador" || userRole === "Revendedor";
+              const isAdminUser = userRole === "Proprietário" || userRole === "Administrador" || userRole === "Admin";
               if (item.adminOnly && !isAdminUser) return false;
               if (item.resellerOnly && userRole !== "Operador" && userRole !== "Usuário") return false;
               return true;

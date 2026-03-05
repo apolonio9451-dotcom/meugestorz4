@@ -165,7 +165,7 @@ export default function Resellers() {
   const [editForm, setEditForm] = useState({ name: "", email: "", whatsapp: "" });
 
   const isOwner = userRole === "Proprietário";
-  const isAdmin = userRole === "Proprietário" || userRole === "Administrador";
+  const isAdmin = userRole === "Proprietário" || userRole === "Administrador" || userRole === "Admin";
 
   // === DATA FETCHING ===
 
