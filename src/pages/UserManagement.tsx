@@ -13,13 +13,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -61,7 +54,6 @@ export default function UserManagement() {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<string>("operator");
   const [saving, setSaving] = useState(false);
 
   const fetchMembers = async () => {
@@ -92,15 +84,14 @@ export default function UserManagement() {
   }, [companyId]);
 
   const handleAddUser = async () => {
-    if (!newEmail || !newName || !newPassword || !companyId) return;
+    if (!newEmail || !newName || !newPassword) return;
     setSaving(true);
 
-    // Sign up the new user
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email: newEmail,
       password: newPassword,
       options: {
-        data: { full_name: newName, is_reseller: "false" },
+        data: { full_name: newName },
         emailRedirectTo: window.location.origin,
       },
     });
@@ -111,31 +102,14 @@ export default function UserManagement() {
       return;
     }
 
-    // The handle_new_user trigger creates a company for the new user.
-    // We need to add them to OUR company instead.
-    // Since we can't easily delete the auto-created company from client side,
-    // we'll add them as a member to our company.
-    if (signUpData.user) {
-      const { error: memberError } = await supabase
-        .from("company_memberships")
-        .insert({
-          company_id: companyId,
-          user_id: signUpData.user.id,
-          role: newRole as "owner" | "admin" | "operator",
-        });
-
-      if (memberError) {
-        toast({ title: "Erro ao vincular", description: memberError.message, variant: "destructive" });
-      } else {
-        toast({ title: "Usuário adicionado com sucesso!" });
-        setAddOpen(false);
-        setNewEmail("");
-        setNewName("");
-        setNewPassword("");
-        setNewRole("operator");
-        fetchMembers();
-      }
-    }
+    toast({
+      title: "Acesso criado com sucesso!",
+      description: "Este usuário terá uma empresa própria e isolada, sem compartilhar dados.",
+    });
+    setAddOpen(false);
+    setNewEmail("");
+    setNewName("");
+    setNewPassword("");
     setSaving(false);
   };
 
@@ -265,18 +239,6 @@ export default function UserManagement() {
             <div className="space-y-2">
               <Label>Senha</Label>
               <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
-            </div>
-            <div className="space-y-2">
-              <Label>Cargo</Label>
-              <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="operator">Operador</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter>
