@@ -41,9 +41,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
     if (data) {
       setCompanyId(data.company_id);
-      setUserRole(roleLabels[data.role] || data.role);
       setIsTrial(data.is_trial || false);
       setTrialExpiresAt(data.trial_expires_at || null);
+
+      // Check if user is a reseller (has a record in resellers table)
+      const { data: resellerData } = await supabase
+        .from("resellers")
+        .select("id, credit_balance")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (resellerData) {
+        // Reseller: show as "Revendedor" or "Usuário" based on credits
+        setUserRole(resellerData.credit_balance > 0 ? "Revendedor" : "Usuário");
+      } else {
+        setUserRole(roleLabels[data.role] || data.role);
+      }
     }
   };
 
