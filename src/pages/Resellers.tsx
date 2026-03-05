@@ -134,7 +134,7 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { companyId, userRole, user, isTrial } = useAuth();
+  const { companyId, userRole, user, isTrial, resellerCredits } = useAuth();
   const { toast } = useToast();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
@@ -525,9 +525,18 @@ export default function Resellers() {
             Centro de gerenciamento de revenda, créditos e acessos
           </p>
         </div>
-        <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 w-full sm:w-auto">
-          <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {resellerCredits !== null && (
+            <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
+              <Coins className="w-4 h-4" />
+              <span className="font-mono">{resellerCredits}</span>
+              <span className="text-xs font-normal text-primary/70">créditos</span>
+            </div>
+          )}
+          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 flex-1 sm:flex-none">
+            <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards - compact on mobile */}

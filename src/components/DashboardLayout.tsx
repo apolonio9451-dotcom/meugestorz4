@@ -394,11 +394,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   isActive(item.href!) ? "text-primary" : "group-hover:scale-110"
                 )} />
                 <span className="flex-1">{item.label}</span>
-                {item.href === "/dashboard/resellers" && resellerCredits !== null && (
-                  <span className="ml-auto text-[10px] font-bold font-mono bg-primary/15 text-primary border border-primary/30 rounded-full px-2 py-0.5">
-                    {resellerCredits}
-                  </span>
-                )}
               </Link>
             );
           })}
