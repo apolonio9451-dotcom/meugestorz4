@@ -542,7 +542,7 @@ export default function Resellers() {
       {/* KPI Cards - compact on mobile */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {[
-          { label: "Total", value: resellers.length, icon: Users, color: "text-primary" },
+          { label: "Total", value: manageableResellers.length, icon: Users, color: "text-primary" },
           { label: "Ativos", value: activeCount, icon: CheckCircle2, color: "text-emerald-400" },
           { label: "Teste", value: trialCount, icon: FlaskConical, color: "text-amber-400" },
           { label: "Vencidos", value: overdueCount, icon: AlertTriangle, color: "text-orange-400" },
