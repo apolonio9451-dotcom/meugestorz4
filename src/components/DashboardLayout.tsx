@@ -283,8 +283,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems
             .filter((item) => {
-              if (item.adminOnly && userRole !== "Proprietário" && userRole !== "Administrador") return false;
-              if (item.resellerOnly && userRole !== "Operador") return false;
+              const isAdminUser = userRole === "Proprietário" || userRole === "Administrador" || userRole === "Revendedor";
+              if (item.adminOnly && !isAdminUser) return false;
+              if (item.resellerOnly && userRole !== "Operador" && userRole !== "Usuário") return false;
               return true;
             })
             .map((item) => {
