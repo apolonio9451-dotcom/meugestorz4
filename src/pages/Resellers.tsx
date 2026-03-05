@@ -576,7 +576,16 @@ export default function Resellers() {
                       <TableRow key={r.id} className="group">
                         <TableCell>
                           <div>
-                            <p className="font-medium text-sm text-foreground">{r.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm text-foreground">{r.name}</p>
+                              <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
+                                r.credit_balance > 0
+                                  ? "bg-primary/10 text-primary border-primary/30"
+                                  : "bg-muted text-muted-foreground border-border"
+                              }`}>
+                                {r.credit_balance > 0 ? "Admin" : "Usuário"}
+                              </Badge>
+                            </div>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
                           </div>
@@ -656,7 +665,16 @@ export default function Resellers() {
                     {/* Top: Name + Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
+                          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 shrink-0 ${
+                            r.credit_balance > 0
+                              ? "bg-primary/10 text-primary border-primary/30"
+                              : "bg-muted text-muted-foreground border-border"
+                          }`}>
+                            {r.credit_balance > 0 ? "Admin" : "Usuário"}
+                          </Badge>
+                        </div>
                         {r.email && (
                           <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Mail className="w-3 h-3 shrink-0" />
