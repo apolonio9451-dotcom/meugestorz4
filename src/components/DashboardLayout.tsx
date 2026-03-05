@@ -66,13 +66,14 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, userRole } = useAuth();
+  const { signOut, user, companyId, userRole, isTrial } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("ClientHub");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
+  const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
 
   const applyThemeColors = (primary?: string, secondary?: string, bg?: string) => {
     const hexToHsl = (hex: string): string => {
@@ -142,9 +143,82 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       }
     };
 
+    const fetchAdminInfo = async () => {
+      if (!user) return;
+      // Check if this user was created via a trial link
+      const { data: membership } = await supabase
+        .from("company_memberships")
+        .select("trial_link_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (membership?.trial_link_id) {
+        // Get who created the trial link
+        const { data: trialLink } = await supabase
+          .from("trial_links")
+          .select("created_by, company_id")
+          .eq("id", membership.trial_link_id)
+          .maybeSingle();
+
+        if (trialLink?.created_by) {
+          const { data: adminProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", trialLink.created_by)
+            .maybeSingle();
+
+          // Try to get whatsapp from resellers table
+          const { data: reseller } = await supabase
+            .from("resellers")
+            .select("whatsapp")
+            .eq("user_id", trialLink.created_by)
+            .maybeSingle();
+
+          if (adminProfile) {
+            setAdminInfo({
+              name: adminProfile.full_name || "Admin",
+              whatsapp: reseller?.whatsapp || null,
+            });
+          }
+        }
+      } else {
+        // Check if user is a reseller - get parent company owner
+        const { data: resellerData } = await supabase
+          .from("resellers")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (resellerData?.company_id) {
+          const { data: ownerMembership } = await supabase
+            .from("company_memberships")
+            .select("user_id")
+            .eq("company_id", resellerData.company_id)
+            .eq("role", "owner")
+            .maybeSingle();
+
+          if (ownerMembership?.user_id) {
+            const { data: ownerProfile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", ownerMembership.user_id)
+              .maybeSingle();
+
+            if (ownerProfile) {
+              setAdminInfo({
+                name: ownerProfile.full_name || "Admin",
+                whatsapp: null,
+              });
+            }
+          }
+        }
+      }
+    };
+
     fetchBrand();
     fetchSubscription();
-  }, [companyId]);
+    fetchAdminInfo();
+  }, [companyId, user]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
     navItems.forEach((item) => {
@@ -318,6 +392,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <span className="block text-[10px] text-muted-foreground truncate">{user?.email}</span>
             </div>
           </Link>
+          {adminInfo && (
+            <div className="rounded-lg bg-sidebar-accent/30 border border-sidebar-border/50 px-3 py-2.5 space-y-1.5">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Seu Admin</p>
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">{adminInfo.name}</p>
+              {adminInfo.whatsapp && (
+                <a
+                  href={`https://wa.me/${adminInfo.whatsapp.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[11px] text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  Chamar no WhatsApp
+                </a>
+              )}
+            </div>
+          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
