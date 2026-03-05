@@ -18,6 +18,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const trialToken = searchParams.get("trial");
   const [trialInfo, setTrialInfo] = useState<{ expires_at: string; company_id: string; id: string } | null>(null);
+  const [brandName, setBrandName] = useState("Meu Gestor");
 
   useEffect(() => {
     if (trialToken) {
@@ -28,7 +29,18 @@ export default function Auth() {
         .eq("status", "pending")
         .maybeSingle()
         .then(({ data }) => {
-          if (data) setTrialInfo(data);
+          if (data) {
+            setTrialInfo(data);
+            // Fetch brand name from company settings
+            supabase
+              .from("company_settings")
+              .select("brand_name")
+              .eq("company_id", data.company_id)
+              .maybeSingle()
+              .then(({ data: settings }) => {
+                if (settings?.brand_name) setBrandName(settings.brand_name);
+              });
+          }
         });
     }
   }, [trialToken]);
@@ -96,7 +108,7 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 mb-4">
             <Zap className="w-8 h-8 text-accent" />
           </div>
-          <h1 className="text-3xl font-bold font-display text-accent">Max Gestor</h1>
+          <h1 className="text-3xl font-bold font-display text-accent">{brandName}</h1>
           <p className="text-muted-foreground mt-1">Gestão inteligente de assinaturas</p>
         </div>
 
