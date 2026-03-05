@@ -52,8 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (resellerData) {
-        // Reseller: show as "Revendedor" or "Usuário" based on credits
-        setUserRole(resellerData.credit_balance > 0 ? "Revendedor" : "Usuário");
+        // Reseller: show as "Admin" or "Usuário" based on credits
+        setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
       } else {
         setUserRole(roleLabels[data.role] || data.role);
       }
