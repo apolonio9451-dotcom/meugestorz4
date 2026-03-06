@@ -54,6 +54,8 @@ import {
   MoreVertical,
   Phone,
   Mail,
+  GitBranch,
+  Network,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
@@ -75,6 +77,7 @@ interface Reseller {
   trial_expires_at?: string | null;
   subscription_expires_at?: string | null;
   user_id?: string | null;
+  parent_reseller_id?: string | null;
 }
 
 interface CreditTransaction {
@@ -142,6 +145,7 @@ export default function Resellers() {
   const [companyCredits, setCompanyCredits] = useState<number>(0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [parentFilter, setParentFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Dialogs
@@ -474,10 +478,32 @@ export default function Resellers() {
 
   // === FILTERING & PAGINATION ===
 
+  // Build parent name map from ALL resellers (not just manageable)
+  const parentNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    resellers.forEach(r => { map[r.id] = r.name; });
+    return map;
+  }, [resellers]);
+
+  // Unique parent resellers for filter dropdown
+  const parentOptions = useMemo(() => {
+    const parents = new Map<string, string>();
+    resellers.forEach(r => {
+      if (r.parent_reseller_id && parentNameMap[r.parent_reseller_id]) {
+        parents.set(r.parent_reseller_id, parentNameMap[r.parent_reseller_id]);
+      }
+    });
+    // Also add resellers that ARE parents (have sub-resellers)
+    resellers.forEach(r => {
+      const hasSubs = resellers.some(s => s.parent_reseller_id === r.id);
+      if (hasSubs) parents.set(r.id, r.name);
+    });
+    return Array.from(parents.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [resellers, parentNameMap]);
+
   const manageableResellers = useMemo(() => {
     if (!user?.id) return resellers;
     const currentEmail = user.email?.toLowerCase();
-    // Never show yourself in the resellers list
     return resellers.filter((r) => {
       if (r.user_id === user.id) return false;
       if (currentEmail && r.email?.toLowerCase() === currentEmail) return false;
@@ -492,14 +518,20 @@ export default function Resellers() {
         r.email?.toLowerCase().includes(search.toLowerCase()) ||
         r.whatsapp?.includes(search);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      let matchesParent = true;
+      if (parentFilter === "direct") {
+        matchesParent = !r.parent_reseller_id;
+      } else if (parentFilter !== "all") {
+        matchesParent = r.parent_reseller_id === parentFilter;
+      }
+      return matchesSearch && matchesStatus && matchesParent;
     });
-  }, [manageableResellers, search, statusFilter]);
+  }, [manageableResellers, search, statusFilter, parentFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter, parentFilter]);
 
   // === KPIs ===
   const activeCount = manageableResellers.filter(r => r.status === "active").length;
@@ -586,18 +618,38 @@ export default function Resellers() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-44 h-9">
-              <SelectValue placeholder="Filtrar status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="trial">Em Teste</SelectItem>
-              <SelectItem value="active">Assinatura Ativa</SelectItem>
-              <SelectItem value="expired">Expirado</SelectItem>
-              <SelectItem value="overdue">Vencido</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            {parentOptions.length > 0 && (
+              <Select value={parentFilter} onValueChange={setParentFilter}>
+                <SelectTrigger className="w-full sm:w-48 h-9">
+                  <SelectValue placeholder="Filtrar rede" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toda a Rede</SelectItem>
+                  <SelectItem value="direct">Diretos (sem pai)</SelectItem>
+                  {parentOptions.map(([id, name]) => (
+                    <SelectItem key={id} value={id}>
+                      <span className="flex items-center gap-1.5">
+                        <GitBranch className="w-3 h-3" /> Rede de {name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-44 h-9">
+                <SelectValue placeholder="Filtrar status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="trial">Em Teste</SelectItem>
+                <SelectItem value="active">Assinatura Ativa</SelectItem>
+                <SelectItem value="expired">Expirado</SelectItem>
+                <SelectItem value="overdue">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {loading ? (
@@ -612,6 +664,7 @@ export default function Resellers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>Rede</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Dias Restantes</TableHead>
                     <TableHead className="text-center">Créditos</TableHead>
@@ -623,6 +676,7 @@ export default function Resellers() {
                   {paginated.map((r) => {
                     const remaining = getDaysRemaining(r);
                     const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+                    const parentName = r.parent_reseller_id ? parentNameMap[r.parent_reseller_id] : null;
 
                     return (
                       <TableRow key={r.id} className="group">
@@ -641,6 +695,18 @@ export default function Resellers() {
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {parentName ? (
+                            <div className="flex items-center gap-1.5">
+                              <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <span className="text-[11px] text-muted-foreground">{parentName}</span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-primary/5 text-primary/70 border-primary/20">
+                              Direto
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-center">
@@ -711,9 +777,17 @@ export default function Resellers() {
               {paginated.map((r) => {
                 const remaining = getDaysRemaining(r);
                 const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+                const parentName = r.parent_reseller_id ? parentNameMap[r.parent_reseller_id] : null;
 
                 return (
                   <div key={r.id} className="p-3 space-y-3">
+                    {/* Parent indicator */}
+                    {parentName && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <GitBranch className="w-3 h-3" />
+                        <span>Sub-revenda de <strong className="text-foreground">{parentName}</strong></span>
+                      </div>
+                    )}
                     {/* Top: Name + Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
