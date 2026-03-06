@@ -531,7 +531,7 @@ export default function Clients() {
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground text-xs sm:text-sm">{clients.length} clientes cadastrados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
           <DialogTrigger asChild>
             <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
           </DialogTrigger>
