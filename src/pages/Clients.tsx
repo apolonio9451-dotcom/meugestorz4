@@ -677,50 +677,52 @@ export default function Clients() {
                 <p className="text-[11px] italic font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">APP · MAC & KEY</p>
                 <div className="space-y-3">
                   {formMacKeys.map((mk, i) => (
-                    <div key={i} className="space-y-2 p-3 rounded-lg border border-primary/15 bg-primary/5">
-                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                        <Input
-                          placeholder="Nome do App"
-                          value={mk.app_name}
-                          onChange={(e) => {
-                            const updated = [...formMacKeys];
-                            updated[i] = { ...updated[i], app_name: e.target.value };
-                            setFormMacKeys(updated);
-                          }}
-                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
-                        />
-                        <SlotDatePicker
-                          date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
-                          onDateChange={(d) => {
-                            const updated = [...formMacKeys];
-                            updated[i] = { ...updated[i], expires_at: d ? format(d, "yyyy-MM-dd") : "" };
-                            setFormMacKeys(updated);
-                          }}
-                          placeholder="Expiração..."
-                        />
-                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 row-span-2 self-center" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                    <div key={i} className="p-3 rounded-lg border border-primary/15 bg-primary/5">
+                      <div className="flex gap-2">
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Nome do App"
+                            value={mk.app_name}
+                            onChange={(e) => {
+                              const updated = [...formMacKeys];
+                              updated[i] = { ...updated[i], app_name: e.target.value };
+                              setFormMacKeys(updated);
+                            }}
+                            className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                          />
+                          <SlotDatePicker
+                            date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
+                            onDateChange={(d) => {
+                              const updated = [...formMacKeys];
+                              updated[i] = { ...updated[i], expires_at: d ? format(d, "yyyy-MM-dd") : "" };
+                              setFormMacKeys(updated);
+                            }}
+                            placeholder="Expiração..."
+                          />
+                          <Input
+                            placeholder="MAC Address"
+                            value={mk.mac}
+                            onChange={(e) => {
+                              const updated = [...formMacKeys];
+                              updated[i] = { ...updated[i], mac: formatMac(e.target.value) };
+                              setFormMacKeys(updated);
+                            }}
+                            className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                          />
+                          <Input
+                            placeholder="KEY"
+                            value={mk.key}
+                            onChange={(e) => {
+                              const updated = [...formMacKeys];
+                              updated[i] = { ...updated[i], key: e.target.value };
+                              setFormMacKeys(updated);
+                            }}
+                            className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                          />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 self-center" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
                           <X className="w-4 h-4" />
                         </Button>
-                        <Input
-                          placeholder="MAC Address"
-                          value={mk.mac}
-                          onChange={(e) => {
-                            const updated = [...formMacKeys];
-                            updated[i] = { ...updated[i], mac: formatMac(e.target.value) };
-                            setFormMacKeys(updated);
-                          }}
-                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
-                        />
-                        <Input
-                          placeholder="KEY"
-                          value={mk.key}
-                          onChange={(e) => {
-                            const updated = [...formMacKeys];
-                            updated[i] = { ...updated[i], key: e.target.value };
-                            setFormMacKeys(updated);
-                          }}
-                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
-                        />
                       </div>
                     </div>
                   ))}
