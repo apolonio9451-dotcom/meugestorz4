@@ -178,22 +178,12 @@ export default function Resellers() {
       .order("created_at", { ascending: false });
     if (!data) { setLoading(false); return; }
 
-    const trialResellers = data.filter(r => r.status === "trial" && r.user_id);
-    if (trialResellers.length > 0) {
-      const userIds = trialResellers.map(r => r.user_id!);
-      const { data: memberships } = await supabase
-        .from("company_memberships")
-        .select("user_id, trial_expires_at")
-        .eq("company_id", companyId)
-        .eq("is_trial", true)
-        .in("user_id", userIds);
-      const expiryMap = new Map((memberships || []).map(m => [m.user_id, m.trial_expires_at]));
-      data.forEach(r => {
-        if (r.status === "trial" && r.user_id) {
-          (r as any).trial_expires_at = expiryMap.get(r.user_id) || null;
-        }
-      });
-    }
+    // Use subscription_expires_at directly as trial expiry source
+    data.forEach(r => {
+      if (r.status === "trial") {
+        (r as any).trial_expires_at = r.subscription_expires_at || null;
+      }
+    });
 
     const now = new Date();
     for (const r of data) {
