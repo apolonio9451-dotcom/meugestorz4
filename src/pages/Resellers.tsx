@@ -618,18 +618,38 @@ export default function Resellers() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-44 h-9">
-              <SelectValue placeholder="Filtrar status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="trial">Em Teste</SelectItem>
-              <SelectItem value="active">Assinatura Ativa</SelectItem>
-              <SelectItem value="expired">Expirado</SelectItem>
-              <SelectItem value="overdue">Vencido</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            {parentOptions.length > 0 && (
+              <Select value={parentFilter} onValueChange={setParentFilter}>
+                <SelectTrigger className="w-full sm:w-48 h-9">
+                  <SelectValue placeholder="Filtrar rede" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toda a Rede</SelectItem>
+                  <SelectItem value="direct">Diretos (sem pai)</SelectItem>
+                  {parentOptions.map(([id, name]) => (
+                    <SelectItem key={id} value={id}>
+                      <span className="flex items-center gap-1.5">
+                        <GitBranch className="w-3 h-3" /> Rede de {name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-44 h-9">
+                <SelectValue placeholder="Filtrar status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="trial">Em Teste</SelectItem>
+                <SelectItem value="active">Assinatura Ativa</SelectItem>
+                <SelectItem value="expired">Expirado</SelectItem>
+                <SelectItem value="overdue">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {loading ? (
