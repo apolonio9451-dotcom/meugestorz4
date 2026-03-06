@@ -21,9 +21,7 @@ export default function TrialAccess() {
       if (!token) { setStatus("not_found"); return; }
 
       const { data, error } = await supabase
-        .from("trial_links")
-        .select("client_name, expires_at, created_at, status")
-        .eq("token", token)
+        .rpc("get_trial_link_by_token", { _token: token })
         .maybeSingle();
 
       if (error || !data) {
