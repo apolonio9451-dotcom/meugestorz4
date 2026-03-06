@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import TrialBanner from "@/components/trials/TrialBanner";
 import AnnouncementModal from "@/components/announcements/AnnouncementModal";
 import { supabase } from "@/integrations/supabase/client";
+import { themePresets, applyThemePreset } from "@/lib/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { differenceInDays, parseISO } from "date-fns";
