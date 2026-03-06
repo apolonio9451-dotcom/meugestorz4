@@ -51,7 +51,6 @@ const navItems: NavItem[] = [
   },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
-  { href: "/dashboard/reseller-panel", label: "Revendedor", icon: Store, resellerOnly: true },
   {
     label: "Configurações",
     icon: Settings,
