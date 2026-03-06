@@ -568,22 +568,56 @@ export default function Clients() {
                       <Input name="cpf" placeholder="000.000.000-00" defaultValue={editing?.cpf || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
                     <div className="space-y-1.5">
+                      <Label className="text-sm">Nascimento</Label>
+                      <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5 relative">
+                      <Label className="text-sm">Indicado por</Label>
+                      <Input
+                        placeholder="Nome..."
+                        value={referralSearch}
+                        onChange={(e) => {
+                          setReferralSearch(e.target.value);
+                          setFormReferredBy(e.target.value);
+                          setShowReferralDropdown(true);
+                        }}
+                        onFocus={() => setShowReferralDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowReferralDropdown(false), 200)}
+                        className="h-10 text-sm border-primary/20 focus:border-primary/50"
+                      />
+                      {showReferralDropdown && referralSearch.length > 0 && (() => {
+                        const matches = activeClients.filter(c => 
+                          c.name.toLowerCase().includes(referralSearch.toLowerCase()) &&
+                          c.id !== editing?.id
+                        ).slice(0, 5);
+                        if (matches.length === 0) return null;
+                        return (
+                          <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-28 overflow-y-auto">
+                            {matches.map(c => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+                                onMouseDown={() => {
+                                  setFormReferredBy(c.name);
+                                  setReferralSearch(c.name);
+                                  setShowReferralDropdown(false);
+                                }}
+                              >
+                                {c.name}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div className="space-y-1.5">
                       <Label className="text-sm">Observações</Label>
                       <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Status</Label>
-                    <Select name="status" defaultValue={editing?.status || "active"}>
-                      <SelectTrigger className="h-10 text-sm border-primary/20 focus:border-primary/50"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Ativo</SelectItem>
-                        <SelectItem value="inactive">Inativo</SelectItem>
-                        <SelectItem value="blocked">Bloqueado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
                 </div>
               </div>
               <div>
