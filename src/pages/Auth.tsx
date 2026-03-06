@@ -237,6 +237,18 @@ export default function Auth() {
                   className="w-full h-12 rounded-xl text-base font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-[0_0_20px_hsl(180_100%_50%/0.3)]">
                   {loading ? "Criando..." : trialToken ? "Criar Conta de Teste" : "Criar Conta"}
                 </Button>
+
+                {resendEmail && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleResendConfirmation}
+                    disabled={resendingConfirmation}
+                    className="w-full h-11 rounded-xl"
+                  >
+                    {resendingConfirmation ? "Reenviando..." : "Reenviar email de verificação"}
+                  </Button>
+                )}
               </form>
             </div>
           </TabsContent>
