@@ -20,6 +20,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Coins,
   FlaskConical,
@@ -32,6 +34,9 @@ import {
   AlertTriangle,
   ShieldCheck,
   MessageCircle,
+  Phone,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { differenceInHours, parseISO, format } from "date-fns";
 
