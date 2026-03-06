@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,6 +31,7 @@ import {
   TrendingUp,
   AlertTriangle,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { differenceInHours, parseISO, format } from "date-fns";
 
