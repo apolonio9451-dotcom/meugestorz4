@@ -549,17 +549,7 @@ export default function Clients() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>Data de Nascimento</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formBirthDate && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formBirthDate ? format(formBirthDate, "dd/MM/yyyy") : "Selecione..."}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={formBirthDate} onSelect={setFormBirthDate} initialFocus className={cn("p-3 pointer-events-auto")} captionLayout="dropdown-buttons" fromYear={1940} toYear={new Date().getFullYear()} />
-                        </PopoverContent>
-                      </Popover>
+                      <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Observações</Label>
