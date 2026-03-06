@@ -13,44 +13,30 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Auth check: either service role or authenticated owner
+    // Auth: try user token first
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
     
-    // If not service role, verify user is owner
-    if (token !== serviceRoleKey) {
-      if (!token) {
-        return new Response(JSON.stringify({ error: "Não autenticado" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const { data: { user: caller } } = await adminClient.auth.admin.getUserById(
-        // Decode JWT to get user ID
-        ""
-      ).catch(() => ({ data: { user: null } }));
-      
-      // Use the anon client to verify
-      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    if (token) {
+      const anonClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: { user: caller2 } } = await anonClient.auth.getUser();
-      if (!caller2) {
-        return new Response(JSON.stringify({ error: "Não autenticado" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const { data: membership } = await adminClient
-        .from("company_memberships")
-        .select("role")
-        .eq("user_id", caller2.id)
-        .eq("role", "owner")
-        .maybeSingle();
-      if (!membership) {
-        return new Response(JSON.stringify({ error: "Sem permissão" }), {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const { data: { user: caller } } = await anonClient.auth.getUser();
+      if (caller) {
+        const { data: membership } = await adminClient
+          .from("company_memberships")
+          .select("role")
+          .eq("user_id", caller.id)
+          .eq("role", "owner")
+          .maybeSingle();
+        if (!membership) {
+          return new Response(JSON.stringify({ error: "Sem permissão" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
