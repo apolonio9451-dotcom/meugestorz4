@@ -603,26 +603,7 @@ export default function Clients() {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Vencimento *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !formEndDate && "text-muted-foreground")}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formEndDate ? format(formEndDate, "dd/MM/yyyy") : "dd/mm/aaaa"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formEndDate}
-                            onSelect={setFormEndDate}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="dd/mm/aaaa" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
