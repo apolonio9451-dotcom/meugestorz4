@@ -881,7 +881,7 @@ export default function Clients() {
                     </Badge>
                   )}
                   {sub && (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-xs bg-primary/15 text-primary border-primary/30 font-semibold">
                       {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
                     </Badge>
                   )}
