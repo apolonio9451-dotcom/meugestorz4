@@ -587,7 +587,22 @@ export default function Clients() {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Servidor & Assinatura</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Acesso ao Portal</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Usuário *</Label>
+                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Senha</Label>
+                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Assinatura</p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Servidor *</Label>
@@ -600,7 +615,7 @@ export default function Clients() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-sm text-primary font-semibold">Plano *</Label>
                       <Select value={formPlanId} onValueChange={(v) => {
@@ -630,10 +645,10 @@ export default function Clients() {
                         className="h-10 text-sm border-primary/30 focus:ring-primary/40"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Vencimento *</Label>
-                      <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
-                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Vencimento *</Label>
+                    <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
                   </div>
                 </div>
               </div>
