@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -30,6 +31,7 @@ import {
   TrendingUp,
   AlertTriangle,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { differenceInHours, parseISO, format } from "date-fns";
 
@@ -72,6 +74,9 @@ export default function ResellerPanel() {
   const [showHistory, setShowHistory] = useState(false);
   const [showTrialLink, setShowTrialLink] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
+  const [showNoCreditModal, setShowNoCreditModal] = useState(false);
+  const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
+  const [adminName, setAdminName] = useState<string>("Administrador");
 
   const fetchReseller = async () => {
     if (!user) return;
@@ -143,11 +148,30 @@ export default function ResellerPanel() {
       fetchClients();
       fetchTransactions();
       fetchTrialLinks();
+      // Fetch admin contact info
+      if (reseller.company_id) {
+        supabase
+          .from("company_settings")
+          .select("support_whatsapp, brand_name")
+          .eq("company_id", reseller.company_id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.support_whatsapp) setAdminWhatsapp(data.support_whatsapp);
+            if (data?.brand_name) setAdminName(data.brand_name);
+          });
+      }
     }
   }, [reseller]);
 
   const handleGenerateTrial = async () => {
     if (!companyId || !user) return;
+
+    // Block if no credits
+    if (reseller && reseller.credit_balance <= 0) {
+      setShowNoCreditModal(true);
+      return;
+    }
+
     setGenerating(true);
 
     const { data, error } = await supabase
@@ -549,6 +573,47 @@ export default function ResellerPanel() {
               <Copy className="w-4 h-4" /> Copiar Link
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* No Credits Modal */}
+      <Dialog open={showNoCreditModal} onOpenChange={setShowNoCreditModal}>
+        <DialogContent className="rounded-2xl border-amber-500/30">
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-14 h-14 rounded-full bg-amber-500/15 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-7 h-7 text-amber-500" />
+            </div>
+            <DialogTitle className="text-lg">Créditos Insuficientes</DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Você precisa ter pelo menos <strong className="text-foreground">1 crédito</strong> disponível para gerar um link de teste.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Entre em contato com seu administrador para adquirir créditos.
+            </p>
+            {adminWhatsapp ? (
+              <Button
+                className="w-full gap-2"
+                onClick={() => {
+                  const phone = adminWhatsapp.replace(/\D/g, "");
+                  const msg = encodeURIComponent("Olá! Preciso comprar créditos para minha revenda.");
+                  window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+                }}
+              >
+                <MessageCircle className="w-4 h-4" /> Chamar no WhatsApp
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                WhatsApp de suporte não configurado. Contate seu administrador.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNoCreditModal(false)} className="w-full">
+              Entendi
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

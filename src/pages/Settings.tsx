@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw } from "lucide-react";
+import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone } from "lucide-react";
 
 interface CompanySettings {
   id?: string;
@@ -16,6 +16,7 @@ interface CompanySettings {
   primary_color: string;
   secondary_color: string;
   background_color: string;
+  support_whatsapp: string;
 }
 
 export default function Settings() {
@@ -33,6 +34,7 @@ export default function Settings() {
     primary_color: "#00db49",
     secondary_color: "#00c0f5",
     background_color: "#0357a5",
+    support_whatsapp: "",
   });
 
   useEffect(() => {
@@ -80,6 +82,7 @@ export default function Settings() {
       primary_color: settings.primary_color,
       secondary_color: settings.secondary_color,
       background_color: settings.background_color,
+      support_whatsapp: settings.support_whatsapp,
     };
 
     let error;
@@ -235,6 +238,23 @@ export default function Settings() {
               onChange={handleLogoUpload}
             />
           </div>
+        </div>
+
+        {/* WhatsApp de Suporte */}
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Phone className="w-4 h-4 text-primary" />
+            WhatsApp de Suporte
+          </Label>
+          <Input
+            value={settings.support_whatsapp}
+            onChange={(e) => setSettings((prev) => ({ ...prev, support_whatsapp: e.target.value }))}
+            placeholder="5511999999999"
+            className="bg-secondary/50 border-border"
+          />
+          <p className="text-muted-foreground text-xs">
+            Número usado para contato dos revendedores quando precisarem de suporte ou créditos. Formato: código do país + DDD + número (ex: 5511999999999)
+          </p>
         </div>
 
         {/* Colors */}
