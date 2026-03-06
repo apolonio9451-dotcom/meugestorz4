@@ -978,8 +978,10 @@ export type Database = {
         Args: { _token: string }
         Returns: {
           client_name: string
+          company_id: string
           created_at: string
           expires_at: string
+          id: string
           status: string
         }[]
       }
