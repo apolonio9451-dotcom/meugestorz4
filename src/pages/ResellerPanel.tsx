@@ -168,8 +168,40 @@ export default function ResellerPanel() {
             if (data?.brand_name) setAdminName(data.brand_name);
           });
       }
+      // Fetch reseller's own support whatsapp
+      supabase
+        .from("reseller_settings")
+        .select("id, support_whatsapp")
+        .eq("reseller_id", reseller.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setResellerSettingsId(data.id);
+            setSupportWhatsapp((data as any).support_whatsapp || "");
+          }
+        });
     }
   }, [reseller]);
+
+  const handleSaveWhatsapp = async () => {
+    if (!reseller) return;
+    setSavingWhatsapp(true);
+    if (resellerSettingsId) {
+      await supabase
+        .from("reseller_settings")
+        .update({ support_whatsapp: supportWhatsapp } as any)
+        .eq("id", resellerSettingsId);
+    } else {
+      const { data } = await supabase
+        .from("reseller_settings")
+        .insert({ reseller_id: reseller.id, support_whatsapp: supportWhatsapp } as any)
+        .select("id")
+        .single();
+      if (data) setResellerSettingsId(data.id);
+    }
+    setSavingWhatsapp(false);
+    toast({ title: "WhatsApp de suporte salvo!" });
+  };
 
   const handleGenerateTrial = async () => {
     if (!companyId || !user) return;
