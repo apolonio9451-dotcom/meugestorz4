@@ -557,7 +557,7 @@ export default function Clients() {
                       <Input name="email" type="email" placeholder="email@exemplo.com" defaultValue={editing?.email || ""} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>Data de Nascimento</Label>
                       <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
@@ -566,6 +566,46 @@ export default function Clients() {
                       <Label>Observações</Label>
                       <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} />
                     </div>
+                  </div>
+                  <div className="space-y-1.5 relative">
+                    <Label>Indicado por</Label>
+                    <Input
+                      placeholder="Digite o nome ou selecione..."
+                      value={referralSearch}
+                      onChange={(e) => {
+                        setReferralSearch(e.target.value);
+                        setFormReferredBy(e.target.value);
+                        setShowReferralDropdown(true);
+                      }}
+                      onFocus={() => setShowReferralDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowReferralDropdown(false), 200)}
+                    />
+                    {showReferralDropdown && referralSearch.length > 0 && (() => {
+                      const matches = activeClients.filter(c => 
+                        c.name.toLowerCase().includes(referralSearch.toLowerCase()) &&
+                        c.id !== editing?.id
+                      ).slice(0, 5);
+                      if (matches.length === 0) return null;
+                      return (
+                        <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-32 overflow-y-auto">
+                          {matches.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setFormReferredBy(c.name);
+                                setReferralSearch(c.name);
+                                setShowReferralDropdown(false);
+                              }}
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
