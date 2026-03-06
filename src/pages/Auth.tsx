@@ -16,6 +16,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+  const [resendEmail, setResendEmail] = useState<string | null>(null);
   const trialToken = searchParams.get("trial");
   const [trialInfo, setTrialInfo] = useState<{ expires_at: string; company_id: string; id: string } | null>(null);
   const [brandName, setBrandName] = useState("Meu Gestor");
@@ -90,14 +92,38 @@ export default function Auth() {
       if (error) {
         toast.error(error.message);
       } else {
+        setResendEmail(email);
         toast.success("Conta de teste criada! Verifique seu email para confirmar.");
       }
     } else {
       const { error } = await signUp(email, password, fullName, companyName);
-      if (error) toast.error(error.message);
-      else toast.success("Conta criada! Verifique seu email para confirmar.");
+      if (error) {
+        toast.error(error.message);
+      } else {
+        setResendEmail(email);
+        toast.success("Conta criada! Verifique seu email para confirmar.");
+      }
     }
     setLoading(false);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!resendEmail) return;
+    setResendingConfirmation(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: resendEmail,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Email de verificação reenviado com sucesso.");
+    }
+    setResendingConfirmation(false);
   };
 
   return (
@@ -211,6 +237,18 @@ export default function Auth() {
                   className="w-full h-12 rounded-xl text-base font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-[0_0_20px_hsl(180_100%_50%/0.3)]">
                   {loading ? "Criando..." : trialToken ? "Criar Conta de Teste" : "Criar Conta"}
                 </Button>
+
+                {resendEmail && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleResendConfirmation}
+                    disabled={resendingConfirmation}
+                    className="w-full h-11 rounded-xl"
+                  >
+                    {resendingConfirmation ? "Reenviando..." : "Reenviar email de verificação"}
+                  </Button>
+                )}
               </form>
             </div>
           </TabsContent>
