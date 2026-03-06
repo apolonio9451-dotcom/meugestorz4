@@ -285,7 +285,7 @@ export default function Clients() {
       await supabase.from("client_mac_keys").delete().eq("client_id", clientId);
       
       // Insert new ones
-      const validMacKeys = formMacKeys.filter(mk => mk.mac.trim() || mk.key.trim());
+      const validMacKeys = formMacKeys.filter(mk => mk.mac.trim() || mk.key.trim() || mk.app_name.trim());
       if (validMacKeys.length > 0) {
         await supabase.from("client_mac_keys").insert(
           validMacKeys.map(mk => ({
@@ -293,7 +293,9 @@ export default function Clients() {
             company_id: companyId,
             mac: mk.mac.trim(),
             key: mk.key.trim(),
-          }))
+            app_name: mk.app_name.trim(),
+            expires_at: mk.expires_at || null,
+          } as any))
         );
       }
 
