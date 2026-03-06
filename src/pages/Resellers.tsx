@@ -208,11 +208,12 @@ export default function Resellers() {
   };
 
   const fetchPendingLinks = async () => {
-    if (!companyId) return;
+    if (!companyId || !user) return;
     const { data } = await supabase
       .from("trial_links")
       .select("id, token, expires_at, created_at, status")
       .eq("company_id", companyId)
+      .eq("created_by", user.id)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
     if (data) setPendingLinks(data);
