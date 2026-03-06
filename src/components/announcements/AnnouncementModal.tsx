@@ -19,7 +19,7 @@ interface Announcement {
 }
 
 export default function AnnouncementModal() {
-  const { user, companyId } = useAuth();
+  const { user, companyId, parentCompanyId } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [open, setOpen] = useState(false);
@@ -33,7 +33,6 @@ export default function AnnouncementModal() {
     if (localStorage.getItem(todayKey)) return;
 
     const fetchAnnouncements = async () => {
-      // Try company_id first, then reseller company
       const queries = [];
       
       if (companyId) {
@@ -42,6 +41,18 @@ export default function AnnouncementModal() {
             .from("system_announcements")
             .select("id, title, message")
             .eq("company_id", companyId)
+            .eq("is_active", true)
+            .order("created_at", { ascending: false })
+        );
+      }
+
+      // For resellers: also fetch announcements from parent company
+      if (parentCompanyId && parentCompanyId !== companyId) {
+        queries.push(
+          supabase
+            .from("system_announcements")
+            .select("id, title, message")
+            .eq("company_id", parentCompanyId)
             .eq("is_active", true)
             .order("created_at", { ascending: false })
         );
