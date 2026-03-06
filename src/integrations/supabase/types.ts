@@ -974,6 +974,15 @@ export type Database = {
     Functions: {
       get_reseller_company_id: { Args: { _user_id: string }; Returns: string }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
+      get_trial_link_by_token: {
+        Args: { _token: string }
+        Returns: {
+          client_name: string
+          created_at: string
+          expires_at: string
+          status: string
+        }[]
+      }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_company_role: {
         Args: {
