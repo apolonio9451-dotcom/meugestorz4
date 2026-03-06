@@ -263,6 +263,7 @@ export default function Clients() {
       address: "",
       status: "active",
       company_id: companyId,
+      referred_by: formReferredBy.trim(),
     };
 
     let clientId = editing?.id;
