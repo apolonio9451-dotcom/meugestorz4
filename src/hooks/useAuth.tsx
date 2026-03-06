@@ -6,6 +6,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
+  parentCompanyId: string | null;
   userRole: string | null;
   resellerCredits: number | null;
   isTrial: boolean;
