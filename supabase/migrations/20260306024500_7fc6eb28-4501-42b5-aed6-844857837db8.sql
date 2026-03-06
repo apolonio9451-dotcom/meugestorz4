@@ -1,0 +1,1 @@
+ALTER TABLE public.reseller_settings ADD COLUMN IF NOT EXISTS support_whatsapp text DEFAULT '';
