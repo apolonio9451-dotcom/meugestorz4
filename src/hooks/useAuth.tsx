@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [parentCompanyId, setParentCompanyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [resellerCredits, setResellerCredits] = useState<number | null>(null);
   const [isTrial, setIsTrial] = useState(false);
