@@ -12,144 +12,208 @@ interface SlotColumnProps {
 }
 
 function SlotColumn({ items, selected, onSelect }: SlotColumnProps) {
-  const itemH = 44;
-  const visibleItems = 5;
-  const paddingItems = Math.floor(visibleItems / 2);
-  const totalH = visibleItems * itemH;
+  const ITEM_HEIGHT = 42;
+  const VISIBLE = 5;
+  const CENTER = Math.floor(VISIBLE / 2);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const programmaticScroll = React.useRef(false);
-  const scrollTimer = React.useRef<ReturnType<typeof setTimeout>>();
+  const isDragging = React.useRef(false);
+  const startY = React.useRef(0);
+  const startOffset = React.useRef(0);
+  const [offset, setOffset] = React.useState(0);
+  const animFrame = React.useRef<number>();
+  const velocity = React.useRef(0);
+  const lastY = React.useRef(0);
+  const lastTime = React.useRef(0);
 
-  const selectedIdx = items.findIndex((i) => i.value === selected);
+  const selectedIdx = React.useMemo(
+    () => items.findIndex((i) => i.value === selected),
+    [items, selected]
+  );
 
-  // Scroll to selected item on mount and when selected changes externally
+  // Sync offset when selected changes externally
   React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
     const idx = selectedIdx >= 0 ? selectedIdx : 0;
-    programmaticScroll.current = true;
-    el.scrollTop = idx * itemH;
-    // Reset flag after scroll settles
-    setTimeout(() => { programmaticScroll.current = false; }, 50);
+    setOffset(-idx * ITEM_HEIGHT);
   }, [selectedIdx]);
 
-  const handleScroll = () => {
-    if (programmaticScroll.current) return;
-    if (scrollTimer.current) clearTimeout(scrollTimer.current);
-    scrollTimer.current = setTimeout(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      const idx = Math.round(el.scrollTop / itemH);
-      const clamped = Math.max(0, Math.min(items.length - 1, idx));
-      // Snap to position
-      programmaticScroll.current = true;
-      el.scrollTo({ top: clamped * itemH, behavior: "smooth" });
-      setTimeout(() => { programmaticScroll.current = false; }, 300);
-      if (items[clamped] && items[clamped].value !== selected) {
-        onSelect(items[clamped].value);
-      }
-    }, 120);
+  const clampOffset = (o: number) => {
+    const min = -(items.length - 1) * ITEM_HEIGHT;
+    return Math.max(min, Math.min(0, o));
   };
 
-  const handleClick = (idx: number, value: number) => {
-    onSelect(value);
-    const el = containerRef.current;
-    if (el) {
-      programmaticScroll.current = true;
-      el.scrollTo({ top: idx * itemH, behavior: "smooth" });
-      setTimeout(() => { programmaticScroll.current = false; }, 300);
-    }
-  };
+  const snapToNearest = (currentOffset: number, vel: number = 0) => {
+    // Project forward based on velocity
+    let projected = currentOffset + vel * 8;
+    projected = clampOffset(projected);
+    const idx = Math.round(-projected / ITEM_HEIGHT);
+    const clamped = Math.max(0, Math.min(items.length - 1, idx));
+    const target = -clamped * ITEM_HEIGHT;
 
-  // Calculate 3D transform for each item based on distance from center
-  const getItemStyle = (idx: number): React.CSSProperties => {
-    const el = containerRef.current;
-    if (!el) {
-      const dist = Math.abs(idx - (selectedIdx >= 0 ? selectedIdx : 0));
-      return get3DStyle(dist);
-    }
-    const scrollIdx = el.scrollTop / itemH;
-    const dist = idx - scrollIdx;
-    return get3DStyle(dist);
-  };
-
-  const get3DStyle = (dist: number): React.CSSProperties => {
-    const absDist = Math.abs(dist);
-    const rotateX = dist * -18; // tilt based on position
-    const scale = Math.max(0.65, 1 - absDist * 0.12);
-    const opacity = Math.max(0.15, 1 - absDist * 0.3);
-    const translateZ = -absDist * 8;
-
-    return {
-      transform: `perspective(300px) rotateX(${rotateX}deg) scale(${scale}) translateZ(${translateZ}px)`,
-      opacity,
-      transition: "transform 0.15s ease, opacity 0.15s ease",
+    // Animate to target
+    const animate = () => {
+      setOffset((prev) => {
+        const diff = target - prev;
+        if (Math.abs(diff) < 0.5) {
+          if (items[clamped] && items[clamped].value !== selected) {
+            onSelect(items[clamped].value);
+          }
+          return target;
+        }
+        const next = prev + diff * 0.2;
+        animFrame.current = requestAnimationFrame(animate);
+        return next;
+      });
     };
+    if (animFrame.current) cancelAnimationFrame(animFrame.current);
+    animFrame.current = requestAnimationFrame(animate);
   };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (animFrame.current) cancelAnimationFrame(animFrame.current);
+    isDragging.current = true;
+    startY.current = e.clientY;
+    startOffset.current = offset;
+    lastY.current = e.clientY;
+    lastTime.current = Date.now();
+    velocity.current = 0;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    const dy = e.clientY - startY.current;
+    const now = Date.now();
+    const dt = now - lastTime.current;
+    if (dt > 0) {
+      velocity.current = (e.clientY - lastY.current) / dt;
+    }
+    lastY.current = e.clientY;
+    lastTime.current = now;
+    setOffset(clampOffset(startOffset.current + dy));
+  };
+
+  const handlePointerUp = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    snapToNearest(offset, velocity.current * 100);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (animFrame.current) cancelAnimationFrame(animFrame.current);
+    const newOffset = clampOffset(offset - e.deltaY);
+    setOffset(newOffset);
+    snapToNearest(newOffset);
+  };
+
+  const handleClick = (idx: number) => {
+    if (animFrame.current) cancelAnimationFrame(animFrame.current);
+    const target = -idx * ITEM_HEIGHT;
+    onSelect(items[idx].value);
+
+    const animate = () => {
+      setOffset((prev) => {
+        const diff = target - prev;
+        if (Math.abs(diff) < 0.5) return target;
+        animFrame.current = requestAnimationFrame(animate);
+        return prev + diff * 0.2;
+      });
+    };
+    animFrame.current = requestAnimationFrame(animate);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (animFrame.current) cancelAnimationFrame(animFrame.current);
+    };
+  }, []);
+
+  const totalHeight = VISIBLE * ITEM_HEIGHT;
 
   return (
-    <div className="relative" style={{ height: totalH, perspective: "300px" }}>
-      {/* Selection highlight - 3D glass effect */}
+    <div
+      className="relative select-none touch-none overflow-hidden"
+      style={{ height: totalHeight }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onWheel={handleWheel}
+    >
+      {/* Center selection highlight */}
       <div
-        className="absolute left-1 right-1 pointer-events-none z-10 rounded-lg"
+        className="absolute left-1 right-1 z-10 pointer-events-none rounded-lg"
         style={{
-          top: paddingItems * itemH,
-          height: itemH,
-          background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.08))",
-          border: "1.5px solid hsl(var(--primary) / 0.5)",
-          boxShadow: "0 0 12px hsl(var(--primary) / 0.15), inset 0 1px 0 hsl(var(--primary) / 0.1)",
+          top: CENTER * ITEM_HEIGHT,
+          height: ITEM_HEIGHT,
+          background: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.06))",
+          border: "1.5px solid hsl(var(--primary) / 0.45)",
+          boxShadow: "0 0 10px hsl(var(--primary) / 0.1), inset 0 1px 0 hsl(var(--primary) / 0.08)",
         }}
       />
-      {/* Fade top */}
+      {/* Top fade */}
       <div
-        className="absolute top-0 left-0 right-0 h-20 z-20 pointer-events-none rounded-t-md"
-        style={{ background: "linear-gradient(to bottom, hsl(var(--popover)), transparent)" }}
-      />
-      {/* Fade bottom */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-20 z-20 pointer-events-none rounded-b-md"
-        style={{ background: "linear-gradient(to top, hsl(var(--popover)), transparent)" }}
-      />
-      <div
-        ref={containerRef}
-        className="h-full overflow-y-auto scrollbar-hide"
+        className="absolute top-0 left-0 right-0 z-20 pointer-events-none"
         style={{
-          scrollSnapType: "y mandatory",
-          WebkitOverflowScrolling: "touch",
+          height: CENTER * ITEM_HEIGHT,
+          background: "linear-gradient(to bottom, hsl(var(--popover)), hsl(var(--popover) / 0.6), transparent)",
         }}
-        onScroll={handleScroll}
+      />
+      {/* Bottom fade */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
+        style={{
+          height: CENTER * ITEM_HEIGHT,
+          background: "linear-gradient(to top, hsl(var(--popover)), hsl(var(--popover) / 0.6), transparent)",
+        }}
+      />
+      {/* Items */}
+      <div
+        className="absolute left-0 right-0"
+        style={{
+          top: CENTER * ITEM_HEIGHT,
+          transform: `translateY(${offset}px)`,
+          willChange: "transform",
+        }}
       >
-        {/* Top padding */}
-        {Array.from({ length: paddingItems }).map((_, i) => (
-          <div key={`pad-top-${i}`} style={{ height: itemH }} />
-        ))}
         {items.map((item, idx) => {
-          const isSelected = item.value === selected;
+          // Calculate visual distance from center for 3D effect
+          const itemCenter = idx * ITEM_HEIGHT + ITEM_HEIGHT / 2;
+          const viewCenter = -offset;
+          const dist = (itemCenter - viewCenter) / ITEM_HEIGHT;
+          const absDist = Math.abs(dist);
+
+          const rotateX = Math.max(-60, Math.min(60, dist * -20));
+          const scale = Math.max(0.7, 1 - absDist * 0.08);
+          const itemOpacity = Math.max(0.1, 1 - absDist * 0.35);
+          const isCenter = absDist < 0.6;
+
           return (
             <div
               key={`${item.value}-${item.label}`}
               className={cn(
-                "flex items-center justify-center cursor-pointer select-none",
-                isSelected
-                  ? "text-foreground font-bold text-sm"
-                  : "text-muted-foreground text-xs"
+                "flex items-center justify-center cursor-pointer",
+                isCenter
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground"
               )}
               style={{
-                height: itemH,
-                scrollSnapAlign: "start",
-                transformStyle: "preserve-3d",
-                ...getItemStyle(idx),
+                height: ITEM_HEIGHT,
+                fontSize: isCenter ? "0.9rem" : "0.75rem",
+                opacity: itemOpacity,
+                transform: `perspective(200px) rotateX(${rotateX}deg) scale(${scale})`,
+                transformOrigin: "center center",
+                transition: isDragging.current ? "none" : "transform 0.08s ease-out",
               }}
-              onClick={() => handleClick(idx, item.value)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClick(idx);
+              }}
             >
               {item.label}
             </div>
           );
         })}
-        {/* Bottom padding */}
-        {Array.from({ length: paddingItems }).map((_, i) => (
-          <div key={`pad-bot-${i}`} style={{ height: itemH }} />
-        ))}
       </div>
     </div>
   );
@@ -235,32 +299,32 @@ export function SlotDatePicker({
           className="p-4 space-y-3 rounded-lg"
           style={{
             background: "linear-gradient(145deg, hsl(var(--popover)), hsl(var(--card)))",
-            boxShadow: "0 8px 32px hsl(var(--primary) / 0.1), 0 0 0 1px hsl(var(--border))",
+            boxShadow: "0 8px 32px hsl(var(--primary) / 0.08), 0 0 0 1px hsl(var(--border))",
           }}
         >
-          <div className="flex gap-3">
-            <div className="flex-1 min-w-[60px]">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1.5 font-semibold">
+          <div className="flex gap-1">
+            <div className="flex-1 min-w-[58px]">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1 font-semibold">
                 Dia
               </p>
               <SlotColumn items={dayItems} selected={clampedDay} onSelect={setDay} />
             </div>
             <div
-              className="w-px self-stretch my-4"
-              style={{ background: "hsl(var(--border) / 0.5)" }}
+              className="w-px self-stretch my-6"
+              style={{ background: "hsl(var(--border) / 0.4)" }}
             />
-            <div className="flex-1 min-w-[60px]">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1.5 font-semibold">
+            <div className="flex-1 min-w-[58px]">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1 font-semibold">
                 Mês
               </p>
               <SlotColumn items={monthItems} selected={month} onSelect={setMonth} />
             </div>
             <div
-              className="w-px self-stretch my-4"
-              style={{ background: "hsl(var(--border) / 0.5)" }}
+              className="w-px self-stretch my-6"
+              style={{ background: "hsl(var(--border) / 0.4)" }}
             />
-            <div className="flex-1 min-w-[70px]">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1.5 font-semibold">
+            <div className="flex-1 min-w-[68px]">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1 font-semibold">
                 Ano
               </p>
               <SlotColumn items={yearItems} selected={year} onSelect={setYear} />
@@ -271,7 +335,7 @@ export function SlotDatePicker({
             className="w-full gap-1.5"
             onClick={handleConfirm}
             style={{
-              boxShadow: "0 4px 14px hsl(var(--primary) / 0.3)",
+              boxShadow: "0 4px 14px hsl(var(--primary) / 0.25)",
             }}
           >
             <Check className="w-3.5 h-3.5" /> Confirmar
