@@ -540,7 +540,7 @@ export default function Clients() {
               <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
             </DialogTrigger>
           </div>
-          <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden">
+          <DialogContent className="max-w-xl max-h-[95vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle className="text-base">{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
