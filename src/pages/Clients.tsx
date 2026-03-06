@@ -674,33 +674,59 @@ export default function Clients() {
                 </div>
               </div>
               <div>
-                <p className="text-[11px] italic font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">MAC & KEY</p>
+                <p className="text-[11px] italic font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">APP · MAC & KEY</p>
                 <div className="space-y-3">
                   {formMacKeys.map((mk, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        placeholder="MAC Address"
-                        value={mk.mac}
-                        onChange={(e) => {
-                          const updated = [...formMacKeys];
-                          updated[i].mac = e.target.value;
-                          setFormMacKeys(updated);
-                        }}
-                        className="h-10 text-sm flex-1 border-primary/20 focus:border-primary/50"
-                      />
-                      <Input
-                        placeholder="KEY"
-                        value={mk.key}
-                        onChange={(e) => {
-                          const updated = [...formMacKeys];
-                          updated[i].key = e.target.value;
-                          setFormMacKeys(updated);
-                        }}
-                        className="h-10 text-sm flex-1 border-primary/20 focus:border-primary/50"
-                      />
-                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
-                        <X className="w-4 h-4" />
-                      </Button>
+                    <div key={i} className="space-y-2 p-3 rounded-lg border border-primary/15 bg-primary/5">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Nome do App"
+                          value={mk.app_name}
+                          onChange={(e) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], app_name: e.target.value };
+                            setFormMacKeys(updated);
+                          }}
+                          className="h-9 text-sm flex-1 border-primary/20 focus:border-primary/50"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="MAC Address"
+                          value={mk.mac}
+                          onChange={(e) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], mac: formatMac(e.target.value) };
+                            setFormMacKeys(updated);
+                          }}
+                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                        />
+                        <Input
+                          placeholder="KEY"
+                          value={mk.key}
+                          onChange={(e) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], key: e.target.value };
+                            setFormMacKeys(updated);
+                          }}
+                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Expiração do MAC</Label>
+                        <SlotDatePicker
+                          date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
+                          onDateChange={(d) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], expires_at: d ? format(d, "yyyy-MM-dd") : "" };
+                            setFormMacKeys(updated);
+                          }}
+                          placeholder="Data de expiração..."
+                        />
+                      </div>
                     </div>
                   ))}
                   <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "", app_name: "", expires_at: "" }])}>
