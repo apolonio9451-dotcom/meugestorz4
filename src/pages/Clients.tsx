@@ -554,7 +554,12 @@ export default function Clients() {
               )}
             >
               {block.count > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 bg-primary text-primary-foreground shadow-sm">
+                <span className={cn(
+                  "absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 shadow-sm",
+                  block.key === "log"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-primary text-primary-foreground"
+                )}>
                   {block.count}
                 </span>
               )}
