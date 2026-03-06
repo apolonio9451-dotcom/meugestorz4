@@ -552,57 +552,7 @@ export default function Clients() {
                     <Label className="text-sm">Nome *</Label>
                     <Input name="name" required placeholder="Nome completo" defaultValue={editing?.name || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Usuário *</Label>
-                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Senha</Label>
-                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
-                    </div>
-                    <div className="space-y-1.5 relative">
-                      <Label className="text-sm">Indicado por</Label>
-                      <Input
-                        placeholder="Nome..."
-                        value={referralSearch}
-                        onChange={(e) => {
-                          setReferralSearch(e.target.value);
-                          setFormReferredBy(e.target.value);
-                          setShowReferralDropdown(true);
-                        }}
-                        onFocus={() => setShowReferralDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowReferralDropdown(false), 200)}
-                        className="h-10 text-sm border-primary/20 focus:border-primary/50"
-                      />
-                      {showReferralDropdown && referralSearch.length > 0 && (() => {
-                        const matches = activeClients.filter(c => 
-                          c.name.toLowerCase().includes(referralSearch.toLowerCase()) &&
-                          c.id !== editing?.id
-                        ).slice(0, 5);
-                        if (matches.length === 0) return null;
-                        return (
-                          <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-28 overflow-y-auto">
-                            {matches.map(c => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
-                                onMouseDown={() => {
-                                  setFormReferredBy(c.name);
-                                  setReferralSearch(c.name);
-                                  setShowReferralDropdown(false);
-                                }}
-                              >
-                                {c.name}
-                              </button>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-sm">WhatsApp *</Label>
                       <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
@@ -611,19 +561,48 @@ export default function Clients() {
                       <Label className="text-sm">Email</Label>
                       <Input name="email" type="email" placeholder="email@ex.com" defaultValue={editing?.email || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <Label className="text-sm">Nascimento</Label>
-                      <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
+                      <Label className="text-sm">CPF</Label>
+                      <Input name="cpf" placeholder="000.000.000-00" defaultValue={editing?.cpf || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Observações</Label>
+                      <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Observações</Label>
-                    <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    <Label className="text-sm">Status</Label>
+                    <Select name="status" defaultValue={editing?.status || "active"}>
+                      <SelectTrigger className="h-10 text-sm border-primary/20 focus:border-primary/50"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                        <SelectItem value="blocked">Bloqueado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Acesso ao Portal</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Usuário *</Label>
+                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Senha</Label>
+                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    </div>
                   </div>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Servidor & Assinatura</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Assinatura</p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Servidor *</Label>
@@ -636,7 +615,7 @@ export default function Clients() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-sm text-primary font-semibold">Plano *</Label>
                       <Select value={formPlanId} onValueChange={(v) => {
@@ -666,10 +645,10 @@ export default function Clients() {
                         className="h-10 text-sm border-primary/30 focus:ring-primary/40"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Vencimento *</Label>
-                      <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
-                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Vencimento *</Label>
+                    <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
                   </div>
                 </div>
               </div>
