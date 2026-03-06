@@ -454,6 +454,38 @@ export default function ResellerPanel() {
         </Card>
       )}
 
+      {/* WhatsApp de Suporte Config */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Phone className="w-5 h-5 text-primary" />
+            WhatsApp de Suporte
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+            <div className="space-y-1.5 flex-1 w-full">
+              <Label className="text-xs text-muted-foreground">
+                Número que seus clientes/sub-revendas usarão para contato
+              </Label>
+              <Input
+                value={supportWhatsapp}
+                onChange={(e) => setSupportWhatsapp(e.target.value)}
+                placeholder="5511999999999"
+                className="bg-secondary/50 border-border"
+              />
+            </div>
+            <Button onClick={handleSaveWhatsapp} disabled={savingWhatsapp} size="sm" className="gap-2 shrink-0">
+              {savingWhatsapp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar
+            </Button>
+          </div>
+          <p className="text-muted-foreground text-xs mt-2">
+            Formato: código do país + DDD + número (ex: 5511999999999)
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Client List */}
       <Card>
         <CardHeader className="pb-3">
