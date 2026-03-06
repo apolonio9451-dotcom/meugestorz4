@@ -68,6 +68,7 @@ export default function Auth() {
     const password = form.get("password") as string;
     const fullName = form.get("fullName") as string;
     const companyName = form.get("companyName") as string;
+    const whatsapp = form.get("whatsapp") as string || "";
 
     if (trialToken && trialInfo) {
       // Trial signup: create user with trial metadata
@@ -78,6 +79,7 @@ export default function Auth() {
           data: {
             full_name: fullName,
             company_name: companyName,
+            whatsapp: whatsapp,
             is_trial: true,
             trial_token: trialToken,
             trial_company_id: trialInfo.company_id,
