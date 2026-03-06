@@ -74,6 +74,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
+  const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
 
   const applyThemeColors = (primary?: string, secondary?: string, bg?: string) => {
     const hexToHsl = (hex: string): string => {
