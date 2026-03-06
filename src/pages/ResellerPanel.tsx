@@ -82,6 +82,9 @@ export default function ResellerPanel() {
   const [showNoCreditModal, setShowNoCreditModal] = useState(false);
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
   const [adminName, setAdminName] = useState<string>("Administrador");
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+  const [resellerSettingsId, setResellerSettingsId] = useState<string | null>(null);
 
   const fetchReseller = async () => {
     if (!user) return;
