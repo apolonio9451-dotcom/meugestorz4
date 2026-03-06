@@ -518,11 +518,12 @@ export default function Resellers() {
         r.email?.toLowerCase().includes(search.toLowerCase()) ||
         r.whatsapp?.includes(search);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
-      const matchesParent =
-        parentFilter === "all" ||
-        parentFilter === "direct" ? !r.parent_reseller_id :
-        parentFilter === "direct" ? !r.parent_reseller_id :
-        r.parent_reseller_id === parentFilter;
+      let matchesParent = true;
+      if (parentFilter === "direct") {
+        matchesParent = !r.parent_reseller_id;
+      } else if (parentFilter !== "all") {
+        matchesParent = r.parent_reseller_id === parentFilter;
+      }
       return matchesSearch && matchesStatus && matchesParent;
     });
   }, [manageableResellers, search, statusFilter, parentFilter]);
