@@ -6,6 +6,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
+  parentCompanyId: string | null;
   userRole: string | null;
   resellerCredits: number | null;
   isTrial: boolean;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [parentCompanyId, setParentCompanyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [resellerCredits, setResellerCredits] = useState<number | null>(null);
   const [isTrial, setIsTrial] = useState(false);
@@ -51,8 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (resellerData) {
-      // Reseller should use reseller company context (not trial signup company)
-      setCompanyId(resellerData.company_id);
+      // Reseller uses their OWN company (from membership) for data isolation
+      // Parent company is stored separately for shared features (announcements)
+      setCompanyId(membership?.company_id || resellerData.company_id);
+      setParentCompanyId(resellerData.company_id);
       setResellerCredits(resellerData.credit_balance);
       setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
 
@@ -79,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => fetchCompanyData(session.user.id), 0);
         } else {
           setCompanyId(null);
+          setParentCompanyId(null);
           setUserRole(null);
           setIsTrial(false);
           setTrialExpiresAt(null);
@@ -157,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setCompanyId(null);
+    setParentCompanyId(null);
     setUserRole(null);
     setResellerCredits(null);
     setIsTrial(false);
@@ -164,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, userRole, resellerCredits, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, parentCompanyId, userRole, resellerCredits, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
