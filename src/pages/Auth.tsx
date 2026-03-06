@@ -229,6 +229,15 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label className="text-foreground font-semibold">WhatsApp</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input name="whatsapp" type="tel" placeholder="5511999999999"
+                      className="pl-10 bg-input border-border text-foreground placeholder:text-muted-foreground h-12 rounded-xl" />
+                  </div>
+                  <p className="text-muted-foreground text-[10px]">Usado para contato e suporte pelo seu administrador</p>
+                </div>
+                <div className="space-y-2">
                   <Label className="text-foreground font-semibold">Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
