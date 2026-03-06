@@ -21,7 +21,8 @@ interface CompanySettings {
 }
 
 export default function Settings() {
-  const { companyId } = useAuth();
+  const { companyId, userRole } = useAuth();
+  const isOwner = userRole === "Proprietário";
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
