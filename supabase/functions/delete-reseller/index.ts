@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
       const { error: deleteProfileError } = await adminClient.from("profiles").delete().eq("id", userId);
       ensureSuccess(deleteProfileError, "Falha ao remover perfil");
 
+      // This also invalidates all active sessions, forcing immediate logout
       const { error: deleteAuthUserError } = await adminClient.auth.admin.deleteUser(userId);
       ensureSuccess(deleteAuthUserError, "Falha ao remover usuário de autenticação");
     }
