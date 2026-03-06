@@ -165,6 +165,13 @@ export default function ResellerPanel() {
 
   const handleGenerateTrial = async () => {
     if (!companyId || !user) return;
+
+    // Block if no credits
+    if (reseller && reseller.credit_balance <= 0) {
+      setShowNoCreditModal(true);
+      return;
+    }
+
     setGenerating(true);
 
     const { data, error } = await supabase
