@@ -777,9 +777,17 @@ export default function Resellers() {
               {paginated.map((r) => {
                 const remaining = getDaysRemaining(r);
                 const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+                const parentName = r.parent_reseller_id ? parentNameMap[r.parent_reseller_id] : null;
 
                 return (
                   <div key={r.id} className="p-3 space-y-3">
+                    {/* Parent indicator */}
+                    {parentName && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <GitBranch className="w-3 h-3" />
+                        <span>Sub-revenda de <strong className="text-foreground">{parentName}</strong></span>
+                      </div>
+                    )}
                     {/* Top: Name + Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
