@@ -184,6 +184,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          referred_by: string | null
           reseller_id: string | null
           server: string | null
           status: string
@@ -202,6 +203,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          referred_by?: string | null
           reseller_id?: string | null
           server?: string | null
           status?: string
@@ -220,6 +222,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          referred_by?: string | null
           reseller_id?: string | null
           server?: string | null
           status?: string

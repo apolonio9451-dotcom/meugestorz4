@@ -29,6 +29,7 @@ interface Client {
   address: string;
   status: string;
   created_at: string;
+  referred_by: string;
 }
 
 interface Subscription {
@@ -70,6 +71,9 @@ export default function Clients() {
   const [welcomeData, setWelcomeData] = useState<{
     name: string; planName: string; amount: string; endDate: string; user: string; password: string; whatsapp: string;
   } | null>(null);
+  const [formReferredBy, setFormReferredBy] = useState("");
+  const [referralSearch, setReferralSearch] = useState("");
+  const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -216,6 +220,8 @@ export default function Clients() {
       setEditing(client);
       setFormMacKeys(macKeys[client.id] || []);
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
+      setFormReferredBy(client.referred_by || "");
+      setReferralSearch(client.referred_by || "");
       const sub = subscriptions[client.id];
       if (sub) {
         setFormPlanId(sub.plan_id);
@@ -230,6 +236,8 @@ export default function Clients() {
       setEditing(null);
       setFormMacKeys([]);
       setFormBirthDate(undefined);
+      setFormReferredBy("");
+      setReferralSearch("");
       setFormPlanId("");
       setFormAmount("");
       setFormEndDate(undefined);
@@ -255,6 +263,7 @@ export default function Clients() {
       address: "",
       status: "active",
       company_id: companyId,
+      referred_by: formReferredBy.trim(),
     };
 
     let clientId = editing?.id;
@@ -309,6 +318,8 @@ export default function Clients() {
     setFormPlanId("");
     setFormAmount("");
     setFormEndDate(undefined);
+    setFormReferredBy("");
+    setReferralSearch("");
     fetchClients();
     fetchMacKeys();
     fetchSubscriptions();
@@ -520,7 +531,7 @@ export default function Clients() {
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground text-xs sm:text-sm">{clients.length} clientes cadastrados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
           <DialogTrigger asChild>
             <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
           </DialogTrigger>
@@ -546,7 +557,7 @@ export default function Clients() {
                       <Input name="email" type="email" placeholder="email@exemplo.com" defaultValue={editing?.email || ""} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>Data de Nascimento</Label>
                       <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
@@ -555,6 +566,46 @@ export default function Clients() {
                       <Label>Observações</Label>
                       <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} />
                     </div>
+                  </div>
+                  <div className="space-y-1.5 relative">
+                    <Label>Indicado por</Label>
+                    <Input
+                      placeholder="Digite o nome ou selecione..."
+                      value={referralSearch}
+                      onChange={(e) => {
+                        setReferralSearch(e.target.value);
+                        setFormReferredBy(e.target.value);
+                        setShowReferralDropdown(true);
+                      }}
+                      onFocus={() => setShowReferralDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowReferralDropdown(false), 200)}
+                    />
+                    {showReferralDropdown && referralSearch.length > 0 && (() => {
+                      const matches = activeClients.filter(c => 
+                        c.name.toLowerCase().includes(referralSearch.toLowerCase()) &&
+                        c.id !== editing?.id
+                      ).slice(0, 5);
+                      if (matches.length === 0) return null;
+                      return (
+                        <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-32 overflow-y-auto">
+                          {matches.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setFormReferredBy(c.name);
+                                setReferralSearch(c.name);
+                                setShowReferralDropdown(false);
+                              }}
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -840,6 +891,14 @@ export default function Clients() {
                         <span className="truncate font-mono">{mk.mac}{mk.key ? ` · ${mk.key}` : ""}</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Referred by */}
+                {client.referred_by && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Users className="w-3 h-3 shrink-0" />
+                    <span>Indicado por: <span className="text-foreground font-medium">{client.referred_by}</span></span>
                   </div>
                 )}
 
