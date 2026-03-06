@@ -83,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => fetchCompanyData(session.user.id), 0);
         } else {
           setCompanyId(null);
+          setParentCompanyId(null);
           setUserRole(null);
           setIsTrial(false);
           setTrialExpiresAt(null);
