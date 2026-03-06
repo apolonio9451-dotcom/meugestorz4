@@ -318,6 +318,8 @@ export default function Clients() {
     setFormPlanId("");
     setFormAmount("");
     setFormEndDate(undefined);
+    setFormReferredBy("");
+    setReferralSearch("");
     fetchClients();
     fetchMacKeys();
     fetchSubscriptions();
