@@ -20,6 +20,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Coins,
   FlaskConical,
@@ -32,6 +34,9 @@ import {
   AlertTriangle,
   ShieldCheck,
   MessageCircle,
+  Phone,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { differenceInHours, parseISO, format } from "date-fns";
 
@@ -77,6 +82,9 @@ export default function ResellerPanel() {
   const [showNoCreditModal, setShowNoCreditModal] = useState(false);
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
   const [adminName, setAdminName] = useState<string>("Administrador");
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+  const [resellerSettingsId, setResellerSettingsId] = useState<string | null>(null);
 
   const fetchReseller = async () => {
     if (!user) return;
@@ -160,8 +168,40 @@ export default function ResellerPanel() {
             if (data?.brand_name) setAdminName(data.brand_name);
           });
       }
+      // Fetch reseller's own support whatsapp
+      supabase
+        .from("reseller_settings")
+        .select("id, support_whatsapp")
+        .eq("reseller_id", reseller.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setResellerSettingsId(data.id);
+            setSupportWhatsapp((data as any).support_whatsapp || "");
+          }
+        });
     }
   }, [reseller]);
+
+  const handleSaveWhatsapp = async () => {
+    if (!reseller) return;
+    setSavingWhatsapp(true);
+    if (resellerSettingsId) {
+      await supabase
+        .from("reseller_settings")
+        .update({ support_whatsapp: supportWhatsapp } as any)
+        .eq("id", resellerSettingsId);
+    } else {
+      const { data } = await supabase
+        .from("reseller_settings")
+        .insert({ reseller_id: reseller.id, support_whatsapp: supportWhatsapp } as any)
+        .select("id")
+        .single();
+      if (data) setResellerSettingsId(data.id);
+    }
+    setSavingWhatsapp(false);
+    toast({ title: "WhatsApp de suporte salvo!" });
+  };
 
   const handleGenerateTrial = async () => {
     if (!companyId || !user) return;
@@ -413,6 +453,38 @@ export default function ResellerPanel() {
           </CardContent>
         </Card>
       )}
+
+      {/* WhatsApp de Suporte Config */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Phone className="w-5 h-5 text-primary" />
+            WhatsApp de Suporte
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+            <div className="space-y-1.5 flex-1 w-full">
+              <Label className="text-xs text-muted-foreground">
+                Número que seus clientes/sub-revendas usarão para contato
+              </Label>
+              <Input
+                value={supportWhatsapp}
+                onChange={(e) => setSupportWhatsapp(e.target.value)}
+                placeholder="5511999999999"
+                className="bg-secondary/50 border-border"
+              />
+            </div>
+            <Button onClick={handleSaveWhatsapp} disabled={savingWhatsapp} size="sm" className="gap-2 shrink-0">
+              {savingWhatsapp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Salvar
+            </Button>
+          </div>
+          <p className="text-muted-foreground text-xs mt-2">
+            Formato: código do país + DDD + número (ex: 5511999999999)
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Client List */}
       <Card>
