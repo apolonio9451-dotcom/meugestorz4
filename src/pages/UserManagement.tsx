@@ -87,7 +87,7 @@ export default function UserManagement() {
     if (!newEmail || !newName || !newPassword) return;
     setSaving(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email: newEmail,
       password: newPassword,
       options: {
@@ -96,8 +96,14 @@ export default function UserManagement() {
       },
     });
 
-    if (signUpError) {
-      toast({ title: "Erro", description: signUpError.message, variant: "destructive" });
+    const isRepeatedSignup = !signUpError && (!data?.user || (Array.isArray(data.user.identities) && data.user.identities.length === 0));
+
+    if (signUpError || isRepeatedSignup) {
+      toast({
+        title: "Erro",
+        description: signUpError?.message || "Este email já está cadastrado e não pode ser criado novamente.",
+        variant: "destructive",
+      });
       setSaving(false);
       return;
     }
