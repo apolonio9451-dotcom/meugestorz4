@@ -53,8 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (resellerData) {
-      // Reseller should use reseller company context (not trial signup company)
-      setCompanyId(resellerData.company_id);
+      // Reseller uses their OWN company (from membership) for data isolation
+      // Parent company is stored separately for shared features (announcements)
+      setCompanyId(membership?.company_id || resellerData.company_id);
+      setParentCompanyId(resellerData.company_id);
       setResellerCredits(resellerData.credit_balance);
       setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
 
