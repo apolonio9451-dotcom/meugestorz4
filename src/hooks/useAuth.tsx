@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -82,6 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRole(null);
           setIsTrial(false);
           setTrialExpiresAt(null);
+          // If token refresh failed (user deleted), redirect to auth
+          if (event === 'TOKEN_REFRESHED' && !session) {
+            window.location.href = '/auth';
+          }
         }
         setLoading(false);
       }
