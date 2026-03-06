@@ -340,12 +340,53 @@ export default function Resellers() {
     if (isNaN(amount) || amount === 0) return;
     const finalAmount = creditForm.type === "debit" ? -Math.abs(amount) : Math.abs(amount);
 
+    // If reseller (not owner) is ADDING credits, deduct from their own balance first
+    if (!isOwner && finalAmount > 0) {
+      // Fetch current reseller's fresh balance
+      const { data: myReseller } = await supabase
+        .from("resellers")
+        .select("id, credit_balance")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (!myReseller || myReseller.credit_balance < finalAmount) {
+        toast({
+          title: "Saldo insuficiente",
+          description: `Você tem ${myReseller?.credit_balance ?? 0} créditos, mas tentou transferir ${finalAmount}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Deduct from current reseller
+      const { error: deductErr } = await supabase
+        .from("resellers")
+        .update({ credit_balance: myReseller.credit_balance - finalAmount })
+        .eq("id", myReseller.id);
+      if (deductErr) {
+        toast({ title: "Erro ao debitar seu saldo", description: deductErr.message, variant: "destructive" });
+        return;
+      }
+
+      // Log the deduction on the current reseller
+      await supabase.from("reseller_credit_transactions").insert({
+        reseller_id: myReseller.id,
+        company_id: companyId,
+        amount: -finalAmount,
+        type: "transfer_out",
+        description: `Transferência para ${selected.name}`,
+      });
+    }
+
+    // Add to sub-reseller
     const { error: txError } = await supabase.from("reseller_credit_transactions").insert({
       reseller_id: selected.id,
       company_id: companyId,
       amount: finalAmount,
-      type: creditForm.type,
-      description: creditForm.description || (creditForm.type === "purchase" ? "Compra de créditos" : "Débito de créditos"),
+      type: creditForm.type === "debit" ? "debit" : (isOwner ? "purchase" : "transfer_in"),
+      description: creditForm.description || (creditForm.type === "purchase"
+        ? (isOwner ? "Créditos do proprietário" : `Transferência de ${user?.user_metadata?.full_name || "revendedor"}`)
+        : "Débito de créditos"),
     });
     if (txError) { toast({ title: "Erro", description: txError.message, variant: "destructive" }); return; }
 
@@ -356,7 +397,7 @@ export default function Resellers() {
     if (upError) {
       toast({ title: "Erro ao atualizar saldo", description: upError.message, variant: "destructive" });
     } else {
-      toast({ title: `${finalAmount > 0 ? "Créditos adicionados" : "Créditos debitados"} com sucesso` });
+      toast({ title: `${finalAmount > 0 ? "Créditos transferidos" : "Créditos debitados"} com sucesso` });
       setShowCredits(false);
       setCreditForm({ amount: "", type: "purchase", description: "" });
       fetchResellers();
