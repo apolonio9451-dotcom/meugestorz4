@@ -678,7 +678,7 @@ export default function Clients() {
                 <div className="space-y-3">
                   {formMacKeys.map((mk, i) => (
                     <div key={i} className="space-y-2 p-3 rounded-lg border border-primary/15 bg-primary/5">
-                      <div className="flex items-center gap-2">
+                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                         <Input
                           placeholder="Nome do App"
                           value={mk.app_name}
@@ -687,7 +687,7 @@ export default function Clients() {
                             updated[i] = { ...updated[i], app_name: e.target.value };
                             setFormMacKeys(updated);
                           }}
-                          className="h-9 text-sm flex-1 border-primary/20 focus:border-primary/50"
+                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
                         />
                         <SlotDatePicker
                           date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
@@ -697,7 +697,6 @@ export default function Clients() {
                             setFormMacKeys(updated);
                           }}
                           placeholder="Expiração..."
-                          className="flex-1"
                         />
                         <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
                           <X className="w-4 h-4" />
