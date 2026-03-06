@@ -828,45 +828,50 @@ export default function Clients() {
                 key={client.id}
                 className={`rounded-xl border bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden transition-all duration-300 ${neonColor}`}
               >
-                {/* Row 1: Name + menu */}
+                {/* Row 1: Name + status + menu */}
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-display font-bold text-foreground text-base leading-tight truncate flex-1">{client.name}</h3>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openDialog(client)}>
-                        <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
-                      </DropdownMenuItem>
-                      {sub && (
-                        <>
-                          <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}>
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
-                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
+                    {client.iptv_user && (
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {days !== null && getExpiryBadge(days)}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openDialog(client)}>
+                          <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        {sub && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}>
+                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
+                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-
-                {/* Row 2: Expiry badge */}
-                <div>{days !== null && getExpiryBadge(days)}</div>
 
                 {/* Row 3: Server + Plan + Price */}
                 <div className="flex items-center gap-2 flex-wrap">
