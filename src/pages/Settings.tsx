@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw } from "lucide-react";
+import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone } from "lucide-react";
 
 interface CompanySettings {
   id?: string;
