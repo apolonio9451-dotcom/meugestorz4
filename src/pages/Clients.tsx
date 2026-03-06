@@ -45,6 +45,8 @@ interface MacKey {
   id?: string;
   mac: string;
   key: string;
+  app_name: string;
+  expires_at: string;
 }
 
 export default function Clients() {
