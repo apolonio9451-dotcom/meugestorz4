@@ -538,27 +538,27 @@ export default function Clients() {
           </div>
           <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+              <DialogTitle className="text-base">{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[calc(95vh-80px)] pr-1 -mr-1">
+            <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto max-h-[calc(95vh-80px)] pr-1 -mr-1">
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dados Pessoais</p>
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Nome *</Label>
-                    <Input name="name" required placeholder="Nome completo" defaultValue={editing?.name || ""} className="h-9" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dados Pessoais</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Nome *</Label>
+                    <Input name="name" required placeholder="Nome completo" defaultValue={editing?.name || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Usuário *</Label>
-                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-9 text-xs" />
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Usuário *</Label>
+                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Senha</Label>
-                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-9 text-xs" />
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Senha</Label>
+                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
-                    <div className="space-y-1 relative">
-                      <Label className="text-xs">Indicado por</Label>
+                    <div className="space-y-1.5 relative">
+                      <Label className="text-sm">Indicado por</Label>
                       <Input
                         placeholder="Nome..."
                         value={referralSearch}
@@ -569,7 +569,7 @@ export default function Clients() {
                         }}
                         onFocus={() => setShowReferralDropdown(true)}
                         onBlur={() => setTimeout(() => setShowReferralDropdown(false), 200)}
-                        className="h-9 text-xs"
+                        className="h-10 text-sm border-primary/20 focus:border-primary/50"
                       />
                       {showReferralDropdown && referralSearch.length > 0 && (() => {
                         const matches = activeClients.filter(c => 
@@ -599,32 +599,32 @@ export default function Clients() {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">WhatsApp *</Label>
-                      <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} className="h-9 text-xs" />
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">WhatsApp *</Label>
+                      <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Email</Label>
-                      <Input name="email" type="email" placeholder="email@ex.com" defaultValue={editing?.email || ""} className="h-9 text-xs" />
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Email</Label>
+                      <Input name="email" type="email" placeholder="email@ex.com" defaultValue={editing?.email || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Nascimento</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Nascimento</Label>
                       <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Observações</Label>
-                    <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-9 text-xs" />
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Observações</Label>
+                    <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                   </div>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Servidor & Assinatura</p>
-                <div className="space-y-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Servidor *</Label>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Servidor & Assinatura</p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Servidor *</Label>
                     <Select name="server" defaultValue={editing?.server || ""}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o servidor" /></SelectTrigger>
+                      <SelectTrigger className="h-10 text-sm border-primary/20 focus:border-primary/50"><SelectValue placeholder="Selecione o servidor" /></SelectTrigger>
                       <SelectContent>
                         {servers.map(s => (
                           <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
@@ -633,8 +633,8 @@ export default function Clients() {
                     </Select>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-primary font-semibold">Plano *</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm text-primary font-semibold">Plano *</Label>
                       <Select value={formPlanId} onValueChange={(v) => {
                         setFormPlanId(v);
                         const plan = plans.find(p => p.id === v);
@@ -643,7 +643,7 @@ export default function Clients() {
                           setFormEndDate(addDays(new Date(), plan.duration_days));
                         }
                       }}>
-                        <SelectTrigger className="h-9 border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectTrigger className="h-10 text-sm border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
                           {plans.map(p => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -651,27 +651,27 @@ export default function Clients() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-primary font-semibold">Valor (R$) *</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm text-primary font-semibold">Valor (R$) *</Label>
                       <Input
                         value={formAmount}
                         onChange={(e) => setFormAmount(e.target.value)}
                         placeholder="30.00"
                         type="number"
                         step="0.01"
-                        className="h-9 text-xs border-primary/30 focus:ring-primary/40"
+                        className="h-10 text-sm border-primary/30 focus:ring-primary/40"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Vencimento *</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Vencimento *</Label>
                       <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
                     </div>
                   </div>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">MAC & KEY</p>
-                <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">MAC & KEY</p>
+                <div className="space-y-3">
                   {formMacKeys.map((mk, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Input
@@ -682,7 +682,7 @@ export default function Clients() {
                           updated[i].mac = e.target.value;
                           setFormMacKeys(updated);
                         }}
-                        className="h-9 text-xs flex-1"
+                        className="h-10 text-sm flex-1 border-primary/20 focus:border-primary/50"
                       />
                       <Input
                         placeholder="KEY"
@@ -692,9 +692,9 @@ export default function Clients() {
                           updated[i].key = e.target.value;
                           setFormMacKeys(updated);
                         }}
-                        className="h-9 text-xs flex-1"
+                        className="h-10 text-sm flex-1 border-primary/20 focus:border-primary/50"
                       />
-                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -704,7 +704,7 @@ export default function Clients() {
                   </Button>
                 </div>
               </div>
-              <Button type="submit" disabled={loading} className="w-full">{loading ? "Salvando..." : editing ? "Salvar" : "Cadastrar"}</Button>
+              <Button type="submit" disabled={loading} className="w-full h-11 text-sm">{loading ? "Salvando..." : editing ? "Salvar" : "Cadastrar"}</Button>
             </form>
           </DialogContent>
       </Dialog>
