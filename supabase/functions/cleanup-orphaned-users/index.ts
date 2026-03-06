@@ -13,43 +13,46 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization") || "";
 
-    // Verify caller
-    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Não autenticado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify caller is an owner
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: membership } = await adminClient
-      .from("company_memberships")
-      .select("role, company_id")
-      .eq("user_id", caller.id)
-      .eq("role", "owner")
-      .maybeSingle();
 
-    if (!membership) {
-      return new Response(JSON.stringify({ error: "Sem permissão" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // If called with user auth, verify they're an owner
+    if (authHeader && !authHeader.includes(serviceRoleKey)) {
+      const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "Não autenticado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: membership } = await adminClient
+        .from("company_memberships")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("role", "owner")
+        .maybeSingle();
+      if (!membership) {
+        return new Response(JSON.stringify({ error: "Sem permissão" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
+
+    // Get optional owner_id to exclude
+    const body = await req.json().catch(() => ({}));
+    const excludeId = body.exclude_user_id || null;
 
     // List all auth users
     const { data: { users }, error: listErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
     if (listErr) throw listErr;
 
-    // Find orphaned users: have trial metadata but no reseller row and no active membership (excluding the caller)
     const cleaned: string[] = [];
 
     for (const u of users) {
-      if (u.id === caller.id) continue;
+      if (excludeId && u.id === excludeId) continue;
 
       // Check if user has a reseller record
       const { data: reseller } = await adminClient
@@ -57,39 +60,33 @@ Deno.serve(async (req) => {
         .select("id")
         .eq("user_id", u.id)
         .maybeSingle();
+      if (reseller) continue;
 
-      if (reseller) continue; // still has a reseller record, skip
-
-      // Check if user has any active membership
+      // Check membership
       const { data: mem } = await adminClient
         .from("company_memberships")
-        .select("id, is_trial")
+        .select("id, is_trial, company_id")
         .eq("user_id", u.id)
         .limit(1)
         .maybeSingle();
 
-      // Only clean up trial users whose reseller was deleted (has trial metadata OR is_trial membership)
       const isTrial = u.user_metadata?.is_trial || mem?.is_trial;
       if (!isTrial) continue;
 
-      // This is an orphaned trial user - clean up
-      if (mem) {
-        // Delete the company created for this user
-        const { data: membershipFull } = await adminClient
+      // Orphaned trial user - clean up
+      const { data: allMems } = await adminClient
+        .from("company_memberships")
+        .select("company_id")
+        .eq("user_id", u.id);
+
+      for (const m of allMems || []) {
+        await adminClient.from("company_memberships").delete().eq("company_id", m.company_id).eq("user_id", u.id);
+        const { count } = await adminClient
           .from("company_memberships")
-          .select("company_id")
-          .eq("user_id", u.id);
-        
-        for (const m of membershipFull || []) {
-          await adminClient.from("company_memberships").delete().eq("company_id", m.company_id).eq("user_id", u.id);
-          // Check if company has other members
-          const { count } = await adminClient
-            .from("company_memberships")
-            .select("id", { count: "exact", head: true })
-            .eq("company_id", m.company_id);
-          if (count === 0) {
-            await adminClient.from("companies").delete().eq("id", m.company_id);
-          }
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", m.company_id);
+        if (count === 0) {
+          await adminClient.from("companies").delete().eq("id", m.company_id);
         }
       }
 
