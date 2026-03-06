@@ -74,6 +74,9 @@ export default function ResellerPanel() {
   const [showHistory, setShowHistory] = useState(false);
   const [showTrialLink, setShowTrialLink] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
+  const [showNoCreditModal, setShowNoCreditModal] = useState(false);
+  const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
+  const [adminName, setAdminName] = useState<string>("Administrador");
 
   const fetchReseller = async () => {
     if (!user) return;
