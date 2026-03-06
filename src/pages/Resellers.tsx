@@ -54,6 +54,8 @@ import {
   MoreVertical,
   Phone,
   Mail,
+  GitBranch,
+  Network,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
