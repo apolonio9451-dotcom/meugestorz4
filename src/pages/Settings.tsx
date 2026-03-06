@@ -34,6 +34,7 @@ export default function Settings() {
     primary_color: "#00db49",
     secondary_color: "#00c0f5",
     background_color: "#0357a5",
+    support_whatsapp: "",
   });
 
   useEffect(() => {
