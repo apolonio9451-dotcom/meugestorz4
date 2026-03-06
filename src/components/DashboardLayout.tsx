@@ -447,6 +447,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="px-3 py-4 border-t border-sidebar-border/50 space-y-1">
+          {supportWhatsapp && (
+            <a
+              href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 px-3 py-2 w-full rounded-lg text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Suporte
+            </a>
+          )}
           <Link
             to="/dashboard/profile"
             onClick={() => setSidebarOpen(false)}
@@ -481,17 +492,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </a>
               )}
             </div>
-          )}
-          {supportWhatsapp && (
-            <a
-              href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20 transition-all duration-200 group"
-            >
-              <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-              Chamar Suporte
-            </a>
           )}
           <button
             onClick={handleSignOut}
