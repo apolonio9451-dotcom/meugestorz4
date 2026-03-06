@@ -16,6 +16,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+  const [resendEmail, setResendEmail] = useState<string | null>(null);
   const trialToken = searchParams.get("trial");
   const [trialInfo, setTrialInfo] = useState<{ expires_at: string; company_id: string; id: string } | null>(null);
   const [brandName, setBrandName] = useState("Meu Gestor");
@@ -90,14 +92,38 @@ export default function Auth() {
       if (error) {
         toast.error(error.message);
       } else {
+        setResendEmail(email);
         toast.success("Conta de teste criada! Verifique seu email para confirmar.");
       }
     } else {
       const { error } = await signUp(email, password, fullName, companyName);
-      if (error) toast.error(error.message);
-      else toast.success("Conta criada! Verifique seu email para confirmar.");
+      if (error) {
+        toast.error(error.message);
+      } else {
+        setResendEmail(email);
+        toast.success("Conta criada! Verifique seu email para confirmar.");
+      }
     }
     setLoading(false);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!resendEmail) return;
+    setResendingConfirmation(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: resendEmail,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Email de verificação reenviado com sucesso.");
+    }
+    setResendingConfirmation(false);
   };
 
   return (
