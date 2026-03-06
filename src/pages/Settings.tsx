@@ -390,31 +390,20 @@ export default function Settings() {
           <Button
             variant="outline"
             onClick={async () => {
+              const defaultTheme = themePresets[0];
               const defaults = {
                 brand_name: "Meu gestor",
                 login_slug: "",
                 logo_url: null,
-                primary_color: "#2ba6d4",
-                secondary_color: "#242a33",
-                background_color: "#0f1319",
+                primary_color: defaultTheme.colors.primary,
+                secondary_color: defaultTheme.colors.secondary,
+                background_color: defaultTheme.colors.background,
               };
               setSettings((prev) => ({ ...prev, ...defaults }));
-              // Auto-save defaults
+              clearThemeOverrides();
+              applyThemePreset(defaultTheme);
               if (settings.id && companyId) {
                 await supabase.from("company_settings").update({ ...defaults, company_id: companyId }).eq("id", settings.id);
-                // Apply CSS immediately
-                const root = document.documentElement;
-                root.style.removeProperty("--primary");
-                root.style.removeProperty("--ring");
-                root.style.removeProperty("--accent");
-                root.style.removeProperty("--sidebar-primary");
-                root.style.removeProperty("--sidebar-ring");
-                root.style.removeProperty("--glass-glow");
-                root.style.removeProperty("--secondary");
-                root.style.removeProperty("--muted");
-                root.style.removeProperty("--sidebar-accent");
-                root.style.removeProperty("--background");
-                root.style.removeProperty("--sidebar-background");
               }
               toast({ title: "Padrões restaurados e salvos!" });
             }}
