@@ -16,6 +16,7 @@ interface CompanySettings {
   primary_color: string;
   secondary_color: string;
   background_color: string;
+  support_whatsapp: string;
 }
 
 export default function Settings() {
