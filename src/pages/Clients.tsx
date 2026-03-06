@@ -536,8 +536,179 @@ export default function Clients() {
               <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
             </DialogTrigger>
           </div>
+          <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[calc(95vh-80px)] pr-1 -mr-1">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dados Pessoais</p>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome *</Label>
+                    <Input name="name" required placeholder="Nome completo" defaultValue={editing?.name || ""} className="h-9" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Usuário *</Label>
+                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Senha</Label>
+                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1 relative">
+                      <Label className="text-xs">Indicado por</Label>
+                      <Input
+                        placeholder="Nome..."
+                        value={referralSearch}
+                        onChange={(e) => {
+                          setReferralSearch(e.target.value);
+                          setFormReferredBy(e.target.value);
+                          setShowReferralDropdown(true);
+                        }}
+                        onFocus={() => setShowReferralDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowReferralDropdown(false), 200)}
+                        className="h-9 text-xs"
+                      />
+                      {showReferralDropdown && referralSearch.length > 0 && (() => {
+                        const matches = activeClients.filter(c => 
+                          c.name.toLowerCase().includes(referralSearch.toLowerCase()) &&
+                          c.id !== editing?.id
+                        ).slice(0, 5);
+                        if (matches.length === 0) return null;
+                        return (
+                          <div className="absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-28 overflow-y-auto">
+                            {matches.map(c => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+                                onMouseDown={() => {
+                                  setFormReferredBy(c.name);
+                                  setReferralSearch(c.name);
+                                  setShowReferralDropdown(false);
+                                }}
+                              >
+                                {c.name}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">WhatsApp *</Label>
+                      <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Email</Label>
+                      <Input name="email" type="email" placeholder="email@ex.com" defaultValue={editing?.email || ""} className="h-9 text-xs" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Nascimento</Label>
+                      <SlotDatePicker date={formBirthDate} onDateChange={setFormBirthDate} placeholder="Selecione..." fromYear={1940} toYear={new Date().getFullYear()} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Observações</Label>
+                    <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-9 text-xs" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Servidor & Assinatura</p>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Servidor *</Label>
+                    <Select name="server" defaultValue={editing?.server || ""}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Selecione o servidor" /></SelectTrigger>
+                      <SelectContent>
+                        {servers.map(s => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-primary font-semibold">Plano *</Label>
+                      <Select value={formPlanId} onValueChange={(v) => {
+                        setFormPlanId(v);
+                        const plan = plans.find(p => p.id === v);
+                        if (plan) {
+                          setFormAmount(String(plan.price));
+                          setFormEndDate(addDays(new Date(), plan.duration_days));
+                        }
+                      }}>
+                        <SelectTrigger className="h-9 border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {plans.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-primary font-semibold">Valor (R$) *</Label>
+                      <Input
+                        value={formAmount}
+                        onChange={(e) => setFormAmount(e.target.value)}
+                        placeholder="30.00"
+                        type="number"
+                        step="0.01"
+                        className="h-9 text-xs border-primary/30 focus:ring-primary/40"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Vencimento *</Label>
+                      <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">MAC & KEY</p>
+                <div className="space-y-2">
+                  {formMacKeys.map((mk, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        placeholder="MAC Address"
+                        value={mk.mac}
+                        onChange={(e) => {
+                          const updated = [...formMacKeys];
+                          updated[i].mac = e.target.value;
+                          setFormMacKeys(updated);
+                        }}
+                        className="h-9 text-xs flex-1"
+                      />
+                      <Input
+                        placeholder="KEY"
+                        value={mk.key}
+                        onChange={(e) => {
+                          const updated = [...formMacKeys];
+                          updated[i].key = e.target.value;
+                          setFormMacKeys(updated);
+                        }}
+                        className="h-9 text-xs flex-1"
+                      />
+                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "" }])}>
+                    <Plus className="w-3 h-3 mr-1" /> Adicionar MAC
+                  </Button>
+                </div>
+              </div>
+              <Button type="submit" disabled={loading} className="w-full">{loading ? "Salvando..." : editing ? "Salvar" : "Cadastrar"}</Button>
+            </form>
+          </DialogContent>
+      </Dialog>
 
-      {/* Main filter blocks */}
       <div className="grid grid-cols-5 gap-2">
         {mainBlocks.map((block) => {
           const Icon = block.icon;
