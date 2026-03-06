@@ -701,7 +701,7 @@ export default function Clients() {
                       </Button>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "" }])}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "", app_name: "", expires_at: "" }])}>
                     <Plus className="w-3 h-3 mr-1" /> Adicionar MAC
                   </Button>
                 </div>
