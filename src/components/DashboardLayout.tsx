@@ -315,6 +315,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex bg-background">
+      <AnnouncementModal />
       {/* Mobile overlay */}
       <div
         className={cn(
