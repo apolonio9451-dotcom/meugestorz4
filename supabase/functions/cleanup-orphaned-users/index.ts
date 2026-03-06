@@ -13,17 +13,30 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const authHeader = req.headers.get("Authorization") || "";
-
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // If called with user auth, verify they're an owner
-    if (authHeader && !authHeader.includes(serviceRoleKey)) {
-      const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    // Auth check: either service role or authenticated owner
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    
+    // If not service role, verify user is owner
+    if (token !== serviceRoleKey) {
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Não autenticado" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: { user: caller } } = await adminClient.auth.admin.getUserById(
+        // Decode JWT to get user ID
+        ""
+      ).catch(() => ({ data: { user: null } }));
+      
+      // Use the anon client to verify
+      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: { user: caller } } = await callerClient.auth.getUser();
-      if (!caller) {
+      const { data: { user: caller2 } } = await anonClient.auth.getUser();
+      if (!caller2) {
         return new Response(JSON.stringify({ error: "Não autenticado" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -31,7 +44,7 @@ Deno.serve(async (req) => {
       const { data: membership } = await adminClient
         .from("company_memberships")
         .select("role")
-        .eq("user_id", caller.id)
+        .eq("user_id", caller2.id)
         .eq("role", "owner")
         .maybeSingle();
       if (!membership) {
@@ -41,11 +54,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Get optional owner_id to exclude
     const body = await req.json().catch(() => ({}));
     const excludeId = body.exclude_user_id || null;
 
-    // List all auth users
     const { data: { users }, error: listErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
     if (listErr) throw listErr;
 
@@ -54,7 +65,6 @@ Deno.serve(async (req) => {
     for (const u of users) {
       if (excludeId && u.id === excludeId) continue;
 
-      // Check if user has a reseller record
       const { data: reseller } = await adminClient
         .from("resellers")
         .select("id")
@@ -62,7 +72,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (reseller) continue;
 
-      // Check membership
       const { data: mem } = await adminClient
         .from("company_memberships")
         .select("id, is_trial, company_id")
@@ -73,7 +82,6 @@ Deno.serve(async (req) => {
       const isTrial = u.user_metadata?.is_trial || mem?.is_trial;
       if (!isTrial) continue;
 
-      // Orphaned trial user - clean up
       const { data: allMems } = await adminClient
         .from("company_memberships")
         .select("company_id")
