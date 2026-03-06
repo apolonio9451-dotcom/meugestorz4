@@ -476,7 +476,7 @@ export default function Clients() {
   };
 
   const mainBlocks = [
-    { key: "todos" as const, label: "Todos", icon: Users, count: filterCounts.todos },
+    { key: "todos" as const, label: "Todos", icon: LayoutGrid, count: filterCounts.todos },
     { key: "status" as const, label: "Status", icon: Activity, count: filterCounts.ativos },
     { key: "vencidos" as const, label: "Vencidos", icon: AlertTriangle, count: filterCounts.vencidos },
     { key: "excluidos" as const, label: "Excluídos", icon: Trash2, count: filterCounts.excluidos },
