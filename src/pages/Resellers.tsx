@@ -664,6 +664,7 @@ export default function Resellers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>Rede</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Dias Restantes</TableHead>
                     <TableHead className="text-center">Créditos</TableHead>
@@ -675,6 +676,7 @@ export default function Resellers() {
                   {paginated.map((r) => {
                     const remaining = getDaysRemaining(r);
                     const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
+                    const parentName = r.parent_reseller_id ? parentNameMap[r.parent_reseller_id] : null;
 
                     return (
                       <TableRow key={r.id} className="group">
