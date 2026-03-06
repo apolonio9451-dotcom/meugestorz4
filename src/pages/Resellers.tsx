@@ -145,6 +145,7 @@ export default function Resellers() {
   const [companyCredits, setCompanyCredits] = useState<number>(0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [parentFilter, setParentFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Dialogs
