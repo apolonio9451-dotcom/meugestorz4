@@ -583,10 +583,7 @@ export default function Clients() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Observações</Label>
-                    <Input name="notes" placeholder="Notas internas..." defaultValue={editing?.notes || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
-                  </div>
+                  
                 </div>
               </div>
               <div>
