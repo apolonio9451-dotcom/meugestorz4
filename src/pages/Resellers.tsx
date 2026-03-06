@@ -696,6 +696,18 @@ export default function Resellers() {
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
                           </div>
                         </TableCell>
+                        <TableCell>
+                          {parentName ? (
+                            <div className="flex items-center gap-1.5">
+                              <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <span className="text-[11px] text-muted-foreground">{parentName}</span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-primary/5 text-primary/70 border-primary/20">
+                              Direto
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-center">
                           <div>
