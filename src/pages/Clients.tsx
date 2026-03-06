@@ -902,8 +902,8 @@ export default function Clients() {
                 {/* Referred by */}
                 {client.referred_by && (
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Users className="w-3 h-3 shrink-0" />
-                    <span>Indicado por: <span className="text-foreground font-medium">{client.referred_by}</span></span>
+                    <Handshake className="w-3 h-3 shrink-0" />
+                    <span className="text-foreground font-medium">{client.referred_by}</span>
                   </div>
                 )}
 
