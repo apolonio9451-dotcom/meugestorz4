@@ -155,6 +155,7 @@ export default function Resellers() {
   const [showActivate, setShowActivate] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showZeroCreditsModal, setShowZeroCreditsModal] = useState(true);
   const [generatedTrialLink, setGeneratedTrialLink] = useState("");
   const [selected, setSelected] = useState<Reseller | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
