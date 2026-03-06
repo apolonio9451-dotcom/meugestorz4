@@ -603,30 +603,41 @@ export default function Resellers() {
   const effectiveCredits = resellerCredits !== null ? resellerCredits : companyCredits;
   if (!isOwner && effectiveCredits <= 0) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] p-4">
-        <div className="max-w-md w-full rounded-2xl border border-amber-500/30 bg-card p-8 text-center space-y-5 shadow-lg shadow-amber-500/5">
-          <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-amber-500" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-foreground">Créditos Esgotados</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Seu saldo de créditos está <strong className="text-amber-500">zerado</strong>. 
-              Você não pode gerenciar seus revendedores até recarregar.
-            </p>
-          </div>
-          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3">
-            <p className="text-xs text-amber-500 font-medium">
-              Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 px-4 py-3">
-            <Coins className="w-4 h-4 text-destructive" />
-            <span className="text-sm font-mono font-bold text-destructive">0</span>
-            <span className="text-xs text-muted-foreground">créditos disponíveis</span>
+      <>
+        <Dialog open={showZeroCreditsModal} onOpenChange={setShowZeroCreditsModal}>
+          <DialogContent className="max-w-md rounded-2xl border-warning/30 bg-card [&>button]:hidden">
+            <DialogHeader className="text-center">
+              <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-warning/15">
+                <AlertTriangle className="h-7 w-7 text-warning" />
+              </div>
+              <DialogTitle className="text-lg font-bold">Créditos Esgotados</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                Seu saldo está <strong className="text-warning">zerado</strong>. Você não pode gerenciar seus revendedores até recarregar.
+              </p>
+              <div className="rounded-lg border border-warning/25 bg-warning/10 px-4 py-3">
+                <p className="text-xs font-medium text-warning">
+                  Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" className="w-full" onClick={() => setShowZeroCreditsModal(false)}>
+                Entendi
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <div className="flex min-h-[60vh] items-center justify-center p-4">
+          <div className="max-w-md text-center text-sm text-muted-foreground">
+            Gestão de revendedores temporariamente bloqueada por falta de créditos.
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
