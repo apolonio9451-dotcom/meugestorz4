@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Mail, Lock, User, Building2, FlaskConical, Clock } from "lucide-react";
+import { Zap, Mail, Lock, User, Building2, FlaskConical, Clock, Phone } from "lucide-react";
 import { differenceInHours, parseISO } from "date-fns";
 
 export default function Auth() {

@@ -240,6 +240,23 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* WhatsApp de Suporte */}
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Phone className="w-4 h-4 text-primary" />
+            WhatsApp de Suporte
+          </Label>
+          <Input
+            value={settings.support_whatsapp}
+            onChange={(e) => setSettings((prev) => ({ ...prev, support_whatsapp: e.target.value }))}
+            placeholder="5511999999999"
+            className="bg-secondary/50 border-border"
+          />
+          <p className="text-muted-foreground text-xs">
+            Número usado para contato dos revendedores quando precisarem de suporte ou créditos. Formato: código do país + DDD + número (ex: 5511999999999)
+          </p>
+        </div>
+
         {/* Colors */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-2">
