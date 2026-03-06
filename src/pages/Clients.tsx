@@ -71,6 +71,9 @@ export default function Clients() {
   const [welcomeData, setWelcomeData] = useState<{
     name: string; planName: string; amount: string; endDate: string; user: string; password: string; whatsapp: string;
   } | null>(null);
+  const [formReferredBy, setFormReferredBy] = useState("");
+  const [referralSearch, setReferralSearch] = useState("");
+  const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
