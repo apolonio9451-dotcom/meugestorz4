@@ -634,7 +634,7 @@ export default function Clients() {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-xs">Plano *</Label>
+                      <Label className="text-xs text-primary font-semibold">Plano *</Label>
                       <Select value={formPlanId} onValueChange={(v) => {
                         setFormPlanId(v);
                         const plan = plans.find(p => p.id === v);
@@ -643,7 +643,7 @@ export default function Clients() {
                           setFormEndDate(addDays(new Date(), plan.duration_days));
                         }
                       }}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectTrigger className="h-9 border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
                         <SelectContent>
                           {plans.map(p => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -652,14 +652,14 @@ export default function Clients() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Valor (R$) *</Label>
+                      <Label className="text-xs text-primary font-semibold">Valor (R$) *</Label>
                       <Input
                         value={formAmount}
                         onChange={(e) => setFormAmount(e.target.value)}
                         placeholder="30.00"
                         type="number"
                         step="0.01"
-                        className="h-9 text-xs"
+                        className="h-9 text-xs border-primary/30 focus:ring-primary/40"
                       />
                     </div>
                     <div className="space-y-1">
