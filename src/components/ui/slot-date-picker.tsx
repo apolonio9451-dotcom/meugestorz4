@@ -9,64 +9,110 @@ interface SlotColumnProps {
   items: { value: number; label: string }[];
   selected: number;
   onSelect: (value: number) => void;
-  height?: number;
 }
 
-function SlotColumn({ items, selected, onSelect, height = 200 }: SlotColumnProps) {
-  const itemH = 40;
+function SlotColumn({ items, selected, onSelect }: SlotColumnProps) {
+  const itemH = 44;
+  const visibleItems = 5;
+  const paddingItems = Math.floor(visibleItems / 2);
+  const totalH = visibleItems * itemH;
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const selectedIdx = items.findIndex((i) => i.value === selected);
-  const isScrolling = React.useRef(false);
-  const scrollTimeout = React.useRef<ReturnType<typeof setTimeout>>();
+  const programmaticScroll = React.useRef(false);
+  const scrollTimer = React.useRef<ReturnType<typeof setTimeout>>();
 
-  const scrollToIndex = React.useCallback((idx: number, smooth = true) => {
+  const selectedIdx = items.findIndex((i) => i.value === selected);
+
+  // Scroll to selected item on mount and when selected changes externally
+  React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const target = idx * itemH;
-    el.scrollTo({ top: target, behavior: smooth ? "smooth" : "auto" });
-  }, []);
-
-  React.useEffect(() => {
-    if (!isScrolling.current) {
-      scrollToIndex(selectedIdx >= 0 ? selectedIdx : 0, false);
-    }
-  }, [selectedIdx, scrollToIndex]);
+    const idx = selectedIdx >= 0 ? selectedIdx : 0;
+    programmaticScroll.current = true;
+    el.scrollTop = idx * itemH;
+    // Reset flag after scroll settles
+    setTimeout(() => { programmaticScroll.current = false; }, 50);
+  }, [selectedIdx]);
 
   const handleScroll = () => {
-    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-    isScrolling.current = true;
-    scrollTimeout.current = setTimeout(() => {
+    if (programmaticScroll.current) return;
+    if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => {
       const el = containerRef.current;
       if (!el) return;
       const idx = Math.round(el.scrollTop / itemH);
       const clamped = Math.max(0, Math.min(items.length - 1, idx));
-      scrollToIndex(clamped);
+      // Snap to position
+      programmaticScroll.current = true;
+      el.scrollTo({ top: clamped * itemH, behavior: "smooth" });
+      setTimeout(() => { programmaticScroll.current = false; }, 300);
       if (items[clamped] && items[clamped].value !== selected) {
         onSelect(items[clamped].value);
       }
-      isScrolling.current = false;
-    }, 80);
+    }, 120);
   };
 
-  // Visible area shows 5 items, selected in center
-  const visibleItems = 5;
-  const paddingItems = Math.floor(visibleItems / 2);
-  const totalH = visibleItems * itemH;
+  const handleClick = (idx: number, value: number) => {
+    onSelect(value);
+    const el = containerRef.current;
+    if (el) {
+      programmaticScroll.current = true;
+      el.scrollTo({ top: idx * itemH, behavior: "smooth" });
+      setTimeout(() => { programmaticScroll.current = false; }, 300);
+    }
+  };
+
+  // Calculate 3D transform for each item based on distance from center
+  const getItemStyle = (idx: number): React.CSSProperties => {
+    const el = containerRef.current;
+    if (!el) {
+      const dist = Math.abs(idx - (selectedIdx >= 0 ? selectedIdx : 0));
+      return get3DStyle(dist);
+    }
+    const scrollIdx = el.scrollTop / itemH;
+    const dist = idx - scrollIdx;
+    return get3DStyle(dist);
+  };
+
+  const get3DStyle = (dist: number): React.CSSProperties => {
+    const absDist = Math.abs(dist);
+    const rotateX = dist * -18; // tilt based on position
+    const scale = Math.max(0.65, 1 - absDist * 0.12);
+    const opacity = Math.max(0.15, 1 - absDist * 0.3);
+    const translateZ = -absDist * 8;
+
+    return {
+      transform: `perspective(300px) rotateX(${rotateX}deg) scale(${scale}) translateZ(${translateZ}px)`,
+      opacity,
+      transition: "transform 0.15s ease, opacity 0.15s ease",
+    };
+  };
 
   return (
-    <div className="relative" style={{ height: totalH }}>
-      {/* Selection highlight */}
+    <div className="relative" style={{ height: totalH, perspective: "300px" }}>
+      {/* Selection highlight - 3D glass effect */}
       <div
-        className="absolute left-0 right-0 pointer-events-none z-10 rounded-md border border-primary/40 bg-primary/10"
-        style={{ top: paddingItems * itemH, height: itemH }}
+        className="absolute left-1 right-1 pointer-events-none z-10 rounded-lg"
+        style={{
+          top: paddingItems * itemH,
+          height: itemH,
+          background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.08))",
+          border: "1.5px solid hsl(var(--primary) / 0.5)",
+          boxShadow: "0 0 12px hsl(var(--primary) / 0.15), inset 0 1px 0 hsl(var(--primary) / 0.1)",
+        }}
       />
       {/* Fade top */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-popover to-transparent z-20 pointer-events-none rounded-t-md" />
+      <div
+        className="absolute top-0 left-0 right-0 h-20 z-20 pointer-events-none rounded-t-md"
+        style={{ background: "linear-gradient(to bottom, hsl(var(--popover)), transparent)" }}
+      />
       {/* Fade bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-popover to-transparent z-20 pointer-events-none rounded-b-md" />
+      <div
+        className="absolute bottom-0 left-0 right-0 h-20 z-20 pointer-events-none rounded-b-md"
+        style={{ background: "linear-gradient(to top, hsl(var(--popover)), transparent)" }}
+      />
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto scrollbar-hide scroll-smooth"
+        className="h-full overflow-y-auto scrollbar-hide"
         style={{
           scrollSnapType: "y mandatory",
           WebkitOverflowScrolling: "touch",
@@ -81,21 +127,20 @@ function SlotColumn({ items, selected, onSelect, height = 200 }: SlotColumnProps
           const isSelected = item.value === selected;
           return (
             <div
-              key={item.value}
+              key={`${item.value}-${item.label}`}
               className={cn(
-                "flex items-center justify-center cursor-pointer transition-all duration-150 select-none",
+                "flex items-center justify-center cursor-pointer select-none",
                 isSelected
-                  ? "text-foreground font-semibold text-sm scale-105"
-                  : "text-muted-foreground text-xs opacity-50 hover:opacity-75"
+                  ? "text-foreground font-bold text-sm"
+                  : "text-muted-foreground text-xs"
               )}
               style={{
                 height: itemH,
                 scrollSnapAlign: "start",
+                transformStyle: "preserve-3d",
+                ...getItemStyle(idx),
               }}
-              onClick={() => {
-                onSelect(item.value);
-                scrollToIndex(idx);
-              }}
+              onClick={() => handleClick(idx, item.value)}
             >
               {item.label}
             </div>
@@ -186,22 +231,49 @@ export function SlotDatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-        <div className="p-3 space-y-3">
-          <div className="flex gap-2">
+        <div
+          className="p-4 space-y-3 rounded-lg"
+          style={{
+            background: "linear-gradient(145deg, hsl(var(--popover)), hsl(var(--card)))",
+            boxShadow: "0 8px 32px hsl(var(--primary) / 0.1), 0 0 0 1px hsl(var(--border))",
+          }}
+        >
+          <div className="flex gap-3">
             <div className="flex-1 min-w-[60px]">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground text-center mb-1 font-semibold">Dia</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1.5 font-semibold">
+                Dia
+              </p>
               <SlotColumn items={dayItems} selected={clampedDay} onSelect={setDay} />
             </div>
+            <div
+              className="w-px self-stretch my-4"
+              style={{ background: "hsl(var(--border) / 0.5)" }}
+            />
             <div className="flex-1 min-w-[60px]">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground text-center mb-1 font-semibold">Mês</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1.5 font-semibold">
+                Mês
+              </p>
               <SlotColumn items={monthItems} selected={month} onSelect={setMonth} />
             </div>
+            <div
+              className="w-px self-stretch my-4"
+              style={{ background: "hsl(var(--border) / 0.5)" }}
+            />
             <div className="flex-1 min-w-[70px]">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground text-center mb-1 font-semibold">Ano</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground text-center mb-1.5 font-semibold">
+                Ano
+              </p>
               <SlotColumn items={yearItems} selected={year} onSelect={setYear} />
             </div>
           </div>
-          <Button size="sm" className="w-full gap-1.5" onClick={handleConfirm}>
+          <Button
+            size="sm"
+            className="w-full gap-1.5"
+            onClick={handleConfirm}
+            style={{
+              boxShadow: "0 4px 14px hsl(var(--primary) / 0.3)",
+            }}
+          >
             <Check className="w-3.5 h-3.5" /> Confirmar
           </Button>
         </div>
