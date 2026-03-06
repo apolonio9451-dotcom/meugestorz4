@@ -11,7 +11,7 @@ interface AuthContextType {
   isTrial: boolean;
   trialExpiresAt: string | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ data: any; error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
