@@ -11,7 +11,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Users } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -476,7 +476,7 @@ export default function Clients() {
   };
 
   const mainBlocks = [
-    { key: "todos" as const, label: "Todos", icon: Users, count: filterCounts.todos },
+    { key: "todos" as const, label: "Todos", icon: LayoutGrid, count: filterCounts.todos },
     { key: "status" as const, label: "Status", icon: Activity, count: filterCounts.ativos },
     { key: "vencidos" as const, label: "Vencidos", icon: AlertTriangle, count: filterCounts.vencidos },
     { key: "excluidos" as const, label: "Excluídos", icon: Trash2, count: filterCounts.excluidos },
@@ -902,8 +902,8 @@ export default function Clients() {
                 {/* Referred by */}
                 {client.referred_by && (
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Users className="w-3 h-3 shrink-0" />
-                    <span>Indicado por: <span className="text-foreground font-medium">{client.referred_by}</span></span>
+                    <Handshake className="w-3 h-3 shrink-0" />
+                    <span className="text-foreground font-medium">{client.referred_by}</span>
                   </div>
                 )}
 
