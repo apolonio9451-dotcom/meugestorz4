@@ -24,15 +24,13 @@ export default function Auth() {
 
   useEffect(() => {
     if (trialToken) {
+      // Use RPC (SECURITY DEFINER) to bypass RLS for unauthenticated users
       supabase
-        .from("trial_links")
-        .select("id, expires_at, company_id, status")
-        .eq("token", trialToken)
-        .eq("status", "pending")
+        .rpc("get_trial_link_by_token", { _token: trialToken })
         .maybeSingle()
         .then(({ data }) => {
-          if (data) {
-            setTrialInfo(data);
+          if (data && data.status === "pending") {
+            setTrialInfo({ id: data.id, expires_at: data.expires_at, company_id: data.company_id });
             // Fetch brand name from company settings
             supabase
               .from("company_settings")
