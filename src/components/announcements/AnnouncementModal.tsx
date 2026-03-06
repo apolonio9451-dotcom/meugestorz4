@@ -74,7 +74,7 @@ export default function AnnouncementModal() {
     // Small delay to let auth settle
     const timer = setTimeout(fetchAnnouncements, 1500);
     return () => clearTimeout(timer);
-  }, [user, companyId]);
+  }, [user, companyId, parentCompanyId]);
 
   const handleClose = () => {
     if (currentIndex < announcements.length - 1) {
