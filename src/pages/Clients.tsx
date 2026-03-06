@@ -526,15 +526,16 @@ export default function Clients() {
 
   return (
     <div className="space-y-3 sm:space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">{clients.length} clientes cadastrados</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
-          <DialogTrigger asChild>
-            <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
-          </DialogTrigger>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <DialogTrigger asChild>
+              <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
+            </DialogTrigger>
+          </div>
           <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden">
             <DialogHeader>
               <DialogTitle>{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
@@ -582,9 +583,8 @@ export default function Clients() {
                               <button
                                 key={c.id}
                                 type="button"
-                                className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent/50 transition-colors"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+                                onMouseDown={() => {
                                   setFormReferredBy(c.name);
                                   setReferralSearch(c.name);
                                   setShowReferralDropdown(false);
@@ -664,60 +664,51 @@ export default function Clients() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Vencimento *</Label>
-                      <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="dd/mm/aaaa" />
+                      <SlotDatePicker date={formEndDate} onDateChange={setFormEndDate} placeholder="Data..." />
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* MAC & KEY Section */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">MAC & KEY</p>
-                  <Button type="button" variant="outline" size="sm" onClick={addMacKey} className="h-7 text-xs">
-                    <Plus className="w-3 h-3 mr-1" /> Adicionar
-                  </Button>
-                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">MAC & KEY</p>
                 <div className="space-y-2">
-                  {formMacKeys.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">Nenhum MAC & KEY adicionado</p>
-                  )}
-                  {formMacKeys.map((mk, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                  {formMacKeys.map((mk, i) => (
+                    <div key={i} className="flex items-center gap-2">
                       <Input
-                        placeholder="00:00:00:00:00:00"
+                        placeholder="MAC Address"
                         value={mk.mac}
-                        onChange={(e) => updateMacKey(index, "mac", e.target.value)}
-                        className="text-sm"
+                        onChange={(e) => {
+                          const updated = [...formMacKeys];
+                          updated[i].mac = e.target.value;
+                          setFormMacKeys(updated);
+                        }}
+                        className="h-9 text-xs flex-1"
                       />
                       <Input
-                        placeholder="Key"
+                        placeholder="KEY"
                         value={mk.key}
-                        onChange={(e) => updateMacKey(index, "key", e.target.value)}
-                        className="text-sm"
+                        onChange={(e) => {
+                          const updated = [...formMacKeys];
+                          updated[i].key = e.target.value;
+                          setFormMacKeys(updated);
+                        }}
+                        className="h-9 text-xs flex-1"
                       />
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeMacKey(index)}>
-                        <X className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                        <X className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "" }])}>
+                    <Plus className="w-3 h-3 mr-1" /> Adicionar MAC
+                  </Button>
                 </div>
               </div>
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Salvando..." : "Salvar"}
-              </Button>
+              <Button type="submit" disabled={loading} className="w-full">{loading ? "Salvando..." : editing ? "Salvar" : "Cadastrar"}</Button>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
-
-      {/* Main filter blocks */}
       <div className="grid grid-cols-5 gap-2">
         {mainBlocks.map((block) => {
           const Icon = block.icon;
@@ -734,7 +725,12 @@ export default function Clients() {
               )}
             >
               {block.count > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 bg-primary text-primary-foreground shadow-sm">
+                <span className={cn(
+                  "absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1 shadow-sm",
+                  block.key === "log"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-primary text-primary-foreground"
+                )}>
                   {block.count}
                 </span>
               )}
