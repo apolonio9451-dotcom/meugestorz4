@@ -29,6 +29,7 @@ interface Client {
   address: string;
   status: string;
   created_at: string;
+  referred_by: string;
 }
 
 interface Subscription {
