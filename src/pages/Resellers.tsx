@@ -77,6 +77,7 @@ interface Reseller {
   trial_expires_at?: string | null;
   subscription_expires_at?: string | null;
   user_id?: string | null;
+  parent_reseller_id?: string | null;
 }
 
 interface CreditTransaction {
