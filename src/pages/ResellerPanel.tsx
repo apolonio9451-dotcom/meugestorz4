@@ -148,6 +148,18 @@ export default function ResellerPanel() {
       fetchClients();
       fetchTransactions();
       fetchTrialLinks();
+      // Fetch admin contact info
+      if (reseller.company_id) {
+        supabase
+          .from("company_settings")
+          .select("support_whatsapp, brand_name")
+          .eq("company_id", reseller.company_id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.support_whatsapp) setAdminWhatsapp(data.support_whatsapp);
+            if (data?.brand_name) setAdminName(data.brand_name);
+          });
+      }
     }
   }, [reseller]);
 
