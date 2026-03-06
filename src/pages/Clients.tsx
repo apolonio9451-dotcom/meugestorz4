@@ -220,6 +220,8 @@ export default function Clients() {
       setEditing(client);
       setFormMacKeys(macKeys[client.id] || []);
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
+      setFormReferredBy(client.referred_by || "");
+      setReferralSearch(client.referred_by || "");
       const sub = subscriptions[client.id];
       if (sub) {
         setFormPlanId(sub.plan_id);
@@ -234,6 +236,8 @@ export default function Clients() {
       setEditing(null);
       setFormMacKeys([]);
       setFormBirthDate(undefined);
+      setFormReferredBy("");
+      setReferralSearch("");
       setFormPlanId("");
       setFormAmount("");
       setFormEndDate(undefined);
