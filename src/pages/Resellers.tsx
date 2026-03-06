@@ -597,6 +597,37 @@ export default function Resellers() {
     );
   }
 
+  // Block non-owner resellers with zero credits
+  const effectiveCredits = resellerCredits !== null ? resellerCredits : companyCredits;
+  if (!isOwner && effectiveCredits <= 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] p-4">
+        <div className="max-w-md w-full rounded-2xl border border-amber-500/30 bg-card p-8 text-center space-y-5 shadow-lg shadow-amber-500/5">
+          <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-foreground">Créditos Esgotados</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Seu saldo de créditos está <strong className="text-amber-500">zerado</strong>. 
+              Você não pode gerenciar seus revendedores até recarregar.
+            </p>
+          </div>
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3">
+            <p className="text-xs text-amber-500 font-medium">
+              Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 px-4 py-3">
+            <Coins className="w-4 h-4 text-destructive" />
+            <span className="text-sm font-mono font-bold text-destructive">0</span>
+            <span className="text-xs text-muted-foreground">créditos disponíveis</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
