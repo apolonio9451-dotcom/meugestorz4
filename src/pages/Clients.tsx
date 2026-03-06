@@ -689,6 +689,16 @@ export default function Clients() {
                           }}
                           className="h-9 text-sm flex-1 border-primary/20 focus:border-primary/50"
                         />
+                        <SlotDatePicker
+                          date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
+                          onDateChange={(d) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], expires_at: d ? format(d, "yyyy-MM-dd") : "" };
+                            setFormMacKeys(updated);
+                          }}
+                          placeholder="Expiração..."
+                          className="flex-1"
+                        />
                         <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
                           <X className="w-4 h-4" />
                         </Button>
@@ -713,18 +723,6 @@ export default function Clients() {
                             setFormMacKeys(updated);
                           }}
                           className="h-9 text-sm border-primary/20 focus:border-primary/50"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Expiração do MAC</Label>
-                        <SlotDatePicker
-                          date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
-                          onDateChange={(d) => {
-                            const updated = [...formMacKeys];
-                            updated[i] = { ...updated[i], expires_at: d ? format(d, "yyyy-MM-dd") : "" };
-                            setFormMacKeys(updated);
-                          }}
-                          placeholder="Data de expiração..."
                         />
                       </div>
                     </div>
