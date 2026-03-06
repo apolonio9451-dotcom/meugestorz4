@@ -422,13 +422,30 @@ export default function Resellers() {
 
   const handleDelete = async () => {
     if (!selected || deleteConfirmText !== "EXCLUIR") return;
-    const { error } = await supabase.from("resellers").delete().eq("id", selected.id);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Cadastro excluído com sucesso" });
-      setShowDelete(false);
-      fetchResellers();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-reseller`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ reseller_id: selected.id }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) {
+        toast({ title: "Erro", description: result.error || "Falha ao excluir", variant: "destructive" });
+      } else {
+        toast({ title: "Revendedor excluído completamente" });
+        setShowDelete(false);
+        fetchResellers();
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
   };
 
