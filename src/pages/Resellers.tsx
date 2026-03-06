@@ -478,10 +478,32 @@ export default function Resellers() {
 
   // === FILTERING & PAGINATION ===
 
+  // Build parent name map from ALL resellers (not just manageable)
+  const parentNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    resellers.forEach(r => { map[r.id] = r.name; });
+    return map;
+  }, [resellers]);
+
+  // Unique parent resellers for filter dropdown
+  const parentOptions = useMemo(() => {
+    const parents = new Map<string, string>();
+    resellers.forEach(r => {
+      if (r.parent_reseller_id && parentNameMap[r.parent_reseller_id]) {
+        parents.set(r.parent_reseller_id, parentNameMap[r.parent_reseller_id]);
+      }
+    });
+    // Also add resellers that ARE parents (have sub-resellers)
+    resellers.forEach(r => {
+      const hasSubs = resellers.some(s => s.parent_reseller_id === r.id);
+      if (hasSubs) parents.set(r.id, r.name);
+    });
+    return Array.from(parents.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [resellers, parentNameMap]);
+
   const manageableResellers = useMemo(() => {
     if (!user?.id) return resellers;
     const currentEmail = user.email?.toLowerCase();
-    // Never show yourself in the resellers list
     return resellers.filter((r) => {
       if (r.user_id === user.id) return false;
       if (currentEmail && r.email?.toLowerCase() === currentEmail) return false;
@@ -496,14 +518,19 @@ export default function Resellers() {
         r.email?.toLowerCase().includes(search.toLowerCase()) ||
         r.whatsapp?.includes(search);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesParent =
+        parentFilter === "all" ||
+        parentFilter === "direct" ? !r.parent_reseller_id :
+        parentFilter === "direct" ? !r.parent_reseller_id :
+        r.parent_reseller_id === parentFilter;
+      return matchesSearch && matchesStatus && matchesParent;
     });
-  }, [manageableResellers, search, statusFilter]);
+  }, [manageableResellers, search, statusFilter, parentFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter, parentFilter]);
 
   // === KPIs ===
   const activeCount = manageableResellers.filter(r => r.status === "active").length;
