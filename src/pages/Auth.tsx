@@ -99,9 +99,11 @@ export default function Auth() {
         toast.success("Conta de teste criada! Verifique seu email para confirmar.");
       }
     } else {
-      const { error } = await signUp(email, password, fullName, companyName);
-      if (error) {
-        toast.error(error.message);
+      const { data, error } = await signUp(email, password, fullName, companyName);
+      const isRepeatedSignup = !error && (!data?.user || (Array.isArray(data.user.identities) && data.user.identities.length === 0));
+
+      if (error || isRepeatedSignup) {
+        toast.error(error?.message || "Este email já está cadastrado. Faça login ou redefina a senha.");
       } else {
         setResendEmail(email);
         toast.success("Conta criada! Verifique seu email para confirmar.");
