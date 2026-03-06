@@ -244,6 +244,52 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     fetchBrand();
     fetchSubscription();
     fetchAdminInfo();
+
+    // Fetch support whatsapp
+    const fetchSupportWhatsapp = async () => {
+      if (!user) return;
+      // Check if user is a reseller
+      const { data: resellerData } = await supabase
+        .from("resellers")
+        .select("id, company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (resellerData) {
+        // First check if the reseller's parent has a support_whatsapp in reseller_settings
+        const { data: parentReseller } = await supabase
+          .from("resellers")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (parentReseller) {
+          // Get the company_settings support_whatsapp for the parent company
+          const { data: compSettings } = await supabase
+            .from("company_settings")
+            .select("support_whatsapp")
+            .eq("company_id", resellerData.company_id)
+            .maybeSingle();
+          if (compSettings?.support_whatsapp) {
+            setSupportWhatsapp(compSettings.support_whatsapp);
+            return;
+          }
+        }
+      }
+
+      // For non-resellers or fallback: get from own company settings
+      if (companyId) {
+        const { data: compSettings } = await supabase
+          .from("company_settings")
+          .select("support_whatsapp")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        if (compSettings?.support_whatsapp) {
+          setSupportWhatsapp(compSettings.support_whatsapp);
+        }
+      }
+    };
+    fetchSupportWhatsapp();
   }, [companyId, user]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
