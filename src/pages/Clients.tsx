@@ -698,11 +698,9 @@ export default function Clients() {
                           }}
                           placeholder="Expiração..."
                         />
-                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 row-span-2 self-center" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
                           <X className="w-4 h-4" />
                         </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
                         <Input
                           placeholder="MAC Address"
                           value={mk.mac}
