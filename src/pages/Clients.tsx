@@ -670,7 +670,7 @@ export default function Clients() {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">MAC & KEY</p>
+                <p className="text-[11px] italic font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">MAC & KEY</p>
                 <div className="space-y-3">
                   {formMacKeys.map((mk, i) => (
                     <div key={i} className="flex items-center gap-2">
