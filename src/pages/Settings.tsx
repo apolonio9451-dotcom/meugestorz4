@@ -82,6 +82,7 @@ export default function Settings() {
       primary_color: settings.primary_color,
       secondary_color: settings.secondary_color,
       background_color: settings.background_color,
+      support_whatsapp: settings.support_whatsapp,
     };
 
     let error;

@@ -575,6 +575,47 @@ export default function ResellerPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* No Credits Modal */}
+      <Dialog open={showNoCreditModal} onOpenChange={setShowNoCreditModal}>
+        <DialogContent className="rounded-2xl border-amber-500/30">
+          <DialogHeader className="text-center">
+            <div className="mx-auto w-14 h-14 rounded-full bg-amber-500/15 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-7 h-7 text-amber-500" />
+            </div>
+            <DialogTitle className="text-lg">Créditos Insuficientes</DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Você precisa ter pelo menos <strong className="text-foreground">1 crédito</strong> disponível para gerar um link de teste.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Entre em contato com seu administrador para adquirir créditos.
+            </p>
+            {adminWhatsapp ? (
+              <Button
+                className="w-full gap-2"
+                onClick={() => {
+                  const phone = adminWhatsapp.replace(/\D/g, "");
+                  const msg = encodeURIComponent("Olá! Preciso comprar créditos para minha revenda.");
+                  window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+                }}
+              >
+                <MessageCircle className="w-4 h-4" /> Chamar no WhatsApp
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                WhatsApp de suporte não configurado. Contate seu administrador.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNoCreditModal(false)} className="w-full">
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
