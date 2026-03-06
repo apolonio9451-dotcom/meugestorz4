@@ -115,14 +115,14 @@ export default function Clients() {
     if (!companyId) return;
     const { data } = await supabase
       .from("client_mac_keys")
-      .select("id, client_id, mac, key")
+      .select("id, client_id, mac, key, app_name, expires_at")
       .eq("company_id", companyId);
     
     if (data) {
       const map: Record<string, MacKey[]> = {};
       for (const mk of data) {
         if (!map[mk.client_id]) map[mk.client_id] = [];
-        map[mk.client_id].push({ id: mk.id, mac: mk.mac, key: mk.key });
+        map[mk.client_id].push({ id: mk.id, mac: mk.mac, key: mk.key, app_name: (mk as any).app_name || "", expires_at: (mk as any).expires_at || "" });
       }
       setMacKeys(map);
     }
