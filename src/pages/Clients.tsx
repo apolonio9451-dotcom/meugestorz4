@@ -45,6 +45,8 @@ interface MacKey {
   id?: string;
   mac: string;
   key: string;
+  app_name: string;
+  expires_at: string;
 }
 
 export default function Clients() {
@@ -113,14 +115,14 @@ export default function Clients() {
     if (!companyId) return;
     const { data } = await supabase
       .from("client_mac_keys")
-      .select("id, client_id, mac, key")
+      .select("id, client_id, mac, key, app_name, expires_at")
       .eq("company_id", companyId);
     
     if (data) {
       const map: Record<string, MacKey[]> = {};
       for (const mk of data) {
         if (!map[mk.client_id]) map[mk.client_id] = [];
-        map[mk.client_id].push({ id: mk.id, mac: mk.mac, key: mk.key });
+        map[mk.client_id].push({ id: mk.id, mac: mk.mac, key: mk.key, app_name: (mk as any).app_name || "", expires_at: (mk as any).expires_at || "" });
       }
       setMacKeys(map);
     }
@@ -283,7 +285,7 @@ export default function Clients() {
       await supabase.from("client_mac_keys").delete().eq("client_id", clientId);
       
       // Insert new ones
-      const validMacKeys = formMacKeys.filter(mk => mk.mac.trim() || mk.key.trim());
+      const validMacKeys = formMacKeys.filter(mk => mk.mac.trim() || mk.key.trim() || mk.app_name.trim());
       if (validMacKeys.length > 0) {
         await supabase.from("client_mac_keys").insert(
           validMacKeys.map(mk => ({
@@ -291,7 +293,9 @@ export default function Clients() {
             company_id: companyId,
             mac: mk.mac.trim(),
             key: mk.key.trim(),
-          }))
+            app_name: mk.app_name.trim(),
+            expires_at: mk.expires_at || null,
+          } as any))
         );
       }
 
@@ -398,7 +402,7 @@ export default function Clients() {
     }
   };
 
-  const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "" }]);
+  const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "", app_name: "", expires_at: "" }]);
   const removeMacKey = (index: number) => setFormMacKeys(formMacKeys.filter((_, i) => i !== index));
   const formatMac = (value: string) => {
     const raw = value.replace(/[^0-9]/g, "").slice(0, 12);
@@ -670,36 +674,62 @@ export default function Clients() {
                 </div>
               </div>
               <div>
-                <p className="text-[11px] italic font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">MAC & KEY</p>
+                <p className="text-[11px] italic font-medium text-muted-foreground/70 uppercase tracking-wider mb-3">APP · MAC & KEY</p>
                 <div className="space-y-3">
                   {formMacKeys.map((mk, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        placeholder="MAC Address"
-                        value={mk.mac}
-                        onChange={(e) => {
-                          const updated = [...formMacKeys];
-                          updated[i].mac = e.target.value;
-                          setFormMacKeys(updated);
-                        }}
-                        className="h-10 text-sm flex-1 border-primary/20 focus:border-primary/50"
-                      />
-                      <Input
-                        placeholder="KEY"
-                        value={mk.key}
-                        onChange={(e) => {
-                          const updated = [...formMacKeys];
-                          updated[i].key = e.target.value;
-                          setFormMacKeys(updated);
-                        }}
-                        className="h-10 text-sm flex-1 border-primary/20 focus:border-primary/50"
-                      />
-                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
-                        <X className="w-4 h-4" />
-                      </Button>
+                    <div key={i} className="space-y-2 p-3 rounded-lg border border-primary/15 bg-primary/5">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Nome do App"
+                          value={mk.app_name}
+                          onChange={(e) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], app_name: e.target.value };
+                            setFormMacKeys(updated);
+                          }}
+                          className="h-9 text-sm flex-1 border-primary/20 focus:border-primary/50"
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setFormMacKeys(formMacKeys.filter((_, idx) => idx !== i))}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="MAC Address"
+                          value={mk.mac}
+                          onChange={(e) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], mac: formatMac(e.target.value) };
+                            setFormMacKeys(updated);
+                          }}
+                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                        />
+                        <Input
+                          placeholder="KEY"
+                          value={mk.key}
+                          onChange={(e) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], key: e.target.value };
+                            setFormMacKeys(updated);
+                          }}
+                          className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Expiração do MAC</Label>
+                        <SlotDatePicker
+                          date={mk.expires_at ? parseISO(mk.expires_at) : undefined}
+                          onDateChange={(d) => {
+                            const updated = [...formMacKeys];
+                            updated[i] = { ...updated[i], expires_at: d ? format(d, "yyyy-MM-dd") : "" };
+                            setFormMacKeys(updated);
+                          }}
+                          placeholder="Data de expiração..."
+                        />
+                      </div>
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "" }])}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFormMacKeys([...formMacKeys, { mac: "", key: "", app_name: "", expires_at: "" }])}>
                     <Plus className="w-3 h-3 mr-1" /> Adicionar MAC
                   </Button>
                 </div>
@@ -885,13 +915,39 @@ export default function Clients() {
 
                 {/* Row 4: MAC & KEY */}
                 {clientMacKeys.length > 0 && (
-                  <div className="space-y-1">
-                    {clientMacKeys.map((mk, i) => (
-                      <div key={mk.id || i} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <Key className="w-3 h-3 shrink-0" />
-                        <span className="truncate font-mono">{mk.mac}{mk.key ? ` · ${mk.key}` : ""}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-1.5">
+                    {clientMacKeys.map((mk, i) => {
+                      const macDays = mk.expires_at ? differenceInCalendarDays(parseISO(mk.expires_at), new Date()) : null;
+                      const isExpiring = macDays !== null && macDays >= 0 && macDays <= 7;
+                      const isExpired = macDays !== null && macDays < 0;
+                      return (
+                        <div key={mk.id || i} className="space-y-0.5">
+                          {mk.app_name && (
+                            <span className="text-[11px] font-bold text-primary">{mk.app_name}</span>
+                          )}
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <Key className="w-3 h-3 shrink-0" />
+                            <span className="truncate font-mono">{mk.mac}{mk.key ? ` · ${mk.key}` : ""}</span>
+                          </div>
+                          {macDays !== null && (
+                            <div className={cn(
+                              "flex items-center gap-1 text-[10px] font-semibold",
+                              isExpired ? "text-destructive" : isExpiring ? "text-orange-400" : "text-muted-foreground/60"
+                            )}>
+                              <AlertTriangle className="w-3 h-3" />
+                              {isExpired
+                                ? `MAC vencido há ${Math.abs(macDays)} dias`
+                                : macDays === 0
+                                  ? "MAC vence hoje!"
+                                  : macDays <= 7
+                                    ? `MAC vence em ${macDays} dias`
+                                    : `MAC: ${format(parseISO(mk.expires_at), "dd/MM/yyyy")}`
+                              }
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

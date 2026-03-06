@@ -64,25 +64,31 @@ export type Database = {
       }
       client_mac_keys: {
         Row: {
+          app_name: string
           client_id: string
           company_id: string
           created_at: string
+          expires_at: string | null
           id: string
           key: string
           mac: string
         }
         Insert: {
+          app_name?: string
           client_id: string
           company_id: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           key?: string
           mac?: string
         }
         Update: {
+          app_name?: string
           client_id?: string
           company_id?: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           key?: string
           mac?: string
