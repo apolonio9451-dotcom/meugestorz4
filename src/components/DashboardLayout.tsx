@@ -77,6 +77,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
 
   const applyThemeColors = (primary?: string, secondary?: string, bg?: string) => {
+    // Check if colors match a preset — if so, apply full preset for complete coverage
+    const matchedPreset = themePresets.find(
+      (p) =>
+        !p.locked &&
+        p.colors.primary === primary &&
+        p.colors.secondary === secondary &&
+        p.colors.background === bg
+    );
+    if (matchedPreset) {
+      applyThemePreset(matchedPreset);
+      return;
+    }
+
+    // Fallback: apply individual hex colors
     const hexToHsl = (hex: string): string => {
       const r = parseInt(hex.slice(1, 3), 16) / 255;
       const g = parseInt(hex.slice(3, 5), 16) / 255;
