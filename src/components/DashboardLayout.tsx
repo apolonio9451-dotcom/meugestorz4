@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import TrialBanner from "@/components/trials/TrialBanner";
+import AnnouncementModal from "@/components/announcements/AnnouncementModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -314,6 +315,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex bg-background">
+      <AnnouncementModal />
       {/* Mobile overlay */}
       <div
         className={cn(

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone } from "lucide-react";
+import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 
 interface CompanySettings {
   id?: string;
@@ -20,7 +21,8 @@ interface CompanySettings {
 }
 
 export default function Settings() {
-  const { companyId } = useAuth();
+  const { companyId, userRole } = useAuth();
+  const isOwner = userRole === "Proprietário";
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -358,6 +360,8 @@ export default function Settings() {
           </Button>
         </div>
       </div>
+
+      {isOwner && <AnnouncementManager />}
     </div>
   );
 }
