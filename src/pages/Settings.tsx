@@ -259,7 +259,76 @@ export default function Settings() {
           </p>
         </div>
 
-        {/* Colors */}
+        {/* Theme Presets */}
+        <div className="space-y-4">
+          <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Palette className="w-4 h-4 text-primary" />
+            Temas Predefinidos
+          </Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {themePresets.map((preset) => {
+              const isActive =
+                settings.primary_color === preset.colors.primary &&
+                settings.secondary_color === preset.colors.secondary &&
+                settings.background_color === preset.colors.background;
+              return (
+                <button
+                  key={preset.id}
+                  disabled={preset.locked}
+                  onClick={() => {
+                    if (preset.locked) return;
+                    setSettings((prev) => ({
+                      ...prev,
+                      primary_color: preset.colors.primary,
+                      secondary_color: preset.colors.secondary,
+                      background_color: preset.colors.background,
+                    }));
+                    applyThemePreset(preset);
+                  }}
+                  className={`relative rounded-xl p-4 text-left transition-all border-2 ${
+                    preset.locked
+                      ? "opacity-50 cursor-not-allowed border-border"
+                      : isActive
+                      ? "border-primary shadow-[0_0_16px_hsl(var(--primary)/0.3)]"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  style={{
+                    background: `linear-gradient(135deg, ${preset.colors.background}, ${preset.colors.secondary})`,
+                  }}
+                >
+                  {isActive && (
+                    <div className="absolute top-2 right-2 bg-primary rounded-full p-0.5">
+                      <Check className="w-3 h-3 text-primary-foreground" />
+                    </div>
+                  )}
+                  {preset.locked && (
+                    <div className="absolute top-2 right-2">
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-5 h-5 rounded-full border border-white/20"
+                      style={{ backgroundColor: preset.colors.primary }}
+                    />
+                    <div
+                      className="w-5 h-5 rounded-full border border-white/20"
+                      style={{ backgroundColor: preset.colors.secondary }}
+                    />
+                    <div
+                      className="w-5 h-5 rounded-full border border-white/20"
+                      style={{ backgroundColor: preset.colors.background }}
+                    />
+                  </div>
+                  <p className="text-sm font-semibold text-white">{preset.name}</p>
+                  <p className="text-xs text-white/60 mt-0.5">{preset.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Custom Colors */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-foreground">Cor Primária</Label>
