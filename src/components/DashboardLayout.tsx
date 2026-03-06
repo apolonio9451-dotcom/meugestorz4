@@ -47,7 +47,6 @@ const navItems: NavItem[] = [
     icon: DollarSign,
     children: [
       { href: "/dashboard/financial", label: "Financeiro", icon: DollarSign },
-      { href: "/dashboard/subscriptions", label: "Assinaturas", icon: FileText },
     ],
   },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
