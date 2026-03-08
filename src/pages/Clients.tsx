@@ -11,7 +11,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, EyeOff } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -75,6 +75,7 @@ export default function Clients() {
   } | null>(null);
   const [formReferredBy, setFormReferredBy] = useState("");
   const [referralSearch, setReferralSearch] = useState("");
+  const [visibleCards, setVisibleCards] = useState<Record<string, boolean>>({});
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
@@ -869,11 +870,21 @@ export default function Clients() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
                     {client.iptv_user && (
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        {visibleCards[client.id] ? `@${client.iptv_user}` : "••••••••"}
+                      </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     {days !== null && getExpiryBadge(days)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
+                      onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
+                    >
+                      {visibleCards[client.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
@@ -937,7 +948,12 @@ export default function Clients() {
                           )}
                           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                             <Key className="w-3 h-3 shrink-0" />
-                            <span className="truncate font-mono">{mk.mac}{mk.key ? ` · ${mk.key}` : ""}</span>
+                            <span className="truncate font-mono">
+                              {visibleCards[client.id]
+                                ? `${mk.mac}${mk.key ? ` · ${mk.key}` : ""}`
+                                : `••:••:••:••:••:••${mk.key ? " · ••••••" : ""}`
+                              }
+                            </span>
                           </div>
                           {macDays !== null && (
                             <div className={cn(
