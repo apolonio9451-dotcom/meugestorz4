@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      auto_send_logs: {
+        Row: {
+          category: string
+          client_id: string | null
+          client_name: string
+          company_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          phone: string | null
+          status: string
+        }
+        Insert: {
+          category?: string
+          client_id?: string | null
+          client_name?: string
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          phone?: string | null
+          status?: string
+        }
+        Update: {
+          category?: string
+          client_id?: string | null
+          client_name?: string
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          phone?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_send_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_send_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_activity_logs: {
         Row: {
           action: string
@@ -194,6 +245,7 @@ export type Database = {
           reseller_id: string | null
           server: string | null
           status: string
+          ultimo_envio_auto: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -213,6 +265,7 @@ export type Database = {
           reseller_id?: string | null
           server?: string | null
           status?: string
+          ultimo_envio_auto?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -232,6 +285,7 @@ export type Database = {
           reseller_id?: string | null
           server?: string | null
           status?: string
+          ultimo_envio_auto?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
