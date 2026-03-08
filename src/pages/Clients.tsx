@@ -429,7 +429,8 @@ export default function Clients() {
   );
 
   const searchFilteredExcluded = excludedClients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
+    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) ||
+    (c.iptv_user || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const getClientDays = (clientId: string) => {
