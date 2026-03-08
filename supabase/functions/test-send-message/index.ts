@@ -21,6 +21,22 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
+function getEvolutiEndpoints(): string[] {
+  const configured = Deno.env.get("EVOLUTI_API_URL")?.trim();
+  if (configured) {
+    return configured
+      .split(",")
+      .map((url) => url.trim())
+      .filter(Boolean)
+      .map((base) => `${base.replace(/\/$/, "")}/api/messages/send`);
+  }
+
+  return [
+    "https://evoluti.cloud/api/messages/send",
+    "https://api.evoluti.cloud/api/messages/send",
+  ];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
