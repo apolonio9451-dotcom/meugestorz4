@@ -8,51 +8,10 @@ export interface ThemePreset {
     secondary: string;
     background: string;
   };
-  // Full HSL variable overrides for complete theme coverage
   cssVars: Record<string, string>;
 }
 
 export const themePresets: ThemePreset[] = [
-  {
-    id: "navy",
-    name: "Navy Blue",
-    description: "Tema padrão azul escuro",
-    colors: {
-      primary: "#2ba6d4",
-      secondary: "#242a33",
-      background: "#0f1319",
-    },
-    cssVars: {
-      "--background": "220 25% 8%",
-      "--foreground": "210 15% 93%",
-      "--card": "220 22% 13%",
-      "--card-foreground": "210 15% 93%",
-      "--popover": "220 22% 13%",
-      "--popover-foreground": "210 15% 93%",
-      "--primary": "200 80% 55%",
-      "--primary-foreground": "0 0% 100%",
-      "--secondary": "220 18% 17%",
-      "--secondary-foreground": "210 15% 93%",
-      "--muted": "220 16% 17%",
-      "--muted-foreground": "215 10% 50%",
-      "--accent": "200 75% 50%",
-      "--accent-foreground": "0 0% 100%",
-      "--border": "220 14% 19%",
-      "--input": "220 16% 15%",
-      "--ring": "200 80% 55%",
-      "--sidebar-background": "220 28% 6%",
-      "--sidebar-foreground": "215 12% 65%",
-      "--sidebar-primary": "200 80% 55%",
-      "--sidebar-primary-foreground": "0 0% 100%",
-      "--sidebar-accent": "220 20% 15%",
-      "--sidebar-accent-foreground": "210 15% 88%",
-      "--sidebar-border": "220 16% 15%",
-      "--sidebar-ring": "200 80% 55%",
-      "--glass-bg": "220 25% 14%",
-      "--glass-border": "210 20% 23%",
-      "--glass-glow": "200 80% 55%",
-    },
-  },
   {
     id: "teal",
     name: "Teal Emerald",
@@ -91,6 +50,46 @@ export const themePresets: ThemePreset[] = [
       "--glass-bg": "170 35% 10%",
       "--glass-border": "174 60% 35%",
       "--glass-glow": "174 72% 40%",
+    },
+  },
+  {
+    id: "navy",
+    name: "Navy Blue",
+    description: "Tema azul escuro",
+    colors: {
+      primary: "#2ba6d4",
+      secondary: "#242a33",
+      background: "#0f1319",
+    },
+    cssVars: {
+      "--background": "220 25% 8%",
+      "--foreground": "210 15% 93%",
+      "--card": "220 22% 13%",
+      "--card-foreground": "210 15% 93%",
+      "--popover": "220 22% 13%",
+      "--popover-foreground": "210 15% 93%",
+      "--primary": "200 80% 55%",
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": "220 18% 17%",
+      "--secondary-foreground": "210 15% 93%",
+      "--muted": "220 16% 17%",
+      "--muted-foreground": "215 10% 50%",
+      "--accent": "200 75% 50%",
+      "--accent-foreground": "0 0% 100%",
+      "--border": "220 14% 19%",
+      "--input": "220 16% 15%",
+      "--ring": "200 80% 55%",
+      "--sidebar-background": "220 28% 6%",
+      "--sidebar-foreground": "215 12% 65%",
+      "--sidebar-primary": "200 80% 55%",
+      "--sidebar-primary-foreground": "0 0% 100%",
+      "--sidebar-accent": "220 20% 15%",
+      "--sidebar-accent-foreground": "210 15% 88%",
+      "--sidebar-border": "220 16% 15%",
+      "--sidebar-ring": "200 80% 55%",
+      "--glass-bg": "220 25% 14%",
+      "--glass-border": "210 20% 23%",
+      "--glass-glow": "200 80% 55%",
     },
   },
   {
@@ -135,11 +134,32 @@ export const themePresets: ThemePreset[] = [
   },
 ];
 
+const THEME_CACHE_KEY = "meugestor-theme-vars";
+
 export function applyThemePreset(preset: ThemePreset) {
   const root = document.documentElement;
   Object.entries(preset.cssVars).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
+  // Cache to localStorage for instant load next time
+  try {
+    localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(preset.cssVars));
+  } catch {}
+}
+
+export function applyCachedTheme(): boolean {
+  try {
+    const cached = localStorage.getItem(THEME_CACHE_KEY);
+    if (cached) {
+      const vars = JSON.parse(cached) as Record<string, string>;
+      const root = document.documentElement;
+      Object.entries(vars).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+      return true;
+    }
+  } catch {}
+  return false;
 }
 
 export function clearThemeOverrides() {
@@ -154,4 +174,7 @@ export function clearThemeOverrides() {
     "--sidebar-border", "--sidebar-ring", "--glass-bg", "--glass-border", "--glass-glow",
   ];
   vars.forEach((v) => root.style.removeProperty(v));
+  try {
+    localStorage.removeItem(THEME_CACHE_KEY);
+  } catch {}
 }
