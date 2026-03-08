@@ -863,126 +863,101 @@ export default function Clients() {
             return (
               <div
                 key={client.id}
-                className={`rounded-xl border bg-card p-3 sm:p-4 space-y-2 sm:space-y-3 relative overflow-hidden transition-all duration-300 ${neonColor}`}
+                className={`rounded-xl border bg-card p-3 sm:p-4 space-y-2.5 relative overflow-hidden transition-all duration-300 ${neonColor}`}
               >
-                {/* Row 1: Name + status + menu */}
+                {/* Row 1: Name + username + status + menu */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
                     {client.iptv_user && (
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        @{client.iptv_user}
-                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {days !== null && getExpiryBadge(days)}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openDialog(client)}>
-                          <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
-                        </DropdownMenuItem>
-                        {sub && (
-                          <>
-                            <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}>
-                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}>
-                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}>
-                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}>
-                              <RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses
-                            </DropdownMenuItem>
-                          </>
-                        )}
+                        <DropdownMenuItem onClick={() => openDialog(client)}><Pencil className="w-3.5 h-3.5 mr-2" /> Editar</DropdownMenuItem>
+                        {sub && (<>
+                          <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
+                        </>)}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}>
-                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
-                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 </div>
 
-                {/* Row 3: Server + Plan + Price + Eye icon */}
+                {/* Row 2: Vencimento + Valor (soft muted boxes) */}
+                {sub && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5"><Clock className="w-3 h-3" /> Vencimento</p>
+                      <p className="text-sm font-semibold text-foreground">{format(parseISO(sub.end_date), "dd/MM/yyyy")}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5"><DollarSign className="w-3 h-3" /> Valor</p>
+                      <p className="text-sm font-semibold text-primary">R$ {Number(sub.amount).toFixed(2).replace(".", ",")}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Row 3: Servidor + Plano + Eye button */}
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                    {client.server && (
-                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
-                        {client.server}
-                      </Badge>
-                    )}
+                  <div className="flex-1 rounded-lg bg-muted/40 px-3 py-2 flex items-center justify-between min-w-0">
+                    <span className="text-xs text-foreground font-medium truncate">{client.server || "—"}</span>
                     {sub && (
-                      <Badge variant="outline" className="text-xs bg-primary/15 text-primary border-primary/30 font-semibold">
-                        {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
-                      </Badge>
+                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold ml-2 shrink-0">{sub.plan_name}</Badge>
                     )}
                   </div>
                   {clientMacKeys.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
-                      onClick={() => setMacModalClientId(client.id)}
-                    >
-                      <Eye className="w-5 h-5" />
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary rounded-lg bg-muted/40 hover:bg-muted/60" onClick={() => setMacModalClientId(client.id)}>
+                      <Eye className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
 
-                {/* App names visible on card */}
-                {clientMacKeys.length > 0 && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {clientMacKeys.map((mk, i) => mk.app_name && (
-                      <Badge key={mk.id || i} variant="outline" className="text-[11px] bg-muted/50 text-primary border-primary/20">
-                        {mk.app_name}
-                      </Badge>
-                    ))}
+                {/* Row 4: App names + Indicação */}
+                {(clientMacKeys.some(mk => mk.app_name) || client.referred_by) && (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      {clientMacKeys.map((mk, i) => mk.app_name && (
+                        <Badge key={mk.id || i} variant="outline" className="text-[10px] bg-muted/50 text-muted-foreground border-border/50 font-medium">{mk.app_name}</Badge>
+                      ))}
+                    </div>
+                    {client.referred_by && (
+                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                        <Handshake className="w-3 h-3" />
+                        <span className="font-medium text-foreground/70">{client.referred_by}</span>
+                      </span>
+                    )}
                   </div>
                 )}
 
-                {/* Referred by */}
-                {client.referred_by && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Handshake className="w-3 h-3 shrink-0" />
-                    <span className="text-foreground font-medium">{client.referred_by}</span>
-                  </div>
-                )}
-
-                {/* Row 5: Progress bar + dates */}
+                {/* Row 5: Progress bar */}
                 {days !== null && sub && (
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-1.5 pt-0.5">
                     <div className={cn("w-full h-1.5 rounded-full overflow-hidden", getBarTrackColor(days))}>
-                      <div
-                        className={`h-full rounded-full transition-all ${getBarColor(days)}`}
-                        style={{ width: `${getBarPercent(days)}%` }}
-                      />
+                      <div className={`h-full rounded-full transition-all ${getBarColor(days)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
-                    <div className={cn("flex items-center justify-between text-[11px]", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{getDaysLabel(days)}</span>
-                      </div>
-                      <span>{format(parseISO(sub.end_date), "dd/MM/yyyy")}</span>
+                    <div className={cn("flex items-center text-[11px]", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
+                      <div className="flex items-center gap-1"><Clock className="w-3 h-3" /><span>{getDaysLabel(days)}</span></div>
                     </div>
                   </div>
                 )}
 
-                {/* Row 6: Cobrar button - bottom */}
+                {/* Row 6: Cobrar button */}
                 {client.whatsapp && (
                   <div className="pt-2 border-t border-border/40">
                     <a
                       href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(buildCobrancaMessage(client, sub, days))}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      target="_blank" rel="noopener noreferrer"
                       className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all text-xs font-bold shadow-[0_0_8px_-2px_rgb(16_185_129/0.3)] hover:shadow-[0_0_14px_-2px_rgb(16_185_129/0.5)]"
                       onClick={(e) => e.stopPropagation()}
                     >
