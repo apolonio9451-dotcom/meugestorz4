@@ -139,30 +139,33 @@ export default function Messages() {
             Configure as mensagens enviadas ao clicar em "Cobrar".
           </p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Info className="w-4 h-4" />
-              Variáveis
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Variáveis disponíveis</DialogTitle>
-              <DialogDescription>
-                Use estas variáveis nos templates. Elas serão substituídas pelos dados reais do cliente.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-2 mt-2">
-              {variables.map((v) => (
-                <div key={v.tag} className="flex items-center gap-3 text-sm">
-                  <code className="bg-muted px-2 py-1 rounded font-mono text-xs min-w-[110px]">{v.tag}</code>
-                  <span className="text-muted-foreground">{v.desc}</span>
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <TestSendButton companyId={companyId} />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Info className="w-4 h-4" />
+                Variáveis
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>Variáveis disponíveis</DialogTitle>
+                <DialogDescription>
+                  Use estas variáveis nos templates. Elas serão substituídas pelos dados reais do cliente.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2 mt-2">
+                {variables.map((v) => (
+                  <div key={v.tag} className="flex items-center gap-3 text-sm">
+                    <code className="bg-muted px-2 py-1 rounded font-mono text-xs min-w-[110px]">{v.tag}</code>
+                    <span className="text-muted-foreground">{v.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="vence_hoje" className="w-full" onValueChange={(v) => setActiveTab(v)}>
