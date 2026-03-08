@@ -143,7 +143,9 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 mb-4 overflow-hidden">
             <img src={appLogo} alt="Meu Gestor" className="w-16 h-16 object-cover" />
           </div>
-          <h1 className="text-3xl font-bold font-display text-accent">{brandName}</h1>
+          <h1 className="text-3xl font-extrabold font-display tracking-tight bg-gradient-to-r from-accent via-primary to-accent bg-clip-text text-transparent drop-shadow-[0_0_12px_hsl(var(--accent)/0.4)]">
+            {brandName}
+          </h1>
           <p className="text-muted-foreground mt-1">Gestão inteligente de assinaturas</p>
         </div>
 
