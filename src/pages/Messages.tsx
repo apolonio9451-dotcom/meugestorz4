@@ -233,6 +233,8 @@ export default function Messages() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <AutoSendLogs companyId={companyId} />
     </div>
   );
 }
