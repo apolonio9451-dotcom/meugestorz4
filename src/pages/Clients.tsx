@@ -870,11 +870,21 @@ export default function Clients() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
                     {client.iptv_user && (
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        {visibleCards[client.id] ? `@${client.iptv_user}` : "••••••••"}
+                      </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     {days !== null && getExpiryBadge(days)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
+                      onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
+                    >
+                      {visibleCards[client.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
