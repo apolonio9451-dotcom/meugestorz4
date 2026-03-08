@@ -1052,7 +1052,7 @@ export default function Clients() {
       </Dialog>
 
       {/* MAC/KEY Details Modal */}
-      <Dialog open={!!visibleCards.__modal_client} onOpenChange={(open) => { if (!open) setVisibleCards(prev => ({ ...prev, __modal_client: "" })); }}>
+      <Dialog open={!!macModalClientId} onOpenChange={(open) => { if (!open) setMacModalClientId(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
@@ -1062,8 +1062,7 @@ export default function Clients() {
           </DialogHeader>
           <div className="space-y-3">
             {(() => {
-              const cid = visibleCards.__modal_client as string;
-              const mks = cid ? (macKeys[cid] || []) : [];
+              const mks = macModalClientId ? (macKeys[macModalClientId] || []) : [];
               return mks.map((mk, i) => {
                 const macDays = mk.expires_at ? differenceInCalendarDays(parseISO(mk.expires_at), new Date()) : null;
                 const isExpired = macDays !== null && macDays < 0;
