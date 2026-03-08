@@ -813,6 +813,13 @@ export default function Clients() {
         </div>
       )}
 
+      {/* Follow-up info text */}
+      {mainFilter === "status" && statusSubFilter === "followup" && (
+        <p className="text-xs text-muted-foreground bg-cyan-400/5 border border-cyan-400/20 rounded-lg px-3 py-2">
+          📋 <span className="font-semibold text-cyan-400">Follow-up</span> — Exibe clientes ativos com 15 dias ou mais de cadastro. Ideal para acompanhamento e fidelização após o período inicial.
+        </p>
+      )}
+
       {/* Log view */}
       {mainFilter === "log" ? (
         <div className="space-y-2">
