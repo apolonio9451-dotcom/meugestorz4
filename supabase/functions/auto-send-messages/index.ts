@@ -200,20 +200,13 @@ Deno.serve(async (req) => {
 
         // Send via Evoluti API
         try {
-          const res = await fetch("https://evoluti.cloud/api/messages/send", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${evolutiToken}`,
-            },
-            body: JSON.stringify({
-              number: normalizedPhone,
-              body: messageBody,
-            }),
-          });
+          const sendResult = await sendMessageWithFallback(
+            evolutiToken,
+            normalizedPhone,
+            messageBody
+          );
 
-          const logStatus = res.ok ? "success" : "error";
-          const errorMsg = res.ok ? "" : await res.text();
+          const logStatus = sendResult.ok ? "success" : "error";
 
           // Log the result
           await supabase.from("auto_send_logs").insert({
@@ -222,11 +215,11 @@ Deno.serve(async (req) => {
             client_name: client.name,
             category,
             status: logStatus,
-            error_message: errorMsg,
+            error_message: sendResult.error || null,
             phone: normalizedPhone,
           });
 
-          if (res.ok) {
+          if (sendResult.ok) {
             // Update ultimo_envio_auto
             await supabase
               .from("clients")
