@@ -1,1 +1,4 @@
 project_id = "icwpvjixmmcwarexyagk"
+
+[functions.auto-send-messages]
+verify_jwt = false
