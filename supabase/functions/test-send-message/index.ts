@@ -21,6 +21,32 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
+function normalizeEndpoint(url: string): string {
+  const cleaned = url.trim().replace(/\/$/, "");
+  if (
+    cleaned.includes("/api/messages/send") ||
+    cleaned.includes("/message/sendText/")
+  ) {
+    return cleaned;
+  }
+  return `${cleaned}/api/messages/send`;
+}
+
+function getEvolutiEndpoints(): string[] {
+  const configured = Deno.env.get("EVOLUTI_API_URL")?.trim();
+  if (configured) {
+    return configured
+      .split(",")
+      .map((url) => normalizeEndpoint(url))
+      .filter(Boolean);
+  }
+
+  return [
+    "https://evoluti.cloud/api/messages/send",
+    "https://api.evoluti.cloud/api/messages/send",
+  ];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -102,24 +128,42 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
 
-    const res = await fetch("https://evoluti.cloud/api/messages/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${evolutiToken}`,
-      },
-      body: JSON.stringify({ number: normalizedPhone, body: messageBody }),
-    });
+    const endpoints = getEvolutiEndpoints();
+    let lastError = "";
+    let sent = false;
 
-    if (!res.ok) {
-      const errorText = await res.text();
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${evolutiToken}`,
+          },
+          body: JSON.stringify({ number: normalizedPhone, body: messageBody }),
+        });
+
+        if (!res.ok) {
+          lastError = await res.text();
+          continue;
+        }
+
+        await res.text();
+        sent = true;
+        break;
+      } catch (networkErr) {
+        lastError = String(networkErr);
+      }
+    }
+
+    if (!sent) {
       return new Response(
-        JSON.stringify({ error: `Evoluti API error: ${errorText}` }),
+        JSON.stringify({
+          error: `Falha ao enviar mensagem. Verifique EVOLUTI_API_URL/endpoint da instância. Detalhe: ${lastError}`,
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    await res.text();
 
     return new Response(
       JSON.stringify({ success: true, phone: normalizedPhone, message: messageBody }),

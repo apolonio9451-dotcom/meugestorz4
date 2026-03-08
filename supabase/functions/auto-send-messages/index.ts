@@ -24,6 +24,62 @@ function replacePlaceholders(
   return msg;
 }
 
+function normalizeEndpoint(url: string): string {
+  const cleaned = url.trim().replace(/\/$/, "");
+  if (
+    cleaned.includes("/api/messages/send") ||
+    cleaned.includes("/message/sendText/")
+  ) {
+    return cleaned;
+  }
+  return `${cleaned}/api/messages/send`;
+}
+
+function getEvolutiEndpoints(): string[] {
+  const configured = Deno.env.get("EVOLUTI_API_URL")?.trim();
+  if (configured) {
+    return configured
+      .split(",")
+      .map((url) => normalizeEndpoint(url))
+      .filter(Boolean);
+  }
+
+  return [
+    "https://evoluti.cloud/api/messages/send",
+    "https://api.evoluti.cloud/api/messages/send",
+  ];
+}
+
+async function sendMessageWithFallback(
+  evolutiToken: string,
+  number: string,
+  body: string
+): Promise<{ ok: boolean; error: string }> {
+  const endpoints = getEvolutiEndpoints();
+  let lastError = "";
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${evolutiToken}`,
+        },
+        body: JSON.stringify({ number, body }),
+      });
+
+      const text = await res.text();
+      if (res.ok) return { ok: true, error: "" };
+      lastError = text;
+    } catch (err) {
+      lastError = String(err);
+    }
+  }
+
+  return { ok: false, error: lastError };
+}
+
 function getCategory(
   daysUntilExpiry: number
 ): string | null {
@@ -154,20 +210,13 @@ Deno.serve(async (req) => {
 
         // Send via Evoluti API
         try {
-          const res = await fetch("https://evoluti.cloud/api/messages/send", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${evolutiToken}`,
-            },
-            body: JSON.stringify({
-              number: normalizedPhone,
-              body: messageBody,
-            }),
-          });
+          const sendResult = await sendMessageWithFallback(
+            evolutiToken,
+            normalizedPhone,
+            messageBody
+          );
 
-          const logStatus = res.ok ? "success" : "error";
-          const errorMsg = res.ok ? "" : await res.text();
+          const logStatus = sendResult.ok ? "success" : "error";
 
           // Log the result
           await supabase.from("auto_send_logs").insert({
@@ -176,11 +225,11 @@ Deno.serve(async (req) => {
             client_name: client.name,
             category,
             status: logStatus,
-            error_message: errorMsg,
+            error_message: sendResult.error || null,
             phone: normalizedPhone,
           });
 
-          if (res.ok) {
+          if (sendResult.ok) {
             // Update ultimo_envio_auto
             await supabase
               .from("clients")
