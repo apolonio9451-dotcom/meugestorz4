@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         p.colors.background === bg
     );
     if (matchedPreset) {
-      applyThemePreset(matchedPreset);
+      applyThemePreset(matchedPreset); // also caches to localStorage
       return;
     }
 
