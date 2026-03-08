@@ -932,7 +932,7 @@ export default function Clients() {
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
-                      onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: true }))}
+                      onClick={() => setMacModalClientId(client.id)}
                     >
                       <Eye className="w-5 h-5" />
                     </Button>
