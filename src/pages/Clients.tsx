@@ -948,7 +948,12 @@ export default function Clients() {
                           )}
                           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                             <Key className="w-3 h-3 shrink-0" />
-                            <span className="truncate font-mono">{mk.mac}{mk.key ? ` · ${mk.key}` : ""}</span>
+                            <span className="truncate font-mono">
+                              {visibleCards[client.id]
+                                ? `${mk.mac}${mk.key ? ` · ${mk.key}` : ""}`
+                                : `••:••:••:••:••:••${mk.key ? " · ••••••" : ""}`
+                              }
+                            </span>
                           </div>
                           {macDays !== null && (
                             <div className={cn(
