@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, Mail, Lock, User, FlaskConical, Clock, Phone, ShieldAlert } from "lucide-react";
+import { Mail, Lock, User, FlaskConical, Clock, Phone, ShieldAlert } from "lucide-react";
+import appLogo from "@/assets/logo.png";
 import { differenceInHours, parseISO } from "date-fns";
 
 export default function Auth() {
