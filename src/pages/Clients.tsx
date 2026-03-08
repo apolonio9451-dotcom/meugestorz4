@@ -912,84 +912,40 @@ export default function Clients() {
                   </div>
                 </div>
 
-                {/* Row 3: Server + Plan + Price */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {client.server && (
-                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
-                      {client.server}
-                    </Badge>
-                  )}
-                  {sub && (
-                    <Badge variant="outline" className="text-xs bg-primary/15 text-primary border-primary/30 font-semibold">
-                      {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
-                    </Badge>
+                {/* Row 3: Server + Plan + Price + Eye icon */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                    {client.server && (
+                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
+                        {client.server}
+                      </Badge>
+                    )}
+                    {sub && (
+                      <Badge variant="outline" className="text-xs bg-primary/15 text-primary border-primary/30 font-semibold">
+                        {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
+                      </Badge>
+                    )}
+                  </div>
+                  {clientMacKeys.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
+                      onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: true }))}
+                    >
+                      <Eye className="w-5 h-5" />
+                    </Button>
                   )}
                 </div>
 
-                {/* Row 4: MAC & KEY - hidden by default */}
+                {/* App names visible on card */}
                 {clientMacKeys.length > 0 && (
-                  <div className="space-y-1.5">
-                    {visibleCards[client.id] ? (
-                      <>
-                        {clientMacKeys.map((mk, i) => {
-                          const macDays = mk.expires_at ? differenceInCalendarDays(parseISO(mk.expires_at), new Date()) : null;
-                          const isExpiring = macDays !== null && macDays >= 0 && macDays <= 7;
-                          const isExpired = macDays !== null && macDays < 0;
-                          return (
-                            <div key={mk.id || i} className="space-y-0.5">
-                              {mk.app_name && (
-                                <span className="text-[11px] font-bold text-primary">{mk.app_name}</span>
-                              )}
-                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                                <Key className="w-3 h-3 shrink-0" />
-                                <span className="truncate font-mono">
-                                  {`${mk.mac}${mk.key ? ` · ${mk.key}` : ""}`}
-                                </span>
-                              </div>
-                              {macDays !== null && (
-                                <div className={cn(
-                                  "flex items-center gap-1 text-[10px] font-semibold",
-                                  isExpired ? "text-destructive" : isExpiring ? "text-orange-400" : "text-muted-foreground/60"
-                                )}>
-                                  <AlertTriangle className="w-3 h-3" />
-                                  {isExpired
-                                    ? `MAC vencido há ${Math.abs(macDays)} dias`
-                                    : macDays === 0
-                                      ? "MAC vence hoje!"
-                                      : macDays <= 7
-                                        ? `MAC vence em ${macDays} dias`
-                                        : `MAC: ${format(parseISO(mk.expires_at), "dd/MM/yyyy")}`
-                                  }
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center py-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 text-muted-foreground hover:text-primary"
-                          onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
-                        >
-                          <Eye className="w-6 h-6" />
-                        </Button>
-                      </div>
-                    )}
-                    {visibleCards[client.id] && (
-                      <div className="flex items-center justify-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
-                        >
-                          <EyeOff className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {clientMacKeys.map((mk, i) => mk.app_name && (
+                      <Badge key={mk.id || i} variant="outline" className="text-[11px] bg-muted/50 text-primary border-primary/20">
+                        {mk.app_name}
+                      </Badge>
+                    ))}
                   </div>
                 )}
 
