@@ -352,8 +352,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-              <Building2 className="w-4 h-4 text-primary" />
+            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110 overflow-hidden">
+              <img src="/icon-512.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
           )}
         <div className="flex flex-col min-w-0">

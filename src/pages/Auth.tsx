@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, Mail, Lock, User, FlaskConical, Clock, Phone, ShieldAlert } from "lucide-react";
+import { Mail, Lock, User, FlaskConical, Clock, Phone, ShieldAlert } from "lucide-react";
+import appLogo from "@/assets/logo.png";
 import { differenceInHours, parseISO } from "date-fns";
 
 export default function Auth() {
@@ -139,8 +140,8 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 mb-4">
-            <Zap className="w-8 h-8 text-accent" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 mb-4 overflow-hidden">
+            <img src={appLogo} alt="Meu Gestor" className="w-12 h-12 object-contain" />
           </div>
           <h1 className="text-3xl font-bold font-display text-accent">{brandName}</h1>
           <p className="text-muted-foreground mt-1">Gestão inteligente de assinaturas</p>
