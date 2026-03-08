@@ -4,8 +4,8 @@
   "description": "Sistema de gestão completo",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#6366f1",
+  "background_color": "#071716",
+  "theme_color": "#14b8a6",
   "icons": [
     {
       "src": "/icon-512.png",
