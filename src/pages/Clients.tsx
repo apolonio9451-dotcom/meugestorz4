@@ -424,11 +424,13 @@ export default function Clients() {
 
   const searchFiltered = activeClients.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) || 
+    (c.iptv_user || "").toLowerCase().includes(search.toLowerCase()) ||
     (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(search.toLowerCase()))
   );
 
   const searchFilteredExcluded = excludedClients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
+    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) ||
+    (c.iptv_user || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const getClientDays = (clientId: string) => {
