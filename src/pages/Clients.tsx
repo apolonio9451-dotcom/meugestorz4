@@ -1049,6 +1049,58 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* MAC/KEY Details Modal */}
+      <Dialog open={!!visibleCards.__modal_client} onOpenChange={(open) => { if (!open) setVisibleCards(prev => ({ ...prev, __modal_client: "" })); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Key className="h-5 w-5 text-primary" />
+              Detalhes MAC & KEY
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(() => {
+              const cid = visibleCards.__modal_client as string;
+              const mks = cid ? (macKeys[cid] || []) : [];
+              return mks.map((mk, i) => {
+                const macDays = mk.expires_at ? differenceInCalendarDays(parseISO(mk.expires_at), new Date()) : null;
+                const isExpired = macDays !== null && macDays < 0;
+                const isExpiring = macDays !== null && macDays >= 0 && macDays <= 7;
+                return (
+                  <div key={mk.id || i} className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
+                    {mk.app_name && (
+                      <p className="text-sm font-bold text-primary">{mk.app_name}</p>
+                    )}
+                    <div className="grid grid-cols-1 gap-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs w-12">MAC:</span>
+                        <span className="font-mono text-foreground">{mk.mac || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs w-12">KEY:</span>
+                        <span className="font-mono text-foreground">{mk.key || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs w-12">Venc.:</span>
+                        <span className={cn(
+                          "font-semibold",
+                          isExpired ? "text-destructive" : isExpiring ? "text-orange-400" : "text-foreground"
+                        )}>
+                          {mk.expires_at ? format(parseISO(mk.expires_at), "dd/MM/yyyy") : "—"}
+                          {isExpired && ` (vencido há ${Math.abs(macDays!)} dias)`}
+                          {isExpiring && macDays === 0 && " (vence hoje!)"}
+                          {isExpiring && macDays! > 0 && ` (vence em ${macDays} dias)`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
