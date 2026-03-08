@@ -877,14 +877,6 @@ export default function Clients() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {days !== null && getExpiryBadge(days)}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-primary"
-                      onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
-                    >
-                      {visibleCards[client.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
