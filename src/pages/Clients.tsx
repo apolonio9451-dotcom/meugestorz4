@@ -870,7 +870,7 @@ export default function Clients() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
-                    {client.iptv_user && visibleCards[client.id] && (
+                    {client.iptv_user && (
                       <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                         @{client.iptv_user}
                       </p>
