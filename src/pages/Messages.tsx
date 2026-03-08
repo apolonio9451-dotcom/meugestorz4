@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Save, Info } from "lucide-react";
+import AutoSendLogs from "@/components/messages/AutoSendLogs";
 import {
   Dialog,
   DialogContent,
@@ -232,6 +233,8 @@ export default function Messages() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <AutoSendLogs companyId={companyId} />
     </div>
   );
 }
