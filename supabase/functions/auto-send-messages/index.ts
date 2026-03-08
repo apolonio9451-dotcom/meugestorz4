@@ -24,6 +24,52 @@ function replacePlaceholders(
   return msg;
 }
 
+function getEvolutiEndpoints(): string[] {
+  const configured = Deno.env.get("EVOLUTI_API_URL")?.trim();
+  if (configured) {
+    return configured
+      .split(",")
+      .map((url) => url.trim())
+      .filter(Boolean)
+      .map((base) => `${base.replace(/\/$/, "")}/api/messages/send`);
+  }
+
+  return [
+    "https://evoluti.cloud/api/messages/send",
+    "https://api.evoluti.cloud/api/messages/send",
+  ];
+}
+
+async function sendMessageWithFallback(
+  evolutiToken: string,
+  number: string,
+  body: string
+): Promise<{ ok: boolean; error: string }> {
+  const endpoints = getEvolutiEndpoints();
+  let lastError = "";
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${evolutiToken}`,
+        },
+        body: JSON.stringify({ number, body }),
+      });
+
+      const text = await res.text();
+      if (res.ok) return { ok: true, error: "" };
+      lastError = text;
+    } catch (err) {
+      lastError = String(err);
+    }
+  }
+
+  return { ok: false, error: lastError };
+}
+
 function getCategory(
   daysUntilExpiry: number
 ): string | null {
