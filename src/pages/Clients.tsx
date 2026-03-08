@@ -76,7 +76,7 @@ export default function Clients() {
   const [formReferredBy, setFormReferredBy] = useState("");
   const [referralSearch, setReferralSearch] = useState("");
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
-  const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
+  const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
