@@ -908,17 +908,20 @@ export default function Clients() {
                   </div>
                 )}
 
-                {/* Row 3: Servidor + Plano + Eye button */}
+                {/* Row 3: Servidor + Plano (full-width soft box like reference) */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 rounded-lg bg-muted/40 px-3 py-2 flex items-center justify-between min-w-0">
-                    <span className="text-xs text-foreground font-medium truncate">{client.server || "—"}</span>
+                  <div className="flex-1 rounded-lg bg-muted/40 px-3 py-2.5 flex items-center justify-between min-w-0">
+                    <span className="text-sm text-foreground font-medium flex items-center gap-1.5 truncate">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-muted-foreground shrink-0"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+                      {client.server || "—"}
+                    </span>
                     {sub && (
-                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold ml-2 shrink-0">{sub.plan_name}</Badge>
+                      <Badge variant="outline" className="text-[11px] bg-background/50 text-foreground border-border/60 font-semibold ml-2 shrink-0 rounded-full px-2.5">{sub.plan_name}</Badge>
                     )}
                   </div>
                   {clientMacKeys.length > 0 && (
-                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary rounded-lg bg-muted/40 hover:bg-muted/60" onClick={() => setMacModalClientId(client.id)}>
-                      <Eye className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary rounded-lg bg-muted/40 hover:bg-muted/60" onClick={() => setMacModalClientId(client.id)}>
+                      <Eye className="w-4.5 h-4.5" />
                     </Button>
                   )}
                 </div>
