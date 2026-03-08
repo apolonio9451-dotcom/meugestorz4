@@ -75,6 +75,7 @@ export default function Clients() {
   } | null>(null);
   const [formReferredBy, setFormReferredBy] = useState("");
   const [referralSearch, setReferralSearch] = useState("");
+  const [visibleCards, setVisibleCards] = useState<Record<string, boolean>>({});
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
