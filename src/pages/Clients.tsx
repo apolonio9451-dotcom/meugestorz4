@@ -11,7 +11,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -75,7 +75,7 @@ export default function Clients() {
   } | null>(null);
   const [formReferredBy, setFormReferredBy] = useState("");
   const [referralSearch, setReferralSearch] = useState("");
-  const [visibleCards, setVisibleCards] = useState<Record<string, boolean>>({});
+  const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
@@ -869,7 +869,7 @@ export default function Clients() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
-                    {client.iptv_user && visibleCards[client.id] && (
+                    {client.iptv_user && (
                       <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                         @{client.iptv_user}
                       </p>
@@ -912,84 +912,40 @@ export default function Clients() {
                   </div>
                 </div>
 
-                {/* Row 3: Server + Plan + Price */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {client.server && (
-                    <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
-                      {client.server}
-                    </Badge>
-                  )}
-                  {sub && (
-                    <Badge variant="outline" className="text-xs bg-primary/15 text-primary border-primary/30 font-semibold">
-                      {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
-                    </Badge>
+                {/* Row 3: Server + Plan + Price + Eye icon */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                    {client.server && (
+                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30 text-xs">
+                        {client.server}
+                      </Badge>
+                    )}
+                    {sub && (
+                      <Badge variant="outline" className="text-xs bg-primary/15 text-primary border-primary/30 font-semibold">
+                        {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
+                      </Badge>
+                    )}
+                  </div>
+                  {clientMacKeys.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
+                      onClick={() => setMacModalClientId(client.id)}
+                    >
+                      <Eye className="w-5 h-5" />
+                    </Button>
                   )}
                 </div>
 
-                {/* Row 4: MAC & KEY - hidden by default */}
+                {/* App names visible on card */}
                 {clientMacKeys.length > 0 && (
-                  <div className="space-y-1.5">
-                    {visibleCards[client.id] ? (
-                      <>
-                        {clientMacKeys.map((mk, i) => {
-                          const macDays = mk.expires_at ? differenceInCalendarDays(parseISO(mk.expires_at), new Date()) : null;
-                          const isExpiring = macDays !== null && macDays >= 0 && macDays <= 7;
-                          const isExpired = macDays !== null && macDays < 0;
-                          return (
-                            <div key={mk.id || i} className="space-y-0.5">
-                              {mk.app_name && (
-                                <span className="text-[11px] font-bold text-primary">{mk.app_name}</span>
-                              )}
-                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                                <Key className="w-3 h-3 shrink-0" />
-                                <span className="truncate font-mono">
-                                  {`${mk.mac}${mk.key ? ` · ${mk.key}` : ""}`}
-                                </span>
-                              </div>
-                              {macDays !== null && (
-                                <div className={cn(
-                                  "flex items-center gap-1 text-[10px] font-semibold",
-                                  isExpired ? "text-destructive" : isExpiring ? "text-orange-400" : "text-muted-foreground/60"
-                                )}>
-                                  <AlertTriangle className="w-3 h-3" />
-                                  {isExpired
-                                    ? `MAC vencido há ${Math.abs(macDays)} dias`
-                                    : macDays === 0
-                                      ? "MAC vence hoje!"
-                                      : macDays <= 7
-                                        ? `MAC vence em ${macDays} dias`
-                                        : `MAC: ${format(parseISO(mk.expires_at), "dd/MM/yyyy")}`
-                                  }
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center py-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 text-muted-foreground hover:text-primary"
-                          onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
-                        >
-                          <Eye className="w-6 h-6" />
-                        </Button>
-                      </div>
-                    )}
-                    {visibleCards[client.id] && (
-                      <div className="flex items-center justify-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          onClick={() => setVisibleCards(prev => ({ ...prev, [client.id]: !prev[client.id] }))}
-                        >
-                          <EyeOff className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {clientMacKeys.map((mk, i) => mk.app_name && (
+                      <Badge key={mk.id || i} variant="outline" className="text-[11px] bg-muted/50 text-primary border-primary/20">
+                        {mk.app_name}
+                      </Badge>
+                    ))}
                   </div>
                 )}
 
@@ -1090,6 +1046,57 @@ export default function Clients() {
             >
               Pular
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MAC/KEY Details Modal */}
+      <Dialog open={!!macModalClientId} onOpenChange={(open) => { if (!open) setMacModalClientId(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Key className="h-5 w-5 text-primary" />
+              Detalhes MAC & KEY
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(() => {
+              const mks = macModalClientId ? (macKeys[macModalClientId] || []) : [];
+              return mks.map((mk, i) => {
+                const macDays = mk.expires_at ? differenceInCalendarDays(parseISO(mk.expires_at), new Date()) : null;
+                const isExpired = macDays !== null && macDays < 0;
+                const isExpiring = macDays !== null && macDays >= 0 && macDays <= 7;
+                return (
+                  <div key={mk.id || i} className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
+                    {mk.app_name && (
+                      <p className="text-sm font-bold text-primary">{mk.app_name}</p>
+                    )}
+                    <div className="grid grid-cols-1 gap-1.5 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs w-12">MAC:</span>
+                        <span className="font-mono text-foreground">{mk.mac || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs w-12">KEY:</span>
+                        <span className="font-mono text-foreground">{mk.key || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs w-12">Venc.:</span>
+                        <span className={cn(
+                          "font-semibold",
+                          isExpired ? "text-destructive" : isExpiring ? "text-orange-400" : "text-foreground"
+                        )}>
+                          {mk.expires_at ? format(parseISO(mk.expires_at), "dd/MM/yyyy") : "—"}
+                          {isExpired && ` (vencido há ${Math.abs(macDays!)} dias)`}
+                          {isExpiring && macDays === 0 && " (vence hoje!)"}
+                          {isExpiring && macDays! > 0 && ` (vence em ${macDays} dias)`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </DialogContent>
       </Dialog>
