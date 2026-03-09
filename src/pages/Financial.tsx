@@ -109,6 +109,39 @@ export default function Financial() {
     });
   }, [subs, dateFrom, dateTo]);
 
+  // Entradas e Saídas chart - last 3 months
+  const entradasSaidasData = useMemo(() => {
+    const now = new Date();
+    const last3 = Array.from({ length: 3 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
+      return d;
+    });
+
+    const totalCostPerCredit = servers.reduce((sum, srv) => sum + Number(srv.cost_per_credit), 0);
+
+    return last3.map((m) => {
+      const mMonth = m.getMonth();
+      const mYear = m.getFullYear();
+      const isCurrentMonth = mMonth === now.getMonth() && mYear === now.getFullYear();
+      const label = format(m, "MMM", { locale: ptBR });
+      const capitalLabel = label.charAt(0).toUpperCase() + label.slice(1);
+
+      const monthSubs = subs.filter((s) => {
+        const sd = new Date(s.start_date);
+        return s.payment_status !== "cancelled" && sd.getMonth() === mMonth && sd.getFullYear() === mYear;
+      });
+
+      const entradas = monthSubs.reduce((sum, s) => sum + Number(s.amount), 0);
+      // Saídas = custo por crédito do servidor × nº de assinaturas ativas no mês
+      const saidas = monthSubs.length * totalCostPerCredit;
+
+      return { label: capitalLabel, entradas, saidas, isCurrent: isCurrentMonth };
+    });
+  }, [subs, servers]);
+
+  const totalEntradas = entradasSaidasData.reduce((sum, d) => sum + d.entradas, 0);
+  const totalSaidas = entradasSaidasData.reduce((sum, d) => sum + d.saidas, 0);
+
   const serverProfits = useMemo(() => {
     return servers.map((srv) => {
       const serverSubs = filteredSubs.filter(
@@ -285,6 +318,74 @@ export default function Financial() {
                 <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Entradas e Saídas */}
+      <Card className="glass-card border-border/30">
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sm font-medium text-foreground">
+            Entradas e Saídas
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Últimos 3 meses</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Mini bar chart */}
+            <div className="flex items-end gap-3 h-[140px] pt-4">
+              {entradasSaidasData.map((d, i) => {
+                const maxVal = Math.max(
+                  ...entradasSaidasData.map((x) => Math.max(x.entradas, x.saidas)),
+                  1
+                );
+                const entH = Math.max((d.entradas / maxVal) * 100, 6);
+                const saiH = Math.max((d.saidas / maxVal) * 100, 6);
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1">
+                    <div className="flex items-end gap-1">
+                      <div
+                        className="w-6 rounded-t-md transition-all"
+                        style={{
+                          height: `${entH}px`,
+                          backgroundColor: d.isCurrent
+                            ? "hsl(var(--primary))"
+                            : "hsl(var(--primary) / 0.35)",
+                        }}
+                      />
+                      <div
+                        className="w-6 rounded-t-md transition-all"
+                        style={{
+                          height: `${saiH}px`,
+                          backgroundColor: d.isCurrent
+                            ? "hsl(var(--muted-foreground))"
+                            : "hsl(var(--muted-foreground) / 0.3)",
+                        }}
+                      />
+                    </div>
+                    <span className={cn("text-xs", d.isCurrent ? "font-bold text-foreground" : "text-muted-foreground")}>
+                      {d.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Summary */}
+            <div className="flex flex-col gap-4 flex-1">
+              <div>
+                <p className="text-xs text-muted-foreground">Entradas</p>
+                <p className="text-xl font-display font-bold text-success">
+                  + {fmt(totalEntradas)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Saídas</p>
+                <p className="text-xl font-display font-bold text-destructive">
+                  - {fmt(totalSaidas)}
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
