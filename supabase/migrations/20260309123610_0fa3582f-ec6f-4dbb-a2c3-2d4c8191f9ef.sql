@@ -1,0 +1,1 @@
+ALTER TABLE public.api_settings ADD COLUMN auto_send_hour integer NOT NULL DEFAULT 8;

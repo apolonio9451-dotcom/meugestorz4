@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Save, Loader2, Eye, EyeOff, Wifi } from "lucide-react";
+import { Save, Loader2, Eye, EyeOff, Wifi, Clock } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   companyId: string | null;
@@ -13,6 +20,7 @@ interface Props {
 export default function ApiSettingsSection({ companyId }: Props) {
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
+  const [autoSendHour, setAutoSendHour] = useState(8);
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,12 +32,13 @@ export default function ApiSettingsSection({ companyId }: Props) {
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
-        .select("id, api_url, api_token")
+        .select("id, api_url, api_token, auto_send_hour")
         .eq("company_id", companyId)
         .maybeSingle();
       if (data) {
         setApiUrl((data as any).api_url || "");
         setApiToken((data as any).api_token || "");
+        setAutoSendHour((data as any).auto_send_hour ?? 8);
         setExistingId((data as any).id);
       }
       setLoading(false);
@@ -41,7 +50,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
     if (!companyId) return;
     setSaving(true);
     try {
-      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim() };
+      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim(), auto_send_hour: autoSendHour };
       let error;
       if (existingId) {
         ({ error } = await supabase.from("api_settings" as any).update(payload).eq("id", existingId));
@@ -97,6 +106,28 @@ export default function ApiSettingsSection({ companyId }: Props) {
         </div>
         <p className="text-muted-foreground text-xs">
           O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Clock className="w-4 h-4 text-primary" />
+          Horário de Disparo Automático
+        </Label>
+        <Select value={String(autoSendHour)} onValueChange={(v) => setAutoSendHour(Number(v))}>
+          <SelectTrigger className="w-full bg-secondary/50 border-border">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 24 }, (_, i) => (
+              <SelectItem key={i} value={String(i)}>
+                {String(i).padStart(2, "0")}:00
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-muted-foreground text-xs">
+          Horário em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
         </p>
       </div>
 

@@ -63,10 +63,14 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const today = new Date().toISOString().split("T")[0];
 
+    // Current hour in Brasília (UTC-3)
+    const nowUtc = new Date();
+    const brasiliaHour = (nowUtc.getUTCHours() - 3 + 24) % 24;
+
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token");
+      .select("company_id, api_url, api_token, auto_send_hour");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -75,10 +79,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Filter only companies whose auto_send_hour matches current Brasília hour
+    const eligibleConfigs = apiConfigs.filter((c: any) => {
+      const configuredHour = c.auto_send_hour ?? 8;
+      return configuredHour === brasiliaHour;
+    });
+
+    if (eligibleConfigs.length === 0) {
+      return new Response(
+        JSON.stringify({ message: `Nenhuma empresa configurada para disparo às ${brasiliaHour}h. Hora atual (Brasília): ${brasiliaHour}:00` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let totalSent = 0;
     let totalErrors = 0;
 
-    for (const config of apiConfigs) {
+    for (const config of eligibleConfigs) {
       if (!config.api_url || !config.api_token) continue;
 
       const apiUrl = config.api_url.replace(/\/$/, "");

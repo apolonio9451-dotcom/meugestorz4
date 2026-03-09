@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           api_token: string
           api_url: string
+          auto_send_hour: number
           company_id: string
           created_at: string
           id: string
@@ -26,6 +27,7 @@ export type Database = {
         Insert: {
           api_token?: string
           api_url?: string
+          auto_send_hour?: number
           company_id: string
           created_at?: string
           id?: string
@@ -34,6 +36,7 @@ export type Database = {
         Update: {
           api_token?: string
           api_url?: string
+          auto_send_hour?: number
           company_id?: string
           created_at?: string
           id?: string
