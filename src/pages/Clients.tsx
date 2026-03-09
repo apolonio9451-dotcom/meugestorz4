@@ -920,7 +920,7 @@ export default function Clients() {
                           <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
                         </>)}
                         <DropdownMenuSeparator />
-                        {!(client as any).support_started_at && (
+                        {!(client as any).support_started_at ? (
                           <DropdownMenuItem onClick={async () => {
                             const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
                             if (error) toast.error("Erro ao enviar para suporte");
@@ -930,6 +930,16 @@ export default function Clients() {
                               fetchClients(); fetchActivityLogs();
                             }
                           }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={async () => {
+                            const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
+                            if (error) toast.error("Erro ao finalizar suporte");
+                            else {
+                              toast.success(`Suporte finalizado para ${client.name}`);
+                              await logActivity("suporte_finalizado", client.name, client.id, "Check-up de satisfação realizado");
+                              fetchClients(); fetchActivityLogs();
+                            }
+                          }}><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> Finalizar Suporte</DropdownMenuItem>
                         )}
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
