@@ -254,10 +254,9 @@ export default function Resellers() {
       return;
     }
     const { data } = await supabase.rpc("get_reseller_password", { _reseller_id: resellerId });
-    if (data) {
-      setPasswords(prev => ({ ...prev, [resellerId]: data }));
-      setVisiblePasswords(prev => ({ ...prev, [resellerId]: true }));
-    }
+    const pwd = data ?? "";
+    setPasswords(prev => ({ ...prev, [resellerId]: pwd || "(não registrada)" }));
+    setVisiblePasswords(prev => ({ ...prev, [resellerId]: true }));
   };
 
   const togglePasswordVisibility = (resellerId: string) => {
