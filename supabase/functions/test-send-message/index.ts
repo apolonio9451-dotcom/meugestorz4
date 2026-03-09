@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     } catch (networkErr) {
       return new Response(
         JSON.stringify({
-          error: `Erro de rede ao conectar com a API Evoluti: ${String(networkErr)}`,
+          error: `Erro de rede ao conectar com a API UAZAPI: ${String(networkErr)}`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

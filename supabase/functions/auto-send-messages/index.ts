@@ -30,16 +30,16 @@ async function sendMessage(
   number: string,
   body: string
 ): Promise<{ ok: boolean; error: string }> {
-  const endpoint = `${apiUrl}/api/messages/send`;
+  const endpoint = `${apiUrl}/send/text`;
 
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiToken}`,
+        "token": apiToken,
       },
-      body: JSON.stringify({ number, body }),
+      body: JSON.stringify({ number, text: body }),
     });
 
     const responseText = await res.text();
