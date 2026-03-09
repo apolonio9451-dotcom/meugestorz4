@@ -141,10 +141,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (resellerData) {
-        // Reseller: fetch from reseller_settings
+        // Reseller: fetch branding from reseller_settings
         const { data: resellerSettings } = await supabase
           .from("reseller_settings")
-          .select("service_name, logo_url, primary_color")
+          .select("service_name, logo_url")
           .eq("reseller_id", resellerData.id)
           .maybeSingle();
 
@@ -154,7 +154,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           setBrandName("Meu gestor");
         }
         if (resellerSettings?.logo_url) setBrandLogo(resellerSettings.logo_url);
-        if (resellerSettings?.primary_color) applyThemeColors(resellerSettings.primary_color);
+
+        // Reseller theme: fetch from company_settings (same as owner)
+        const { data: compSettings } = await supabase
+          .from("company_settings")
+          .select("primary_color, secondary_color, background_color")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        if (compSettings) applyThemeColors(compSettings.primary_color, compSettings.secondary_color, compSettings.background_color);
       } else {
         // Regular user: fetch from company_settings
         const { data } = await supabase
