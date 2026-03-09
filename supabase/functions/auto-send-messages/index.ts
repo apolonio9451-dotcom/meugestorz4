@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     let totalSent = 0;
     let totalErrors = 0;
 
-    for (const config of apiConfigs) {
+    for (const config of eligibleConfigs) {
       if (!config.api_url || !config.api_token) continue;
 
       const apiUrl = config.api_url.replace(/\/$/, "");
