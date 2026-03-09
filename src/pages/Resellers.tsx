@@ -811,7 +811,7 @@ export default function Resellers() {
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
                             {isOwner && (
                               <div className="flex items-center gap-1 mt-0.5">
-                                <Lock className="w-3 h-3 text-muted-foreground/60" />
+                                <Key className="w-3 h-3 text-muted-foreground/60" />
                                 <span className="text-[11px] font-mono text-muted-foreground">
                                   {visiblePasswords[r.id] && passwords[r.id] ? passwords[r.id] : "••••••••"}
                                 </span>
