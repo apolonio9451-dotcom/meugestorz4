@@ -3,7 +3,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, CalendarDays, Users, Target, MessageCircle, UserPlus, FileText } from "lucide-react";
+import { DollarSign, TrendingUp, CalendarDays, Users, Target, MessageCircle, UserPlus, FileText, Server, UserCheck, UserX } from "lucide-react";
+import { differenceInCalendarDays, parseISO } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface Stats {
   todayRevenue: number;
@@ -35,6 +37,13 @@ interface UpcomingInvoice {
   dueDate: string;
 }
 
+interface ServerStat {
+  name: string;
+  total: number;
+  active: number;
+  expired: number;
+}
+
 export default function Dashboard() {
   const { companyId } = useAuth();
   const [stats, setStats] = useState<Stats>({
@@ -47,6 +56,7 @@ export default function Dashboard() {
   });
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
   const [upcomingInvoices, setUpcomingInvoices] = useState<UpcomingInvoice[]>([]);
+  const [serverStats, setServerStats] = useState<ServerStat[]>([]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -58,7 +68,7 @@ export default function Dashboard() {
       const next30 = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
 
       const [clientsRes, subsRes] = await Promise.all([
-        supabase.from("clients").select("id, status, name").eq("company_id", companyId),
+        supabase.from("clients").select("id, status, name, server").eq("company_id", companyId),
         supabase.from("client_subscriptions").select("id, payment_status, amount, start_date, end_date, client_id").eq("company_id", companyId),
       ]);
 
@@ -74,6 +84,29 @@ export default function Dashboard() {
       const upcoming30 = pendingSubs.filter((s) => s.end_date >= today && s.end_date <= next30);
 
       const clientMap = new Map(clients.map((c) => [c.id, c.name]));
+
+      // Build latest sub map for server stats
+      const latestSub: Record<string, string> = {};
+      subs.forEach(s => {
+        if (!latestSub[s.client_id] || s.end_date > latestSub[s.client_id]) {
+          latestSub[s.client_id] = s.end_date;
+        }
+      });
+
+      // Server stats
+      const srvMap: Record<string, ServerStat> = {};
+      clients.filter(c => c.status !== "excluded" && c.server).forEach(c => {
+        const srv = c.server!;
+        if (!srvMap[srv]) srvMap[srv] = { name: srv, total: 0, active: 0, expired: 0 };
+        srvMap[srv].total++;
+        const endDate = latestSub[c.id];
+        if (endDate) {
+          const days = differenceInCalendarDays(parseISO(endDate), new Date());
+          if (days >= 0) srvMap[srv].active++;
+          else srvMap[srv].expired++;
+        }
+      });
+      setServerStats(Object.values(srvMap).sort((a, b) => b.total - a.total));
 
       setStats({
         todayRevenue: todayPaid.reduce((sum, s) => sum + Number(s.amount), 0),
@@ -148,6 +181,21 @@ export default function Dashboard() {
     </div>
   );
 
+  const COLORS = ["hsl(var(--primary))", "hsl(160, 65%, 45%)", "hsl(38, 92%, 50%)", "hsl(200, 70%, 50%)", "hsl(280, 60%, 50%)"];
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload as ServerStat;
+    return (
+      <div className="rounded-lg bg-popover border border-border p-2.5 shadow-lg text-xs space-y-1">
+        <p className="font-semibold text-foreground">{d.name}</p>
+        <p className="text-muted-foreground">Total: <span className="text-foreground font-medium">{d.total}</span></p>
+        <p className="text-emerald-400">Ativos: <span className="font-medium">{d.active}</span></p>
+        <p className="text-destructive">Vencidos: <span className="font-medium">{d.expired}</span></p>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -157,6 +205,34 @@ export default function Dashboard() {
 
       {renderCards(topCards)}
       {renderCards(bottomCards)}
+
+      {/* Server stats chart */}
+      {serverStats.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <Server className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-base">Clientes por Servidor</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={serverStats} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
+                  <Bar dataKey="active" stackId="a" radius={[0, 0, 0, 0]} name="Ativos" fill="hsl(160, 65%, 45%)" />
+                  <Bar dataKey="expired" stackId="a" radius={[4, 4, 0, 0]} name="Vencidos" fill="hsl(var(--destructive))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-4 mt-2 text-[11px]">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> Ativos</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-destructive inline-block" /> Vencidos</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
