@@ -467,6 +467,12 @@ export default function Clients() {
             const activeDays = getClientActiveDays(c.id);
             return activeDays !== null && activeDays >= 15 && (c as any).follow_up_active !== false;
           }
+          case "suporte": {
+            const supportDate = (c as any).support_started_at;
+            if (!supportDate) return false;
+            const daysSinceSupport = differenceInCalendarDays(new Date(), parseISO(supportDate));
+            return daysSinceSupport >= 2;
+          }
           default: return true;
         }
       });
