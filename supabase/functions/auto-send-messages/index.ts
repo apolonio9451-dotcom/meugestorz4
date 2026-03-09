@@ -83,7 +83,8 @@ Deno.serve(async (req) => {
     // Filter only companies whose auto_send_hour matches current Brasília hour
     const eligibleConfigs = apiConfigs.filter((c: any) => {
       const configuredHour = c.auto_send_hour ?? 8;
-      return configuredHour === brasiliaHour;
+      const configuredMinute = c.auto_send_minute ?? 0;
+      return configuredHour === brasiliaHour && configuredMinute === brasiliaMinute;
     });
 
     if (eligibleConfigs.length === 0) {
