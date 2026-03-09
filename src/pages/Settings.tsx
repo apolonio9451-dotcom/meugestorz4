@@ -22,8 +22,9 @@ interface CompanySettings {
 }
 
 export default function Settings() {
-  const { companyId, userRole } = useAuth();
+  const { companyId, parentCompanyId, userRole } = useAuth();
   const isOwner = userRole === "Proprietário";
+  const isReseller = !!parentCompanyId;
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -399,7 +400,8 @@ export default function Settings() {
         </div>
       </div>
 
-      <ApiSettingsSection companyId={companyId} />
+      {/* For resellers: only show API settings if they have their own company (companyId != parentCompanyId) */}
+      <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} />
       {isOwner && <AnnouncementManager />}
     </div>
   );
