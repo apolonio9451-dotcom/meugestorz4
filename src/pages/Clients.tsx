@@ -244,6 +244,7 @@ export default function Clients() {
       setFormBirthDate(undefined);
       setFormReferredBy("");
       setReferralSearch("");
+      setFormFollowUpActive(true);
       setFormPlanId("");
       setFormAmount("");
       setFormEndDate(undefined);
