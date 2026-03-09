@@ -400,7 +400,8 @@ export default function Settings() {
         </div>
       </div>
 
-      <ApiSettingsSection companyId={companyId} />
+      {/* For resellers: only show API settings if they have their own company (companyId != parentCompanyId) */}
+      <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} />
       {isOwner && <AnnouncementManager />}
     </div>
   );
