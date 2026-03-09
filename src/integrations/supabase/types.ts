@@ -19,6 +19,7 @@ export type Database = {
           api_token: string
           api_url: string
           auto_send_hour: number
+          auto_send_minute: number
           company_id: string
           created_at: string
           id: string
@@ -28,6 +29,7 @@ export type Database = {
           api_token?: string
           api_url?: string
           auto_send_hour?: number
+          auto_send_minute?: number
           company_id: string
           created_at?: string
           id?: string
@@ -37,6 +39,7 @@ export type Database = {
           api_token?: string
           api_url?: string
           auto_send_hour?: number
+          auto_send_minute?: number
           company_id?: string
           created_at?: string
           id?: string
