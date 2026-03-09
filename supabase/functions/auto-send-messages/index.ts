@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
     if (eligibleConfigs.length === 0) {
       return new Response(
-        JSON.stringify({ message: `Nenhuma empresa configurada para disparo às ${brasiliaHour}h. Hora atual (Brasília): ${brasiliaHour}:00` }),
+        JSON.stringify({ message: `Nenhuma empresa configurada para disparo às ${brasiliaHour}:${String(brasiliaMinute).padStart(2,"0")}. Hora atual (Brasília): ${brasiliaHour}:${String(brasiliaMinute).padStart(2,"0")}` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
