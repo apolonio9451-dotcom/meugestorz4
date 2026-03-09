@@ -46,6 +46,8 @@ import {
   Copy,
   Pencil,
   Key,
+  Eye,
+  EyeOff,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
