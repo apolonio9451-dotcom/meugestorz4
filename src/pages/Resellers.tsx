@@ -170,6 +170,8 @@ export default function Resellers() {
   const [activateDays, setActivateDays] = useState("30");
   const [trialGenerating, setTrialGenerating] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", email: "", whatsapp: "" });
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
