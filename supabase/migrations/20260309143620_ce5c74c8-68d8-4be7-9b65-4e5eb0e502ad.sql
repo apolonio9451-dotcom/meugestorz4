@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN follow_up_active boolean NOT NULL DEFAULT true;

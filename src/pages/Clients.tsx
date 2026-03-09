@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -77,6 +78,7 @@ export default function Clients() {
   const [referralSearch, setReferralSearch] = useState("");
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
+  const [formFollowUpActive, setFormFollowUpActive] = useState(true);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -222,6 +224,7 @@ export default function Clients() {
     if (client) {
       setEditing(client);
       setFormMacKeys(macKeys[client.id] || []);
+      setFormFollowUpActive((client as any).follow_up_active !== false);
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
       setFormReferredBy(client.referred_by || "");
       setReferralSearch(client.referred_by || "");
@@ -241,6 +244,7 @@ export default function Clients() {
       setFormBirthDate(undefined);
       setFormReferredBy("");
       setReferralSearch("");
+      setFormFollowUpActive(true);
       setFormPlanId("");
       setFormAmount("");
       setFormEndDate(undefined);
@@ -267,6 +271,7 @@ export default function Clients() {
       status: "active",
       company_id: companyId,
       referred_by: formReferredBy.trim(),
+      follow_up_active: formFollowUpActive,
     };
 
     let clientId = editing?.id;
@@ -460,7 +465,7 @@ export default function Clients() {
           case "a_vencer": return days !== null && days >= 2 && days <= 7;
           case "followup": {
             const activeDays = getClientActiveDays(c.id);
-            return activeDays !== null && activeDays >= 15;
+            return activeDays !== null && activeDays >= 15 && (c as any).follow_up_active !== false;
           }
           default: return true;
         }
@@ -477,7 +482,7 @@ export default function Clients() {
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
     a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d >= 2 && d <= 7; }).length,
-    followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15; }).length,
+    followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15 && (c as any).follow_up_active !== false; }).length,
   };
 
   const mainBlocks = [
@@ -744,6 +749,13 @@ export default function Clients() {
                     <Plus className="w-3 h-3 mr-1" /> Adicionar MAC
                   </Button>
                 </div>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-primary/15 bg-primary/5">
+                <div>
+                  <Label className="text-sm font-medium">Ativar Follow-up Automático?</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Se ativo, o cliente aparecerá na lista de acompanhamento 15 dias após o cadastro.</p>
+                </div>
+                <Switch checked={formFollowUpActive} onCheckedChange={setFormFollowUpActive} />
               </div>
               <Button type="submit" disabled={loading} className="w-full h-11 text-sm">{loading ? "Salvando..." : editing ? "Salvar" : "Cadastrar"}</Button>
             </form>

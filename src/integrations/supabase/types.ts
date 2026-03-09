@@ -276,6 +276,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           email: string | null
+          follow_up_active: boolean
           id: string
           iptv_password: string | null
           iptv_user: string | null
@@ -296,6 +297,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           email?: string | null
+          follow_up_active?: boolean
           id?: string
           iptv_password?: string | null
           iptv_user?: string | null
@@ -316,6 +318,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           email?: string | null
+          follow_up_active?: boolean
           id?: string
           iptv_password?: string | null
           iptv_user?: string | null
