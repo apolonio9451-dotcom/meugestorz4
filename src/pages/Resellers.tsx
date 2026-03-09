@@ -809,6 +809,25 @@ export default function Resellers() {
                             </div>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
+                            {isOwner && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Lock className="w-3 h-3 text-muted-foreground/60" />
+                                <span className="text-[11px] font-mono text-muted-foreground">
+                                  {visiblePasswords[r.id] && passwords[r.id] ? passwords[r.id] : "••••••••"}
+                                </span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); togglePasswordVisibility(r.id); }}
+                                  className="p-0.5 rounded hover:bg-muted/80 transition-colors"
+                                  title={visiblePasswords[r.id] ? "Ocultar senha" : "Ver senha"}
+                                >
+                                  {visiblePasswords[r.id] ? (
+                                    <EyeOff className="w-3 h-3 text-muted-foreground" />
+                                  ) : (
+                                    <Eye className="w-3 h-3 text-muted-foreground" />
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
