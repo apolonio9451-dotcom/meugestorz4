@@ -729,6 +729,7 @@ export type Database = {
           name: string
           notes: string | null
           parent_reseller_id: string | null
+          password_plain: string | null
           status: string
           subscription_expires_at: string | null
           updated_at: string
@@ -748,6 +749,7 @@ export type Database = {
           name: string
           notes?: string | null
           parent_reseller_id?: string | null
+          password_plain?: string | null
           status?: string
           subscription_expires_at?: string | null
           updated_at?: string
@@ -767,6 +769,7 @@ export type Database = {
           name?: string
           notes?: string | null
           parent_reseller_id?: string | null
+          password_plain?: string | null
           status?: string
           subscription_expires_at?: string | null
           updated_at?: string
@@ -1131,6 +1134,7 @@ export type Database = {
     Functions: {
       get_reseller_company_id: { Args: { _user_id: string }; Returns: string }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
+      get_reseller_password: { Args: { _reseller_id: string }; Returns: string }
       get_trial_link_by_token: {
         Args: { _token: string }
         Returns: {

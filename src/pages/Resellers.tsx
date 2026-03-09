@@ -46,6 +46,8 @@ import {
   Copy,
   Pencil,
   Key,
+  Eye,
+  EyeOff,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
@@ -168,6 +170,8 @@ export default function Resellers() {
   const [activateDays, setActivateDays] = useState("30");
   const [trialGenerating, setTrialGenerating] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", email: "", whatsapp: "" });
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
@@ -240,6 +244,29 @@ export default function Resellers() {
     fetchPendingLinks();
     fetchCompanyCredits();
   }, [companyId]);
+
+  // Fetch passwords only for owners
+  const fetchPassword = async (resellerId: string) => {
+    if (!isOwner) return;
+    if (passwords[resellerId]) {
+      // Toggle visibility
+      setVisiblePasswords(prev => ({ ...prev, [resellerId]: !prev[resellerId] }));
+      return;
+    }
+    const { data } = await supabase.rpc("get_reseller_password", { _reseller_id: resellerId });
+    if (data) {
+      setPasswords(prev => ({ ...prev, [resellerId]: data }));
+      setVisiblePasswords(prev => ({ ...prev, [resellerId]: true }));
+    }
+  };
+
+  const togglePasswordVisibility = (resellerId: string) => {
+    if (visiblePasswords[resellerId]) {
+      setVisiblePasswords(prev => ({ ...prev, [resellerId]: false }));
+    } else {
+      fetchPassword(resellerId);
+    }
+  };
 
   // === HANDLERS ===
 
@@ -782,6 +809,25 @@ export default function Resellers() {
                             </div>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
+                            {isOwner && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Key className="w-3 h-3 text-muted-foreground/60" />
+                                <span className="text-[11px] font-mono text-muted-foreground">
+                                  {visiblePasswords[r.id] && passwords[r.id] ? passwords[r.id] : "••••••••"}
+                                </span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); togglePasswordVisibility(r.id); }}
+                                  className="p-0.5 rounded hover:bg-muted/80 transition-colors"
+                                  title={visiblePasswords[r.id] ? "Ocultar senha" : "Ver senha"}
+                                >
+                                  {visiblePasswords[r.id] ? (
+                                    <EyeOff className="w-3 h-3 text-muted-foreground" />
+                                  ) : (
+                                    <Eye className="w-3 h-3 text-muted-foreground" />
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -901,6 +947,24 @@ export default function Resellers() {
                             <Phone className="w-3 h-3 shrink-0" />
                             {r.whatsapp}
                           </p>
+                        )}
+                        {isOwner && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Key className="w-3 h-3 text-muted-foreground/60 shrink-0" />
+                            <span className="text-[11px] font-mono text-muted-foreground">
+                              {visiblePasswords[r.id] && passwords[r.id] ? passwords[r.id] : "••••••••"}
+                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); togglePasswordVisibility(r.id); }}
+                              className="p-0.5 rounded hover:bg-muted/80 transition-colors"
+                            >
+                              {visiblePasswords[r.id] ? (
+                                <EyeOff className="w-3 h-3 text-muted-foreground" />
+                              ) : (
+                                <Eye className="w-3 h-3 text-muted-foreground" />
+                              )}
+                            </button>
+                          </div>
                         )}
                       </div>
                       {getStatusBadge(r.status)}
