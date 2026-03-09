@@ -224,6 +224,7 @@ export default function Clients() {
     if (client) {
       setEditing(client);
       setFormMacKeys(macKeys[client.id] || []);
+      setFormFollowUpActive((client as any).follow_up_active !== false);
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
       setFormReferredBy(client.referred_by || "");
       setReferralSearch(client.referred_by || "");
