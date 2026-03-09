@@ -469,9 +469,7 @@ export default function Clients() {
           }
           case "suporte": {
             const supportDate = (c as any).support_started_at;
-            if (!supportDate) return false;
-            const daysSinceSupport = differenceInCalendarDays(new Date(), parseISO(supportDate));
-            return daysSinceSupport >= 2;
+            return !!supportDate;
           }
           default: return true;
         }
