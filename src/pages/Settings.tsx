@@ -399,7 +399,7 @@ export default function Settings() {
         </div>
       </div>
 
-      {isOwner && <ApiSettingsSection companyId={companyId} />}
+      <ApiSettingsSection companyId={companyId} />
       {isOwner && <AnnouncementManager />}
     </div>
   );
