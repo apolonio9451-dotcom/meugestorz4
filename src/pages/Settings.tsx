@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone, Palette, Lock, Check } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
+import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
 import { themePresets, applyThemePreset, clearThemeOverrides, type ThemePreset } from "@/lib/themes";
 interface CompanySettings {
   id?: string;
@@ -419,6 +420,7 @@ export default function Settings() {
         </div>
       </div>
 
+      {isOwner && <ApiSettingsSection companyId={companyId} />}
       {isOwner && <AnnouncementManager />}
     </div>
   );
