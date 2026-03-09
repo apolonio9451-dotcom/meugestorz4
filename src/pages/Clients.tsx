@@ -78,6 +78,7 @@ export default function Clients() {
   const [referralSearch, setReferralSearch] = useState("");
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
+  const [formFollowUpActive, setFormFollowUpActive] = useState(true);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
