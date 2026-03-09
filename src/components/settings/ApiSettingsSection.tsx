@@ -21,8 +21,10 @@ export default function ApiSettingsSection({ companyId }: Props) {
   const [existingId, setExistingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!companyId) return;
-    const fetch = async () => {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
