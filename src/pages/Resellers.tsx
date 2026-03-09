@@ -245,6 +245,29 @@ export default function Resellers() {
     fetchCompanyCredits();
   }, [companyId]);
 
+  // Fetch passwords only for owners
+  const fetchPassword = async (resellerId: string) => {
+    if (!isOwner) return;
+    if (passwords[resellerId]) {
+      // Toggle visibility
+      setVisiblePasswords(prev => ({ ...prev, [resellerId]: !prev[resellerId] }));
+      return;
+    }
+    const { data } = await supabase.rpc("get_reseller_password", { _reseller_id: resellerId });
+    if (data) {
+      setPasswords(prev => ({ ...prev, [resellerId]: data }));
+      setVisiblePasswords(prev => ({ ...prev, [resellerId]: true }));
+    }
+  };
+
+  const togglePasswordVisibility = (resellerId: string) => {
+    if (visiblePasswords[resellerId]) {
+      setVisiblePasswords(prev => ({ ...prev, [resellerId]: false }));
+    } else {
+      fetchPassword(resellerId);
+    }
+  };
+
   // === HANDLERS ===
 
   const handleGenerateTrial = async () => {
