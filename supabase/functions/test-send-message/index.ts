@@ -21,12 +21,6 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
-function getApiConfig(): { baseUrl: string; token: string } {
-  const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "").trim().replace(/\/$/, "");
-  const token = Deno.env.get("EVOLUTI_TOKEN") || "";
-  return { baseUrl: apiUrl, token };
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -42,18 +36,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { baseUrl, token: apiToken } = getApiConfig();
+    const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
+    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://evoluti.cloud").trim().replace(/\/$/, "");
 
     if (!apiToken) {
       return new Response(
         JSON.stringify({ error: "EVOLUTI_TOKEN não configurado" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!baseUrl || !baseUrl.startsWith("http")) {
-      return new Response(
-        JSON.stringify({ error: "EVOLUTI_API_URL não configurado ou inválido. Deve ser uma URL como https://seuservidor.uazapi.com" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -116,17 +104,17 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
 
-    // Send via Whatsapi.my (uazapi) API: POST /send/text
-    const endpoint = `${baseUrl}/send/text`;
+    // Send via Evoluti API: POST /api/messages/send
+    const endpoint = `${apiUrl}/api/messages/send`;
 
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "token": apiToken,
+          "Authorization": `Bearer ${apiToken}`,
         },
-        body: JSON.stringify({ number: normalizedPhone, text: messageBody }),
+        body: JSON.stringify({ number: normalizedPhone, body: messageBody }),
       });
 
       const responseText = await res.text();
@@ -147,7 +135,7 @@ Deno.serve(async (req) => {
     } catch (networkErr) {
       return new Response(
         JSON.stringify({
-          error: `Erro de rede ao conectar com a API: ${String(networkErr)}`,
+          error: `Erro de rede ao conectar com a API Evoluti: ${String(networkErr)}`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

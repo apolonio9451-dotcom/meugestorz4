@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 function normalizePhone(phone: string): string {
@@ -24,28 +24,22 @@ function replacePlaceholders(
   return msg;
 }
 
-function getApiConfig(): { baseUrl: string; token: string } {
-  const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "").trim().replace(/\/$/, "");
-  const token = Deno.env.get("EVOLUTI_TOKEN") || "";
-  return { baseUrl: apiUrl, token };
-}
-
 async function sendMessage(
-  baseUrl: string,
+  apiUrl: string,
   apiToken: string,
   number: string,
-  text: string
+  body: string
 ): Promise<{ ok: boolean; error: string }> {
-  const endpoint = `${baseUrl}/send/text`;
+  const endpoint = `${apiUrl}/api/messages/send`;
 
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "token": apiToken,
+        "Authorization": `Bearer ${apiToken}`,
       },
-      body: JSON.stringify({ number, text }),
+      body: JSON.stringify({ number, body }),
     });
 
     const responseText = await res.text();
@@ -85,18 +79,12 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const { baseUrl, token: apiToken } = getApiConfig();
+    const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
+    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://evoluti.cloud").trim().replace(/\/$/, "");
 
     if (!apiToken) {
       return new Response(
         JSON.stringify({ error: "EVOLUTI_TOKEN not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!baseUrl || !baseUrl.startsWith("http")) {
-      return new Response(
-        JSON.stringify({ error: "EVOLUTI_API_URL not configured or invalid" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -147,13 +135,11 @@ Deno.serve(async (req) => {
       if (!clients) continue;
 
       for (const client of clients) {
-        // Skip if already sent today
         if (client.ultimo_envio_auto === today) continue;
 
         const phone = client.whatsapp || client.phone || "";
         if (!phone || phone.replace(/\D/g, "").length < 10) continue;
 
-        // Get the most recent/active subscription
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
 
@@ -191,10 +177,9 @@ Deno.serve(async (req) => {
 
         const normalizedPhone = normalizePhone(phone);
 
-        // Send via Whatsapi.my (uazapi) API
         try {
           const sendResult = await sendMessage(
-            baseUrl,
+            apiUrl,
             apiToken,
             normalizedPhone,
             messageBody
@@ -202,7 +187,6 @@ Deno.serve(async (req) => {
 
           const logStatus = sendResult.ok ? "success" : "error";
 
-          // Log the result
           await supabase.from("auto_send_logs").insert({
             company_id: company.id,
             client_id: client.id,
@@ -214,7 +198,6 @@ Deno.serve(async (req) => {
           });
 
           if (sendResult.ok) {
-            // Update ultimo_envio_auto
             await supabase
               .from("clients")
               .update({ ultimo_envio_auto: today })
