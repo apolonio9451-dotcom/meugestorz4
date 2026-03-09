@@ -13,10 +13,7 @@ function normalizePhone(phone: string): string {
   return digits;
 }
 
-function replacePlaceholders(
-  template: string,
-  vars: Record<string, string>
-): string {
+function replacePlaceholders(template: string, vars: Record<string, string>): string {
   let msg = template;
   for (const [key, value] of Object.entries(vars)) {
     msg = msg.replaceAll(`{${key}}`, value || "");
@@ -24,24 +21,14 @@ function replacePlaceholders(
   return msg;
 }
 
-async function sendMessage(
-  apiUrl: string,
-  apiToken: string,
-  number: string,
-  body: string
-): Promise<{ ok: boolean; error: string }> {
+async function sendMessage(apiUrl: string, apiToken: string, number: string, body: string): Promise<{ ok: boolean; error: string }> {
   const endpoint = `${apiUrl}/send/text`;
-
   try {
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "token": apiToken,
-      },
-      body: JSON.stringify({ number, text: body }),
+      headers: { "Content-Type": "application/json", "token": apiToken },
+      body: JSON.stringify({ number, text: body, linkPreview: true }),
     });
-
     const responseText = await res.text();
     if (res.ok) return { ok: true, error: "" };
     return { ok: false, error: responseText };
@@ -50,9 +37,7 @@ async function sendMessage(
   }
 }
 
-function getCategory(
-  daysUntilExpiry: number
-): string | null {
+function getCategory(daysUntilExpiry: number): string | null {
   if (daysUntilExpiry === 0) return "vence_hoje";
   if (daysUntilExpiry === 1) return "vence_amanha";
   if (daysUntilExpiry >= 2 && daysUntilExpiry <= 7) return "a_vencer";
@@ -61,14 +46,10 @@ function getCategory(
 }
 
 const defaultTemplates: Record<string, string> = {
-  vence_hoje:
-    "Olá {nome}! 👋\n\nSeu plano vence *hoje*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nPara renovar, entre em contato conosco! 🙏",
-  vence_amanha:
-    "Olá {nome}! 👋\n\nSeu plano vence *amanhã*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nRenove agora para não perder o acesso! 🙏",
-  a_vencer:
-    "Olá {nome}! 👋\n\nSeu plano vence em *{dias} dias*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nAproveite para renovar com antecedência! 🙏",
-  vencidos:
-    "Olá {nome}! 👋\n\nSeu plano está *vencido há {dias} dias*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Venceu em: {vencimento}\n\nRenove agora para voltar a ter acesso! 🙏",
+  vence_hoje: "Olá {nome}! 👋\n\nSeu plano vence *hoje*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nPara renovar, entre em contato conosco! 🙏",
+  vence_amanha: "Olá {nome}! 👋\n\nSeu plano vence *amanhã*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nRenove agora para não perder o acesso! 🙏",
+  a_vencer: "Olá {nome}! 👋\n\nSeu plano vence em *{dias} dias*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nAproveite para renovar com antecedência! 🙏",
+  vencidos: "Olá {nome}! 👋\n\nSeu plano está *vencido há {dias} dias*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Venceu em: {vencimento}\n\nRenove agora para voltar a ter acesso! 🙏",
 };
 
 Deno.serve(async (req) => {
@@ -79,27 +60,17 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
-    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-
-    if (!apiToken) {
-      return new Response(
-        JSON.stringify({ error: "EVOLUTI_TOKEN not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     const today = new Date().toISOString().split("T")[0];
 
-    // Get all companies
-    const { data: companies } = await supabase
-      .from("companies")
-      .select("id");
+    // Get all companies that have API configured
+    const { data: apiConfigs } = await supabase
+      .from("api_settings")
+      .select("company_id, api_url, api_token");
 
-    if (!companies || companies.length === 0) {
+    if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No companies found" }),
+        JSON.stringify({ message: "Nenhuma empresa com API configurada" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -107,19 +78,25 @@ Deno.serve(async (req) => {
     let totalSent = 0;
     let totalErrors = 0;
 
-    for (const company of companies) {
-      // Fetch templates for this company
+    for (const config of apiConfigs) {
+      if (!config.api_url || !config.api_token) continue;
+
+      const apiUrl = config.api_url.replace(/\/$/, "");
+      const apiToken = config.api_token;
+      const companyId = config.company_id;
+
+      // Fetch templates
       const { data: templateRows } = await supabase
         .from("message_templates")
         .select("category, message")
-        .eq("company_id", company.id);
+        .eq("company_id", companyId);
 
       const templates: Record<string, string> = { ...defaultTemplates };
       templateRows?.forEach((t: { category: string; message: string }) => {
         templates[t.category] = t.message;
       });
 
-      // Fetch active clients with subscriptions, excluding already sent today
+      // Fetch active clients with subscriptions
       const { data: clients } = await supabase
         .from("clients")
         .select(`
@@ -129,7 +106,7 @@ Deno.serve(async (req) => {
             subscription_plans ( name, price )
           )
         `)
-        .eq("company_id", company.id)
+        .eq("company_id", companyId)
         .eq("status", "active");
 
       if (!clients) continue;
@@ -147,9 +124,7 @@ Deno.serve(async (req) => {
         const plan = sub.subscription_plans;
         const endDate = new Date(sub.end_date + "T00:00:00");
         const todayDate = new Date(today + "T00:00:00");
-        const diffDays = Math.round(
-          (endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
         const category = getCategory(diffDays);
         if (!category) continue;
@@ -157,17 +132,13 @@ Deno.serve(async (req) => {
         const template = templates[category];
         if (!template) continue;
 
-        const valor = sub.custom_price > 0
-          ? sub.custom_price
-          : plan?.price ?? sub.amount ?? 0;
-
-        const endDateFormatted = endDate.toLocaleDateString("pt-BR");
+        const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
         const messageBody = replacePlaceholders(template, {
           nome: client.name || "",
           plano: plan?.name || "",
           valor: Number(valor).toFixed(2),
-          vencimento: endDateFormatted,
+          vencimento: endDate.toLocaleDateString("pt-BR"),
           dias: String(Math.abs(diffDays)),
           mac: "",
           usuario: client.iptv_user || "",
@@ -178,37 +149,27 @@ Deno.serve(async (req) => {
         const normalizedPhone = normalizePhone(phone);
 
         try {
-          const sendResult = await sendMessage(
-            apiUrl,
-            apiToken,
-            normalizedPhone,
-            messageBody
-          );
-
-          const logStatus = sendResult.ok ? "success" : "error";
+          const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
           await supabase.from("auto_send_logs").insert({
-            company_id: company.id,
+            company_id: companyId,
             client_id: client.id,
             client_name: client.name,
             category,
-            status: logStatus,
+            status: sendResult.ok ? "success" : "error",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
           });
 
           if (sendResult.ok) {
-            await supabase
-              .from("clients")
-              .update({ ultimo_envio_auto: today })
-              .eq("id", client.id);
+            await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
             totalSent++;
           } else {
             totalErrors++;
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
-            company_id: company.id,
+            company_id: companyId,
             client_id: client.id,
             client_name: client.name,
             category,

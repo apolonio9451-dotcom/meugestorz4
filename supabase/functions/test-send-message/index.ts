@@ -36,19 +36,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
-    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-
-    if (!apiToken) {
-      return new Response(
-        JSON.stringify({ error: "Token da API não configurado" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Fetch API credentials from api_settings table
+    const { data: apiSettings } = await supabase
+      .from("api_settings")
+      .select("api_url, api_token")
+      .eq("company_id", company_id)
+      .single();
+
+    if (!apiSettings?.api_url || !apiSettings?.api_token) {
+      return new Response(
+        JSON.stringify({ error: "API de WhatsApp não configurada. Vá em Configurações para cadastrar URL e Token." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
+    const apiToken = apiSettings.api_token;
 
     // Get template
     const { data: templateRow } = await supabase
@@ -103,8 +110,6 @@ Deno.serve(async (req) => {
     });
 
     const normalizedPhone = normalizePhone(phone);
-
-    // Send via UAZAPI: POST /send/text
     const endpoint = `${apiUrl}/send/text`;
 
     try {
@@ -114,16 +119,14 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
           "token": apiToken,
         },
-        body: JSON.stringify({ number: normalizedPhone, text: messageBody }),
+        body: JSON.stringify({ number: normalizedPhone, text: messageBody, linkPreview: true }),
       });
 
       const responseText = await res.text();
 
       if (!res.ok) {
         return new Response(
-          JSON.stringify({
-            error: `Falha ao enviar mensagem (status ${res.status}). Detalhe: ${responseText}`,
-          }),
+          JSON.stringify({ error: `Falha ao enviar mensagem (status ${res.status}). Detalhe: ${responseText}` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -134,9 +137,7 @@ Deno.serve(async (req) => {
       );
     } catch (networkErr) {
       return new Response(
-        JSON.stringify({
-          error: `Erro de rede ao conectar com a API UAZAPI: ${String(networkErr)}`,
-        }),
+        JSON.stringify({ error: `Erro de rede ao conectar com a API: ${String(networkErr)}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

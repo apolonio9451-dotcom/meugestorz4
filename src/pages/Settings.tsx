@@ -420,6 +420,7 @@ export default function Settings() {
         </div>
       </div>
 
+      {isOwner && <ApiSettingsSection companyId={companyId} />}
       {isOwner && <AnnouncementManager />}
     </div>
   );
