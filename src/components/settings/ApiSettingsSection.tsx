@@ -109,20 +109,18 @@ export default function ApiSettingsSection({ companyId }: Props) {
           <Clock className="w-4 h-4 text-primary" />
           Horário de Disparo Automático
         </Label>
-        <Select value={String(autoSendHour)} onValueChange={(v) => setAutoSendHour(Number(v))}>
-          <SelectTrigger className="w-full bg-secondary/50 border-border">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.from({ length: 24 }, (_, i) => (
-              <SelectItem key={i} value={String(i)}>
-                {String(i).padStart(2, "0")}:00
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Input
+          type="time"
+          value={`${String(autoSendHour).padStart(2, "0")}:${String(autoSendMinute).padStart(2, "0")}`}
+          onChange={(e) => {
+            const [h, m] = e.target.value.split(":").map(Number);
+            if (!isNaN(h)) setAutoSendHour(h);
+            if (!isNaN(m)) setAutoSendMinute(m);
+          }}
+          className="bg-secondary/50 border-border w-40"
+        />
         <p className="text-muted-foreground text-xs">
-          Horário em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
+          Horário exato (HH:mm) em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
         </p>
       </div>
 
