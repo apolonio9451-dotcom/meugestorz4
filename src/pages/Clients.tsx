@@ -750,6 +750,13 @@ export default function Clients() {
                   </Button>
                 </div>
               </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-primary/15 bg-primary/5">
+                <div>
+                  <Label className="text-sm font-medium">Ativar Follow-up Automático?</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Se ativo, o cliente aparecerá na lista de acompanhamento 15 dias após o cadastro.</p>
+                </div>
+                <Switch checked={formFollowUpActive} onCheckedChange={setFormFollowUpActive} />
+              </div>
               <Button type="submit" disabled={loading} className="w-full h-11 text-sm">{loading ? "Salvando..." : editing ? "Salvar" : "Cadastrar"}</Button>
             </form>
           </DialogContent>
