@@ -838,8 +838,9 @@ export default function Resellers() {
                               </Button>
                             )}
                             {r.status === "active" && (
-                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleRenewSubscription(r)} title="Renovar assinatura">
-                                <CalendarClock className="w-3.5 h-3.5 text-emerald-400" />
+                              <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs text-emerald-400 hover:bg-emerald-500/10" onClick={() => handleRenewSubscription(r)} title="Renovar assinatura">
+                                <CalendarClock className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">Renovar</span>
                               </Button>
                             )}
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Editar">
