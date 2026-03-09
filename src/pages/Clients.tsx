@@ -895,113 +895,127 @@ export default function Clients() {
             return (
               <div
                 key={client.id}
-                className={`rounded-xl border bg-card p-3 sm:p-4 space-y-3 relative overflow-hidden transition-all duration-300 ${neonColor}`}
+                className={`rounded-xl border bg-card relative overflow-hidden transition-all duration-300 ${neonColor}`}
               >
-                {/* Row 1: Name + username + status + menu */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display font-bold text-foreground text-base leading-tight truncate">{client.name}</h3>
-                    {client.iptv_user && (
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
+                {/* Header: Name + badge + menu */}
+                <div className="px-3.5 pt-3.5 pb-2 sm:px-4 sm:pt-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display font-bold text-foreground text-sm leading-tight truncate">{client.name}</h3>
+                        {days !== null && getExpiryBadge(days)}
+                      </div>
+                      {client.iptv_user && (
+                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {clientMacKeys.length > 0 && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setMacModalClientId(client.id)}>
+                          <Eye className="w-[18px] h-[18px]" />
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openDialog(client)}><Pencil className="w-3.5 h-3.5 mr-2" /> Editar</DropdownMenuItem>
+                          {sub && (<>
+                            <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
+                          </>)}
+                          <DropdownMenuSeparator />
+                          {mainFilter === "status" && statusSubFilter === "suporte" ? (
+                            <DropdownMenuItem onClick={async () => {
+                              const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
+                              if (error) toast.error("Erro ao finalizar suporte");
+                              else {
+                                toast.success(`Suporte finalizado para ${client.name}`);
+                                await logActivity("suporte_finalizado", client.name, client.id, "Check-up de satisfação realizado");
+                                fetchClients(); fetchActivityLogs();
+                              }
+                            }}><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> Finalizar Suporte</DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={async () => {
+                              const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
+                              if (error) toast.error("Erro ao enviar para suporte");
+                              else {
+                                toast.success(`${client.name} enviado para Suporte`);
+                                await logActivity("suporte", client.name, client.id, "Cliente encaminhado para check-up de suporte");
+                                fetchClients(); fetchActivityLogs();
+                              }
+                            }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details section */}
+                <div className="px-3.5 pb-2 sm:px-4 space-y-2">
+                  {/* Info chips row */}
+                  <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                    {client.server && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
+                        {client.server}
+                      </span>
+                    )}
+                    {sub && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary font-semibold border border-primary/15">
+                        {sub.plan_name}
+                      </span>
+                    )}
+                    {sub && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-foreground font-semibold">
+                        <DollarSign className="w-2.5 h-2.5 text-primary" />
+                        {Number(sub.amount).toFixed(2).replace(".", ",")}
+                      </span>
+                    )}
+                    {client.referred_by && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
+                        <Handshake className="w-2.5 h-2.5" />
+                        {client.referred_by}
+                      </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {days !== null && getExpiryBadge(days)}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openDialog(client)}><Pencil className="w-3.5 h-3.5 mr-2" /> Editar</DropdownMenuItem>
-                        {sub && (<>
-                          <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
-                        </>)}
-                        <DropdownMenuSeparator />
-                        {mainFilter === "status" && statusSubFilter === "suporte" ? (
-                          <DropdownMenuItem onClick={async () => {
-                            const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
-                            if (error) toast.error("Erro ao finalizar suporte");
-                            else {
-                              toast.success(`Suporte finalizado para ${client.name}`);
-                              await logActivity("suporte_finalizado", client.name, client.id, "Check-up de satisfação realizado");
-                              fetchClients(); fetchActivityLogs();
-                            }
-                          }}><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> Finalizar Suporte</DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={async () => {
-                            const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
-                            if (error) toast.error("Erro ao enviar para suporte");
-                            else {
-                              toast.success(`${client.name} enviado para Suporte`);
-                              await logActivity("suporte", client.name, client.id, "Cliente encaminhado para check-up de suporte");
-                              fetchClients(); fetchActivityLogs();
-                            }
-                          }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
 
-                {/* Row 2: Info grid — Servidor, Plano, Valor */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {client.server && (
-                    <span className="text-[11px] text-muted-foreground font-medium">{client.server}</span>
-                  )}
-                  {sub && (
-                    <>
-                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold">{sub.plan_name}</Badge>
-                      <span className="text-[11px] font-semibold text-primary">R$ {Number(sub.amount).toFixed(2).replace(".", ",")}</span>
-                    </>
-                  )}
-                  {client.referred_by && (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground ml-auto shrink-0">
-                      <Handshake className="w-3 h-3" />
-                      <span className="font-medium text-foreground/70">{client.referred_by}</span>
-                    </span>
+                  {/* App names */}
+                  {clientMacKeys.some(mk => mk.app_name) && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {clientMacKeys.map((mk, i) => mk.app_name && (
+                        <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5">{mk.app_name}</Badge>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {/* Row 3: App names + Eye button */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                    {clientMacKeys.map((mk, i) => mk.app_name && (
-                      <Badge key={mk.id || i} variant="outline" className="text-[10px] bg-muted/50 text-muted-foreground border-border/50 font-medium">{mk.app_name}</Badge>
-                    ))}
-                  </div>
-                  {clientMacKeys.length > 0 && (
-                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary rounded-lg bg-muted/40 hover:bg-muted/60" onClick={() => setMacModalClientId(client.id)}>
-                      <Eye className="w-5 h-5" />
-                    </Button>
-                  )}
-                </div>
-
-                {/* Row 4: Progress bar + days label + vencimento date */}
+                {/* Progress bar + date */}
                 {days !== null && sub && (
-                  <div className="space-y-1.5 pt-0.5">
-                    <div className={cn("w-full h-1.5 rounded-full overflow-hidden", getBarTrackColor(days))}>
+                  <div className="px-3.5 pb-2 sm:px-4">
+                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days))}>
                       <div className={`h-full rounded-full transition-all ${getBarColor(days)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className={cn("flex items-center gap-1 text-[11px]", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
-                        <Clock className="w-3 h-3" />{getDaysLabel(days)}
+                    <div className="flex items-center justify-between mt-1">
+                      <span className={cn("text-[10px] font-medium", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
+                        {getDaysLabel(days)}
                       </span>
-                      <span className="text-[11px] font-semibold text-muted-foreground">
+                      <span className="text-[10px] text-muted-foreground font-medium">
                         {format(parseISO(sub.end_date), "dd/MM/yyyy")}
                       </span>
                     </div>
                   </div>
                 )}
 
-                {/* Row 5: Action buttons */}
+                {/* Action button */}
                 {client.whatsapp && (
-                  <div className="pt-2 border-t border-border/40 space-y-2">
+                  <div className="border-t border-border/30">
                     {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at ? (
-                      <div className="flex gap-2">
+                      <div className="flex">
                         <a
                           href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
                             (() => {
@@ -1019,16 +1033,14 @@ export default function Clients() {
                             })()
                           )}`}
                           target="_blank" rel="noopener noreferrer"
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-500/15 text-violet-400 hover:bg-violet-500/25 border border-violet-500/30 transition-all text-xs font-bold"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-violet-400 hover:bg-violet-500/10 transition-all text-xs font-bold"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <HeadsetIcon className="w-3.5 h-3.5" />
                           Enviar Check-up
                         </a>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                        <button
+                          className="px-4 py-2.5 text-xs text-emerald-400 hover:bg-emerald-500/10 transition-all font-bold border-l border-border/30 inline-flex items-center gap-1"
                           onClick={async (e) => {
                             e.stopPropagation();
                             const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
@@ -1040,15 +1052,15 @@ export default function Clients() {
                             }
                           }}
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                           Finalizar
-                        </Button>
+                        </button>
                       </div>
                     ) : (
                       <a
                         href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(buildCobrancaMessage(client, sub, days))}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all text-xs font-bold shadow-[0_0_8px_-2px_rgb(16_185_129/0.3)] hover:shadow-[0_0_14px_-2px_rgb(16_185_129/0.5)]"
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 text-emerald-400 hover:bg-emerald-500/10 transition-all text-xs font-bold"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.386 0-4.586-.826-6.32-2.208l-.442-.362-3.263 1.093 1.093-3.263-.362-.442A9.956 9.956 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
