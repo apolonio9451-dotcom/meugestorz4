@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
