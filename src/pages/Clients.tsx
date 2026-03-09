@@ -962,24 +962,17 @@ export default function Clients() {
                   <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
                     {client.server && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
-                        {client.server}
+                        🌐 {client.server}
                       </span>
                     )}
                     {sub && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary font-semibold border border-primary/15">
-                        {sub.plan_name}
-                      </span>
-                    )}
-                    {sub && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-foreground font-semibold">
-                        <DollarSign className="w-2.5 h-2.5 text-primary" />
-                        {Number(sub.amount).toFixed(2).replace(".", ",")}
+                        📦 {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
                       </span>
                     )}
                     {client.referred_by && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
-                        <Handshake className="w-2.5 h-2.5" />
-                        {client.referred_by}
+                        🤝 {client.referred_by}
                       </span>
                     )}
                   </div>
@@ -988,7 +981,7 @@ export default function Clients() {
                   {clientMacKeys.some(mk => mk.app_name) && (
                     <div className="flex items-center gap-1 flex-wrap">
                       {clientMacKeys.map((mk, i) => mk.app_name && (
-                        <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5">{mk.app_name}</Badge>
+                        <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5">📱 {mk.app_name}</Badge>
                       ))}
                     </div>
                   )}
