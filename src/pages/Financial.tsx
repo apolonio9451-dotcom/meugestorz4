@@ -109,6 +109,39 @@ export default function Financial() {
     });
   }, [subs, dateFrom, dateTo]);
 
+  // Entradas e Saídas chart - last 3 months
+  const entradasSaidasData = useMemo(() => {
+    const now = new Date();
+    const last3 = Array.from({ length: 3 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
+      return d;
+    });
+
+    const totalCostPerCredit = servers.reduce((sum, srv) => sum + Number(srv.cost_per_credit), 0);
+
+    return last3.map((m) => {
+      const mMonth = m.getMonth();
+      const mYear = m.getFullYear();
+      const isCurrentMonth = mMonth === now.getMonth() && mYear === now.getFullYear();
+      const label = format(m, "MMM", { locale: ptBR });
+      const capitalLabel = label.charAt(0).toUpperCase() + label.slice(1);
+
+      const monthSubs = subs.filter((s) => {
+        const sd = new Date(s.start_date);
+        return s.payment_status !== "cancelled" && sd.getMonth() === mMonth && sd.getFullYear() === mYear;
+      });
+
+      const entradas = monthSubs.reduce((sum, s) => sum + Number(s.amount), 0);
+      // Saídas = custo por crédito do servidor × nº de assinaturas ativas no mês
+      const saidas = monthSubs.length * totalCostPerCredit;
+
+      return { label: capitalLabel, entradas, saidas, isCurrent: isCurrentMonth };
+    });
+  }, [subs, servers]);
+
+  const totalEntradas = entradasSaidasData.reduce((sum, d) => sum + d.entradas, 0);
+  const totalSaidas = entradasSaidasData.reduce((sum, d) => sum + d.saidas, 0);
+
   const serverProfits = useMemo(() => {
     return servers.map((srv) => {
       const serverSubs = filteredSubs.filter(
