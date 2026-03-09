@@ -1,0 +1,1 @@
+ALTER TABLE public.message_templates ADD CONSTRAINT message_templates_company_category_unique UNIQUE (company_id, category);

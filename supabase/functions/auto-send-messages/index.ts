@@ -46,10 +46,14 @@ function getCategory(daysUntilExpiry: number): string | null {
 }
 
 const defaultTemplates: Record<string, string> = {
-  vence_hoje: "Olá {nome}! 👋\n\nSeu plano vence *hoje*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nPara renovar, entre em contato conosco! 🙏",
-  vence_amanha: "Olá {nome}! 👋\n\nSeu plano vence *amanhã*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nRenove agora para não perder o acesso! 🙏",
-  a_vencer: "Olá {nome}! 👋\n\nSeu plano vence em *{dias} dias*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nAproveite para renovar com antecedência! 🙏",
-  vencidos: "Olá {nome}! 👋\n\nSeu plano está *vencido há {dias} dias*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Venceu em: {vencimento}\n\nRenove agora para voltar a ter acesso! 🙏",
+  vence_hoje:
+    "Olá, {nome}! 👋\n\nPassando para informar que o seu acesso vence hoje! ⏳\n\nPara não ficar sem o sinal e garantir a continuidade do seu serviço, confira os detalhes abaixo:\n\n📋 Plano: {plano}\n\n💰 Valor: R$ {valor}\n\n📅 Vencimento: {vencimento} ({dias} dias de uso)\n\n🔑 Suas Credenciais Atuais:\n\n👤 Usuário: {usuario}\n\n🔑 Senha: {senha}\n\n🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}\n\nDeseja realizar a renovação agora? Basta efetuar o pagamento via Pix e me enviar o comprovante por aqui:\n\n📌 Dados para Pix: * Banco: [Seu Banco]\n\nNome: [Seu Nome]\n\nChave Pix: [Sua Chave]\n\nQualquer dúvida ou se precisar de suporte técnico, estou à disposição! 🤝",
+  vence_amanha:
+    "Olá, {nome}! 👋\n\nPassando para lembrar que o seu acesso vence amanhã! 🗓️\n\nGaranta sua renovação antecipada para continuar aproveitando sem interrupções.\n\n📋 Plano: {plano}\n\n💰 Valor: R$ {valor}\n\n📅 Vencimento: {vencimento} ({dias} dias)\n\n🔑 Dados de Acesso:\n\n👤 Usuário: {usuario}\n\n🔑 Senha: {senha}\n\n🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}\n\nDeseja garantir sua vaga? Basta efetuar o Pix e enviar o comprovante:\n\n📌 Dados para Pagamento:\n\nBanco: [Seu Banco]\n\nNome: [Seu Nome]\n\nChave Pix: [Sua Chave]\n\nQualquer dúvida, estou aqui para ajudar! 🚀",
+  a_vencer:
+    "Olá, {nome}! 👋\n\nTudo bem por aí? Passando apenas para te manter informado sobre o status do seu acesso. Seu plano vence em {dias} dias! ⏳\n\nPreparamos tudo para que você continue aproveitando sua programação sem interrupções. Confira os detalhes:\n\n📋 Resumo da Assinatura:\n\nPlano: {plano}\n\nValor: R$ {valor}\n\nVencimento: {vencimento}\n\n🔑 Dados do Seu Acesso:\n\n👤 Usuário: {usuario}\n\n🔑 Senha: {senha}\n\n🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}\n\nQuer se antecipar e garantir sua renovação? 🚀\n\nBasta realizar o Pix e nos enviar o comprovante por aqui:\n\n📌 Dados para Pagamento:\n\nBanco: [Seu Banco]\n\nNome: [Seu Nome]\n\nChave Pix: [Sua Chave]\n\nQualquer dúvida ou se precisar de suporte, conte comigo! 😊",
+  vencidos:
+    "Olá, {nome}! 👋\n\nNotamos que o seu plano venceu e o seu acesso pode estar interrompido. 🚫\nNão queremos que você perca seus conteúdos! Vamos regularizar isso agora?\n\n📋 Dados da Assinatura Vencida:\n\nPlano: {plano}\n\nValor: R$ {valor}\n\nVencimento: {vencimento}\n\n🔑 Suas Credenciais:\n\n👤 Usuário: {usuario} | 🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}",
 };
 
 Deno.serve(async (req) => {
