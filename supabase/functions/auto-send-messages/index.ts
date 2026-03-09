@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
     // Current hour in Brasília (UTC-3)
     const nowUtc = new Date();
     const brasiliaHour = (nowUtc.getUTCHours() - 3 + 24) % 24;
+    const brasiliaMinute = nowUtc.getUTCMinutes();
 
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
