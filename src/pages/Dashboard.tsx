@@ -163,18 +163,18 @@ export default function Dashboard() {
   ];
 
   const renderCards = (cards: typeof topCards) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {cards.map((card) => (
         <Card key={card.title} className="bg-card border-border">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2 rounded-lg bg-muted/50`}>
-                <card.icon className={`w-5 h-5 ${card.iconColor}`} />
+          <CardContent className="p-3 sm:p-5">
+            <div className="flex items-start justify-between mb-2">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-muted/50">
+                <card.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${card.iconColor}`} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mb-1">{card.title}</p>
-            <p className="text-2xl font-bold font-display text-foreground">{card.value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{card.sub}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{card.title}</p>
+            <p className="text-lg sm:text-2xl font-bold font-display text-foreground">{card.value}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{card.sub}</p>
           </CardContent>
         </Card>
       ))}
