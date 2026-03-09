@@ -556,10 +556,12 @@ export default function Resellers() {
 
   const filtered = useMemo(() => {
     return manageableResellers.filter((r) => {
+      const s = search.toLowerCase();
       const matchesSearch =
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.email?.toLowerCase().includes(search.toLowerCase()) ||
-        r.whatsapp?.includes(search);
+        r.name.toLowerCase().includes(s) ||
+        r.email?.toLowerCase().includes(s) ||
+        r.whatsapp?.includes(search) ||
+        r.id.toLowerCase().includes(s);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
       let matchesParent = true;
       if (parentFilter === "direct") {
