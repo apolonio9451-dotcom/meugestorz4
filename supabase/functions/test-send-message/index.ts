@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     }
 
     const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
-    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://evoluti.cloud").trim().replace(/\/$/, "");
+    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
 
     if (!apiToken) {
       return new Response(
