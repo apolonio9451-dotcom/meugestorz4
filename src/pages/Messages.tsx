@@ -60,6 +60,14 @@ const categories = [
     defaultMessage:
       "Olá, {nome}! 👋\n\nPassando hoje com um sentimento de gratidão por ter você conosco! Já se passaram {dias} dias desde o seu cadastro e é um privilégio fazer parte do seu entretenimento diário. 🌟\n\nNossa maior prioridade é garantir que você tenha a melhor experiencia possível com nosso serviços. Por isso, gostaria de saber: como está sendo sua experiência até agora? Seu feedback é valioso para continuarmos evoluindo nosso serviço! 🚀\n\n📋 Resumo da Sua Assinatura:\n\nPlano: {plano} | Valor: R$ {valor}\n\nVencimento: {vencimento}\n\n🔑 Seus Dados:\n\n👤 Usuário: {usuario} |\n\n🖥️ MAC: {mac} | 🌐 Servidor: {servidor}",
   },
+  {
+    key: "suporte",
+    label: "Suporte",
+    color: "bg-violet-400/20 text-violet-400 border-violet-400/50",
+    description: "Mensagem de check-up de satisfação enviada após suporte técnico.",
+    defaultMessage:
+      "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝",
+  },
 ];
 
 const variables = [
