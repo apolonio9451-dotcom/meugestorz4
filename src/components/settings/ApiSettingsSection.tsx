@@ -109,6 +109,28 @@ export default function ApiSettingsSection({ companyId }: Props) {
         </p>
       </div>
 
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Clock className="w-4 h-4 text-primary" />
+          Horário de Disparo Automático
+        </Label>
+        <Select value={String(autoSendHour)} onValueChange={(v) => setAutoSendHour(Number(v))}>
+          <SelectTrigger className="w-full bg-secondary/50 border-border">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 24 }, (_, i) => (
+              <SelectItem key={i} value={String(i)}>
+                {String(i).padStart(2, "0")}:00
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-muted-foreground text-xs">
+          Horário em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
+        </p>
+      </div>
+
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving || !apiUrl.trim() || !apiToken.trim()}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
