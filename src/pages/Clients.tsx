@@ -506,6 +506,7 @@ export default function Clients() {
     { key: "vence_amanha" as const, label: "Vence Amanhã", count: filterCounts.vence_amanha, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
     { key: "a_vencer" as const, label: "A Vencer", count: filterCounts.a_vencer, color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
     { key: "followup" as const, label: "Follow-up", count: filterCounts.followup, color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50" },
+    { key: "suporte" as const, label: "Suporte", count: filterCounts.suporte, color: "bg-violet-400/20 text-violet-400 border-violet-400/50" },
   ];
 
   const getBarColor = (days: number) => {
