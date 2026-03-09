@@ -178,27 +178,6 @@ export default function Settings() {
           />
         </div>
 
-        {/* Login Slug */}
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold text-foreground">Slug do Login</Label>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm whitespace-nowrap">
-              https://app.ongestor.top/login/
-            </span>
-            <Input
-              value={settings.login_slug || ""}
-              onChange={(e) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  login_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""),
-                }))
-              }
-              placeholder="minha-empresa"
-              className="bg-secondary/50 border-border"
-            />
-          </div>
-          <p className="text-muted-foreground text-xs">URL personalizada para login dos seus clientes</p>
-        </div>
 
         {/* Logo */}
         <div className="space-y-3">
