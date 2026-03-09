@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Server, Trash2, MoreVertical, Pencil, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, MoreVertical, Pencil, AlertTriangle, Users, UserCheck, UserX } from "lucide-react";
+import { differenceInCalendarDays, parseISO } from "date-fns";
 
 interface ServerItem {
   id: string;
@@ -17,9 +18,16 @@ interface ServerItem {
   created_at: string;
 }
 
+interface ServerStats {
+  total: number;
+  active: number;
+  expired: number;
+}
+
 export default function Servers() {
   const { companyId } = useAuth();
   const [servers, setServers] = useState<ServerItem[]>([]);
+  const [serverStats, setServerStats] = useState<Record<string, ServerStats>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServerItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,7 +45,46 @@ export default function Servers() {
     setServers(data || []);
   };
 
-  useEffect(() => { fetchServers(); }, [companyId]);
+  const fetchServerStats = async () => {
+    if (!companyId) return;
+    // Get all non-excluded clients with their server
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("id, server, status")
+      .eq("company_id", companyId)
+      .neq("status", "excluded");
+
+    // Get all subscriptions to determine active/expired
+    const { data: subs } = await supabase
+      .from("client_subscriptions")
+      .select("client_id, end_date")
+      .eq("company_id", companyId);
+
+    // Build latest sub map
+    const latestSub: Record<string, string> = {};
+    (subs || []).forEach(s => {
+      if (!latestSub[s.client_id] || s.end_date > latestSub[s.client_id]) {
+        latestSub[s.client_id] = s.end_date;
+      }
+    });
+
+    const stats: Record<string, ServerStats> = {};
+    (clients || []).forEach(c => {
+      const srv = c.server || "";
+      if (!srv) return;
+      if (!stats[srv]) stats[srv] = { total: 0, active: 0, expired: 0 };
+      stats[srv].total++;
+      const endDate = latestSub[c.id];
+      if (endDate) {
+        const days = differenceInCalendarDays(parseISO(endDate), new Date());
+        if (days >= 0) stats[srv].active++;
+        else stats[srv].expired++;
+      }
+    });
+    setServerStats(stats);
+  };
+
+  useEffect(() => { fetchServers(); fetchServerStats(); }, [companyId]);
 
   const openEdit = (s: ServerItem) => {
     setEditing(s);
@@ -61,17 +108,16 @@ export default function Servers() {
 
     if (editing) {
       const { error } = await supabase.from("servers").update({ name, url, cost_per_credit: parseFloat(costPerCredit) || 0 }).eq("id", editing.id);
-      if (error) { toast.error(error.message); } else { toast.success("Servidor atualizado!"); setDialogOpen(false); setEditing(null); fetchServers(); }
+      if (error) { toast.error(error.message); } else { toast.success("Servidor atualizado!"); setDialogOpen(false); setEditing(null); fetchServers(); fetchServerStats(); }
     } else {
       const { error } = await supabase.from("servers").insert({ name, url, company_id: companyId, cost_per_credit: parseFloat(costPerCredit) || 0 });
-      if (error) { toast.error(error.message); } else { toast.success("Servidor adicionado!"); setDialogOpen(false); fetchServers(); }
+      if (error) { toast.error(error.message); } else { toast.success("Servidor adicionado!"); setDialogOpen(false); fetchServers(); fetchServerStats(); }
     }
     setLoading(false);
   };
 
   const handleDelete = async (s: ServerItem) => {
     if (!companyId) return;
-    // Check if any client is linked to this server
     const { count } = await supabase
       .from("clients")
       .select("id", { count: "exact", head: true })
@@ -87,7 +133,7 @@ export default function Servers() {
 
     if (!confirm("Tem certeza que deseja excluir este servidor?")) return;
     const { error } = await supabase.from("servers").delete().eq("id", s.id);
-    if (error) toast.error(error.message); else { toast.success("Servidor excluído!"); fetchServers(); }
+    if (error) toast.error(error.message); else { toast.success("Servidor excluído!"); fetchServers(); fetchServerStats(); }
   };
 
   return (
@@ -130,34 +176,60 @@ export default function Servers() {
         <p className="text-center text-muted-foreground py-12">Nenhum servidor cadastrado</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {servers.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between rounded-xl border border-primary/20 bg-card p-4 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_20px_-3px_hsl(var(--primary)/0.35)] transition-all duration-300 cursor-pointer"
-              onClick={() => { if (s.url) window.open(s.url.startsWith("http") ? s.url : `http://${s.url}`, "_blank"); }}
-            >
-              <div className="flex flex-col">
-                <span className="font-semibold text-foreground">{s.name}</span>
-                {s.url && <span className="text-[11px] text-primary/70 truncate max-w-[180px] underline underline-offset-2">{s.url}</span>}
-                <span className="text-xs text-muted-foreground">R$ {Number(s.cost_per_credit).toFixed(2).replace(".", ",")} / crédito</span>
+          {servers.map((s) => {
+            const stats = serverStats[s.name] || { total: 0, active: 0, expired: 0 };
+            return (
+              <div
+                key={s.id}
+                className="rounded-xl border border-primary/20 bg-card p-4 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_20px_-3px_hsl(var(--primary)/0.35)] transition-all duration-300 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className="flex flex-col cursor-pointer"
+                    onClick={() => { if (s.url) window.open(s.url.startsWith("http") ? s.url : `http://${s.url}`, "_blank"); }}
+                  >
+                    <span className="font-semibold text-foreground">{s.name}</span>
+                    {s.url && <span className="text-[11px] text-primary/70 truncate max-w-[180px] underline underline-offset-2">{s.url}</span>}
+                    <span className="text-xs text-muted-foreground">R$ {Number(s.cost_per_credit).toFixed(2).replace(".", ",")} / crédito</span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
+                        <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(s); }}>
+                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Client stats */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/30">
+                  <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted/40 py-2">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm font-bold text-foreground">{stats.total}</span>
+                    <span className="text-[9px] text-muted-foreground uppercase font-medium">Total</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5 rounded-lg bg-emerald-500/10 py-2">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-sm font-bold text-emerald-400">{stats.active}</span>
+                    <span className="text-[9px] text-emerald-400/70 uppercase font-medium">Ativos</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5 rounded-lg bg-destructive/10 py-2">
+                    <UserX className="w-3.5 h-3.5 text-destructive" />
+                    <span className="text-sm font-bold text-destructive">{stats.expired}</span>
+                    <span className="text-[9px] text-destructive/70 uppercase font-medium">Vencidos</span>
+                  </div>
+                </div>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
-                    <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(s); }}>
-                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
