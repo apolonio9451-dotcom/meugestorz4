@@ -208,27 +208,43 @@ export default function Dashboard() {
 
       {/* Server stats chart */}
       {serverStats.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <Server className="w-4 h-4 text-muted-foreground" />
-            <CardTitle className="text-base">Clientes por Servidor</CardTitle>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center gap-2 pb-1">
+            <Server className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">Clientes por Servidor</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[220px] w-full">
+          <CardContent className="px-2 pb-3">
+            {/* Summary pills */}
+            <div className="flex items-center gap-2 mb-3 px-2">
+              <div className="flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-[10px]">
+                <Users className="w-3 h-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-bold text-foreground">{serverStats.reduce((s, x) => s + x.total, 0)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px]">
+                <UserCheck className="w-3 h-3 text-emerald-500" />
+                <span className="text-emerald-500">{serverStats.reduce((s, x) => s + x.active, 0)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-[10px]">
+                <UserX className="w-3 h-3 text-destructive" />
+                <span className="text-destructive">{serverStats.reduce((s, x) => s + x.expired, 0)}</span>
+              </div>
+            </div>
+            <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={serverStats} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                  <Bar dataKey="active" stackId="a" radius={[0, 0, 0, 0]} name="Ativos" fill="hsl(160, 65%, 45%)" />
+                <BarChart data={serverStats} margin={{ top: 4, right: 12, left: -20, bottom: 0 }} barCategoryGap="30%">
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.15)" }} />
+                  <Bar dataKey="active" stackId="a" radius={[0, 0, 4, 4]} name="Ativos" fill="hsl(160, 65%, 45%)" />
                   <Bar dataKey="expired" stackId="a" radius={[4, 4, 0, 0]} name="Vencidos" fill="hsl(var(--destructive))" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             {/* Legend */}
-            <div className="flex items-center justify-center gap-4 mt-2 text-[11px]">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> Ativos</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-destructive inline-block" /> Vencidos</span>
+            <div className="flex items-center justify-center gap-4 mt-1 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Ativos</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-destructive inline-block" /> Vencidos</span>
             </div>
           </CardContent>
         </Card>
