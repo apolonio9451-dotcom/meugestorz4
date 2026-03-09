@@ -253,11 +253,14 @@ export default function Resellers() {
       setVisiblePasswords(prev => ({ ...prev, [resellerId]: !prev[resellerId] }));
       return;
     }
-    const { data } = await supabase.rpc("get_reseller_password", { _reseller_id: resellerId });
-    if (data) {
-      setPasswords(prev => ({ ...prev, [resellerId]: data }));
-      setVisiblePasswords(prev => ({ ...prev, [resellerId]: true }));
+    const { data, error } = await (supabase.rpc as any)("get_reseller_password", { _reseller_id: resellerId });
+    if (error) {
+      console.error("Error fetching password:", error);
+      setPasswords(prev => ({ ...prev, [resellerId]: "(erro ao buscar)" }));
+    } else {
+      setPasswords(prev => ({ ...prev, [resellerId]: data || "(não registrada)" }));
     }
+    setVisiblePasswords(prev => ({ ...prev, [resellerId]: true }));
   };
 
   const togglePasswordVisibility = (resellerId: string) => {
