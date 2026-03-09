@@ -21,30 +21,10 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
-function normalizeEndpoint(url: string): string {
-  const cleaned = url.trim().replace(/\/$/, "");
-  if (
-    cleaned.includes("/api/messages/send") ||
-    cleaned.includes("/message/sendText/")
-  ) {
-    return cleaned;
-  }
-  return `${cleaned}/api/messages/send`;
-}
-
-function getEvolutiEndpoints(): string[] {
-  const configured = Deno.env.get("EVOLUTI_API_URL")?.trim();
-  if (configured) {
-    return configured
-      .split(",")
-      .map((url) => normalizeEndpoint(url))
-      .filter(Boolean);
-  }
-
-  return [
-    "https://evoluti.cloud/api/messages/send",
-    "https://api.evoluti.cloud/api/messages/send",
-  ];
+function getApiConfig(): { baseUrl: string; token: string } {
+  const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "").trim().replace(/\/$/, "");
+  const token = Deno.env.get("EVOLUTI_TOKEN") || "";
+  return { baseUrl: apiUrl, token };
 }
 
 Deno.serve(async (req) => {
@@ -62,10 +42,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    const evolutiToken = Deno.env.get("EVOLUTI_TOKEN");
-    if (!evolutiToken) {
+    const { baseUrl, token: apiToken } = getApiConfig();
+
+    if (!apiToken) {
       return new Response(
         JSON.stringify({ error: "EVOLUTI_TOKEN não configurado" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!baseUrl || !baseUrl.startsWith("http")) {
+      return new Response(
+        JSON.stringify({ error: "EVOLUTI_API_URL não configurado ou inválido. Deve ser uma URL como https://seuservidor.uazapi.com" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -128,47 +116,42 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
 
-    const endpoints = getEvolutiEndpoints();
-    let lastError = "";
-    let sent = false;
+    // Send via Whatsapi.my (uazapi) API: POST /send/text
+    const endpoint = `${baseUrl}/send/text`;
 
-    for (const endpoint of endpoints) {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${evolutiToken}`,
-          },
-          body: JSON.stringify({ number: normalizedPhone, body: messageBody }),
-        });
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "token": apiToken,
+        },
+        body: JSON.stringify({ number: normalizedPhone, text: messageBody }),
+      });
 
-        if (!res.ok) {
-          lastError = await res.text();
-          continue;
-        }
+      const responseText = await res.text();
 
-        await res.text();
-        sent = true;
-        break;
-      } catch (networkErr) {
-        lastError = String(networkErr);
+      if (!res.ok) {
+        return new Response(
+          JSON.stringify({
+            error: `Falha ao enviar mensagem (status ${res.status}). Detalhe: ${responseText}`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    }
 
-    if (!sent) {
+      return new Response(
+        JSON.stringify({ success: true, phone: normalizedPhone, message: messageBody }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (networkErr) {
       return new Response(
         JSON.stringify({
-          error: `Falha ao enviar mensagem. Verifique EVOLUTI_API_URL/endpoint da instância. Detalhe: ${lastError}`,
+          error: `Erro de rede ao conectar com a API: ${String(networkErr)}`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    return new Response(
-      JSON.stringify({ success: true, phone: normalizedPhone, message: messageBody }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (err) {
     return new Response(
       JSON.stringify({ error: String(err) }),
