@@ -271,6 +271,7 @@ export default function Clients() {
       status: "active",
       company_id: companyId,
       referred_by: formReferredBy.trim(),
+      follow_up_active: formFollowUpActive,
     };
 
     let clientId = editing?.id;
