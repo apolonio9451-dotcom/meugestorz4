@@ -104,17 +104,17 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
 
-    // Send via Evoluti API: POST /api/messages/send
-    const endpoint = `${apiUrl}/api/messages/send`;
+    // Send via UAZAPI: POST /send/text
+    const endpoint = `${apiUrl}/send/text`;
 
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiToken}`,
+          "token": apiToken,
         },
-        body: JSON.stringify({ number: normalizedPhone, body: messageBody }),
+        body: JSON.stringify({ number: normalizedPhone, text: messageBody }),
       });
 
       const responseText = await res.text();
