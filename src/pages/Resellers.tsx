@@ -936,7 +936,7 @@ export default function Resellers() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1 pt-1 border-t border-border/50">
                       {(r.status === "trial" || r.status === "expired") && (
                         <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => handleRenewSubscription(r)}>
                           <CreditCard className="w-3.5 h-3.5" /> Ativar
@@ -948,24 +948,24 @@ export default function Resellers() {
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="gap-1 h-8 text-xs px-2" onClick={() => openCredits(r)} title="Adicionar créditos">
-                          <CirclePlus className="w-4 h-4 text-primary" />
-                          <span className="text-[10px]">Créditos</span>
+                        <Button size="sm" variant="ghost" className="gap-1 h-8 text-xs px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary" onClick={() => openCredits(r)} title="Adicionar créditos">
+                          <CirclePlus className="w-4 h-4" />
+                          <span className="text-[10px] font-semibold">Créditos</span>
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleRenewSubscription(r)}>
-                          <CalendarClock className="w-3.5 h-3.5 text-emerald-400" />
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20" onClick={() => handleRenewSubscription(r)}>
+                          <CalendarClock className="w-4 h-4 text-emerald-400" />
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(r)}>
-                        <Pencil className="w-3.5 h-3.5" />
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openEdit(r)}>
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openHistory(r)}>
-                        <History className="w-3.5 h-3.5" />
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openHistory(r)}>
+                        <History className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => openDelete(r)}>
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-destructive/10 hover:bg-destructive/20" onClick={() => openDelete(r)}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     </div>
                   </div>
