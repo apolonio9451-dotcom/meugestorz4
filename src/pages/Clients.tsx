@@ -11,7 +11,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2 } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -962,17 +962,17 @@ export default function Clients() {
                   <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
                     {client.server && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
-                        🌐 {client.server}
+                        <Globe className="w-2.5 h-2.5" /> {client.server}
                       </span>
                     )}
                     {sub && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary font-semibold border border-primary/15">
-                        📦 {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
+                        <Package className="w-2.5 h-2.5" /> {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
                       </span>
                     )}
                     {client.referred_by && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
-                        🤝 {client.referred_by}
+                        <Handshake className="w-2.5 h-2.5" /> {client.referred_by}
                       </span>
                     )}
                   </div>
@@ -981,7 +981,9 @@ export default function Clients() {
                   {clientMacKeys.some(mk => mk.app_name) && (
                     <div className="flex items-center gap-1 flex-wrap">
                       {clientMacKeys.map((mk, i) => mk.app_name && (
-                        <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5">📱 {mk.app_name}</Badge>
+                        <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5 gap-1">
+                          <TvMinimal className="w-2.5 h-2.5" /> {mk.app_name}
+                        </Badge>
                       ))}
                     </div>
                   )}
