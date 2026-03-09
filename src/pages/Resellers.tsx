@@ -948,6 +948,24 @@ export default function Resellers() {
                             {r.whatsapp}
                           </p>
                         )}
+                        {isOwner && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Key className="w-3 h-3 text-muted-foreground/60 shrink-0" />
+                            <span className="text-[11px] font-mono text-muted-foreground">
+                              {visiblePasswords[r.id] && passwords[r.id] ? passwords[r.id] : "••••••••"}
+                            </span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); togglePasswordVisibility(r.id); }}
+                              className="p-0.5 rounded hover:bg-muted/80 transition-colors"
+                            >
+                              {visiblePasswords[r.id] ? (
+                                <EyeOff className="w-3 h-3 text-muted-foreground" />
+                              ) : (
+                                <Eye className="w-3 h-3 text-muted-foreground" />
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {getStatusBadge(r.status)}
                     </div>
