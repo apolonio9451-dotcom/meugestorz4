@@ -34,7 +34,7 @@ const categories = [
     color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     description: "Mensagem enviada para clientes cujo plano vence amanhã.",
     defaultMessage:
-      "Olá {nome}! 👋\n\nSeu plano vence *amanhã*.\n\n📋 Plano: {plano}\n💰 Valor: R$ {valor}\n📅 Vencimento: {vencimento}\n\nRenove agora para não perder o acesso! 🙏",
+      "Olá, {nome}! 👋\n\nPassando para lembrar que o seu acesso vence amanhã! 🗓️\n\nGaranta sua renovação antecipada para continuar aproveitando sem interrupções.\n\n📋 Plano: {plano}\n\n💰 Valor: R$ {valor}\n\n📅 Vencimento: {vencimento} ({dias} dias)\n\n🔑 Dados de Acesso:\n\n👤 Usuário: {usuario}\n\n🔑 Senha: {senha}\n\n🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}\n\nDeseja garantir sua vaga? Basta efetuar o Pix e enviar o comprovante:\n\n📌 Dados para Pagamento:\n\nBanco: [Seu Banco]\n\nNome: [Seu Nome]\n\nChave Pix: [Sua Chave]\n\nQualquer dúvida, estou aqui para ajudar! 🚀",
   },
   {
     key: "a_vencer",
