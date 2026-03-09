@@ -32,12 +32,13 @@ export default function ApiSettingsSection({ companyId }: Props) {
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
-        .select("id, api_url, api_token")
+        .select("id, api_url, api_token, auto_send_hour")
         .eq("company_id", companyId)
         .maybeSingle();
       if (data) {
         setApiUrl((data as any).api_url || "");
         setApiToken((data as any).api_token || "");
+        setAutoSendHour((data as any).auto_send_hour ?? 8);
         setExistingId((data as any).id);
       }
       setLoading(false);
