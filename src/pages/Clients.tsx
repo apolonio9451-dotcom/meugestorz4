@@ -922,6 +922,17 @@ export default function Clients() {
                           <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
                         </>)}
                         <DropdownMenuSeparator />
+                        {!(client as any).support_started_at && (
+                          <DropdownMenuItem onClick={async () => {
+                            const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
+                            if (error) toast.error("Erro ao enviar para suporte");
+                            else {
+                              toast.success(`${client.name} enviado para Suporte`);
+                              await logActivity("suporte", client.name, client.id, "Cliente encaminhado para check-up de suporte");
+                              fetchClients(); fetchActivityLogs();
+                            }
+                          }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
+                        )}
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
