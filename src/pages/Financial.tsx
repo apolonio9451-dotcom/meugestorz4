@@ -322,6 +322,74 @@ export default function Financial() {
         </CardContent>
       </Card>
 
+      {/* Entradas e Saídas */}
+      <Card className="glass-card border-border/30">
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sm font-medium text-foreground">
+            Entradas e Saídas
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Últimos 3 meses</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Mini bar chart */}
+            <div className="flex items-end gap-3 h-[140px] pt-4">
+              {entradasSaidasData.map((d, i) => {
+                const maxVal = Math.max(
+                  ...entradasSaidasData.map((x) => Math.max(x.entradas, x.saidas)),
+                  1
+                );
+                const entH = Math.max((d.entradas / maxVal) * 100, 6);
+                const saiH = Math.max((d.saidas / maxVal) * 100, 6);
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1">
+                    <div className="flex items-end gap-1">
+                      <div
+                        className="w-6 rounded-t-md transition-all"
+                        style={{
+                          height: `${entH}px`,
+                          backgroundColor: d.isCurrent
+                            ? "hsl(var(--primary))"
+                            : "hsl(var(--primary) / 0.35)",
+                        }}
+                      />
+                      <div
+                        className="w-6 rounded-t-md transition-all"
+                        style={{
+                          height: `${saiH}px`,
+                          backgroundColor: d.isCurrent
+                            ? "hsl(var(--muted-foreground))"
+                            : "hsl(var(--muted-foreground) / 0.3)",
+                        }}
+                      />
+                    </div>
+                    <span className={cn("text-xs", d.isCurrent ? "font-bold text-foreground" : "text-muted-foreground")}>
+                      {d.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Summary */}
+            <div className="flex flex-col gap-4 flex-1">
+              <div>
+                <p className="text-xs text-muted-foreground">Entradas</p>
+                <p className="text-xl font-display font-bold text-success">
+                  + {fmt(totalEntradas)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Saídas</p>
+                <p className="text-xl font-display font-bold text-destructive">
+                  - {fmt(totalSaidas)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Server Profit Table */}
       <Card className="glass-card border-border/30">
         <CardHeader className="pb-2">
