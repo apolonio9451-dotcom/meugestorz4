@@ -124,7 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         (payload) => {
           const reseller = payload.new as { company_id: string; credit_balance: number; status: string };
-          setCompanyId(reseller.company_id);
+          // Do NOT overwrite companyId here — it should stay as the reseller's own company (from membership)
+          // reseller.company_id is the PARENT company, not the reseller's own
           setResellerCredits(reseller.credit_balance);
           setUserRole(reseller.credit_balance > 0 ? "Admin" : "Usuário");
           if (reseller.status !== "trial") {
