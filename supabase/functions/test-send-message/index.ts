@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
     if (!apiToken) {
       return new Response(
-        JSON.stringify({ error: "EVOLUTI_TOKEN não configurado" }),
+        JSON.stringify({ error: "Token da API não configurado" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
