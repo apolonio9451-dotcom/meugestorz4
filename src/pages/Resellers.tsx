@@ -861,17 +861,16 @@ export default function Resellers() {
             </div>
 
             {/* Mobile Cards - shown only on mobile */}
-            <div className="md:hidden divide-y divide-border">
+            <div className="md:hidden grid gap-3 p-3">
               {paginated.map((r) => {
                 const remaining = getDaysRemaining(r);
-                const canGenerateAccess = r.status === "active" && (r.credit_balance > 0 || isOwner);
                 const parentName = r.parent_reseller_id ? parentNameMap[r.parent_reseller_id] : null;
 
                 return (
-                  <div key={r.id} className="p-3 space-y-3">
+                  <div key={r.id} className="rounded-xl border border-border bg-card p-3 space-y-3 shadow-sm">
                     {/* Parent indicator */}
                     {parentName && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground -mb-1">
                         <GitBranch className="w-3 h-3" />
                         <span>Sub-revenda de <strong className="text-foreground">{parentName}</strong></span>
                       </div>
@@ -936,7 +935,7 @@ export default function Resellers() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-border/50">
                       {(r.status === "trial" || r.status === "expired") && (
                         <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => handleRenewSubscription(r)}>
                           <CreditCard className="w-3.5 h-3.5" /> Ativar
@@ -948,16 +947,18 @@ export default function Resellers() {
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="gap-1 h-8 text-xs px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary" onClick={() => openCredits(r)} title="Adicionar créditos">
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-8 text-xs px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary" onClick={() => openCredits(r)}>
                           <CirclePlus className="w-4 h-4" />
                           <span className="text-[10px] font-semibold">Créditos</span>
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20" onClick={() => handleRenewSubscription(r)}>
-                          <CalendarClock className="w-4 h-4 text-emerald-400" />
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-8 text-xs px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400" onClick={() => handleRenewSubscription(r)}>
+                          <CalendarClock className="w-4 h-4" />
+                          <span className="text-[10px] font-semibold">Renovar</span>
                         </Button>
                       )}
+                      <div className="flex-1" />
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openEdit(r)}>
                         <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
