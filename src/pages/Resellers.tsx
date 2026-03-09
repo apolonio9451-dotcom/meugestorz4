@@ -556,10 +556,12 @@ export default function Resellers() {
 
   const filtered = useMemo(() => {
     return manageableResellers.filter((r) => {
+      const s = search.toLowerCase();
       const matchesSearch =
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.email?.toLowerCase().includes(search.toLowerCase()) ||
-        r.whatsapp?.includes(search);
+        r.name.toLowerCase().includes(s) ||
+        r.email?.toLowerCase().includes(s) ||
+        r.whatsapp?.includes(search) ||
+        r.id.toLowerCase().includes(s);
       const matchesStatus = statusFilter === "all" || r.status === statusFilter;
       let matchesParent = true;
       if (parentFilter === "direct") {
@@ -701,7 +703,7 @@ export default function Resellers() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 sm:p-4 border-b border-border gap-2 sm:gap-3">
           <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+            <Input placeholder="Buscar por nome, email, telefone ou ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
           </div>
           <div className="flex items-center gap-2">
             {parentOptions.length > 0 && (
@@ -767,6 +769,7 @@ export default function Resellers() {
                       <TableRow key={r.id} className="group">
                         <TableCell>
                           <div>
+                            <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm text-foreground">{r.name}</p>
                               <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
@@ -876,6 +879,7 @@ export default function Resellers() {
                     {/* Top: Name + Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
                           <Badge variant="outline" className={`text-[9px] px-1.5 py-0 shrink-0 ${
@@ -932,7 +936,7 @@ export default function Resellers() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1 pt-1 border-t border-border/50">
                       {(r.status === "trial" || r.status === "expired") && (
                         <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => handleRenewSubscription(r)}>
                           <CreditCard className="w-3.5 h-3.5" /> Ativar
@@ -944,24 +948,24 @@ export default function Resellers() {
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="gap-1 h-8 text-xs px-2" onClick={() => openCredits(r)} title="Adicionar créditos">
-                          <CirclePlus className="w-4 h-4 text-primary" />
-                          <span className="text-[10px]">Créditos</span>
+                        <Button size="sm" variant="ghost" className="gap-1 h-8 text-xs px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary" onClick={() => openCredits(r)} title="Adicionar créditos">
+                          <CirclePlus className="w-4 h-4" />
+                          <span className="text-[10px] font-semibold">Créditos</span>
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleRenewSubscription(r)}>
-                          <CalendarClock className="w-3.5 h-3.5 text-emerald-400" />
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20" onClick={() => handleRenewSubscription(r)}>
+                          <CalendarClock className="w-4 h-4 text-emerald-400" />
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(r)}>
-                        <Pencil className="w-3.5 h-3.5" />
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openEdit(r)}>
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openHistory(r)}>
-                        <History className="w-3.5 h-3.5" />
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openHistory(r)}>
+                        <History className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => openDelete(r)}>
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-destructive/10 hover:bg-destructive/20" onClick={() => openDelete(r)}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </Button>
                     </div>
                   </div>
