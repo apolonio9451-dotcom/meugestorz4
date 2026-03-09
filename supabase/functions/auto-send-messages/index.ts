@@ -24,60 +24,36 @@ function replacePlaceholders(
   return msg;
 }
 
-function normalizeEndpoint(url: string): string {
-  const cleaned = url.trim().replace(/\/$/, "");
-  if (
-    cleaned.includes("/api/messages/send") ||
-    cleaned.includes("/message/sendText/")
-  ) {
-    return cleaned;
-  }
-  return `${cleaned}/api/messages/send`;
+function getApiConfig(): { baseUrl: string; token: string } {
+  const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "").trim().replace(/\/$/, "");
+  const token = Deno.env.get("EVOLUTI_TOKEN") || "";
+  return { baseUrl: apiUrl, token };
 }
 
-function getEvolutiEndpoints(): string[] {
-  const configured = Deno.env.get("EVOLUTI_API_URL")?.trim();
-  if (configured) {
-    return configured
-      .split(",")
-      .map((url) => normalizeEndpoint(url))
-      .filter(Boolean);
-  }
-
-  return [
-    "https://evoluti.cloud/api/messages/send",
-    "https://api.evoluti.cloud/api/messages/send",
-  ];
-}
-
-async function sendMessageWithFallback(
-  evolutiToken: string,
+async function sendMessage(
+  baseUrl: string,
+  apiToken: string,
   number: string,
-  body: string
+  text: string
 ): Promise<{ ok: boolean; error: string }> {
-  const endpoints = getEvolutiEndpoints();
-  let lastError = "";
+  const endpoint = `${baseUrl}/send/text`;
 
-  for (const endpoint of endpoints) {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${evolutiToken}`,
-        },
-        body: JSON.stringify({ number, body }),
-      });
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "token": apiToken,
+      },
+      body: JSON.stringify({ number, text }),
+    });
 
-      const text = await res.text();
-      if (res.ok) return { ok: true, error: "" };
-      lastError = text;
-    } catch (err) {
-      lastError = String(err);
-    }
+    const responseText = await res.text();
+    if (res.ok) return { ok: true, error: "" };
+    return { ok: false, error: responseText };
+  } catch (err) {
+    return { ok: false, error: String(err) };
   }
-
-  return { ok: false, error: lastError };
 }
 
 function getCategory(
@@ -109,11 +85,18 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const evolutiToken = Deno.env.get("EVOLUTI_TOKEN");
+    const { baseUrl, token: apiToken } = getApiConfig();
 
-    if (!evolutiToken) {
+    if (!apiToken) {
       return new Response(
         JSON.stringify({ error: "EVOLUTI_TOKEN not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!baseUrl || !baseUrl.startsWith("http")) {
+      return new Response(
+        JSON.stringify({ error: "EVOLUTI_API_URL not configured or invalid" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -208,10 +191,11 @@ Deno.serve(async (req) => {
 
         const normalizedPhone = normalizePhone(phone);
 
-        // Send via Evoluti API
+        // Send via Whatsapi.my (uazapi) API
         try {
-          const sendResult = await sendMessageWithFallback(
-            evolutiToken,
+          const sendResult = await sendMessage(
+            baseUrl,
+            apiToken,
             normalizedPhone,
             messageBody
           );
