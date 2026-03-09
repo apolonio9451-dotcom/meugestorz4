@@ -201,6 +201,105 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Support check-up auto-send ---
+    for (const config of eligibleConfigs) {
+      if (!config.api_url || !config.api_token) continue;
+      const apiUrl = config.api_url.replace(/\/$/, "");
+      const apiToken = config.api_token;
+      const companyId = config.company_id;
+
+      // Fetch support template
+      const { data: supportTemplateRows } = await supabase
+        .from("message_templates")
+        .select("message")
+        .eq("company_id", companyId)
+        .eq("category", "suporte")
+        .limit(1);
+
+      const supportTemplate = supportTemplateRows?.[0]?.message ||
+        "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
+
+      // Fetch clients with support_started_at set and >= 2 days ago
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+      const { data: supportClients } = await supabase
+        .from("clients")
+        .select(`
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, support_started_at,
+          client_subscriptions (
+            end_date, amount, custom_price,
+            subscription_plans ( name, price )
+          )
+        `)
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .not("support_started_at", "is", null)
+        .lte("support_started_at", twoDaysAgo.toISOString());
+
+      if (!supportClients) continue;
+
+      for (const client of supportClients) {
+        // Don't re-send if already sent today
+        if (client.ultimo_envio_auto === today) continue;
+
+        const phone = client.whatsapp || client.phone || "";
+        if (!phone || phone.replace(/\D/g, "").length < 10) continue;
+
+        const subs = (client as any).client_subscriptions;
+        const sub = subs?.[0];
+        const plan = sub?.subscription_plans;
+        const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
+
+        const messageBody = replacePlaceholders(supportTemplate, {
+          nome: client.name || "",
+          plano: plan?.name || "",
+          valor: Number(valor).toFixed(2),
+          vencimento: sub ? new Date(sub.end_date + "T00:00:00").toLocaleDateString("pt-BR") : "",
+          dias: "",
+          mac: "",
+          usuario: client.iptv_user || "",
+          senha: client.iptv_password || "",
+          servidor: client.server || "",
+        });
+
+        const normalizedPhone = normalizePhone(phone);
+
+        try {
+          const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
+
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category: "suporte",
+            status: sendResult.ok ? "success" : "error",
+            error_message: sendResult.error || null,
+            phone: normalizedPhone,
+          });
+
+          if (sendResult.ok) {
+            // Clear support_started_at after successful auto-send
+            await supabase.from("clients").update({ ultimo_envio_auto: today, support_started_at: null }).eq("id", client.id);
+            totalSent++;
+          } else {
+            totalErrors++;
+          }
+        } catch (sendErr) {
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category: "suporte",
+            status: "error",
+            error_message: String(sendErr),
+            phone: normalizedPhone,
+          });
+          totalErrors++;
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ sent: totalSent, errors: totalErrors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

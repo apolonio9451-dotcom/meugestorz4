@@ -287,6 +287,7 @@ export type Database = {
           reseller_id: string | null
           server: string | null
           status: string
+          support_started_at: string | null
           ultimo_envio_auto: string | null
           updated_at: string
           whatsapp: string | null
@@ -308,6 +309,7 @@ export type Database = {
           reseller_id?: string | null
           server?: string | null
           status?: string
+          support_started_at?: string | null
           ultimo_envio_auto?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -329,6 +331,7 @@ export type Database = {
           reseller_id?: string | null
           server?: string | null
           status?: string
+          support_started_at?: string | null
           ultimo_envio_auto?: string | null
           updated_at?: string
           whatsapp?: string | null
