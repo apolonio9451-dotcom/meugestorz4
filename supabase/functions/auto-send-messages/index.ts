@@ -66,11 +66,12 @@ Deno.serve(async (req) => {
     // Current hour in Brasília (UTC-3)
     const nowUtc = new Date();
     const brasiliaHour = (nowUtc.getUTCHours() - 3 + 24) % 24;
+    const brasiliaMinute = nowUtc.getUTCMinutes();
 
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -82,12 +83,13 @@ Deno.serve(async (req) => {
     // Filter only companies whose auto_send_hour matches current Brasília hour
     const eligibleConfigs = apiConfigs.filter((c: any) => {
       const configuredHour = c.auto_send_hour ?? 8;
-      return configuredHour === brasiliaHour;
+      const configuredMinute = c.auto_send_minute ?? 0;
+      return configuredHour === brasiliaHour && configuredMinute === brasiliaMinute;
     });
 
     if (eligibleConfigs.length === 0) {
       return new Response(
-        JSON.stringify({ message: `Nenhuma empresa configurada para disparo às ${brasiliaHour}h. Hora atual (Brasília): ${brasiliaHour}:00` }),
+        JSON.stringify({ message: `Nenhuma empresa configurada para disparo às ${brasiliaHour}:${String(brasiliaMinute).padStart(2,"0")}. Hora atual (Brasília): ${brasiliaHour}:${String(brasiliaMinute).padStart(2,"0")}` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
