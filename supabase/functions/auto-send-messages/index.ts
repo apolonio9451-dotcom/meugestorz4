@@ -30,16 +30,16 @@ async function sendMessage(
   number: string,
   body: string
 ): Promise<{ ok: boolean; error: string }> {
-  const endpoint = `${apiUrl}/api/messages/send`;
+  const endpoint = `${apiUrl}/send/text`;
 
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiToken}`,
+        "token": apiToken,
       },
-      body: JSON.stringify({ number, body }),
+      body: JSON.stringify({ number, text: body }),
     });
 
     const responseText = await res.text();
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
-    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://evoluti.cloud").trim().replace(/\/$/, "");
+    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
 
     if (!apiToken) {
       return new Response(

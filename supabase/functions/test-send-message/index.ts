@@ -37,11 +37,11 @@ Deno.serve(async (req) => {
     }
 
     const apiToken = (Deno.env.get("EVOLUTI_TOKEN") || "").trim();
-    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://evoluti.cloud").trim().replace(/\/$/, "");
+    const apiUrl = (Deno.env.get("EVOLUTI_API_URL") || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
 
     if (!apiToken) {
       return new Response(
-        JSON.stringify({ error: "EVOLUTI_TOKEN não configurado" }),
+        JSON.stringify({ error: "Token da API não configurado" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -104,17 +104,17 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
 
-    // Send via Evoluti API: POST /api/messages/send
-    const endpoint = `${apiUrl}/api/messages/send`;
+    // Send via UAZAPI: POST /send/text
+    const endpoint = `${apiUrl}/send/text`;
 
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiToken}`,
+          "token": apiToken,
         },
-        body: JSON.stringify({ number: normalizedPhone, body: messageBody }),
+        body: JSON.stringify({ number: normalizedPhone, text: messageBody }),
       });
 
       const responseText = await res.text();
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
     } catch (networkErr) {
       return new Response(
         JSON.stringify({
-          error: `Erro de rede ao conectar com a API Evoluti: ${String(networkErr)}`,
+          error: `Erro de rede ao conectar com a API UAZAPI: ${String(networkErr)}`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
