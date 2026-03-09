@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN support_started_at timestamp with time zone DEFAULT NULL;
