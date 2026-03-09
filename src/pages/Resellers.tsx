@@ -879,6 +879,7 @@ export default function Resellers() {
                     {/* Top: Name + Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
                           <Badge variant="outline" className={`text-[9px] px-1.5 py-0 shrink-0 ${
