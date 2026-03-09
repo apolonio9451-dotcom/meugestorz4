@@ -769,6 +769,7 @@ export default function Resellers() {
                       <TableRow key={r.id} className="group">
                         <TableCell>
                           <div>
+                            <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm text-foreground">{r.name}</p>
                               <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
