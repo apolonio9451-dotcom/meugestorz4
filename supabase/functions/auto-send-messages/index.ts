@@ -300,6 +300,58 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Log errors for companies WITHOUT API configured ---
+    const configuredCompanyIds = (apiConfigs || []).map((c: any) => c.company_id);
+    
+    // Find all companies that have active clients with subscriptions but no API
+    const { data: allCompanies } = await supabase
+      .from("companies")
+      .select("id, name");
+
+    if (allCompanies) {
+      const unconfiguredCompanies = allCompanies.filter(
+        (c: any) => !configuredCompanyIds.includes(c.id)
+      );
+
+      for (const company of unconfiguredCompanies) {
+        // Check if this company has any clients that would need messages today
+        const { data: pendingClients } = await supabase
+          .from("clients")
+          .select(`
+            id, name,
+            client_subscriptions ( end_date )
+          `)
+          .eq("company_id", company.id)
+          .eq("status", "active")
+          .neq("ultimo_envio_auto", today);
+
+        if (!pendingClients || pendingClients.length === 0) continue;
+
+        // Check if any client has a subscription expiring within the relevant window
+        const hasEligible = pendingClients.some((client: any) => {
+          const subs = client.client_subscriptions;
+          if (!subs || subs.length === 0) return false;
+          const endDate = new Date(subs[0].end_date + "T00:00:00");
+          const todayDate = new Date(today + "T00:00:00");
+          const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+          return getCategory(diffDays) !== null;
+        });
+
+        if (hasEligible) {
+          // Log one error per company without API
+          await supabase.from("auto_send_logs").insert({
+            company_id: company.id,
+            client_name: `[${company.name}]`,
+            category: "erro_config",
+            status: "error",
+            error_message: "API não configurada pelo revendedor. Configure a URL e Token da UAZAPI nas Configurações.",
+            phone: "",
+          });
+          totalErrors++;
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ sent: totalSent, errors: totalErrors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
