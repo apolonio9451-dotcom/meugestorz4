@@ -50,7 +50,7 @@ const categories = [
     color: "bg-destructive/20 text-destructive border-destructive/30",
     description: "Mensagem enviada para clientes com plano já vencido.",
     defaultMessage:
-      "Olá, {nome}! 👋\n\nNotamos que o seu plano venceu e o seu acesso pode estar interrompido. 🚫\nNão queremos que você perca seus conteúdos! Vamos regularizar isso agora?\n\n📋 Dados da Assinatura Vencida:\n\nPlano: {plano}\n\nValor: R$ {valor}\n\nVencimento: {vencimento}\n\n🔑 Suas Credenciais:\n\n👤 Usuário: {usuario} | 🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}",
+      "Olá, *{primeiro_nome}* {saudacao}! 👋\n\nNotamos que o seu plano venceu a *{dias} dias* e o seu acesso pode estar interrompido. 🚫\nNão perca seus conteúdos favoritos! Vamos regularizar isso agora?\n\n📋 *Dados da Assinatura Vencida*:\n\n*Plano*: {plano}\n*Valor*: R$ {valor}\n*Vencimento*: {vencimento}\n\n📌 *Dados para Pagamento*:\n\n📌 *Chave*: {sua_chave_pix}\n👤 *Nome*: [Seu Nome]\n\n_Se já efetuou o pagamento desconsidere esse lembrete_",
   },
   {
     key: "followup",
