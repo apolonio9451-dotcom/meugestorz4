@@ -8,8 +8,10 @@ const corsHeaders = {
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("55") && digits.length >= 12) return digits;
-  if (digits.length === 11 || digits.length === 10) return "55" + digits;
+  // If already has country code (12+ digits starting with valid code), keep as-is
+  if (digits.length >= 12) return digits;
+  // Brazilian numbers (10-11 digits without country code)
+  if (digits.length === 10 || digits.length === 11) return "55" + digits;
   return digits;
 }
 
@@ -146,7 +148,7 @@ Deno.serve(async (req) => {
         if (client.ultimo_envio_auto === today) continue;
 
         const phone = client.whatsapp || client.phone || "";
-        if (!phone || phone.replace(/\D/g, "").length < 10) continue;
+        if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
@@ -258,7 +260,7 @@ Deno.serve(async (req) => {
         if (client.ultimo_envio_auto === today) continue;
 
         const phone = client.whatsapp || client.phone || "";
-        if (!phone || phone.replace(/\D/g, "").length < 10) continue;
+        if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
         const subs = (client as any).client_subscriptions;
         const sub = subs?.[0];
