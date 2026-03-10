@@ -15,6 +15,7 @@ interface CompanySettings {
   brand_name: string;
   login_slug: string | null;
   logo_url: string | null;
+  icon_url: string | null;
   primary_color: string;
   secondary_color: string;
   background_color: string;
@@ -26,7 +27,8 @@ export default function Settings() {
   const isOwner = userRole === "Proprietário";
   const isReseller = !!parentCompanyId;
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  const brandLogoInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -35,6 +37,7 @@ export default function Settings() {
     brand_name: "",
     login_slug: "",
     logo_url: null,
+    icon_url: null,
     primary_color: "#00db49",
     secondary_color: "#00c0f5",
     background_color: "#0357a5",
@@ -83,6 +86,7 @@ export default function Settings() {
       brand_name: settings.brand_name,
       login_slug: settings.login_slug,
       logo_url: settings.logo_url,
+      icon_url: settings.icon_url,
       primary_color: settings.primary_color,
       secondary_color: settings.secondary_color,
       background_color: settings.background_color,
@@ -113,37 +117,40 @@ export default function Settings() {
     setSaving(false);
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "icon" | "brand") => {
     const file = e.target.files?.[0];
     if (!file || !companyId) return;
 
     setUploading(true);
     const fileExt = file.name.split(".").pop();
-    const filePath = `${companyId}/logo.${fileExt}`;
+    const filePath = `${companyId}/${type}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("logos")
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      toast({ title: "Erro ao enviar logo", description: uploadError.message, variant: "destructive" });
+      toast({ title: "Erro ao enviar imagem", description: uploadError.message, variant: "destructive" });
       setUploading(false);
       return;
     }
 
     const { data: urlData } = supabase.storage.from("logos").getPublicUrl(filePath);
-    setSettings((prev) => ({ ...prev, logo_url: urlData.publicUrl }));
+    const field = type === "icon" ? "icon_url" : "logo_url";
+    setSettings((prev) => ({ ...prev, [field]: urlData.publicUrl }));
     setUploading(false);
-    toast({ title: "Logo enviado com sucesso!" });
+    toast({ title: type === "icon" ? "Ícone enviado!" : "Logo da marca enviado!" });
   };
 
-  const handleRemoveLogo = async () => {
+  const handleRemoveImage = async (type: "icon" | "brand") => {
     if (!companyId) return;
-    // Remove from storage
-    await supabase.storage.from("logos").remove([`${companyId}/logo.png`, `${companyId}/logo.jpg`, `${companyId}/logo.jpeg`, `${companyId}/logo.webp`]);
-    setSettings((prev) => ({ ...prev, logo_url: null }));
-    toast({ title: "Logo removido" });
+    const exts = ["png", "jpg", "jpeg", "webp"];
+    await supabase.storage.from("logos").remove(exts.map((ext) => `${companyId}/${type}.${ext}`));
+    const field = type === "icon" ? "icon_url" : "logo_url";
+    setSettings((prev) => ({ ...prev, [field]: null }));
+    toast({ title: type === "icon" ? "Ícone removido" : "Logo da marca removido" });
   };
+
 
   if (loading) {
     return (
@@ -168,29 +175,14 @@ export default function Settings() {
       <div className="glass-card rounded-xl p-6 space-y-8">
         <h2 className="text-lg font-display font-semibold text-foreground">Marca</h2>
 
-        {/* Brand Name */}
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold text-foreground">Nome da Marca</Label>
-          <Input
-            value={settings.brand_name}
-            onChange={(e) => setSettings((prev) => ({ ...prev, brand_name: e.target.value }))}
-            placeholder="Nome da sua empresa"
-            className="bg-secondary/50 border-border"
-          />
-        </div>
-
-
-        {/* Logo */}
+        {/* Icon Logo */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold text-foreground">Logo</Label>
+          <Label className="text-sm font-semibold text-foreground">Ícone (logo pequeno)</Label>
+          <p className="text-muted-foreground text-xs">Exibido como ícone no menu lateral e header. Ideal: imagem quadrada.</p>
           <div className="flex items-center gap-4">
-            {settings.logo_url ? (
+            {settings.icon_url ? (
               <div className="h-16 w-16 rounded-lg overflow-hidden bg-secondary/50 border border-border flex items-center justify-center">
-                <img
-                  src={settings.logo_url}
-                  alt="Logo"
-                  className="h-full w-full object-contain"
-                />
+                <img src={settings.icon_url} alt="Ícone" className="h-full w-full object-contain" />
               </div>
             ) : (
               <div className="h-16 w-16 rounded-lg bg-secondary/50 border border-border border-dashed flex items-center justify-center">
@@ -198,28 +190,46 @@ export default function Settings() {
               </div>
             )}
             <div className="flex gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
+              <Button variant="default" size="sm" onClick={() => iconInputRef.current?.click()} disabled={uploading}>
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
                 Trocar
               </Button>
-              {settings.logo_url && (
-                <Button variant="destructive" size="sm" onClick={handleRemoveLogo}>
+              {settings.icon_url && (
+                <Button variant="destructive" size="sm" onClick={() => handleRemoveImage("icon")}>
                   <X className="h-4 w-4 mr-1" /> Remover
                 </Button>
               )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
+            <input ref={iconInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, "icon")} />
+          </div>
+        </div>
+
+        {/* Brand Logo */}
+        <div className="space-y-3">
+          <Label className="text-sm font-semibold text-foreground">Logo da Marca (nome)</Label>
+          <p className="text-muted-foreground text-xs">Exibido no lugar do nome da marca no menu. Ideal: imagem horizontal/retangular.</p>
+          <div className="flex items-center gap-4">
+            {settings.logo_url ? (
+              <div className="h-16 w-auto max-w-[200px] rounded-lg overflow-hidden bg-secondary/50 border border-border flex items-center justify-center">
+                <img src={settings.logo_url} alt="Logo da Marca" className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="h-16 w-32 rounded-lg bg-secondary/50 border border-border border-dashed flex items-center justify-center">
+                <Upload className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button variant="default" size="sm" onClick={() => brandLogoInputRef.current?.click()} disabled={uploading}>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
+                Trocar
+              </Button>
+              {settings.logo_url && (
+                <Button variant="destructive" size="sm" onClick={() => handleRemoveImage("brand")}>
+                  <X className="h-4 w-4 mr-1" /> Remover
+                </Button>
+              )}
+            </div>
+            <input ref={brandLogoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, "brand")} />
           </div>
         </div>
 
@@ -376,6 +386,7 @@ export default function Settings() {
                 brand_name: "Meu gestor",
                 login_slug: "",
                 logo_url: null,
+                icon_url: null,
                 primary_color: defaultTheme.colors.primary,
                 secondary_color: defaultTheme.colors.secondary,
                 background_color: defaultTheme.colors.background,

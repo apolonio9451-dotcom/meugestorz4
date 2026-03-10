@@ -72,6 +72,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("ClientHub");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandIcon, setBrandIcon] = useState<string | null>(null);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
@@ -166,11 +167,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         // Regular user: fetch from company_settings
         const { data } = await supabase
           .from("company_settings")
-          .select("brand_name, logo_url, primary_color, secondary_color, background_color")
+          .select("brand_name, logo_url, icon_url, primary_color, secondary_color, background_color")
           .eq("company_id", companyId)
           .maybeSingle();
         if (data?.brand_name) setBrandName(data.brand_name);
         if (data?.logo_url) setBrandLogo(data.logo_url);
+        if (data?.icon_url) setBrandIcon(data.icon_url);
         if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
       }
     };
@@ -354,7 +356,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border/50">
-          {brandLogo ? (
+          {brandIcon ? (
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
+              <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+            </div>
+          ) : brandLogo ? (
             <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
               <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
             </div>
@@ -364,7 +370,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
           )}
         <div className="flex flex-col min-w-0">
-          <span className="font-display font-bold text-lg text-foreground truncate leading-tight">{brandName}</span>
+          {brandLogo ? (
+            <img src={brandLogo} alt="Marca" className="h-6 max-w-[120px] object-contain" />
+          ) : (
+            <span className="font-display font-bold text-lg text-foreground truncate leading-tight">{brandName}</span>
+          )}
           {userRole && (
             <span className="text-[10px] font-medium text-muted-foreground truncate">{userRole}</span>
           )}
@@ -541,7 +551,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* Centered brand name + logo */}
           <div className="flex-1 flex items-center justify-center gap-2.5">
-            {brandLogo ? (
+            {brandIcon ? (
+              <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
+                <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+              </div>
+            ) : brandLogo ? (
               <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
                 <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
               </div>
@@ -550,7 +564,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Building2 className="w-5 h-5 text-primary" />
               </div>
             )}
-            <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
+            {brandLogo ? (
+              <img src={brandLogo} alt="Marca" className="h-7 max-w-[140px] object-contain" />
+            ) : (
+              <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
+            )}
           </div>
 
           {/* Spacer to balance hamburger on mobile */}
