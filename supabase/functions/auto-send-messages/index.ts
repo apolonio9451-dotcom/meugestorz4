@@ -76,7 +76,7 @@ const defaultTemplates: Record<string, string> = {
   a_vencer:
     "*Olá, {primeiro_nome}, {saudacao}*! 👋\n\nPassando  para te manter informado sobre o status do seu acesso. Seu plano vence em {dias} dias! ⏳\n\nPreparamos tudo para que você continue aproveitando sua programação sem interrupções. Confira os detalhes:\n\n📋 Resumo da Assinatura:\n\n*Plano*: {plano}\n*Valor*: R$ {valor}\n*Vencimento*: {vencimento}\n\n🔑 *Dados do Seu Acesso*:\n\n👤 _Usuário: {usuario}_\n🖥️ _MAC: {mac}_\n🌐 _Servidor: {servidor}_\n\nQuer se antecipar e garantir sua renovação? 🚀\n\n📌 *Dados para Pagamento*:\n\n*Banco*: [Seu Banco]\n*Nome*: [Seu Nome]\n*Chave Pix*: {sua_chave_pix}\n\n_Qualquer dúvida ou se precisar de suporte, conte comigo_! 😊",
   vencidos:
-    "Olá, {nome}! 👋\n\nNotamos que o seu plano venceu e o seu acesso pode estar interrompido. 🚫\nNão queremos que você perca seus conteúdos! Vamos regularizar isso agora?\n\n📋 Dados da Assinatura Vencida:\n\nPlano: {plano}\n\nValor: R$ {valor}\n\nVencimento: {vencimento}\n\n🔑 Suas Credenciais:\n\n👤 Usuário: {usuario} | 🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}",
+    "Olá, *{primeiro_nome}* {saudacao}! 👋\n\nNotamos que o seu plano venceu a *{dias} dias* e o seu acesso pode estar interrompido. 🚫\nNão perca seus conteúdos favoritos! Vamos regularizar isso agora?\n\n📋 *Dados da Assinatura Vencida*:\n\n*Plano*: {plano}\n*Valor*: R$ {valor}\n*Vencimento*: {vencimento}\n\n📌 *Dados para Pagamento*:\n\n📌 *Chave*: {sua_chave_pix}\n👤 *Nome*: [Seu Nome]\n\n_Se já efetuou o pagamento desconsidere esse lembrete_",
 };
 
 Deno.serve(async (req) => {
