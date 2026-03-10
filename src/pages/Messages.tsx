@@ -26,7 +26,7 @@ const categories = [
     color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     description: "Mensagem enviada para clientes cujo plano vence hoje.",
     defaultMessage:
-      "Olá, {nome}! 👋\n\nPassando para informar que o seu acesso vence hoje! ⏳\n\nPara não ficar sem o sinal e garantir a continuidade do seu serviço, confira os detalhes abaixo:\n\n📋 Plano: {plano}\n\n💰 Valor: R$ {valor}\n\n📅 Vencimento: {vencimento} ({dias} dias de uso)\n\n🔑 Suas Credenciais Atuais:\n\n👤 Usuário: {usuario}\n\n🔑 Senha: {senha}\n\n🖥️ MAC: {mac}\n\n🌐 Servidor: {servidor}\n\nDeseja realizar a renovação agora? Basta efetuar o pagamento via Pix e me enviar o comprovante por aqui:\n\n📌 Dados para Pix: * Banco: [Seu Banco]\n\nNome: [Seu Nome]\n\nChave Pix: [Sua Chave]\n\nQualquer dúvida ou se precisar de suporte técnico, estou à disposição! 🤝",
+      "Olá, {nome}! ⏳\n\nSeu acesso vence hoje. Para não ficar sem sinal, confira os dados para renovação:\n\n📋 Plano: {plano}\n\n💰 Valor: R$ {valor}\n\n📅 Vencimento: {vencimento}\n\n💳 Pagamento Pix\nClique na chave para copiar:\n\n📌 Chave: {sua_chave_pix}\n👤 Nome: [Seu Nome]\n\nApós o pagamento, envie o comprovante por aqui para liberação imediata. 🤝",
   },
   {
     key: "vence_amanha",
