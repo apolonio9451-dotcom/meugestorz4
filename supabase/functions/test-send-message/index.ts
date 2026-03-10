@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
 
     const messageBody = replacePlaceholders(template, {
       saudacao: getGreeting(),
+      primeiro_nome: (sampleClient?.name || "Cliente Teste").split(" ")[0],
       nome: sampleClient?.name || "Cliente Teste",
       plano: plan?.name || "Plano Exemplo",
       valor: Number(valor).toFixed(2),
