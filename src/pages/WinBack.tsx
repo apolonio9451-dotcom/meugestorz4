@@ -33,7 +33,8 @@ export default function WinBack() {
       supabase.from("client_subscriptions").select("client_id, end_date, amount, subscription_plans(name)").eq("company_id", companyId).order("end_date", { ascending: false }),
       supabase.from("winback_campaign_progress").select("client_id, current_step, last_sent_at").eq("company_id", companyId),
       supabase.from("message_templates").select("category, message").eq("company_id", companyId).like("category", "winback_%"),
-    ]).then(([clientsRes, subsRes, progressRes, templatesRes]) => {
+      supabase.from("api_settings" as any).select("winback_paused").eq("company_id", companyId).maybeSingle(),
+    ]).then(([clientsRes, subsRes, progressRes, templatesRes, apiRes]) => {
       const allClients = clientsRes.data || [];
       const allSubs = subsRes.data || [];
       const today = new Date();
