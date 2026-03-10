@@ -72,6 +72,8 @@ const categories = [
 
 const variables = [
   { tag: "{saudacao}", desc: "Bom dia / Boa tarde / Boa noite (automático)" },
+  { tag: "{dia_semana}", desc: "Dia da semana (ex: Segunda-feira)" },
+  { tag: "{dia}", desc: "Dia do mês (ex: 10)" },
   { tag: "{nome}", desc: "Nome do cliente" },
   { tag: "{primeiro_nome}", desc: "Primeiro nome do cliente" },
   { tag: "{plano}", desc: "Nome do plano" },

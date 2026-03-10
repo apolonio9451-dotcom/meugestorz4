@@ -15,12 +15,25 @@ function normalizePhone(phone: string): string {
   return digits;
 }
 
-function getGreeting(): string {
+function getBrasiliaDate(): Date {
   const nowUtc = new Date();
-  const brasiliaHour = (nowUtc.getUTCHours() - 3 + 24) % 24;
-  if (brasiliaHour >= 5 && brasiliaHour < 12) return "Bom dia";
-  if (brasiliaHour >= 12 && brasiliaHour < 18) return "Boa tarde";
+  return new Date(nowUtc.getTime() - 3 * 60 * 60 * 1000);
+}
+
+function getGreeting(): string {
+  const h = getBrasiliaDate().getUTCHours();
+  if (h >= 5 && h < 12) return "Bom dia";
+  if (h >= 12 && h < 18) return "Boa tarde";
   return "Boa noite";
+}
+
+function getDayOfWeek(): string {
+  const dias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+  return dias[getBrasiliaDate().getUTCDay()];
+}
+
+function getDayOfMonth(): string {
+  return String(getBrasiliaDate().getUTCDate());
 }
 
 function replacePlaceholders(template: string, vars: Record<string, string>): string {
@@ -169,6 +182,8 @@ Deno.serve(async (req) => {
 
         const messageBody = replacePlaceholders(template, {
           saudacao: getGreeting(),
+          dia_semana: getDayOfWeek(),
+          dia: getDayOfMonth(),
           primeiro_nome: (client.name || "").split(" ")[0],
           nome: client.name || "",
           plano: plan?.name || "",
