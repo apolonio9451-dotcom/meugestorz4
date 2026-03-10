@@ -16,7 +16,7 @@ import {
   LogOut,
   Menu,
   X,
-  Building2,
+  
   Server,
   DollarSign,
   RotateCcw,
