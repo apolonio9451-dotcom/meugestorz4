@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
     const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
     const messageBody = replacePlaceholders(template, {
+      saudacao: getGreeting(),
       nome: sampleClient?.name || "Cliente Teste",
       plano: plan?.name || "Plano Exemplo",
       valor: Number(valor).toFixed(2),
