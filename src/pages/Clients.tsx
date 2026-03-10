@@ -78,7 +78,7 @@ export default function Clients() {
   const [referralSearch, setReferralSearch] = useState("");
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
-  const [formFollowUpActive, setFormFollowUpActive] = useState(true);
+  const [formFollowUpActive, setFormFollowUpActive] = useState(false);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -244,7 +244,7 @@ export default function Clients() {
       setFormBirthDate(undefined);
       setFormReferredBy("");
       setReferralSearch("");
-      setFormFollowUpActive(true);
+      setFormFollowUpActive(false);
       setFormPlanId("");
       setFormAmount("");
       setFormEndDate(undefined);
@@ -411,7 +411,7 @@ export default function Clients() {
   const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "", app_name: "", expires_at: "" }]);
   const removeMacKey = (index: number) => setFormMacKeys(formMacKeys.filter((_, i) => i !== index));
   const formatMac = (value: string) => {
-    const raw = value.replace(/[^0-9]/g, "").slice(0, 12);
+    const raw = value.replace(/[^0-9a-fA-F]/g, "").slice(0, 12);
     return raw.match(/.{1,2}/g)?.join(":") || raw;
   };
 
