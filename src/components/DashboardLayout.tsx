@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { themePresets, applyThemePreset } from "@/lib/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import defaultBrandLogo from "@/assets/brand-logo.png";
 import { differenceInDays, parseISO } from "date-fns";
 import {
   LayoutDashboard,
@@ -15,7 +16,7 @@ import {
   LogOut,
   Menu,
   X,
-  Building2,
+  
   Server,
   DollarSign,
   RotateCcw,
@@ -70,9 +71,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [brandName, setBrandName] = useState("ClientHub");
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
-  const [brandIcon, setBrandIcon] = useState<string | null>(null);
+  const [brandName, setBrandName] = useState("Meu Gestor");
+  const [brandLogo, setBrandLogo] = useState<string | null>(defaultBrandLogo);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
@@ -172,7 +172,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .maybeSingle();
         if (data?.brand_name) setBrandName(data.brand_name);
         if (data?.logo_url) setBrandLogo(data.logo_url);
-        if (data?.icon_url) setBrandIcon(data.icon_url);
         if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
       }
     };
@@ -355,30 +354,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border/50">
-          {brandIcon ? (
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-              <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50">
+          <div className="relative flex items-center justify-center flex-1 min-w-0">
+            {/* Glow effect behind logo */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-32 h-10 rounded-full bg-primary/20 blur-xl" />
             </div>
-          ) : brandLogo ? (
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-              <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110 overflow-hidden">
-              <img src="/icon-512.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-          )}
-        <div className="flex flex-col min-w-0">
-          {brandLogo ? (
-            <img src={brandLogo} alt="Marca" className="h-6 max-w-[120px] object-contain" />
-          ) : (
-            <span className="font-display font-bold text-lg text-foreground truncate leading-tight">{brandName}</span>
-          )}
+            <img
+              src={brandLogo || defaultBrandLogo}
+              alt="Marca"
+              className="relative h-8 max-w-[160px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+            />
+          </div>
           {userRole && (
             <span className="text-[10px] font-medium text-muted-foreground truncate">{userRole}</span>
           )}
-        </div>
           <button className="lg:hidden ml-auto text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
@@ -549,26 +539,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Menu className="w-6 h-6 text-foreground" />
           </button>
 
-          {/* Centered brand name + logo */}
-          <div className="flex-1 flex items-center justify-center gap-2.5">
-            {brandIcon ? (
-              <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
-                <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="relative flex items-center justify-center">
+              {/* Glow effect */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-40 h-12 rounded-full bg-primary/15 blur-xl" />
               </div>
-            ) : brandLogo ? (
-              <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
-                <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div className="w-10 h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5 text-primary" />
-              </div>
-            )}
-            {brandLogo ? (
-              <img src={brandLogo} alt="Marca" className="h-7 max-w-[140px] object-contain" />
-            ) : (
-              <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
-            )}
+              <img
+                src={brandLogo || defaultBrandLogo}
+                alt="Marca"
+                className="relative h-9 max-w-[180px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+              />
+            </div>
           </div>
 
           {/* Spacer to balance hamburger on mobile */}
