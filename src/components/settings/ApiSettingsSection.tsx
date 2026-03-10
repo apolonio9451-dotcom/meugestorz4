@@ -13,6 +13,7 @@ interface Props {
 export default function ApiSettingsSection({ companyId }: Props) {
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
+  const [pixKey, setPixKey] = useState("");
   const [autoSendHour, setAutoSendHour] = useState(8);
   const [autoSendMinute, setAutoSendMinute] = useState(0);
   const [showToken, setShowToken] = useState(false);
