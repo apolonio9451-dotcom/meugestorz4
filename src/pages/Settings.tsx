@@ -27,7 +27,7 @@ export default function Settings() {
   const isOwner = userRole === "Proprietário";
   const isReseller = !!parentCompanyId;
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // file input refs moved below upload handlers
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
