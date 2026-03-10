@@ -151,8 +151,6 @@ export default function Settings() {
     toast({ title: type === "icon" ? "Ícone removido" : "Logo da marca removido" });
   };
 
-  const iconInputRef = useRef<HTMLInputElement>(null);
-  const brandLogoInputRef = useRef<HTMLInputElement>(null);
 
   if (loading) {
     return (
