@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
         if (client.ultimo_envio_auto === today) continue;
 
         const phone = client.whatsapp || client.phone || "";
-        if (!phone || phone.replace(/\D/g, "").length < 10) continue;
+        if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
         const subs = (client as any).client_subscriptions;
         const sub = subs?.[0];
