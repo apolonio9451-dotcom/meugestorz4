@@ -354,22 +354,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50">
-          <div className="relative flex items-center justify-center flex-1 min-w-0">
+        <div className="flex items-center px-4 h-20 border-b border-sidebar-border/50">
+          <div className="relative flex items-center justify-center flex-1 min-w-0 py-2">
             {/* Glow effect behind logo */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-32 h-10 rounded-full bg-primary/20 blur-xl" />
+              <div className="w-48 h-14 rounded-full bg-primary/20 blur-2xl" />
             </div>
             <img
               src={brandLogo || defaultBrandLogo}
               alt="Marca"
-              className="relative h-8 max-w-[160px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+              className="relative h-12 max-w-[200px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
             />
           </div>
-          {userRole && (
-            <span className="text-[10px] font-medium text-muted-foreground truncate">{userRole}</span>
-          )}
-          <button className="lg:hidden ml-auto text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
+          <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
         </div>
