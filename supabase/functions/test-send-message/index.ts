@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
       usuario: sampleClient?.iptv_user || "",
       senha: sampleClient?.iptv_password || "",
       servidor: sampleClient?.server || "",
+      sua_chave_pix: apiSettings?.pix_key || "",
     });
 
     const normalizedPhone = normalizePhone(phone);

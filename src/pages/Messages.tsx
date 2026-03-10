@@ -80,6 +80,7 @@ const variables = [
   { tag: "{usuario}", desc: "Usuário IPTV" },
   { tag: "{senha}", desc: "Senha IPTV" },
   { tag: "{servidor}", desc: "Nome do servidor" },
+  { tag: "{sua_chave_pix}", desc: "Chave Pix (configurada em Configurações)" },
 ];
 
 export default function Messages() {
