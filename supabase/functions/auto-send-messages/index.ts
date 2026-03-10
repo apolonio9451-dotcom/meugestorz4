@@ -166,6 +166,7 @@ Deno.serve(async (req) => {
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
         const messageBody = replacePlaceholders(template, {
+          saudacao: getGreeting(),
           nome: client.name || "",
           plano: plan?.name || "",
           valor: Number(valor).toFixed(2),
