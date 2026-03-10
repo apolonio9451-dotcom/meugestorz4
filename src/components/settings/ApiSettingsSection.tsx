@@ -13,6 +13,7 @@ interface Props {
 export default function ApiSettingsSection({ companyId }: Props) {
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
+  const [pixKey, setPixKey] = useState("");
   const [autoSendHour, setAutoSendHour] = useState(8);
   const [autoSendMinute, setAutoSendMinute] = useState(0);
   const [showToken, setShowToken] = useState(false);
@@ -29,7 +30,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
-        .select("id, api_url, api_token, auto_send_hour, auto_send_minute")
+        .select("id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key")
         .eq("company_id", companyId)
         .maybeSingle();
       if (data) {
@@ -37,6 +38,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
         setApiToken((data as any).api_token || "");
         setAutoSendHour((data as any).auto_send_hour ?? 8);
         setAutoSendMinute((data as any).auto_send_minute ?? 0);
+        setPixKey((data as any).pix_key || "");
         setExistingId((data as any).id);
       }
       setLoading(false);
@@ -48,7 +50,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
     if (!companyId) return;
     setSaving(true);
     try {
-      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim(), auto_send_hour: autoSendHour, auto_send_minute: autoSendMinute };
+      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim(), auto_send_hour: autoSendHour, auto_send_minute: autoSendMinute, pix_key: pixKey.trim() };
       let error;
       if (existingId) {
         ({ error } = await supabase.from("api_settings" as any).update(payload).eq("id", existingId));
@@ -124,6 +126,19 @@ export default function ApiSettingsSection({ companyId }: Props) {
         />
         <p className="text-muted-foreground text-xs">
           Horário exato (HH:mm) em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-foreground">Chave Pix</Label>
+        <Input
+          value={pixKey}
+          onChange={(e) => setPixKey(e.target.value)}
+          placeholder="sua-chave-pix@email.com ou CPF/CNPJ"
+          className="bg-secondary/50 border-border"
+        />
+        <p className="text-muted-foreground text-xs">
+          Esta chave será usada na variável <code className="bg-muted px-1 rounded">{'{sua_chave_pix}'}</code> nos templates de mensagem.
         </p>
       </div>
 

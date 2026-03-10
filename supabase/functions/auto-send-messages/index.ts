@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
           usuario: client.iptv_user || "",
           senha: client.iptv_password || "",
           servidor: client.server || "",
+          sua_chave_pix: config.pix_key || "",
         });
 
         const normalizedPhone = normalizePhone(phone);
@@ -265,6 +266,7 @@ Deno.serve(async (req) => {
           usuario: client.iptv_user || "",
           senha: client.iptv_password || "",
           servidor: client.server || "",
+          sua_chave_pix: config.pix_key || "",
         });
 
         const normalizedPhone = normalizePhone(phone);

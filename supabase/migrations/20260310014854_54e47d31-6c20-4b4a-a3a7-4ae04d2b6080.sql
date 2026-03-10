@@ -1,0 +1,1 @@
+ALTER TABLE public.api_settings ADD COLUMN pix_key text NOT NULL DEFAULT '';
