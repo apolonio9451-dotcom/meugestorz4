@@ -21,6 +21,8 @@ export default function WinBack() {
   const [filter, setFilter] = useState<"all" | "45" | "60" | "90">("all");
   const [progress, setProgress] = useState<Record<string, { step: number; lastSentAt: string | null }>>({});
   const [templates, setTemplates] = useState<Record<string, string>>({});
+  const [winbackPaused, setWinbackPaused] = useState(false);
+  const [togglingPause, setTogglingPause] = useState(false);
 
   useEffect(() => {
     if (!companyId) return;
