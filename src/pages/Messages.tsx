@@ -73,6 +73,7 @@ const categories = [
 const variables = [
   { tag: "{saudacao}", desc: "Bom dia / Boa tarde / Boa noite (automático)" },
   { tag: "{nome}", desc: "Nome do cliente" },
+  { tag: "{primeiro_nome}", desc: "Primeiro nome do cliente" },
   { tag: "{plano}", desc: "Nome do plano" },
   { tag: "{valor}", desc: "Valor do plano (R$)" },
   { tag: "{vencimento}", desc: "Data de vencimento" },
