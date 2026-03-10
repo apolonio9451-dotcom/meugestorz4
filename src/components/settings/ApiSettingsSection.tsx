@@ -38,6 +38,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
         setApiToken((data as any).api_token || "");
         setAutoSendHour((data as any).auto_send_hour ?? 8);
         setAutoSendMinute((data as any).auto_send_minute ?? 0);
+        setPixKey((data as any).pix_key || "");
         setExistingId((data as any).id);
       }
       setLoading(false);
