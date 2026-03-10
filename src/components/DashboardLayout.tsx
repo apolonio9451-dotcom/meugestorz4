@@ -267,6 +267,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     fetchSubscription();
     fetchAdminInfo();
 
+    // Listen for instant logo changes from Settings page
+    const handleLogoChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.logoUrl) setBrandLogo(detail.logoUrl);
+    };
+    window.addEventListener("brand-logo-changed", handleLogoChange);
+
     // Fetch support whatsapp
     const fetchSupportWhatsapp = async () => {
       if (!user) return;
@@ -312,6 +319,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       }
     };
     fetchSupportWhatsapp();
+
+    return () => {
+      window.removeEventListener("brand-logo-changed", handleLogoChange);
+    };
   }, [companyId, user]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
