@@ -551,7 +551,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* Centered brand name + logo */}
           <div className="flex-1 flex items-center justify-center gap-2.5">
-            {brandLogo ? (
+            {brandIcon ? (
+              <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
+                <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+              </div>
+            ) : brandLogo ? (
               <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
                 <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
               </div>
@@ -560,7 +564,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Building2 className="w-5 h-5 text-primary" />
               </div>
             )}
-            <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
+            {brandLogo ? (
+              <img src={brandLogo} alt="Marca" className="h-7 max-w-[140px] object-contain" />
+            ) : (
+              <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
+            )}
           </div>
 
           {/* Spacer to balance hamburger on mobile */}
