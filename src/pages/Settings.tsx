@@ -36,6 +36,7 @@ export default function Settings() {
     brand_name: "",
     login_slug: "",
     logo_url: null,
+    icon_url: null,
     primary_color: "#00db49",
     secondary_color: "#00c0f5",
     background_color: "#0357a5",
