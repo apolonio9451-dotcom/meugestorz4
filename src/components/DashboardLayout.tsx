@@ -353,30 +353,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-sidebar-border/50">
-          {brandIcon ? (
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-              <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border/50">
+          <div className="relative flex items-center justify-center flex-1 min-w-0">
+            {/* Glow effect behind logo */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-32 h-10 rounded-full bg-primary/20 blur-xl" />
             </div>
-          ) : brandLogo ? (
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-              <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center transition-transform duration-200 hover:scale-110 overflow-hidden">
-              <img src="/icon-512.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-          )}
-        <div className="flex flex-col min-w-0">
-          {brandLogo ? (
-            <img src={brandLogo} alt="Marca" className="h-6 max-w-[120px] object-contain" />
-          ) : (
-            <span className="font-display font-bold text-lg text-foreground truncate leading-tight">{brandName}</span>
-          )}
+            <img
+              src={brandLogo || defaultBrandLogo}
+              alt="Marca"
+              className="relative h-8 max-w-[160px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+            />
+          </div>
           {userRole && (
             <span className="text-[10px] font-medium text-muted-foreground truncate">{userRole}</span>
           )}
-        </div>
           <button className="lg:hidden ml-auto text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
