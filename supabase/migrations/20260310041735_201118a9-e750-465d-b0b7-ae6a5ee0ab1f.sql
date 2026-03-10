@@ -1,0 +1,1 @@
+ALTER TABLE public.api_settings ADD COLUMN winback_paused boolean NOT NULL DEFAULT false;
