@@ -58,7 +58,7 @@ const categories = [
     color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50",
     description: "Mensagem de follow-up para clientes em acompanhamento.",
     defaultMessage:
-      "Olá, {nome}! 👋\n\nPassando hoje com um sentimento de gratidão por ter você conosco! Já se passaram {dias} dias desde o seu cadastro e é um privilégio fazer parte do seu entretenimento diário. 🌟\n\nNossa maior prioridade é garantir que você tenha a melhor experiencia possível com nosso serviços. Por isso, gostaria de saber: como está sendo sua experiência até agora? Seu feedback é valioso para continuarmos evoluindo nosso serviço! 🚀\n\n📋 Resumo da Sua Assinatura:\n\nPlano: {plano} | Valor: R$ {valor}\n\nVencimento: {vencimento}\n\n🔑 Seus Dados:\n\n👤 Usuário: {usuario} |\n\n🖥️ MAC: {mac} | 🌐 Servidor: {servidor}",
+      "Olá, {primeiro_nome}! 👋\n\nPassando hoje com um sentimento de gratidão por ter você conosco! Já se passaram {dias} dias desde o seu cadastro e é um privilégio fazer parte do seu entretenimento diário. 🌟\n\nNossa maior prioridade é garantir que você tenha a melhor experiência possível com nosso serviços. Por isso, gostaria de saber: como está sendo sua experiência até agora? Seu feedback é valioso para continuarmos evoluindo nosso serviço! 🚀\n\n📋 Resumo da Sua Assinatura:\n\nPlano: {plano}\nValor: R$ {valor}\nVencimento: {vencimento}\n\n🔑 Seus Dados:\n\n👤 Usuário: {usuario}\n🖥️ MAC: {mac}\n🌐 Servidor: {servidor}",
   },
   {
     key: "suporte",
