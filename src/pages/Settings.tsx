@@ -116,37 +116,42 @@ export default function Settings() {
     setSaving(false);
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "icon" | "brand") => {
     const file = e.target.files?.[0];
     if (!file || !companyId) return;
 
     setUploading(true);
     const fileExt = file.name.split(".").pop();
-    const filePath = `${companyId}/logo.${fileExt}`;
+    const filePath = `${companyId}/${type}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("logos")
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      toast({ title: "Erro ao enviar logo", description: uploadError.message, variant: "destructive" });
+      toast({ title: "Erro ao enviar imagem", description: uploadError.message, variant: "destructive" });
       setUploading(false);
       return;
     }
 
     const { data: urlData } = supabase.storage.from("logos").getPublicUrl(filePath);
-    setSettings((prev) => ({ ...prev, logo_url: urlData.publicUrl }));
+    const field = type === "icon" ? "icon_url" : "logo_url";
+    setSettings((prev) => ({ ...prev, [field]: urlData.publicUrl }));
     setUploading(false);
-    toast({ title: "Logo enviado com sucesso!" });
+    toast({ title: type === "icon" ? "Ícone enviado!" : "Logo da marca enviado!" });
   };
 
-  const handleRemoveLogo = async () => {
+  const handleRemoveImage = async (type: "icon" | "brand") => {
     if (!companyId) return;
-    // Remove from storage
-    await supabase.storage.from("logos").remove([`${companyId}/logo.png`, `${companyId}/logo.jpg`, `${companyId}/logo.jpeg`, `${companyId}/logo.webp`]);
-    setSettings((prev) => ({ ...prev, logo_url: null }));
-    toast({ title: "Logo removido" });
+    const exts = ["png", "jpg", "jpeg", "webp"];
+    await supabase.storage.from("logos").remove(exts.map((ext) => `${companyId}/${type}.${ext}`));
+    const field = type === "icon" ? "icon_url" : "logo_url";
+    setSettings((prev) => ({ ...prev, [field]: null }));
+    toast({ title: type === "icon" ? "Ícone removido" : "Logo da marca removido" });
   };
+
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  const brandLogoInputRef = useRef<HTMLInputElement>(null);
 
   if (loading) {
     return (
