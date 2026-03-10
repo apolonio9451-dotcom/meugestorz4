@@ -15,6 +15,7 @@ interface CompanySettings {
   brand_name: string;
   login_slug: string | null;
   logo_url: string | null;
+  icon_url: string | null;
   primary_color: string;
   secondary_color: string;
   background_color: string;
