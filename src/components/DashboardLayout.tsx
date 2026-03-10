@@ -534,21 +534,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <TrialBanner />
-        <header className="h-16 glass-header flex items-center justify-between px-4 lg:px-6">
+        <header className="h-20 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-foreground" />
           </button>
 
           <div className="flex-1 flex items-center justify-center">
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center py-2">
               {/* Glow effect */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-40 h-12 rounded-full bg-primary/15 blur-xl" />
+                <div className="w-64 h-16 rounded-full bg-primary/20 blur-2xl" />
               </div>
               <img
                 src={brandLogo || defaultBrandLogo}
                 alt="Marca"
-                className="relative h-9 max-w-[180px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+                className="relative h-14 sm:h-16 max-w-[320px] object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)]"
               />
             </div>
           </div>
