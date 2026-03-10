@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     // Fetch API credentials from api_settings table
     const { data: apiSettings } = await supabase
       .from("api_settings")
-      .select("api_url, api_token")
+      .select("api_url, api_token, pix_key")
       .eq("company_id", company_id)
       .single();
 
