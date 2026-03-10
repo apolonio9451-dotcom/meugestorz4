@@ -411,7 +411,7 @@ export default function Clients() {
   const addMacKey = () => setFormMacKeys([...formMacKeys, { mac: "", key: "", app_name: "", expires_at: "" }]);
   const removeMacKey = (index: number) => setFormMacKeys(formMacKeys.filter((_, i) => i !== index));
   const formatMac = (value: string) => {
-    const raw = value.replace(/[^0-9]/g, "").slice(0, 12);
+    const raw = value.replace(/[^0-9a-fA-F]/g, "").slice(0, 12);
     return raw.match(/.{1,2}/g)?.join(":") || raw;
   };
 
