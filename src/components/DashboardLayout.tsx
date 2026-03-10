@@ -167,11 +167,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         // Regular user: fetch from company_settings
         const { data } = await supabase
           .from("company_settings")
-          .select("brand_name, logo_url, primary_color, secondary_color, background_color")
+          .select("brand_name, logo_url, icon_url, primary_color, secondary_color, background_color")
           .eq("company_id", companyId)
           .maybeSingle();
         if (data?.brand_name) setBrandName(data.brand_name);
         if (data?.logo_url) setBrandLogo(data.logo_url);
+        if (data?.icon_url) setBrandIcon(data.icon_url);
         if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
       }
     };

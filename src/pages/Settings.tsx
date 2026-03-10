@@ -387,6 +387,7 @@ export default function Settings() {
                 brand_name: "Meu gestor",
                 login_slug: "",
                 logo_url: null,
+                icon_url: null,
                 primary_color: defaultTheme.colors.primary,
                 secondary_color: defaultTheme.colors.secondary,
                 background_color: defaultTheme.colors.background,
