@@ -23,6 +23,7 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          pix_key: string
           updated_at: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          pix_key?: string
           updated_at?: string
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          pix_key?: string
           updated_at?: string
         }
         Relationships: [
