@@ -172,6 +172,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .maybeSingle();
         if (data?.brand_name) setBrandName(data.brand_name);
         if (data?.logo_url) setBrandLogo(data.logo_url);
+        if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
       }
     };
 
