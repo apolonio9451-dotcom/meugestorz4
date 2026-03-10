@@ -176,29 +176,14 @@ export default function Settings() {
       <div className="glass-card rounded-xl p-6 space-y-8">
         <h2 className="text-lg font-display font-semibold text-foreground">Marca</h2>
 
-        {/* Brand Name */}
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold text-foreground">Nome da Marca</Label>
-          <Input
-            value={settings.brand_name}
-            onChange={(e) => setSettings((prev) => ({ ...prev, brand_name: e.target.value }))}
-            placeholder="Nome da sua empresa"
-            className="bg-secondary/50 border-border"
-          />
-        </div>
-
-
-        {/* Logo */}
+        {/* Icon Logo */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold text-foreground">Logo</Label>
+          <Label className="text-sm font-semibold text-foreground">Ícone (logo pequeno)</Label>
+          <p className="text-muted-foreground text-xs">Exibido como ícone no menu lateral e header. Ideal: imagem quadrada.</p>
           <div className="flex items-center gap-4">
-            {settings.logo_url ? (
+            {settings.icon_url ? (
               <div className="h-16 w-16 rounded-lg overflow-hidden bg-secondary/50 border border-border flex items-center justify-center">
-                <img
-                  src={settings.logo_url}
-                  alt="Logo"
-                  className="h-full w-full object-contain"
-                />
+                <img src={settings.icon_url} alt="Ícone" className="h-full w-full object-contain" />
               </div>
             ) : (
               <div className="h-16 w-16 rounded-lg bg-secondary/50 border border-border border-dashed flex items-center justify-center">
@@ -206,28 +191,46 @@ export default function Settings() {
               </div>
             )}
             <div className="flex gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
+              <Button variant="default" size="sm" onClick={() => iconInputRef.current?.click()} disabled={uploading}>
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
                 Trocar
               </Button>
-              {settings.logo_url && (
-                <Button variant="destructive" size="sm" onClick={handleRemoveLogo}>
+              {settings.icon_url && (
+                <Button variant="destructive" size="sm" onClick={() => handleRemoveImage("icon")}>
                   <X className="h-4 w-4 mr-1" /> Remover
                 </Button>
               )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
+            <input ref={iconInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, "icon")} />
+          </div>
+        </div>
+
+        {/* Brand Logo */}
+        <div className="space-y-3">
+          <Label className="text-sm font-semibold text-foreground">Logo da Marca (nome)</Label>
+          <p className="text-muted-foreground text-xs">Exibido no lugar do nome da marca no menu. Ideal: imagem horizontal/retangular.</p>
+          <div className="flex items-center gap-4">
+            {settings.logo_url ? (
+              <div className="h-16 w-auto max-w-[200px] rounded-lg overflow-hidden bg-secondary/50 border border-border flex items-center justify-center">
+                <img src={settings.logo_url} alt="Logo da Marca" className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="h-16 w-32 rounded-lg bg-secondary/50 border border-border border-dashed flex items-center justify-center">
+                <Upload className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button variant="default" size="sm" onClick={() => brandLogoInputRef.current?.click()} disabled={uploading}>
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
+                Trocar
+              </Button>
+              {settings.logo_url && (
+                <Button variant="destructive" size="sm" onClick={() => handleRemoveImage("brand")}>
+                  <X className="h-4 w-4 mr-1" /> Remover
+                </Button>
+              )}
+            </div>
+            <input ref={brandLogoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, "brand")} />
           </div>
         </div>
 
