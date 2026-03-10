@@ -440,6 +440,7 @@ export type Database = {
           brand_name: string
           company_id: string
           created_at: string
+          icon_url: string | null
           id: string
           login_slug: string | null
           logo_url: string | null
@@ -453,6 +454,7 @@ export type Database = {
           brand_name?: string
           company_id: string
           created_at?: string
+          icon_url?: string | null
           id?: string
           login_slug?: string | null
           logo_url?: string | null
@@ -466,6 +468,7 @@ export type Database = {
           brand_name?: string
           company_id?: string
           created_at?: string
+          icon_url?: string | null
           id?: string
           login_slug?: string | null
           logo_url?: string | null
