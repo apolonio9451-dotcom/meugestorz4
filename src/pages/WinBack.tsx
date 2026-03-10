@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Clock, UserX, Users, Megaphone, List } from "lucide-react";
+import { Search, Clock, UserX, Users, Megaphone, List, Pause, Play } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import CampaignTemplates from "@/components/winback/CampaignTemplates";
 import WinBackClientRow, { type WinBackClient } from "@/components/winback/WinBackClientRow";
 
