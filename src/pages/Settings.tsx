@@ -136,8 +136,14 @@ export default function Settings() {
     }
 
     const { data: urlData } = supabase.storage.from("logos").getPublicUrl(filePath);
+    // Add cache-busting param so browser fetches the new image
+    const freshUrl = `${urlData.publicUrl}?t=${Date.now()}`;
     const field = type === "icon" ? "icon_url" : "logo_url";
-    setSettings((prev) => ({ ...prev, [field]: urlData.publicUrl }));
+    setSettings((prev) => ({ ...prev, [field]: freshUrl }));
+    // Instantly update the header/sidebar logo
+    if (type === "brand" || type === "icon") {
+      window.dispatchEvent(new CustomEvent("brand-logo-changed", { detail: { logoUrl: freshUrl } }));
+    }
     setUploading(false);
     toast({ title: type === "icon" ? "Ícone enviado!" : "Logo da marca enviado!" });
   };
