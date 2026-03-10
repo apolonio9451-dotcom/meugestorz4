@@ -50,7 +50,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
     if (!companyId) return;
     setSaving(true);
     try {
-      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim(), auto_send_hour: autoSendHour, auto_send_minute: autoSendMinute };
+      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim(), auto_send_hour: autoSendHour, auto_send_minute: autoSendMinute, pix_key: pixKey.trim() };
       let error;
       if (existingId) {
         ({ error } = await supabase.from("api_settings" as any).update(payload).eq("id", existingId));
