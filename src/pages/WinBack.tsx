@@ -106,12 +106,49 @@ export default function WinBack() {
     setClients((prev) => prev.filter((c) => c.id !== clientId));
   };
 
+  const togglePause = async () => {
+    if (!companyId) return;
+    setTogglingPause(true);
+    try {
+      const newValue = !winbackPaused;
+      const { error } = await supabase
+        .from("api_settings" as any)
+        .update({ winback_paused: newValue })
+        .eq("company_id", companyId);
+      if (error) throw error;
+      setWinbackPaused(newValue);
+      toast({ title: newValue ? "Repescagem pausada" : "Repescagem retomada", description: newValue ? "O envio automático da campanha foi pausado." : "O envio automático da campanha foi retomado." });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message, variant: "destructive" });
+    } finally {
+      setTogglingPause(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Repescagem</h1>
-        <p className="text-muted-foreground text-sm mt-1">Clientes vencidos há mais de 45 dias — campanhas de recuperação</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">Repescagem</h1>
+          <p className="text-muted-foreground text-sm mt-1">Clientes vencidos há mais de 45 dias — campanhas de recuperação</p>
+        </div>
+        <Button
+          variant={winbackPaused ? "default" : "outline"}
+          size="sm"
+          onClick={togglePause}
+          disabled={togglingPause}
+          className="gap-2"
+        >
+          {winbackPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          {winbackPaused ? "Retomar Envio" : "Pausar Envio"}
+        </Button>
       </div>
+      {winbackPaused && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm text-warning flex items-center gap-2">
+          <Pause className="w-4 h-4 shrink-0" />
+          O envio automático da repescagem está <strong>pausado</strong>. Clique em "Retomar Envio" para reativar.
+        </div>
+      )}
 
       <Tabs defaultValue="clients" className="w-full">
         <TabsList className="bg-muted/50">

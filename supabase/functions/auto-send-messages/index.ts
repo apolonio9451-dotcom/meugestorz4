@@ -335,6 +335,158 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- WinBack campaign auto-send ---
+    const CAMPAIGN_STEPS = [
+      { key: "winback_day1", day: 1, minGapDays: 0 },
+      { key: "winback_day3", day: 3, minGapDays: 2 },
+      { key: "winback_day6", day: 6, minGapDays: 3 },
+      { key: "winback_day10", day: 10, minGapDays: 4 },
+      { key: "winback_day15", day: 15, minGapDays: 5 },
+    ];
+
+    const defaultWinbackTemplates: Record<string, string> = {
+      winback_day1: "Olá {nome}! 👋\n\nSentimos sua falta por aqui! Faz um tempinho que você não está com a gente.\n\nSeu último plano era o *{plano}* e queremos te ajudar a voltar.\n\nTem interesse? Responda essa mensagem! 😊",
+      winback_day3: "Oi {nome}! 😊\n\nVocê sabia que nossos clientes estão aproveitando novidades incríveis?\n\nSeu plano *{plano}* por apenas *R$ {valor}* te dá acesso completo.\n\nQue tal voltar e conferir? 🚀",
+      winback_day6: "Oi {nome}! 👋\n\nMuitos clientes que estavam na mesma situação já voltaram e estão curtindo nosso serviço!\n\nPlano *{plano}* • R$ {valor}\n\nVem fazer parte desse grupo também! 💪",
+      winback_day10: "Fala {nome}! 🔥\n\nPreparei uma *condição especial* pra você voltar:\n\nPlano *{plano}* com um valor diferenciado!\n\nEssa oferta é por tempo limitado. Quer saber mais? Me chama! ⏳",
+      winback_day15: "Olá {nome}! 👋\n\nEssa é minha última tentativa de contato.\n\nSei que imprevistos acontecem, mas quero que saiba que a porta está aberta.\n\nPlano *{plano}* • R$ {valor}\n\nSe mudar de ideia, é só me chamar! 🙏",
+    };
+
+    for (const config of eligibleConfigs) {
+      if (!config.api_url || !config.api_token) continue;
+      if (config.winback_paused) continue; // Skip if paused
+
+      const apiUrl = config.api_url.replace(/\/$/, "");
+      const apiToken = config.api_token;
+      const companyId = config.company_id;
+
+      // Fetch winback templates
+      const { data: wbTemplateRows } = await supabase
+        .from("message_templates")
+        .select("category, message")
+        .eq("company_id", companyId)
+        .like("category", "winback_%");
+
+      const wbTemplates: Record<string, string> = { ...defaultWinbackTemplates };
+      wbTemplateRows?.forEach((t: { category: string; message: string }) => {
+        wbTemplates[t.category] = t.message;
+      });
+
+      // Fetch winback-eligible clients (inactive or expired 45+ days)
+      const { data: wbClients } = await supabase
+        .from("clients")
+        .select(`
+          id, name, whatsapp, phone, server, iptv_user,
+          client_subscriptions (
+            end_date, amount, custom_price,
+            subscription_plans ( name, price )
+          )
+        `)
+        .eq("company_id", companyId)
+        .in("status", ["active", "inactive"]);
+
+      if (!wbClients) continue;
+
+      // Fetch campaign progress
+      const { data: progressRows } = await supabase
+        .from("winback_campaign_progress")
+        .select("client_id, current_step, last_sent_at")
+        .eq("company_id", companyId);
+
+      const progressMap: Record<string, { step: number; lastSentAt: string | null }> = {};
+      progressRows?.forEach((p: any) => {
+        progressMap[p.client_id] = { step: p.current_step, lastSentAt: p.last_sent_at };
+      });
+
+      for (const client of wbClients) {
+        const subs = (client as any).client_subscriptions;
+        if (!subs || subs.length === 0) continue;
+
+        const sub = subs[0];
+        const plan = sub.subscription_plans;
+        const endDate = new Date(sub.end_date + "T00:00:00");
+        const todayDate = new Date(today + "T00:00:00");
+        const daysExpired = Math.round((todayDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysExpired < 45) continue; // Only 45+ days expired
+
+        const prog = progressMap[client.id] || { step: 0, lastSentAt: null };
+        if (prog.step >= CAMPAIGN_STEPS.length) continue; // Campaign finished
+
+        const currentStepDef = CAMPAIGN_STEPS[prog.step];
+
+        // Check minimum gap
+        if (prog.step > 0 && prog.lastSentAt) {
+          const daysSinceLast = Math.floor((Date.now() - new Date(prog.lastSentAt).getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceLast < currentStepDef.minGapDays) continue;
+        }
+
+        const phone = client.whatsapp || client.phone || "";
+        if (!phone || phone.replace(/\D/g, "").length < 8) continue;
+
+        const template = wbTemplates[currentStepDef.key];
+        if (!template) continue;
+
+        const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
+
+        const messageBody = replacePlaceholders(template, {
+          saudacao: getGreeting(),
+          primeiro_nome: (client.name || "").split(" ")[0],
+          nome: client.name || "",
+          plano: plan?.name || "",
+          valor: Number(valor).toFixed(2),
+          vencimento: endDate.toLocaleDateString("pt-BR"),
+          dias: String(Math.abs(daysExpired)),
+          mac: "",
+          usuario: client.iptv_user || "",
+          senha: "",
+          servidor: client.server || "",
+          sua_chave_pix: config.pix_key || "",
+        });
+
+        const normalizedPhone = normalizePhone(phone);
+
+        try {
+          const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
+
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category: `repescagem_${currentStepDef.key}`,
+            status: sendResult.ok ? "success" : "error",
+            error_message: sendResult.error || null,
+            phone: normalizedPhone,
+          });
+
+          if (sendResult.ok) {
+            const newStep = prog.step + 1;
+            const nowISO = new Date().toISOString();
+            await supabase
+              .from("winback_campaign_progress")
+              .upsert(
+                { company_id: companyId, client_id: client.id, current_step: newStep, last_sent_at: nowISO },
+                { onConflict: "company_id,client_id" }
+              );
+            totalSent++;
+          } else {
+            totalErrors++;
+          }
+        } catch (sendErr) {
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category: `repescagem_${currentStepDef.key}`,
+            status: "error",
+            error_message: String(sendErr),
+            phone: normalizedPhone,
+          });
+          totalErrors++;
+        }
+      }
+    }
+
     // --- Log errors for companies WITHOUT API configured ---
     const configuredCompanyIds = (apiConfigs || []).map((c: any) => c.company_id);
     
