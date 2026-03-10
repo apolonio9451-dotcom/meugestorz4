@@ -538,26 +538,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Menu className="w-6 h-6 text-foreground" />
           </button>
 
-          {/* Centered brand name + logo */}
-          <div className="flex-1 flex items-center justify-center gap-2.5">
-            {brandIcon ? (
-              <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
-                <img src={brandIcon} alt="Ícone" className="w-full h-full object-contain" />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="relative flex items-center justify-center">
+              {/* Glow effect */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-40 h-12 rounded-full bg-primary/15 blur-xl" />
               </div>
-            ) : brandLogo ? (
-              <div className="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 flex items-center justify-center shrink-0">
-                <img src={brandLogo} alt="Logo" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div className="w-10 h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-                <Building2 className="w-5 h-5 text-primary" />
-              </div>
-            )}
-            {brandLogo ? (
-              <img src={brandLogo} alt="Marca" className="h-7 max-w-[140px] object-contain" />
-            ) : (
-              <span className="font-display font-bold text-base text-foreground truncate">{brandName}</span>
-            )}
+              <img
+                src={brandLogo || defaultBrandLogo}
+                alt="Marca"
+                className="relative h-9 max-w-[180px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+              />
+            </div>
           </div>
 
           {/* Spacer to balance hamburger on mobile */}
