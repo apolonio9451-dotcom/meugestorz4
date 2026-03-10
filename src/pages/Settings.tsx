@@ -85,6 +85,7 @@ export default function Settings() {
       brand_name: settings.brand_name,
       login_slug: settings.login_slug,
       logo_url: settings.logo_url,
+      icon_url: settings.icon_url,
       primary_color: settings.primary_color,
       secondary_color: settings.secondary_color,
       background_color: settings.background_color,
