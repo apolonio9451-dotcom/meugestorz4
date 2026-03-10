@@ -122,6 +122,8 @@ Deno.serve(async (req) => {
 
     const messageBody = replacePlaceholders(template, {
       saudacao: getGreeting(),
+      dia_semana: getDayOfWeek(),
+      dia: getDayOfMonth(),
       primeiro_nome: (sampleClient?.name || "Cliente Teste").split(" ")[0],
       nome: sampleClient?.name || "Cliente Teste",
       plano: plan?.name || "Plano Exemplo",
