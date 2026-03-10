@@ -13,6 +13,14 @@ function normalizePhone(phone: string): string {
   return digits;
 }
 
+function getGreeting(): string {
+  const nowUtc = new Date();
+  const brasiliaHour = (nowUtc.getUTCHours() - 3 + 24) % 24;
+  if (brasiliaHour >= 5 && brasiliaHour < 12) return "Bom dia";
+  if (brasiliaHour >= 12 && brasiliaHour < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
 function replacePlaceholders(template: string, vars: Record<string, string>): string {
   let msg = template;
   for (const [key, value] of Object.entries(vars)) {
@@ -158,6 +166,7 @@ Deno.serve(async (req) => {
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
         const messageBody = replacePlaceholders(template, {
+          saudacao: getGreeting(),
           nome: client.name || "",
           plano: plan?.name || "",
           valor: Number(valor).toFixed(2),
@@ -257,6 +266,7 @@ Deno.serve(async (req) => {
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
         const messageBody = replacePlaceholders(supportTemplate, {
+          saudacao: getGreeting(),
           nome: client.name || "",
           plano: plan?.name || "",
           valor: Number(valor).toFixed(2),
