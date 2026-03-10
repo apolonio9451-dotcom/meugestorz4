@@ -49,6 +49,9 @@ export default function WinBack() {
       (templatesRes.data || []).forEach((t: any) => { tMap[t.category] = t.message; });
       setTemplates(tMap);
 
+      // Winback pause state
+      setWinbackPaused((apiRes.data as any)?.winback_paused ?? false);
+
       const winbackList: WinBackClient[] = [];
 
       for (const client of allClients) {
