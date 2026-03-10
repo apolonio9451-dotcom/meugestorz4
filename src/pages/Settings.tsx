@@ -181,34 +181,6 @@ export default function Settings() {
       <div className="glass-card rounded-xl p-6 space-y-8">
         <h2 className="text-lg font-display font-semibold text-foreground">Marca</h2>
 
-        {/* Icon Logo */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold text-foreground">Ícone (logo pequeno)</Label>
-          <p className="text-muted-foreground text-xs">Exibido como ícone no menu lateral e header. Ideal: imagem quadrada.</p>
-          <div className="flex items-center gap-4">
-            {settings.icon_url ? (
-              <div className="h-16 w-16 rounded-lg overflow-hidden bg-secondary/50 border border-border flex items-center justify-center">
-                <img src={settings.icon_url} alt="Ícone" className="h-full w-full object-contain" />
-              </div>
-            ) : (
-              <div className="h-16 w-16 rounded-lg bg-secondary/50 border border-border border-dashed flex items-center justify-center">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button variant="default" size="sm" onClick={() => iconInputRef.current?.click()} disabled={uploading}>
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
-                Trocar
-              </Button>
-              {settings.icon_url && (
-                <Button variant="destructive" size="sm" onClick={() => handleRemoveImage("icon")}>
-                  <X className="h-4 w-4 mr-1" /> Remover
-                </Button>
-              )}
-            </div>
-            <input ref={iconInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, "icon")} />
-          </div>
-        </div>
 
         {/* Brand Logo */}
         <div className="space-y-3">
