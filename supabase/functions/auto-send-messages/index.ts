@@ -63,7 +63,7 @@ async function sendMessage(apiUrl: string, apiToken: string, number: string, bod
 function getCategory(daysUntilExpiry: number): string | null {
   if (daysUntilExpiry === 0) return "vence_hoje";
   if (daysUntilExpiry === 1) return "vence_amanha";
-  if (daysUntilExpiry >= 2 && daysUntilExpiry <= 7) return "a_vencer";
+  if (daysUntilExpiry === 3) return "a_vencer";
   if (daysUntilExpiry < 0) return "vencidos";
   return null;
 }
