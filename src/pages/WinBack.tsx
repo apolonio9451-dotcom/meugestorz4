@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Clock, UserX, Users, Megaphone, List } from "lucide-react";
+import { Search, Clock, UserX, Users, Megaphone, List, Pause, Play } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import CampaignTemplates from "@/components/winback/CampaignTemplates";
 import WinBackClientRow, { type WinBackClient } from "@/components/winback/WinBackClientRow";
 
@@ -19,6 +21,8 @@ export default function WinBack() {
   const [filter, setFilter] = useState<"all" | "45" | "60" | "90">("all");
   const [progress, setProgress] = useState<Record<string, { step: number; lastSentAt: string | null }>>({});
   const [templates, setTemplates] = useState<Record<string, string>>({});
+  const [winbackPaused, setWinbackPaused] = useState(false);
+  const [togglingPause, setTogglingPause] = useState(false);
 
   useEffect(() => {
     if (!companyId) return;
@@ -29,7 +33,8 @@ export default function WinBack() {
       supabase.from("client_subscriptions").select("client_id, end_date, amount, subscription_plans(name)").eq("company_id", companyId).order("end_date", { ascending: false }),
       supabase.from("winback_campaign_progress").select("client_id, current_step, last_sent_at").eq("company_id", companyId),
       supabase.from("message_templates").select("category, message").eq("company_id", companyId).like("category", "winback_%"),
-    ]).then(([clientsRes, subsRes, progressRes, templatesRes]) => {
+      supabase.from("api_settings" as any).select("winback_paused").eq("company_id", companyId).maybeSingle(),
+    ]).then(([clientsRes, subsRes, progressRes, templatesRes, apiRes]) => {
       const allClients = clientsRes.data || [];
       const allSubs = subsRes.data || [];
       const today = new Date();
@@ -43,6 +48,9 @@ export default function WinBack() {
       const tMap: Record<string, string> = {};
       (templatesRes.data || []).forEach((t: any) => { tMap[t.category] = t.message; });
       setTemplates(tMap);
+
+      // Winback pause state
+      setWinbackPaused((apiRes.data as any)?.winback_paused ?? false);
 
       const winbackList: WinBackClient[] = [];
 
@@ -98,12 +106,49 @@ export default function WinBack() {
     setClients((prev) => prev.filter((c) => c.id !== clientId));
   };
 
+  const togglePause = async () => {
+    if (!companyId) return;
+    setTogglingPause(true);
+    try {
+      const newValue = !winbackPaused;
+      const { error } = await supabase
+        .from("api_settings" as any)
+        .update({ winback_paused: newValue })
+        .eq("company_id", companyId);
+      if (error) throw error;
+      setWinbackPaused(newValue);
+      toast({ title: newValue ? "Repescagem pausada" : "Repescagem retomada", description: newValue ? "O envio automático da campanha foi pausado." : "O envio automático da campanha foi retomado." });
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message, variant: "destructive" });
+    } finally {
+      setTogglingPause(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Repescagem</h1>
-        <p className="text-muted-foreground text-sm mt-1">Clientes vencidos há mais de 45 dias — campanhas de recuperação</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">Repescagem</h1>
+          <p className="text-muted-foreground text-sm mt-1">Clientes vencidos há mais de 45 dias — campanhas de recuperação</p>
+        </div>
+        <Button
+          variant={winbackPaused ? "default" : "outline"}
+          size="sm"
+          onClick={togglePause}
+          disabled={togglingPause}
+          className="gap-2"
+        >
+          {winbackPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          {winbackPaused ? "Retomar Envio" : "Pausar Envio"}
+        </Button>
       </div>
+      {winbackPaused && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-sm text-warning flex items-center gap-2">
+          <Pause className="w-4 h-4 shrink-0" />
+          O envio automático da repescagem está <strong>pausado</strong>. Clique em "Retomar Envio" para reativar.
+        </div>
+      )}
 
       <Tabs defaultValue="clients" className="w-full">
         <TabsList className="bg-muted/50">

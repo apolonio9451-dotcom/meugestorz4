@@ -25,6 +25,7 @@ export type Database = {
           id: string
           pix_key: string
           updated_at: string
+          winback_paused: boolean
         }
         Insert: {
           api_token?: string
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           pix_key?: string
           updated_at?: string
+          winback_paused?: boolean
         }
         Update: {
           api_token?: string
@@ -47,6 +49,7 @@ export type Database = {
           id?: string
           pix_key?: string
           updated_at?: string
+          winback_paused?: boolean
         }
         Relationships: [
           {
