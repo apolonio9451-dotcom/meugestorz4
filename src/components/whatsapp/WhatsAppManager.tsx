@@ -58,7 +58,8 @@ export default function WhatsAppManager({ userName }: Props) {
           }));
           stopPolling();
         } else if (data?.qrCode) {
-          setQrCode(data.qrCode);
+          const qr = data.qrCode;
+          setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
           setStatus("qr");
         }
       } catch (err) {
@@ -80,7 +81,8 @@ export default function WhatsAppManager({ userName }: Props) {
         setStatus("connected");
         toast.success("WhatsApp conectado!");
       } else if (data.qrCode) {
-        setQrCode(data.qrCode);
+        const qr = data.qrCode;
+        setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
         setConnection({ token: data.token, instanceId: data.instanceId });
         setStatus("qr");
         startPolling(data.token, data.instanceId);
@@ -239,11 +241,13 @@ export default function WhatsAppManager({ userName }: Props) {
               <QrCode className="w-4 h-4" />
               Escaneie o QR Code com seu WhatsApp
             </div>
-            <img
-              src={`data:image/png;base64,${qrCode}`}
-              alt="QR Code WhatsApp"
-              className="w-64 h-64 mx-auto border-2 border-border rounded-xl shadow-lg"
-            />
+            <div className="bg-white rounded-xl p-3 shadow-lg inline-block">
+              <img
+                src={qrCode}
+                alt="QR Code WhatsApp"
+                className="w-64 h-64 object-contain"
+              />
+            </div>
             <p className="text-xs text-muted-foreground animate-pulse">⏳ Aguardando conexão...</p>
           </div>
         )}
