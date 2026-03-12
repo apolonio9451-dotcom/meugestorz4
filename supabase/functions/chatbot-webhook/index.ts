@@ -765,6 +765,21 @@ Ofereça ajuda e sugira planos disponíveis.`;
           decisions.push("👋 Primeiro contato deste número → Enviando boas-vindas");
           await doPresence("composing", minDelay, maxDelay);
           await sendText(apiUrl, apiToken, phone, welcomeMsg);
+
+          // Send welcome media if configured
+          const welcomeMediaId = chatSettings.send_welcome_media_id;
+          if (welcomeMediaId) {
+            const { data: welcomeMedia } = await supabase
+              .from("chatbot_media").select("file_url, file_type, file_name")
+              .eq("id", welcomeMediaId).single();
+            if (welcomeMedia) {
+              decisions.push(`📎 Enviando mídia de boas-vindas: ${welcomeMedia.file_name}`);
+              const presType = welcomeMedia.file_type === "audio" ? "recording" : "composing";
+              await doPresence(presType as any, minDelay + 1, maxDelay + 2);
+              await sendMedia(apiUrl, apiToken, phone, welcomeMedia.file_url, welcomeMedia.file_type);
+            }
+          }
+
           await supabase.from("chatbot_logs").insert({
             company_id: companyIdParam, phone, client_name: "Novo Contato",
             message_received: messageText.slice(0, 500), message_sent: welcomeMsg.slice(0, 500),
