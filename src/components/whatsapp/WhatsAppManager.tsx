@@ -79,65 +79,62 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
   };
 
   const confirmAndFinalize = async (instanceToken: string, instanceId: string, data: any) => {
-    console.log("[WhatsApp] Connection detected, confirming in 3s...");
+    console.log("[WhatsApp] Connection detected, validating stability...");
     setStatus("loading");
 
-    // Wait 3 seconds and re-check to confirm stable connection
-    await new Promise((r) => setTimeout(r, 3000));
+    let lastConnectedPayload: any = null;
+    let consecutiveConnectedChecks = 0;
 
-    const { data: confirmData, error: confirmError } = await supabase.functions.invoke("whatsapp-status", {
-      body: { token: instanceToken },
-    });
+    // Validate stability: up to 6 checks, every 3s, require 2 connected checks in sequence
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      await new Promise((r) => setTimeout(r, 3000));
 
-    console.log("[WhatsApp] Confirmation check:", JSON.stringify(confirmData));
+      const { data: confirmData, error: confirmError } = await supabase.functions.invoke("whatsapp-status", {
+        body: { token: instanceToken },
+      });
 
-    if (confirmError || !confirmData?.connected) {
-      console.warn("[WhatsApp] Connection not stable, resuming polling...");
-      setStatus("qr");
-      startPolling(instanceToken, instanceId);
-      return;
-    }
+      console.log(`[WhatsApp] Stability check ${attempt}/6:`, JSON.stringify(confirmData));
 
-    // Connection confirmed! Now configure webhook via manage-instance
-    console.log("[WhatsApp] ✅ Connection confirmed! Configuring webhook...");
-    
-    if (companyId) {
-      try {
-        const { data: saveData, error: saveError } = await supabase.functions.invoke("manage-instance", {
-          body: {
-            action: "save",
-            company_id: companyId,
-            instance_token: instanceToken,
-            instance_name: userName || "Minha Instância",
-          },
-        });
-        if (saveError) {
-          console.error("[WhatsApp] Webhook config error:", saveError);
-        } else {
-          console.log("[WhatsApp] Webhook configured:", saveData?.webhook_url);
+      if (!confirmError && confirmData?.connected) {
+        consecutiveConnectedChecks += 1;
+        lastConnectedPayload = confirmData;
+
+        if (consecutiveConnectedChecks >= 2) {
+          const profileName = confirmData.profileName || data?.profileName;
+          const phoneNumber = confirmData.phoneNumber || data?.phoneNumber;
+
+          setStatus("connected");
+          setQrCode(null);
+          setConnection({
+            token: instanceToken,
+            instanceId: confirmData.instanceId ?? instanceId,
+            profileName,
+            phoneNumber,
+          });
+
+          await persistToken(instanceToken);
+
+          toast.success("WhatsApp conectado com sucesso!");
+          setTimeout(() => {
+            console.log("[WhatsApp] Firing onConnected callback");
+            onConnected?.({ profileName, phoneNumber });
+          }, 500);
+          return;
         }
-      } catch (err) {
-        console.error("[WhatsApp] Webhook setup failed:", err);
+      } else {
+        consecutiveConnectedChecks = 0;
       }
     }
 
-    const profileName = confirmData.profileName || data?.profileName;
-    const phoneNumber = confirmData.phoneNumber || data?.phoneNumber;
+    // If it did not stabilize, keep trying via polling instead of failing hard
+    console.warn("[WhatsApp] Connection did not stabilize yet, resuming polling...");
 
-    setStatus("connected");
-    setQrCode(null);
-    setConnection({
-      token: instanceToken,
-      instanceId: confirmData.instanceId ?? instanceId,
-      profileName,
-      phoneNumber,
-    });
+    if (lastConnectedPayload?.qrCode) {
+      setQrCode(normalizeQrCode(lastConnectedPayload.qrCode));
+    }
 
-    toast.success("WhatsApp conectado com sucesso!");
-    setTimeout(() => {
-      console.log("[WhatsApp] Firing onConnected callback");
-      onConnected?.({ profileName, phoneNumber });
-    }, 500);
+    setStatus("waiting_qr");
+    startPolling(instanceToken, instanceId);
   };
 
   const startPolling = (instanceToken: string, instanceId: string) => {
@@ -169,6 +166,8 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         if (data?.qrCode) {
           setQrCode(normalizeQrCode(data.qrCode));
           setStatus("qr");
+        } else {
+          setStatus("waiting_qr");
         }
 
         if (attempts >= 60) {
