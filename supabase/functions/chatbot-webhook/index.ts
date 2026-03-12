@@ -461,6 +461,27 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Fetch API credentials
+    const { data: apiSettings } = await supabase
+      .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
+    if (!apiSettings?.api_url || !apiSettings?.api_token) {
+      return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
+    const apiToken = apiSettings.api_token;
+    const minDelay = chatSettings.min_delay_seconds ?? 3;
+    const maxDelay = chatSettings.max_delay_seconds ?? 6;
+
+    // Helper: simulate presence only if enabled
+    async function doPresence(type: "composing" | "recording", min: number, max: number) {
+      if (presenceEnabled) {
+        await simulatePresence(apiUrl, apiToken, phone, type, getRandomDelay(min, max));
+      }
+    }
+
     // Check max messages per contact limit
     const maxMsgsLimit = chatSettings.max_messages_per_contact || 0;
     if (maxMsgsLimit > 0) {
@@ -477,7 +498,6 @@ Deno.serve(async (req: Request) => {
         decisions.push(`🛑 Limite de ${maxMsgsLimit} mensagens/24h atingido (${msgCount} enviadas)`);
         const closingMsg = chatSettings.closing_message?.trim();
         if (closingMsg) {
-          // Only send closing message once - check if already sent
           const { data: alreadySentClosing } = await supabase
             .from("chatbot_logs")
             .select("id")
@@ -505,27 +525,6 @@ Deno.serve(async (req: Request) => {
         });
       }
       decisions.push(`📊 Mensagens enviadas: ${msgCount || 0}/${maxMsgsLimit} (24h)`);
-    }
-
-    // Fetch API credentials
-    const { data: apiSettings } = await supabase
-      .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
-    if (!apiSettings?.api_url || !apiSettings?.api_token) {
-      return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
-    const apiToken = apiSettings.api_token;
-    const minDelay = chatSettings.min_delay_seconds ?? 3;
-    const maxDelay = chatSettings.max_delay_seconds ?? 6;
-
-    // Helper: simulate presence only if enabled
-    async function doPresence(type: "composing" | "recording", min: number, max: number) {
-      if (presenceEnabled) {
-        await simulatePresence(apiUrl, apiToken, phone, type, getRandomDelay(min, max));
-      }
     }
 
     // Check business hours
