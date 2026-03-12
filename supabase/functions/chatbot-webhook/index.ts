@@ -162,7 +162,6 @@ function checkAutoReply(message: string, autoReplies: any[]): any | null {
 }
 
 // ===================== UAZAPI PAYLOAD EXTRACTION =====================
-// Handles multiple UAZAPI payload formats including messages.upsert
 
 interface ExtractedPayload {
   messageText: string;
@@ -173,33 +172,15 @@ interface ExtractedPayload {
 }
 
 function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
-  // messages.upsert format: body contains an array or object with message data
-  // Common structure: { event: "messages.upsert", data: { key: { remoteJid, fromMe }, message: { conversation, ... } } }
-  // Or: { event: "messages.upsert", data: [{ key: {...}, message: {...} }] }
-  
   const event = (body?.event || body?.EventType || body?.action || "").toString();
-  
   let msgData = body?.data;
-  
-  // If data is an array, take first element
-  if (Array.isArray(msgData)) {
-    msgData = msgData[0];
-  }
-  
-  // Sometimes the message itself is the root
-  if (!msgData && body?.key && body?.message) {
-    msgData = body;
-  }
-  
+  if (Array.isArray(msgData)) msgData = msgData[0];
+  if (!msgData && body?.key && body?.message) msgData = body;
   if (!msgData) return null;
-  
   const key = msgData?.key || {};
   const message = msgData?.message || {};
-  
   const fromMe = key?.fromMe === true || msgData?.fromMe === true;
   const remoteJid = key?.remoteJid || "";
-  
-  // Extract text from various WhatsApp message types
   const messageText = 
     message?.conversation ||
     message?.extendedTextMessage?.text ||
@@ -207,11 +188,7 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
     message?.listResponseMessage?.title ||
     message?.templateButtonReplyMessage?.selectedDisplayText ||
     message?.editedMessage?.message?.protocolMessage?.editedMessage?.conversation ||
-    msgData?.body ||
-    msgData?.text ||
-    "";
-  
-  // Detect message type
+    msgData?.body || msgData?.text || "";
   let messageType = "text";
   if (message?.imageMessage) messageType = "image";
   else if (message?.videoMessage) messageType = "video";
@@ -221,7 +198,6 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
   else if (message?.contactMessage) messageType = "contact";
   else if (message?.locationMessage) messageType = "location";
   else if (!messageText) messageType = "unknown";
-  
   return {
     messageText: typeof messageText === "string" ? messageText.trim() : "",
     senderPhone: cleanJid(remoteJid),
@@ -232,10 +208,8 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
 }
 
 function extractGenericPayload(body: any): ExtractedPayload {
-  // Fallback: try all known field locations from UAZAPI V1/V2 and other formats
   const eventType = (body?.EventType || body?.event || body?.action || "").toString().toLowerCase();
   const fromMe = body?.message?.fromMe === true || body?.fromMe === true;
-
   const textCandidates = [
     body?.message?.text,
     body?.message?.content?.text,
@@ -251,47 +225,30 @@ function extractGenericPayload(body: any): ExtractedPayload {
     body?.message?.listReply?.title,
     body?.message?.listResponseMessage?.title,
     body?.message?.templateButtonReplyMessage?.selectedDisplayText,
-    body?.text,
-    body?.body,
-    body?.data?.text,
-    body?.data?.body,
+    body?.text, body?.body,
+    body?.data?.text, body?.data?.body,
     body?.data?.message?.text,
     body?.data?.message?.conversation,
     body?.data?.message?.extendedTextMessage?.text,
   ];
-  
   let messageText = "";
   for (const val of textCandidates) {
     if (typeof val === "string" && val.trim()) { messageText = val.trim(); break; }
   }
-
   const phoneCandidates = [
-    body?.message?.chatid,
-    body?.chat?.wa_chatid,
-    body?.chat?.phone,
-    body?.message?.sender,
-    body?.message?.sender_pn,
-    body?.message?.from,
-    body?.from,
-    body?.phone,
-    body?.sender,
-    body?.data?.from,
-    body?.data?.phone,
-    body?.data?.sender,
-    body?.data?.key?.remoteJid,
-    body?.key?.remoteJid,
+    body?.message?.chatid, body?.chat?.wa_chatid, body?.chat?.phone,
+    body?.message?.sender, body?.message?.sender_pn, body?.message?.from,
+    body?.from, body?.phone, body?.sender,
+    body?.data?.from, body?.data?.phone, body?.data?.sender,
+    body?.data?.key?.remoteJid, body?.key?.remoteJid,
   ];
-
   let senderRaw = "";
   for (const val of phoneCandidates) {
     if (typeof val === "string" && val.trim()) { senderRaw = val.trim(); break; }
   }
-
-  // Detect type based on UAZAPI message fields
   const msg = body?.message || {};
   const msgType = (msg.messageType || msg.type || "").toLowerCase();
   let messageType = "text";
-  
   if (msgType.includes("image") || msg.mediaType === "image") messageType = "image";
   else if (msgType.includes("audio") || msg.mediaType === "audio") messageType = "audio";
   else if (msgType.includes("video") || msg.mediaType === "video") messageType = "video";
@@ -305,39 +262,73 @@ function extractGenericPayload(body: any): ExtractedPayload {
     else messageType = "media";
   }
   if (!messageText && messageType === "text") messageType = "unknown";
-
-  return {
-    messageText,
-    senderPhone: cleanJid(senderRaw),
-    fromMe,
-    messageType,
-    eventType,
-  };
+  return { messageText, senderPhone: cleanJid(senderRaw), fromMe, messageType, eventType };
 }
 
 function extractIncomingPayload(body: any): ExtractedPayload {
-  // Try messages.upsert format first (most common from modern UAZAPI/Baileys)
   const upsert = extractFromMessagesUpsert(body);
-  if (upsert && (upsert.senderPhone || upsert.messageText)) {
-    return upsert;
-  }
-  // Fallback to generic extraction
+  if (upsert && (upsert.senderPhone || upsert.messageText)) return upsert;
   return extractGenericPayload(body);
+}
+
+// ===================== AI COMMAND TAG PROCESSOR =====================
+
+interface AiCommandResult {
+  cleanText: string;
+  commands: { type: string; data?: any }[];
+}
+
+function parseAiCommands(text: string): AiCommandResult {
+  const commands: { type: string; data?: any }[] = [];
+  let cleanText = text;
+
+  // [ENVIAR_MENU] - send the configured interactive menu
+  if (cleanText.includes("[ENVIAR_MENU]")) {
+    commands.push({ type: "send_menu" });
+    cleanText = cleanText.replace(/\[ENVIAR_MENU\]\s*/gi, "").trim();
+  }
+
+  // [ENVIAR_CATALOGO] - send subscription plans as list
+  if (cleanText.includes("[ENVIAR_CATALOGO]")) {
+    commands.push({ type: "send_catalog" });
+    cleanText = cleanText.replace(/\[ENVIAR_CATALOGO\]\s*/gi, "").trim();
+  }
+
+  // [ENVIAR_BOTOES:titulo1|titulo2|titulo3] - send quick buttons
+  const btnMatch = cleanText.match(/\[ENVIAR_BOTOES:(.+?)\]/i);
+  if (btnMatch) {
+    const titles = btnMatch[1].split("|").map(t => t.trim()).filter(Boolean).slice(0, 3);
+    commands.push({ type: "send_buttons", data: titles });
+    cleanText = cleanText.replace(/\[ENVIAR_BOTOES:.+?\]\s*/gi, "").trim();
+  }
+
+  // [ENVIAR_LISTA:titulo1|titulo2|...] - send list menu with items
+  const listMatch = cleanText.match(/\[ENVIAR_LISTA:(.+?)\]/i);
+  if (listMatch) {
+    const titles = listMatch[1].split("|").map(t => t.trim()).filter(Boolean).slice(0, 10);
+    commands.push({ type: "send_list", data: titles });
+    cleanText = cleanText.replace(/\[ENVIAR_LISTA:.+?\]\s*/gi, "").trim();
+  }
+
+  // [ENVIAR_MEDIA:filename] - existing media tag
+  const mediaMatch = cleanText.match(/\[ENVIAR_MEDIA:(.+?)\]/i);
+  if (mediaMatch) {
+    commands.push({ type: "send_media", data: mediaMatch[1].trim() });
+    cleanText = cleanText.replace(/\[ENVIAR_MEDIA:.+?\]\s*/gi, "").trim();
+  }
+
+  return { cleanText, commands };
 }
 
 // ===================== MAIN HANDLER =====================
 
 Deno.serve(async (req: Request) => {
-  // Always allow CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
   }
-
-  // Accept GET for health checks
   if (req.method === "GET") {
     return new Response(JSON.stringify({ status: "ok", message: "Chatbot webhook is running" }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -345,14 +336,15 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  // UAZAPI appends event type to URL path, which can pollute the company_id param
-  // e.g. "8979f2af-d095-41d0-9de3-7a5797a8fdc1/messages/text" — extract just the UUID
+
   const rawCompanyId = new URL(req.url).searchParams.get("company_id") || "";
   const uuidMatch = rawCompanyId.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   const companyIdParam = uuidMatch ? uuidMatch[1] : rawCompanyId || null;
 
+  // Decision log accumulator
+  const decisions: string[] = [];
+
   try {
-    // ===== STEP 1: Parse body =====
     let body: any;
     try {
       body = await req.json();
@@ -367,12 +359,10 @@ Deno.serve(async (req: Request) => {
     console.log("company_id:", companyIdParam);
     console.log("Corpo recebido:", JSON.stringify(body).slice(0, 3000));
 
-    // ===== STEP 2: Extract payload =====
     const { messageText, senderPhone, fromMe, messageType, eventType } = extractIncomingPayload(body);
-
     console.log("Dados extraídos:", JSON.stringify({ messageText: messageText.slice(0, 200), senderPhone, fromMe, messageType, eventType }));
 
-    // ===== STEP 3: Filter non-message events =====
+    // Filter non-message events
     const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels", "messages_update", "chat_labels", "receipt"];
     const eventLower = eventType.toLowerCase();
     if (eventLower && ignoredEvents.some(e => eventLower.includes(e))) {
@@ -382,7 +372,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ===== STEP 3.5: Ignore group messages =====
+    // Ignore group messages
     const isGroup = body?.message?.isGroup === true || body?.chat?.wa_isGroup === true || 
       (senderPhone && senderPhone.includes("120363"));
     if (isGroup) {
@@ -392,25 +382,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ===== STEP 4: Ignore own messages =====
+    // Ignore own messages
     if (fromMe) {
-      console.log("Mensagem própria ignorada (fromMe)");
       return new Response(JSON.stringify({ status: "ok", reason: "from_me" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ===== STEP 5: Handle non-text messages =====
+    // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      console.log(`Mídia recebida (${messageType}), ignorando processamento IA`);
       await supabase.from("chatbot_logs").insert({
-        company_id: companyIdParam,
-        phone: normalizePhone(senderPhone),
-        client_name: `Mídia (${messageType})`,
-        message_received: `[${messageType.toUpperCase()}]`,
-        message_sent: "",
-        context_type: "media_received",
-        status: "ignored",
+        company_id: companyIdParam, phone: normalizePhone(senderPhone),
+        client_name: `Mídia (${messageType})`, message_received: `[${messageType.toUpperCase()}]`,
+        message_sent: "", context_type: "media_received", status: "ignored",
         error_message: `Tipo de mensagem não processável: ${messageType}`,
       });
       return new Response(JSON.stringify({ status: "ok", reason: "non_text", type: messageType }), {
@@ -418,26 +402,18 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ===== STEP 6: Validate required fields =====
+    // Validate required fields
     if (!messageText || !senderPhone || !companyIdParam) {
       const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
       const debugDetails = `Missing: text=${!!messageText} phone=${!!senderPhone} company=${!!companyIdParam} type=${messageType} event=${eventType} keys=[${bodyKeys.join(",")}]`;
-      console.error("Payload inválido:", debugDetails);
-
       if (companyIdParam) {
         await supabase.from("chatbot_logs").insert({
-          company_id: companyIdParam,
-          phone: normalizePhone(senderPhone || ""),
-          client_name: "Payload inválido",
-          message_received: (messageText || "").slice(0, 500),
-          message_sent: "",
-          context_type: "invalid_payload",
-          status: "error",
+          company_id: companyIdParam, phone: normalizePhone(senderPhone || ""),
+          client_name: "Payload inválido", message_received: (messageText || "").slice(0, 500),
+          message_sent: "", context_type: "invalid_payload", status: "error",
           error_message: `${debugDetails} | preview: ${JSON.stringify(body).slice(0, 300)}`,
         });
       }
-
-      // Return 200 to prevent UAZAPI retries
       return new Response(JSON.stringify({ status: "ok", info: "missing_fields", details: debugDetails }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -445,38 +421,35 @@ Deno.serve(async (req: Request) => {
 
     const phone = normalizePhone(senderPhone);
     console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
+    decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
 
-    // ===== STEP 7: Fetch chatbot settings =====
-    console.log(`Buscando configurações do chatbot para empresa: ${companyIdParam}`);
+    // Fetch chatbot settings
     const { data: chatSettings } = await supabase
       .from("chatbot_settings").select("*").eq("company_id", companyIdParam).single();
 
     if (!chatSettings?.is_active) {
-      console.log("Chatbot desativado para esta empresa");
       return new Response(JSON.stringify({ status: "ok", reason: "bot_disabled" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log("Chatbot ativo, personalidade:", (chatSettings.personality || "").slice(0, 80));
 
-    // ===== STEP 8: Check blocked contacts =====
+    const presenceEnabled = chatSettings.presence_enabled !== false;
+    const aiDecisionLog = chatSettings.ai_decision_log !== false;
+
+    // Check blocked contacts
     const { data: blocked } = await supabase
       .from("chatbot_blocked_contacts").select("id").eq("company_id", companyIdParam).eq("phone", phone).maybeSingle();
-
     if (blocked) {
-      console.log(`Contato bloqueado: ${phone}`);
+      decisions.push("🚫 Contato bloqueado → Ignorando");
       return new Response(JSON.stringify({ status: "ok", reason: "blocked" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ===== STEP 9: Fetch API credentials =====
-    console.log("Buscando credenciais da API UAZAPI...");
+    // Fetch API credentials
     const { data: apiSettings } = await supabase
       .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
-
     if (!apiSettings?.api_url || !apiSettings?.api_token) {
-      console.error("API não configurada para esta empresa");
       return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -486,19 +459,26 @@ Deno.serve(async (req: Request) => {
     const apiToken = apiSettings.api_token;
     const minDelay = chatSettings.min_delay_seconds ?? 3;
     const maxDelay = chatSettings.max_delay_seconds ?? 6;
-    console.log(`API URL: ${apiUrl}, delay: ${minDelay}-${maxDelay}s`);
 
-    // ===== STEP 10: Check business hours =====
+    // Helper: simulate presence only if enabled
+    async function doPresence(type: "composing" | "recording", min: number, max: number) {
+      if (presenceEnabled) {
+        await simulatePresence(apiUrl, apiToken, phone, type, getRandomDelay(min, max));
+      }
+    }
+
+    // Check business hours
     if (!isWithinBusinessHours(chatSettings)) {
-      console.log("Fora do horário comercial");
+      decisions.push("🕐 Fora do horário comercial → Enviando mensagem de ausência");
       const awayMsg = chatSettings.away_message?.trim();
       if (awayMsg) {
-        await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+        await doPresence("composing", minDelay, maxDelay);
         await sendText(apiUrl, apiToken, phone, awayMsg);
         await supabase.from("chatbot_logs").insert({
           company_id: companyIdParam, phone, client_name: "Fora do horário",
           message_received: messageText.slice(0, 500), message_sent: awayMsg.slice(0, 500),
           context_type: "away", status: "success",
+          error_message: aiDecisionLog ? decisions.join("\n") : null,
         });
       }
       return new Response(JSON.stringify({ status: "ok", reason: "outside_hours" }), {
@@ -506,39 +486,39 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ===== STEP 11: Check transfer keyword =====
+    // Check transfer keyword
     const transferKw = (chatSettings.transfer_keyword || "").trim().toLowerCase();
     if (transferKw && messageText.toLowerCase().trim().includes(transferKw)) {
-      console.log("Keyword de transferência detectada");
+      decisions.push(`🔄 Keyword de transferência "${transferKw}" detectada → Transferindo`);
       const transferMsg = chatSettings.transfer_message?.trim() || "Transferindo para um atendente...";
-      await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+      await doPresence("composing", minDelay, maxDelay);
       await sendText(apiUrl, apiToken, phone, transferMsg);
       await supabase.from("chatbot_logs").insert({
         company_id: companyIdParam, phone, client_name: "Transferência",
         message_received: messageText.slice(0, 500), message_sent: transferMsg.slice(0, 500),
         context_type: "transfer", status: "success",
+        error_message: aiDecisionLog ? decisions.join("\n") : null,
       });
       return new Response(JSON.stringify({ status: "ok", reason: "transferred" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ===== STEP 12: Check auto-replies =====
+    // Check auto-replies
     const { data: autoReplies } = await supabase
       .from("chatbot_auto_replies").select("*").eq("company_id", companyIdParam);
-
     if (autoReplies && autoReplies.length > 0) {
       const matchedReply = checkAutoReply(messageText, autoReplies);
       if (matchedReply) {
-        console.log("Auto-reply encontrada:", matchedReply.trigger_keyword);
-        await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+        decisions.push(`⚡ Gatilho automático ativado: "${matchedReply.trigger_keyword}" → Resposta direta`);
+        await doPresence("composing", minDelay, maxDelay);
         await sendText(apiUrl, apiToken, phone, matchedReply.response_text);
         if (matchedReply.response_media_id) {
           const { data: media } = await supabase
             .from("chatbot_media").select("*").eq("id", matchedReply.response_media_id).single();
           if (media) {
             const presType = media.file_type === "audio" ? "recording" : "composing";
-            await simulatePresence(apiUrl, apiToken, phone, presType as any, getRandomDelay(minDelay + 2, maxDelay + 3));
+            await doPresence(presType as any, minDelay + 2, maxDelay + 3);
             await sendMedia(apiUrl, apiToken, phone, media.file_url, media.file_type);
           }
         }
@@ -546,6 +526,7 @@ Deno.serve(async (req: Request) => {
           company_id: companyIdParam, phone, client_name: "Auto-Reply",
           message_received: messageText.slice(0, 500), message_sent: matchedReply.response_text.slice(0, 500),
           context_type: "auto_reply", status: "success",
+          error_message: aiDecisionLog ? decisions.join("\n") : null,
         });
         return new Response(JSON.stringify({ status: "ok", reason: "auto_reply" }), {
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -553,12 +534,11 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // ===== STEP 12.5: Handle menu item responses =====
+    // Handle menu item responses
     const menuEnabled = chatSettings.interactive_menu_enabled;
     const menuItems: any[] = chatSettings.interactive_menu_items || [];
     const lowerText = messageText.toLowerCase().trim();
     
-    // Check if user's message matches a menu item (button reply)
     const isMenuResponse = menuEnabled && menuItems.length > 0 && menuItems.some((item: any) => {
       const itemTitle = (item.title || "").toLowerCase().trim();
       const itemId = (item.id || "").toLowerCase().trim();
@@ -566,9 +546,9 @@ Deno.serve(async (req: Request) => {
     });
 
     if (isMenuResponse) {
-      // Handle "ver catalogo" - send subscription plans as interactive list
+      // Handle "ver catalogo"
       if (lowerText.includes("ver catalogo") || lowerText.includes("ver catálogo") || lowerText.includes("catalogo") || lowerText.includes("catálogo")) {
-        console.log("Resposta de menu: ver catálogo - buscando planos...");
+        decisions.push("📋 Resposta de menu: 'Ver Catálogo' → Buscando planos ativos");
         const { data: plans } = await supabase
           .from("subscription_plans")
           .select("id, name, price, duration_days, description")
@@ -583,46 +563,39 @@ Deno.serve(async (req: Request) => {
             title: plan.name,
             description: `R$ ${Number(plan.price).toFixed(2)} - ${plan.duration_days} dias`,
           }));
-
+          decisions.push(`✅ ${plans.length} planos encontrados → Enviando lista interativa`);
           try {
-            await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
-            await sendList(
-              apiUrl, apiToken, phone,
-              "📋 Nosso Catálogo",
-              "Confira nossos planos disponíveis! Selecione um para mais informações:",
-              "Preços atualizados",
-              "Ver Planos",
-              catalogItems
-            );
+            await doPresence("composing", minDelay, maxDelay);
+            await sendList(apiUrl, apiToken, phone, "📋 Nosso Catálogo", "Confira nossos planos disponíveis! Selecione um para mais informações:", "Preços atualizados", "Ver Planos", catalogItems);
             await supabase.from("chatbot_logs").insert({
               company_id: companyIdParam, phone, client_name: "Catálogo",
               message_received: messageText.slice(0, 500),
               message_sent: `[CATÁLOGO] ${plans.map((p: any) => p.name).join(" | ")}`.slice(0, 500),
               context_type: "auto_reply", status: "success",
+              error_message: aiDecisionLog ? decisions.join("\n") : null,
             });
             return new Response(JSON.stringify({ status: "ok", reason: "catalog_sent" }), {
               status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           } catch (catErr: any) {
-            console.error("Erro ao enviar catálogo:", catErr);
-            // Fallback: send as text
+            decisions.push(`⚠️ Falha na lista interativa → Enviando como texto`);
             const textCatalog = plans.map((p: any) => 
               `📦 *${p.name}*\n💰 R$ ${Number(p.price).toFixed(2)}\n⏱️ ${p.duration_days} dias${p.description ? `\n📝 ${p.description}` : ""}`
             ).join("\n\n");
             await sendText(apiUrl, apiToken, phone, `📋 *Nosso Catálogo de Planos:*\n\n${textCatalog}\n\nPara contratar, fale com nosso atendente! 😊`);
             await supabase.from("chatbot_logs").insert({
               company_id: companyIdParam, phone, client_name: "Catálogo (texto)",
-              message_received: messageText.slice(0, 500),
-              message_sent: textCatalog.slice(0, 500),
+              message_received: messageText.slice(0, 500), message_sent: textCatalog.slice(0, 500),
               context_type: "auto_reply", status: "success",
+              error_message: aiDecisionLog ? decisions.join("\n") : null,
             });
             return new Response(JSON.stringify({ status: "ok", reason: "catalog_text_fallback" }), {
               status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
         } else {
-          // No plans found - send friendly message
-          await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+          decisions.push("⚠️ Nenhum plano ativo → Enviando mensagem padrão");
+          await doPresence("composing", minDelay, maxDelay);
           await sendText(apiUrl, apiToken, phone, "No momento não temos planos cadastrados no catálogo. Entre em contato com nosso atendente para mais informações! 😊");
           return new Response(JSON.stringify({ status: "ok", reason: "no_plans" }), {
             status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -630,42 +603,42 @@ Deno.serve(async (req: Request) => {
         }
       }
       
-      // Other menu responses - pass to AI for handling
-      console.log("Resposta de menu não mapeada, passando para IA:", lowerText);
+      decisions.push(`🔘 Resposta de menu "${lowerText}" não mapeada → Passando para IA`);
     }
 
-    // ===== STEP 12.6: Send interactive menu (only for non-menu-response messages) =====
+    // Send interactive menu (only for non-menu-response messages)
     if (!isMenuResponse && menuEnabled && menuItems.length > 0 && menuItems.some((i: any) => i.title)) {
-      const menuType = chatSettings.interactive_menu_type || "buttons";
-      const menuTitle = chatSettings.interactive_menu_title || "";
-      const menuBody = chatSettings.interactive_menu_body || "Selecione uma opção:";
-      const menuFooter = chatSettings.interactive_menu_footer || "";
-      const menuButtonText = chatSettings.interactive_menu_button_text || "Ver Opções";
+      decisions.push("📱 Enviando menu interativo como primeira resposta");
+      const mType = chatSettings.interactive_menu_type || "buttons";
+      const mTitle = chatSettings.interactive_menu_title || "";
+      const mBody = chatSettings.interactive_menu_body || "Selecione uma opção:";
+      const mFooter = chatSettings.interactive_menu_footer || "";
+      const mButtonText = chatSettings.interactive_menu_button_text || "Ver Opções";
       const validItems = menuItems.filter((i: any) => i.title);
-
       try {
-        await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
-        if (menuType === "buttons") {
-          await sendButtons(apiUrl, apiToken, phone, menuTitle, menuBody, menuFooter, validItems.slice(0, 3));
+        await doPresence("composing", minDelay, maxDelay);
+        if (mType === "buttons") {
+          await sendButtons(apiUrl, apiToken, phone, mTitle, mBody, mFooter, validItems.slice(0, 3));
         } else {
-          await sendList(apiUrl, apiToken, phone, menuTitle, menuBody, menuFooter, menuButtonText, validItems.slice(0, 10));
+          await sendList(apiUrl, apiToken, phone, mTitle, mBody, mFooter, mButtonText, validItems.slice(0, 10));
         }
         await supabase.from("chatbot_logs").insert({
           company_id: companyIdParam, phone, client_name: "Menu Interativo",
           message_received: messageText.slice(0, 500),
-          message_sent: `[MENU ${menuType.toUpperCase()}] ${validItems.map((i: any) => i.title).join(" | ")}`.slice(0, 500),
+          message_sent: `[MENU ${mType.toUpperCase()}] ${validItems.map((i: any) => i.title).join(" | ")}`.slice(0, 500),
           context_type: "auto_reply", status: "success",
+          error_message: aiDecisionLog ? decisions.join("\n") : null,
         });
         return new Response(JSON.stringify({ status: "ok", reason: "interactive_menu" }), {
           status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (menuErr: any) {
-        console.error("Falha ao enviar menu interativo, continuando para IA:", menuErr);
+        decisions.push("⚠️ Falha no menu interativo → Continuando para IA");
+        console.error("Falha ao enviar menu interativo:", menuErr);
       }
     }
 
-    // ===== STEP 13: Check client context =====
-    console.log(`Buscando dados do cliente com telefone: ${phone}`);
+    // ===== CHECK CLIENT CONTEXT =====
     const { data: clientData } = await supabase
       .from("clients").select("id, name, status, company_id")
       .eq("company_id", companyIdParam)
@@ -675,11 +648,16 @@ Deno.serve(async (req: Request) => {
     let clientContext = "";
     let contextType = "new_contact";
     let clientName = "Desconhecido";
+    let contextInstructions = "";
+
+    // Get the custom instructions for new contact vs client
+    const newContactInstr = (chatSettings.new_contact_instructions || "").trim();
+    const clientInstr = (chatSettings.client_instructions || "").trim();
 
     if (clientData) {
       contextType = "client";
       clientName = clientData.name;
-      console.log(`Cliente encontrado: ${clientName} (${clientData.status})`);
+      decisions.push(`👤 Identificado como CLIENTE EXISTENTE: ${clientName} (${clientData.status})`);
 
       const { data: subData } = await supabase
         .from("client_subscriptions")
@@ -690,6 +668,7 @@ Deno.serve(async (req: Request) => {
 
       if (subData) {
         const planName = (subData as any).subscription_plans?.name || "N/A";
+        decisions.push(`📊 Dados: Plano=${planName}, Vencimento=${subData.end_date}, Valor=R$${subData.amount}`);
         clientContext = `
 CONTEXTO DO CLIENTE:
 - Nome: ${clientName}
@@ -697,7 +676,7 @@ CONTEXTO DO CLIENTE:
 - Plano: ${planName}
 - Vencimento: ${subData.end_date}
 - Valor: R$ ${subData.amount}
-Foque em suporte personalizado. Use o nome do cliente.`;
+Foque em suporte personalizado. Use o nome do cliente. Saúde-o pelo nome.`;
       } else {
         clientContext = `
 CONTEXTO DO CLIENTE:
@@ -706,8 +685,15 @@ CONTEXTO DO CLIENTE:
 - Sem assinatura ativa.
 Ofereça ajuda e sugira planos disponíveis.`;
       }
+
+      // Use custom client instructions if available
+      if (clientInstr) {
+        contextInstructions = `\n\nINSTRUÇÕES ESPECÍFICAS PARA CLIENTES:\n${clientInstr}`;
+        decisions.push("📝 Usando instruções personalizadas para CLIENTE");
+      }
     } else {
-      console.log("Novo contato - não encontrado na base");
+      decisions.push("🆕 Identificado como NOVO CONTATO → Não é cliente na base");
+
       const welcomeMsg = chatSettings.welcome_message?.trim();
       if (welcomeMsg) {
         const { data: previousLogs } = await supabase
@@ -716,13 +702,14 @@ Ofereça ajuda e sugira planos disponíveis.`;
           .eq("context_type", "welcome").limit(1).maybeSingle();
 
         if (!previousLogs) {
-          console.log("Enviando mensagem de boas-vindas");
-          await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+          decisions.push("👋 Primeiro contato deste número → Enviando boas-vindas");
+          await doPresence("composing", minDelay, maxDelay);
           await sendText(apiUrl, apiToken, phone, welcomeMsg);
           await supabase.from("chatbot_logs").insert({
             company_id: companyIdParam, phone, client_name: "Novo Contato",
             message_received: messageText.slice(0, 500), message_sent: welcomeMsg.slice(0, 500),
             context_type: "welcome", status: "success",
+            error_message: aiDecisionLog ? decisions.join("\n") : null,
           });
           await sleep(1500);
         }
@@ -731,23 +718,37 @@ Ofereça ajuda e sugira planos disponíveis.`;
 CONTEXTO: Este é um NOVO CONTATO que não é cliente.
 Foque em vendas: apresente o serviço, benefícios e como contratar.
 Seja persuasivo mas educado.`;
+
+      // Use custom new contact instructions if available
+      if (newContactInstr) {
+        contextInstructions = `\n\nINSTRUÇÕES ESPECÍFICAS PARA NOVOS CONTATOS (Script de Vendas):\n${newContactInstr}`;
+        decisions.push("📝 Usando instruções personalizadas para NOVO CONTATO (script de vendas)");
+      }
     }
 
-    // ===== STEP 14: Fetch media =====
+    // Fetch media
     const { data: mediaFiles } = await supabase
       .from("chatbot_media").select("file_name, file_url, file_type").eq("company_id", companyIdParam);
 
     let mediaContext = "";
     if (mediaFiles && mediaFiles.length > 0) {
-      mediaContext = `\n\nMÍDIAS DISPONÍVEIS (use o nome do arquivo quando quiser enviar):
+      mediaContext = `\n\nMÍDIAS DISPONÍVEIS:
 ${mediaFiles.map((m: any) => `- [${m.file_type.toUpperCase()}] ${m.file_name}`).join("\n")}
-
-Para enviar mídia, responda EXATAMENTE neste formato na primeira linha:
-[ENVIAR_MEDIA:nome_do_arquivo.extensão]
-Seguido da mensagem de texto que acompanha o envio.`;
+Para enviar mídia: [ENVIAR_MEDIA:nome_do_arquivo.extensão]`;
     }
 
-    // ===== STEP 15: Call AI =====
+    // Build AI command tags documentation
+    const commandTagsDoc = `
+
+COMANDOS ESPECIAIS (Tags que você pode usar na resposta para executar ações):
+- [ENVIAR_MENU] → Envia o menu interativo configurado
+- [ENVIAR_CATALOGO] → Envia a lista de planos/preços como menu interativo
+- [ENVIAR_BOTOES:Opção 1|Opção 2|Opção 3] → Envia botões rápidos (máx 3)
+- [ENVIAR_LISTA:Item 1|Item 2|Item 3] → Envia um menu de lista expansível
+- [ENVIAR_MEDIA:arquivo.mp3] → Envia mídia da biblioteca
+Use esses comandos quando achar relevante. O sistema processará automaticamente.`;
+
+    // Call AI
     if (!lovableApiKey) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
@@ -755,19 +756,23 @@ Seguido da mensagem de texto que acompanha o envio.`;
     const aiModel = chatSettings.ai_model || "google/gemini-3-flash-preview";
     const aiTemperature = chatSettings.ai_temperature ?? 0.7;
 
-    const systemPrompt = `${chatSettings.personality || "Você é um assistente virtual profissional."}
+    decisions.push(`🤖 Chamando IA (${aiModel}) com contexto: ${contextType}`);
 
+    const systemPrompt = `${chatSettings.personality || "Você é um assistente virtual profissional."}
+${contextInstructions}
 ${clientContext}
 ${mediaContext}
+${commandTagsDoc}
 
 REGRAS IMPORTANTES:
 - Responda de forma natural e humanizada, como se fosse uma pessoa real digitando.
 - Mantenha respostas curtas e diretas (máximo 3 parágrafos).
 - Use emojis com moderação.
 - NUNCA revele que é uma IA ou bot.
-- Se não souber algo, diga que vai verificar e retornar.`;
+- Se não souber algo, diga que vai verificar e retornar.
+- Quando o cliente pedir para ver planos/catálogo, use [ENVIAR_CATALOGO].
+- Quando quiser dar opções ao cliente, use [ENVIAR_BOTOES:...] ou [ENVIAR_LISTA:...].`;
 
-    console.log(`Chamando IA (${aiModel}) para gerar resposta...`);
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
@@ -792,39 +797,106 @@ REGRAS IMPORTANTES:
 
     console.log("Resposta da IA gerada:", replyText.slice(0, 200));
 
-    // ===== STEP 16: Check media in AI response =====
-    let mediaToSend: any = null;
-    const mediaMatch = replyText.match(/^\[ENVIAR_MEDIA:(.+?)\]/);
-    if (mediaMatch && mediaFiles) {
-      const requestedFile = mediaMatch[1].trim();
-      mediaToSend = mediaFiles.find(
-        (m: any) => m.file_name.toLowerCase() === requestedFile.toLowerCase()
-      );
-      replyText = replyText.replace(/^\[ENVIAR_MEDIA:.+?\]\s*/i, "").trim();
+    // Parse AI command tags
+    const { cleanText, commands } = parseAiCommands(replyText);
+    replyText = cleanText;
+
+    // Execute AI commands
+    for (const cmd of commands) {
+      switch (cmd.type) {
+        case "send_menu": {
+          decisions.push("🎯 IA solicitou [ENVIAR_MENU] → Enviando menu interativo");
+          if (menuEnabled && menuItems.length > 0) {
+            const mType = chatSettings.interactive_menu_type || "buttons";
+            const validItems = menuItems.filter((i: any) => i.title);
+            try {
+              if (mType === "buttons") {
+                await sendButtons(apiUrl, apiToken, phone, chatSettings.interactive_menu_title || "", chatSettings.interactive_menu_body || "Selecione:", chatSettings.interactive_menu_footer || "", validItems.slice(0, 3));
+              } else {
+                await sendList(apiUrl, apiToken, phone, chatSettings.interactive_menu_title || "", chatSettings.interactive_menu_body || "Selecione:", chatSettings.interactive_menu_footer || "", chatSettings.interactive_menu_button_text || "Ver Opções", validItems.slice(0, 10));
+              }
+            } catch (e) { console.error("Falha ao enviar menu via tag:", e); }
+          }
+          break;
+        }
+        case "send_catalog": {
+          decisions.push("🎯 IA solicitou [ENVIAR_CATALOGO] → Buscando planos");
+          const { data: plans } = await supabase
+            .from("subscription_plans")
+            .select("id, name, price, duration_days, description")
+            .eq("company_id", companyIdParam)
+            .eq("is_active", true)
+            .order("price", { ascending: true })
+            .limit(10);
+          if (plans && plans.length > 0) {
+            const catalogItems = plans.map((p: any) => ({
+              id: `plan_${p.id}`, title: p.name,
+              description: `R$ ${Number(p.price).toFixed(2)} - ${p.duration_days} dias`,
+            }));
+            try {
+              await sendList(apiUrl, apiToken, phone, "📋 Catálogo", "Confira nossos planos:", "Preços atualizados", "Ver Planos", catalogItems);
+            } catch (e) {
+              const textCat = plans.map((p: any) => `📦 *${p.name}* - R$ ${Number(p.price).toFixed(2)} (${p.duration_days}d)`).join("\n");
+              await sendText(apiUrl, apiToken, phone, `📋 *Nossos Planos:*\n\n${textCat}`);
+            }
+          }
+          break;
+        }
+        case "send_buttons": {
+          const titles: string[] = cmd.data || [];
+          decisions.push(`🎯 IA solicitou [ENVIAR_BOTOES] → ${titles.join(", ")}`);
+          if (titles.length > 0) {
+            const btns = titles.map((t, i) => ({ id: `ai_btn_${i}`, title: t.slice(0, 20) }));
+            try {
+              await sendButtons(apiUrl, apiToken, phone, "", "Escolha uma opção:", "", btns);
+            } catch (e) { console.error("Falha ao enviar botões via tag:", e); }
+          }
+          break;
+        }
+        case "send_list": {
+          const titles: string[] = cmd.data || [];
+          decisions.push(`🎯 IA solicitou [ENVIAR_LISTA] → ${titles.length} itens`);
+          if (titles.length > 0) {
+            const items = titles.map((t, i) => ({ id: `ai_list_${i}`, title: t.slice(0, 24) }));
+            try {
+              await sendList(apiUrl, apiToken, phone, "Opções", "Selecione uma opção:", "", "Ver Opções", items);
+            } catch (e) { console.error("Falha ao enviar lista via tag:", e); }
+          }
+          break;
+        }
+        case "send_media": {
+          const requestedFile = cmd.data;
+          decisions.push(`🎯 IA solicitou [ENVIAR_MEDIA:${requestedFile}]`);
+          if (mediaFiles) {
+            const mediaToSend = mediaFiles.find(
+              (m: any) => m.file_name.toLowerCase() === requestedFile.toLowerCase()
+            );
+            if (mediaToSend) {
+              const presType = mediaToSend.file_type === "audio" ? "recording" : "composing";
+              await doPresence(presType as any, minDelay + 2, maxDelay + 3);
+              await sendMedia(apiUrl, apiToken, phone, mediaToSend.file_url, mediaToSend.file_type);
+            }
+          }
+          break;
+        }
+      }
     }
 
-    // ===== STEP 17: Send response =====
-    console.log("Tentando enviar via UAZAPI...");
-    if (mediaToSend) {
-      const presenceType = mediaToSend.file_type === "audio" ? "recording" : "composing";
-      if (replyText) {
-        await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
-        await sendText(apiUrl, apiToken, phone, replyText);
-      }
-      await simulatePresence(apiUrl, apiToken, phone, presenceType as any, getRandomDelay(minDelay + 2, maxDelay + 3));
-      await sendMedia(apiUrl, apiToken, phone, mediaToSend.file_url, mediaToSend.file_type);
-    } else {
-      await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+    // Send text response (if any remaining after command extraction)
+    if (replyText.trim()) {
+      decisions.push(`💬 Enviando resposta de texto (${replyText.length} chars)`);
+      await doPresence("composing", minDelay, maxDelay);
       await sendText(apiUrl, apiToken, phone, replyText);
     }
 
     console.log("Mensagem enviada com sucesso!");
 
-    // ===== STEP 18: Log =====
+    // Log with decision trail
     await supabase.from("chatbot_logs").insert({
       company_id: companyIdParam, phone, client_name: clientName,
       message_received: messageText.slice(0, 500), message_sent: replyText.slice(0, 500),
       context_type: contextType, status: "success",
+      error_message: aiDecisionLog ? decisions.join("\n") : null,
     });
 
     return new Response(JSON.stringify({ status: "ok", context: contextType }), {
@@ -834,17 +906,16 @@ REGRAS IMPORTANTES:
     console.error("Chatbot webhook error:", error?.message || error);
     try {
       if (companyIdParam) {
-        await supabase.from("chatbot_logs").insert({
+        const supabase2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        await supabase2.from("chatbot_logs").insert({
           company_id: companyIdParam, phone: "unknown", client_name: "Erro",
           message_received: "", message_sent: "",
           context_type: "error", status: "error",
-          error_message: (error?.message || "Unknown error").slice(0, 500),
+          error_message: `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`,
         });
       }
     } catch (_) {}
-
-    // ALWAYS return 200 to prevent UAZAPI retries
-    return new Response(JSON.stringify({ status: "ok", error: error?.message || "Internal error" }), {
+    return new Response(JSON.stringify({ status: "ok", error: "internal" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
