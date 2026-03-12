@@ -187,7 +187,17 @@ export default function Clients() {
     });
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); }, [companyId]);
+  const fetchPixKey = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("api_settings")
+      .select("pix_key")
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (data) setPixKey(data.pix_key || "");
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchPixKey(); }, [companyId]);
 
   const getMessageCategory = (days: number | null): string => {
     if (days === null) return "vencidos";
