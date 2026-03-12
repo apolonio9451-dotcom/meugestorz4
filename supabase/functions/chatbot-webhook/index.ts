@@ -886,6 +886,26 @@ REGRAS IMPORTANTES:
           }
           break;
         }
+        case "send_audio": {
+          const audioName = cmd.data;
+          decisions.push(`🎯 IA solicitou [AUDIO:${audioName}] → Buscando áudio`);
+          if (mediaFiles) {
+            // Match by name (with or without extension)
+            const audioToSend = mediaFiles.find((m: any) => {
+              const fn = m.file_name.toLowerCase();
+              const search = audioName.toLowerCase();
+              return fn === search || fn.startsWith(search + ".") || fn.replace(/\.[^.]+$/, "") === search;
+            });
+            if (audioToSend) {
+              decisions.push(`✅ Áudio encontrado: ${audioToSend.file_name}`);
+              await doPresence("recording", minDelay + 2, maxDelay + 4);
+              await sendMedia(apiUrl, apiToken, phone, audioToSend.file_url, "audio");
+            } else {
+              decisions.push(`⚠️ Áudio "${audioName}" não encontrado na biblioteca`);
+            }
+          }
+          break;
+        }
       }
     }
 
