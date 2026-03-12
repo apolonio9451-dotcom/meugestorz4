@@ -191,19 +191,10 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
       });
 
       if (error) throw error;
-      if (data?.token) void persistToken(data.token);
 
       if (data.status === "connected") {
-        setConnection({
-          token: data.token,
-          instanceId: data.instanceId ?? "",
-          profileName: data.profileName,
-          phoneNumber: data.phoneNumber,
-        });
-        setQrCode(null);
-        setStatus("connected");
-        toast.success("WhatsApp conectado!");
-        setTimeout(() => onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber }), 500);
+        setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
+        await confirmAndFinalize(data.token, data.instanceId ?? "", data);
       } else if (data.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
