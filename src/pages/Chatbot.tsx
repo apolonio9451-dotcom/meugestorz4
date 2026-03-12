@@ -1798,6 +1798,139 @@ export default function Chatbot() {
             )}
           </div>
         </TabsContent>
+
+        {/* DIAGNOSTICS TAB */}
+        <TabsContent value="diagnostics" className="space-y-4 mt-4">
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-primary" />
+                  Painel de Diagnóstico
+                </h2>
+                <p className="text-muted-foreground text-xs mt-1">
+                  Eventos recentes do webhook — falhas, payloads inválidos e mídias não processáveis.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={logsLoading} className="h-8">
+                <RefreshCw className={`w-3.5 h-3.5 mr-1 ${logsLoading ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-center">
+                <p className="text-2xl font-bold text-foreground">{logStats.total}</p>
+                <p className="text-[11px] text-muted-foreground">Total de Eventos</p>
+              </div>
+              <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 text-center">
+                <p className="text-2xl font-bold text-primary">{logStats.success}</p>
+                <p className="text-[11px] text-muted-foreground">Processados</p>
+              </div>
+              <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20 text-center">
+                <p className="text-2xl font-bold text-destructive">{logStats.errors}</p>
+                <p className="text-[11px] text-muted-foreground">Erros</p>
+              </div>
+              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-center">
+                <p className="text-2xl font-bold text-foreground">
+                  {logs.filter((l) => l.context_type === "media_received" || l.context_type === "invalid_payload").length}
+                </p>
+                <p className="text-[11px] text-muted-foreground">Ignorados/Inválidos</p>
+              </div>
+            </div>
+
+            {/* Diagnostic events list */}
+            {(() => {
+              const diagnosticLogs = logs.filter(
+                (l) => l.status === "error" || l.status === "ignored" || l.context_type === "invalid_payload" || l.context_type === "media_received"
+              );
+              if (diagnosticLogs.length === 0) {
+                return (
+                  <div className="text-center py-10 text-muted-foreground text-sm">
+                    <Check className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Nenhum problema encontrado! 🎉</p>
+                    <p className="text-xs mt-1">Todos os webhooks foram processados com sucesso.</p>
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {diagnosticLogs.map((log) => {
+                    const ctx = CONTEXT_LABELS[log.context_type] || CONTEXT_LABELS.error;
+                    const isExpanded = expandedLog === log.id;
+                    return (
+                      <div
+                        key={log.id}
+                        className={`rounded-lg border transition-all cursor-pointer ${
+                          log.status === "error"
+                            ? "bg-destructive/5 border-destructive/20"
+                            : log.status === "ignored"
+                            ? "bg-muted/30 border-border/50"
+                            : "bg-secondary/30 border-border/50"
+                        }`}
+                        onClick={() => setExpandedLog(isExpanded ? null : log.id)}
+                      >
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {log.status === "error" ? (
+                              <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                            ) : (
+                              <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            )}
+                            <span className="text-sm font-medium text-foreground truncate">{log.client_name}</span>
+                            <Badge variant={ctx.color as any} className="text-[9px] shrink-0">
+                              {ctx.label}
+                            </Badge>
+                            <Badge variant="outline" className="text-[9px] shrink-0">
+                              {log.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[11px] font-mono text-muted-foreground hidden md:inline">{log.phone}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {format(new Date(log.created_at), "dd/MM HH:mm:ss")}
+                            </span>
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                          </div>
+                        </div>
+                        {isExpanded && (
+                          <div className="px-4 pb-3 space-y-2 border-t border-border/30 pt-2">
+                            {log.error_message && (
+                              <div className="bg-destructive/10 rounded p-2.5 text-xs">
+                                <span className="text-destructive font-semibold block mb-1">⚠️ Motivo da falha:</span>
+                                <span className="text-foreground font-mono text-[11px] break-all">{log.error_message}</span>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                              <div className="bg-background/50 rounded p-2.5">
+                                <span className="text-muted-foreground block mb-1 font-semibold">📩 Mensagem Recebida:</span>
+                                <span className="text-foreground whitespace-pre-wrap">{log.message_received || "—"}</span>
+                              </div>
+                              <div className="bg-background/50 rounded p-2.5">
+                                <span className="text-muted-foreground block mb-1 font-semibold">🤖 Resposta Enviada:</span>
+                                <span className="text-foreground whitespace-pre-wrap">{log.message_sent || "—"}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                              <span>📱 {log.phone}</span>
+                              <span>•</span>
+                              <span>Tipo: {ctx.label}</span>
+                              <span>•</span>
+                              <span>Status: {log.status}</span>
+                              <span>•</span>
+                              <span>ID: <span className="font-mono">{log.id.slice(0, 8)}</span></span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
