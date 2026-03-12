@@ -91,6 +91,7 @@ export default function Chatbot() {
   const [activeTab, setActiveTab] = useState("connection");
   const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
   const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
+  const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
