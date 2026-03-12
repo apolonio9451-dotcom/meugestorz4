@@ -780,7 +780,7 @@ export default function Chatbot() {
             <div>
               <Label className="text-xs text-muted-foreground">Telefone de teste</Label>
               <Input
-                placeholder="5511999999999"
+                placeholder="Digite o número (ex: 5511999999999)"
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
                 className="h-8 text-sm mt-1"
@@ -798,7 +798,7 @@ export default function Chatbot() {
             <div className="flex items-end">
               <Button
                 onClick={handleTestWebhook}
-                disabled={testingWebhook || !testPhone.trim()}
+                disabled={testingWebhook}
                 className="h-8 w-full"
                 variant="outline"
               >
