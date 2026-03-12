@@ -864,28 +864,31 @@ export default function Chatbot() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5 md:grid-cols-10 h-auto">
           <TabsTrigger value="connection" className="text-xs py-2">
-            <Smartphone className="w-3.5 h-3.5 mr-1" />Conexão
+            <Smartphone className="w-3.5 h-3.5 mr-1" />1. Conexão
           </TabsTrigger>
           <TabsTrigger value="training" className="text-xs py-2">
-            <Brain className="w-3.5 h-3.5 mr-1" />Treinamento
+            <Brain className="w-3.5 h-3.5 mr-1" />2. Treinamento
           </TabsTrigger>
           <TabsTrigger value="messages" className="text-xs py-2">
-            <MessageSquare className="w-3.5 h-3.5 mr-1" />Mensagens
-          </TabsTrigger>
-          <TabsTrigger value="menu" className="text-xs py-2">
-            <Layers className="w-3.5 h-3.5 mr-1" />Menu
-          </TabsTrigger>
-          <TabsTrigger value="autoreplies" className="text-xs py-2">
-            <Zap className="w-3.5 h-3.5 mr-1" />Gatilhos
+            <MessageSquare className="w-3.5 h-3.5 mr-1" />3. Mensagens
           </TabsTrigger>
           <TabsTrigger value="media" className="text-xs py-2">
-            <Music className="w-3.5 h-3.5 mr-1" />Mídia
+            <Music className="w-3.5 h-3.5 mr-1" />4. Mídia
+          </TabsTrigger>
+          <TabsTrigger value="menu" className="text-xs py-2">
+            <Layers className="w-3.5 h-3.5 mr-1" />5. Menu
+          </TabsTrigger>
+          <TabsTrigger value="autoreplies" className="text-xs py-2">
+            <Zap className="w-3.5 h-3.5 mr-1" />6. Gatilhos
           </TabsTrigger>
           <TabsTrigger value="advanced" className="text-xs py-2">
-            <Settings2 className="w-3.5 h-3.5 mr-1" />Avançado
+            <Settings2 className="w-3.5 h-3.5 mr-1" />7. Avançado
+          </TabsTrigger>
+          <TabsTrigger value="simulator" className="text-xs py-2">
+            <MessageCircle className="w-3.5 h-3.5 mr-1" />8. Simulador
           </TabsTrigger>
           <TabsTrigger value="logs" className="text-xs py-2">
-            <MessageCircle className="w-3.5 h-3.5 mr-1" />Logs
+            <MessageCircle className="w-3.5 h-3.5 mr-1" />9. Logs
             {logStats.errors > 0 && (
               <span className="ml-1 bg-destructive text-destructive-foreground text-[9px] rounded-full px-1.5">{logStats.errors}</span>
             )}
