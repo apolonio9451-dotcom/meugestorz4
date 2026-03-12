@@ -234,12 +234,32 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const messageText = body?.message?.text || body?.text || body?.body || "";
-    const senderPhone = body?.message?.from || body?.from || body?.phone || "";
+    const { messageText, senderPhone, senderRaw } = extractIncomingPayload(body);
     const companyIdParam = new URL(req.url).searchParams.get("company_id");
 
     if (!messageText || !senderPhone || !companyIdParam) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+      const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
+      const debugDetails = `Missing fields -> text:${!!messageText} phone:${!!senderPhone} company_id:${!!companyIdParam} keys:${bodyKeys.join(",")}`;
+      console.error("Invalid chatbot webhook payload", {
+        debugDetails,
+        senderRaw,
+        bodyPreview: JSON.stringify(body).slice(0, 500),
+      });
+
+      if (companyIdParam) {
+        await supabase.from("chatbot_logs").insert({
+          company_id: companyIdParam,
+          phone: normalizePhone(senderPhone || ""),
+          client_name: "Payload inválido",
+          message_received: (messageText || "").slice(0, 500),
+          message_sent: "",
+          context_type: "invalid_payload",
+          status: "error",
+          error_message: debugDetails.slice(0, 500),
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Missing required fields", details: debugDetails }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
