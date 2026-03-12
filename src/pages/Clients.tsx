@@ -347,6 +347,21 @@ export default function Clients() {
         );
       }
 
+      // Save credentials
+      await supabase.from("client_credentials").delete().eq("client_id", clientId);
+      const validCreds = formCredentials.filter(c => c.username.trim() || c.password.trim());
+      if (validCreds.length > 0) {
+        await supabase.from("client_credentials").insert(
+          validCreds.map(c => ({
+            client_id: clientId!,
+            company_id: companyId,
+            username: c.username.trim(),
+            password: c.password.trim(),
+            label: c.label.trim(),
+          }))
+        );
+      }
+
       // Save subscription
       if (formPlanId && formEndDate) {
         await supabase.from("client_subscriptions").delete().eq("client_id", clientId);
