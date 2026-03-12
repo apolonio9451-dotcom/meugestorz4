@@ -238,6 +238,10 @@ function extractGenericPayload(body: any): ExtractedPayload {
 
   const textCandidates = [
     body?.message?.text,
+    body?.message?.content?.text,
+    body?.message?.content?.selectedDisplayText,
+    body?.message?.content?.conversation,
+    body?.message?.content?.extendedTextMessage?.text,
     body?.message?.convertOptions,
     body?.message?.body,
     body?.message?.conversation,
@@ -246,6 +250,7 @@ function extractGenericPayload(body: any): ExtractedPayload {
     body?.message?.buttonResponseMessage?.selectedDisplayText,
     body?.message?.listReply?.title,
     body?.message?.listResponseMessage?.title,
+    body?.message?.templateButtonReplyMessage?.selectedDisplayText,
     body?.text,
     body?.body,
     body?.data?.text,
