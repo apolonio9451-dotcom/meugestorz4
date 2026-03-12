@@ -50,6 +50,13 @@ interface MacKey {
   expires_at: string;
 }
 
+interface Credential {
+  id?: string;
+  username: string;
+  password: string;
+  label: string;
+}
+
 export default function Clients() {
   const { companyId, user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
