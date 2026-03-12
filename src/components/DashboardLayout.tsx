@@ -30,6 +30,7 @@ import {
   Clock,
   MessageCircle,
   FlaskConical,
+  Bot,
 } from "lucide-react";
 
 type NavItem = {
