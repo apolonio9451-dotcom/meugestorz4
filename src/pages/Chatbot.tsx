@@ -124,6 +124,10 @@ export default function Chatbot() {
   // Webhook
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [showWebhookUrl, setShowWebhookUrl] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("Olá, isso é um teste do chatbot!");
+  const [testResult, setTestResult] = useState<{ status: string; data: any } | null>(null);
 
   useEffect(() => {
     if (!companyId) { setLoading(false); return; }
