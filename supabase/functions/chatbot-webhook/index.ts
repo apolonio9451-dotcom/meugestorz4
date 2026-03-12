@@ -157,14 +157,33 @@ function cleanJid(value: string): string {
   return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
 }
 
-function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string; eventType: string; fromMe: boolean } {
+function detectMessageType(body: any): string {
+  const msg = body?.message || {};
+  if (msg.text) return "text";
+  if (msg.convertOptions) return "button_response";
+  if (msg.content?.URL) {
+    const lastMsgType = body?.chat?.wa_lastMessageType || "";
+    if (lastMsgType.toLowerCase().includes("audio")) return "audio";
+    if (lastMsgType.toLowerCase().includes("video")) return "video";
+    if (lastMsgType.toLowerCase().includes("image")) return "image";
+    if (lastMsgType.toLowerCase().includes("sticker")) return "sticker";
+    if (lastMsgType.toLowerCase().includes("document")) return "document";
+    return "media";
+  }
+  if (msg.body) return "text";
+  if (msg.conversation) return "text";
+  if (msg.extendedTextMessage?.text) return "text";
+  return "unknown";
+}
+
+function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string; eventType: string; fromMe: boolean; messageType: string } {
   const eventType = (body?.EventType || body?.event || "").toString().toLowerCase();
   const fromMe = body?.message?.fromMe === true;
+  const messageType = detectMessageType(body);
 
   const messageText = pickFirstString([
-    // UAZAPI V2 format: message.text is the primary text field
     body?.message?.text,
-    body?.message?.convertOptions, // button/list selection response
+    body?.message?.convertOptions,
     body?.message?.body,
     body?.message?.conversation,
     body?.message?.extendedTextMessage?.text,
@@ -172,10 +191,8 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     body?.message?.buttonResponseMessage?.selectedDisplayText,
     body?.message?.listReply?.title,
     body?.message?.listResponseMessage?.title,
-    // Flat format
     body?.text,
     body?.body,
-    // Nested data format
     body?.data?.text,
     body?.data?.body,
     body?.data?.message?.text,
@@ -185,12 +202,13 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     body?.data?.listResponse?.title,
   ]);
 
+  // UAZAPI V2: prefer chatid (WhatsApp JID with real phone) over sender (may be @lid)
   const senderRaw = pickFirstString([
-    // UAZAPI V2: message.sender has the sender JID/phone
-    body?.message?.sender,
+    body?.message?.chatid,       // "553399653956@s.whatsapp.net"
+    body?.chat?.wa_chatid,       // "553399653956@s.whatsapp.net"
+    body?.chat?.phone,           // "+55 33 9965-3956"
+    body?.message?.sender,       // may be @lid format - less reliable
     body?.message?.sender_pn,
-    // chat.id may also contain the phone for 1:1 chats
-    body?.chat?.id,
     body?.message?.from,
     body?.from,
     body?.phone,
@@ -208,6 +226,7 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     senderRaw,
     eventType,
     fromMe,
+    messageType,
   };
 }
 
