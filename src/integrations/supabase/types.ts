@@ -112,6 +112,92 @@ export type Database = {
           },
         ]
       }
+      chatbot_auto_replies: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          priority: number
+          response_media_id: string | null
+          response_text: string
+          trigger_keyword: string
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          response_media_id?: string | null
+          response_text?: string
+          trigger_keyword?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          response_media_id?: string | null
+          response_text?: string
+          trigger_keyword?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_auto_replies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_auto_replies_response_media_id_fkey"
+            columns: ["response_media_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_blocked_contacts: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          phone: string
+          reason: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          phone?: string
+          reason?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          phone?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_blocked_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_logs: {
         Row: {
           client_name: string
@@ -199,34 +285,85 @@ export type Database = {
       }
       chatbot_settings: {
         Row: {
+          ai_model: string
+          ai_temperature: number
+          away_message: string
           billing_cron_hour: number
           billing_cron_minute: number
+          business_days: number[]
+          business_hours_enabled: boolean
+          business_hours_end: string
+          business_hours_start: string
+          closing_message: string
           company_id: string
           created_at: string
           id: string
           is_active: boolean
+          max_delay_seconds: number
+          max_messages_per_contact: number
+          min_delay_seconds: number
           personality: string
+          send_welcome_media_id: string | null
+          transfer_keyword: string
+          transfer_message: string
+          transfer_phone: string
+          unknown_message: string
           updated_at: string
+          welcome_message: string
         }
         Insert: {
+          ai_model?: string
+          ai_temperature?: number
+          away_message?: string
           billing_cron_hour?: number
           billing_cron_minute?: number
+          business_days?: number[]
+          business_hours_enabled?: boolean
+          business_hours_end?: string
+          business_hours_start?: string
+          closing_message?: string
           company_id: string
           created_at?: string
           id?: string
           is_active?: boolean
+          max_delay_seconds?: number
+          max_messages_per_contact?: number
+          min_delay_seconds?: number
           personality?: string
+          send_welcome_media_id?: string | null
+          transfer_keyword?: string
+          transfer_message?: string
+          transfer_phone?: string
+          unknown_message?: string
           updated_at?: string
+          welcome_message?: string
         }
         Update: {
+          ai_model?: string
+          ai_temperature?: number
+          away_message?: string
           billing_cron_hour?: number
           billing_cron_minute?: number
+          business_days?: number[]
+          business_hours_enabled?: boolean
+          business_hours_end?: string
+          business_hours_start?: string
+          closing_message?: string
           company_id?: string
           created_at?: string
           id?: string
           is_active?: boolean
+          max_delay_seconds?: number
+          max_messages_per_contact?: number
+          min_delay_seconds?: number
           personality?: string
+          send_welcome_media_id?: string | null
+          transfer_keyword?: string
+          transfer_message?: string
+          transfer_phone?: string
+          unknown_message?: string
           updated_at?: string
+          welcome_message?: string
         }
         Relationships: [
           {
