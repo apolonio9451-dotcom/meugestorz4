@@ -1357,7 +1357,7 @@ export default function Clients() {
               onClick={() => {
                 if (welcomeData?.whatsapp) {
                   const msg = `Olá ${welcomeData.name}! 🎉\n\nSeus dados de acesso:\n\n📋 Plano: ${welcomeData.planName}\n💰 Valor: R$ ${welcomeData.amount}\n📅 Vencimento: ${welcomeData.endDate}\n👤 Usuário: ${welcomeData.user || "—"}\n🔑 Senha: ${welcomeData.password || "—"}\n\nBem-vindo!`;
-                  const phone = welcomeData.whatsapp.replace(/\D/g, "");
+                  
                   const url = getWhatsAppSendUrl(welcomeData.whatsapp, msg);
                   window.open(url, "_blank");
                 } else {
