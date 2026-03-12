@@ -1015,10 +1015,10 @@ export default function Chatbot() {
             </div>
 
             {/* AI Model + Temperature */}
-            <div className="border-t border-border pt-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">4</div>
-                <Label className="text-sm font-semibold">Modelo e Configuração da IA</Label>
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">4</div>
+                <Label className="text-xs md:text-sm font-semibold">Modelo e Configuração da IA</Label>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
