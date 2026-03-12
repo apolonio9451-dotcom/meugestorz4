@@ -317,6 +317,13 @@ function parseAiCommands(text: string): AiCommandResult {
     cleanText = cleanText.replace(/\[ENVIAR_MEDIA:.+?\]\s*/gi, "").trim();
   }
 
+  // [AUDIO:name] - shorthand trigger for audio files
+  const audioMatches = cleanText.matchAll(/\[AUDIO:(.+?)\]/gi);
+  for (const match of audioMatches) {
+    commands.push({ type: "send_audio", data: match[1].trim() });
+  }
+  cleanText = cleanText.replace(/\[AUDIO:.+?\]\s*/gi, "").trim();
+
   return { cleanText, commands };
 }
 
@@ -746,6 +753,7 @@ COMANDOS ESPECIAIS (Tags que você pode usar na resposta para executar ações):
 - [ENVIAR_BOTOES:Opção 1|Opção 2|Opção 3] → Envia botões rápidos (máx 3)
 - [ENVIAR_LISTA:Item 1|Item 2|Item 3] → Envia um menu de lista expansível
 - [ENVIAR_MEDIA:arquivo.mp3] → Envia mídia da biblioteca
+- [AUDIO:nome] → Atalho para enviar áudio da biblioteca (busca por nome, com ou sem extensão)
 Use esses comandos quando achar relevante. O sistema processará automaticamente.`;
 
     // Call AI
@@ -875,6 +883,26 @@ REGRAS IMPORTANTES:
               const presType = mediaToSend.file_type === "audio" ? "recording" : "composing";
               await doPresence(presType as any, minDelay + 2, maxDelay + 3);
               await sendMedia(apiUrl, apiToken, phone, mediaToSend.file_url, mediaToSend.file_type);
+            }
+          }
+          break;
+        }
+        case "send_audio": {
+          const audioName = cmd.data;
+          decisions.push(`🎯 IA solicitou [AUDIO:${audioName}] → Buscando áudio`);
+          if (mediaFiles) {
+            // Match by name (with or without extension)
+            const audioToSend = mediaFiles.find((m: any) => {
+              const fn = m.file_name.toLowerCase();
+              const search = audioName.toLowerCase();
+              return fn === search || fn.startsWith(search + ".") || fn.replace(/\.[^.]+$/, "") === search;
+            });
+            if (audioToSend) {
+              decisions.push(`✅ Áudio encontrado: ${audioToSend.file_name}`);
+              await doPresence("recording", minDelay + 2, maxDelay + 4);
+              await sendMedia(apiUrl, apiToken, phone, audioToSend.file_url, "audio");
+            } else {
+              decisions.push(`⚠️ Áudio "${audioName}" não encontrado na biblioteca`);
             }
           }
           break;
