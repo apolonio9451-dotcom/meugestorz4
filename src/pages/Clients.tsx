@@ -1191,6 +1191,42 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Renewal Confirmation Dialog */}
+      <Dialog open={!!renewConfirm} onOpenChange={(open) => !open && setRenewConfirm(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" />
+              Confirmar Renovação
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-2">
+              {renewConfirm && (() => {
+                const client = clients.find(c => c.id === renewConfirm.clientId);
+                return (
+                  <>
+                    Deseja realmente <strong>{renewConfirm.label.toLowerCase()}</strong> para o cliente <strong>{client?.name}</strong>?
+                  </>
+                );
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setRenewConfirm(null)}>Cancelar</Button>
+            <Button onClick={async () => {
+              if (!renewConfirm) return;
+              if (renewConfirm.type === "same") {
+                await handleRenewSameDate(renewConfirm.clientId);
+              } else {
+                await handleRenew(renewConfirm.clientId, renewConfirm.days!);
+              }
+              setRenewConfirm(null);
+            }}>
+              Confirmar Renovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
