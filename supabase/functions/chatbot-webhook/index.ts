@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, token",
+  "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
 };
 
 function normalizePhone(phone: string): string {
@@ -35,6 +36,7 @@ async function simulatePresence(
 }
 
 async function sendText(apiUrl: string, apiToken: string, to: string, text: string) {
+  console.log(`Enviando texto para ${to}: "${text.slice(0, 80)}..."`);
   const resp = await fetch(`${apiUrl}/send/text`, {
     method: "POST",
     headers: { "Content-Type": "application/json", token: apiToken },
@@ -121,35 +123,21 @@ async function sendList(
 
 function isWithinBusinessHours(settings: any): boolean {
   if (!settings.business_hours_enabled) return true;
-  
   const now = new Date();
-  // Convert to Brasilia time (UTC-3)
   const brasiliaOffset = -3 * 60;
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const brasiliaTime = new Date(utcMs + brasiliaOffset * 60000);
-  
   const dayOfWeek = brasiliaTime.getDay();
   const days: number[] = settings.business_days || [1, 2, 3, 4, 5];
   if (!days.includes(dayOfWeek)) return false;
-  
   const currentMinutes = brasiliaTime.getHours() * 60 + brasiliaTime.getMinutes();
   const [startH, startM] = (settings.business_hours_start || "08:00").split(":").map(Number);
   const [endH, endM] = (settings.business_hours_end || "18:00").split(":").map(Number);
-  const startMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-  
-  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+  return currentMinutes >= startH * 60 + startM && currentMinutes <= endH * 60 + endM;
 }
 
 function getRandomDelay(min: number, max: number): number {
   return (min + Math.random() * (max - min)) * 1000;
-}
-
-function pickFirstString(values: unknown[]): string {
-  for (const value of values) {
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return "";
 }
 
 function cleanJid(value: string): string {
@@ -157,31 +145,98 @@ function cleanJid(value: string): string {
   return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
 }
 
-function detectMessageType(body: any): string {
-  const msg = body?.message || {};
-  if (msg.text) return "text";
-  if (msg.convertOptions) return "button_response";
-  if (msg.content?.URL) {
-    const lastMsgType = body?.chat?.wa_lastMessageType || "";
-    if (lastMsgType.toLowerCase().includes("audio")) return "audio";
-    if (lastMsgType.toLowerCase().includes("video")) return "video";
-    if (lastMsgType.toLowerCase().includes("image")) return "image";
-    if (lastMsgType.toLowerCase().includes("sticker")) return "sticker";
-    if (lastMsgType.toLowerCase().includes("document")) return "document";
-    return "media";
+function checkAutoReply(message: string, autoReplies: any[]): any | null {
+  const lowerMsg = message.toLowerCase().trim();
+  const sorted = [...autoReplies].filter((r) => r.is_active).sort((a, b) => b.priority - a.priority);
+  for (const reply of sorted) {
+    const keyword = reply.trigger_keyword.toLowerCase().trim();
+    let match = false;
+    switch (reply.trigger_type) {
+      case "exact": match = lowerMsg === keyword; break;
+      case "starts_with": match = lowerMsg.startsWith(keyword); break;
+      case "contains": default: match = lowerMsg.includes(keyword); break;
+    }
+    if (match) return reply;
   }
-  if (msg.body) return "text";
-  if (msg.conversation) return "text";
-  if (msg.extendedTextMessage?.text) return "text";
-  return "unknown";
+  return null;
 }
 
-function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string; eventType: string; fromMe: boolean; messageType: string } {
-  const eventType = (body?.EventType || body?.event || "").toString().toLowerCase();
-  const fromMe = body?.message?.fromMe === true;
-  const messageType = detectMessageType(body);
+// ===================== UAZAPI PAYLOAD EXTRACTION =====================
+// Handles multiple UAZAPI payload formats including messages.upsert
 
-  const messageText = pickFirstString([
+interface ExtractedPayload {
+  messageText: string;
+  senderPhone: string;
+  fromMe: boolean;
+  messageType: string;
+  eventType: string;
+}
+
+function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
+  // messages.upsert format: body contains an array or object with message data
+  // Common structure: { event: "messages.upsert", data: { key: { remoteJid, fromMe }, message: { conversation, ... } } }
+  // Or: { event: "messages.upsert", data: [{ key: {...}, message: {...} }] }
+  
+  const event = (body?.event || body?.EventType || body?.action || "").toString();
+  
+  let msgData = body?.data;
+  
+  // If data is an array, take first element
+  if (Array.isArray(msgData)) {
+    msgData = msgData[0];
+  }
+  
+  // Sometimes the message itself is the root
+  if (!msgData && body?.key && body?.message) {
+    msgData = body;
+  }
+  
+  if (!msgData) return null;
+  
+  const key = msgData?.key || {};
+  const message = msgData?.message || {};
+  
+  const fromMe = key?.fromMe === true || msgData?.fromMe === true;
+  const remoteJid = key?.remoteJid || "";
+  
+  // Extract text from various WhatsApp message types
+  const messageText = 
+    message?.conversation ||
+    message?.extendedTextMessage?.text ||
+    message?.buttonsResponseMessage?.selectedDisplayText ||
+    message?.listResponseMessage?.title ||
+    message?.templateButtonReplyMessage?.selectedDisplayText ||
+    message?.editedMessage?.message?.protocolMessage?.editedMessage?.conversation ||
+    msgData?.body ||
+    msgData?.text ||
+    "";
+  
+  // Detect message type
+  let messageType = "text";
+  if (message?.imageMessage) messageType = "image";
+  else if (message?.videoMessage) messageType = "video";
+  else if (message?.audioMessage) messageType = "audio";
+  else if (message?.documentMessage) messageType = "document";
+  else if (message?.stickerMessage) messageType = "sticker";
+  else if (message?.contactMessage) messageType = "contact";
+  else if (message?.locationMessage) messageType = "location";
+  else if (!messageText) messageType = "unknown";
+  
+  return {
+    messageText: typeof messageText === "string" ? messageText.trim() : "",
+    senderPhone: cleanJid(remoteJid),
+    fromMe,
+    messageType,
+    eventType: event,
+  };
+}
+
+function extractGenericPayload(body: any): ExtractedPayload {
+  // Fallback: try all known field locations from UAZAPI V1/V2 and other formats
+  const eventType = (body?.EventType || body?.event || body?.action || "").toString().toLowerCase();
+  const fromMe = body?.message?.fromMe === true || body?.fromMe === true;
+
+  const textCandidates = [
     body?.message?.text,
     body?.message?.convertOptions,
     body?.message?.body,
@@ -198,16 +253,18 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     body?.data?.message?.text,
     body?.data?.message?.conversation,
     body?.data?.message?.extendedTextMessage?.text,
-    body?.data?.buttonResponse?.title,
-    body?.data?.listResponse?.title,
-  ]);
+  ];
+  
+  let messageText = "";
+  for (const val of textCandidates) {
+    if (typeof val === "string" && val.trim()) { messageText = val.trim(); break; }
+  }
 
-  // UAZAPI V2: prefer chatid (WhatsApp JID with real phone) over sender (may be @lid)
-  const senderRaw = pickFirstString([
-    body?.message?.chatid,       // "553399653956@s.whatsapp.net"
-    body?.chat?.wa_chatid,       // "553399653956@s.whatsapp.net"
-    body?.chat?.phone,           // "+55 33 9965-3956"
-    body?.message?.sender,       // may be @lid format - less reliable
+  const phoneCandidates = [
+    body?.message?.chatid,
+    body?.chat?.wa_chatid,
+    body?.chat?.phone,
+    body?.message?.sender,
     body?.message?.sender_pn,
     body?.message?.from,
     body?.from,
@@ -218,77 +275,108 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     body?.data?.sender,
     body?.data?.key?.remoteJid,
     body?.key?.remoteJid,
-  ]);
+  ];
+
+  let senderRaw = "";
+  for (const val of phoneCandidates) {
+    if (typeof val === "string" && val.trim()) { senderRaw = val.trim(); break; }
+  }
+
+  // Detect type
+  const msg = body?.message || {};
+  let messageType = "text";
+  if (msg.content?.URL) {
+    const lastType = (body?.chat?.wa_lastMessageType || "").toLowerCase();
+    if (lastType.includes("audio")) messageType = "audio";
+    else if (lastType.includes("video")) messageType = "video";
+    else if (lastType.includes("image")) messageType = "image";
+    else messageType = "media";
+  }
+  if (!messageText && messageType === "text") messageType = "unknown";
 
   return {
     messageText,
     senderPhone: cleanJid(senderRaw),
-    senderRaw,
-    eventType,
     fromMe,
     messageType,
+    eventType,
   };
 }
 
-function checkAutoReply(message: string, autoReplies: any[]): any | null {
-  const lowerMsg = message.toLowerCase().trim();
-  // Sort by priority descending
-  const sorted = [...autoReplies].filter((r) => r.is_active).sort((a, b) => b.priority - a.priority);
-  
-  for (const reply of sorted) {
-    const keyword = reply.trigger_keyword.toLowerCase().trim();
-    let match = false;
-    
-    switch (reply.trigger_type) {
-      case "exact":
-        match = lowerMsg === keyword;
-        break;
-      case "starts_with":
-        match = lowerMsg.startsWith(keyword);
-        break;
-      case "contains":
-      default:
-        match = lowerMsg.includes(keyword);
-        break;
-    }
-    
-    if (match) return reply;
+function extractIncomingPayload(body: any): ExtractedPayload {
+  // Try messages.upsert format first (most common from modern UAZAPI/Baileys)
+  const upsert = extractFromMessagesUpsert(body);
+  if (upsert && (upsert.senderPhone || upsert.messageText)) {
+    return upsert;
   }
-  return null;
+  // Fallback to generic extraction
+  return extractGenericPayload(body);
 }
 
+// ===================== MAIN HANDLER =====================
+
 Deno.serve(async (req: Request) => {
+  // Always allow CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
+  }
+
+  // Accept GET for health checks
+  if (req.method === "GET") {
+    return new Response(JSON.stringify({ status: "ok", message: "Chatbot webhook is running" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
+  const companyIdParam = new URL(req.url).searchParams.get("company_id");
 
   try {
-    const body = await req.json();
-    const { messageText, senderPhone, senderRaw, eventType, fromMe, messageType } = extractIncomingPayload(body);
-    const companyIdParam = new URL(req.url).searchParams.get("company_id");
-
-    // Ignore non-message events from UAZAPI (e.g. "chats", "status", "connection", etc.)
-    if (eventType && eventType !== "messages" && eventType !== "message" && eventType !== "") {
-      return new Response(JSON.stringify({ status: "ignored", event: eventType }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // ===== STEP 1: Parse body =====
+    let body: any;
+    try {
+      body = await req.json();
+    } catch (parseErr) {
+      console.error("Falha ao parsear JSON do body:", parseErr);
+      return new Response(JSON.stringify({ status: "ok", info: "invalid_json" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Ignore messages sent by the bot itself to avoid loops
+    console.log("===== WEBHOOK RECEBIDO =====");
+    console.log("company_id:", companyIdParam);
+    console.log("Corpo recebido:", JSON.stringify(body).slice(0, 3000));
+
+    // ===== STEP 2: Extract payload =====
+    const { messageText, senderPhone, fromMe, messageType, eventType } = extractIncomingPayload(body);
+
+    console.log("Dados extraídos:", JSON.stringify({ messageText: messageText.slice(0, 200), senderPhone, fromMe, messageType, eventType }));
+
+    // ===== STEP 3: Filter non-message events =====
+    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels"];
+    const eventLower = eventType.toLowerCase();
+    if (eventLower && ignoredEvents.some(e => eventLower.includes(e))) {
+      console.log("Evento ignorado:", eventType);
+      return new Response(JSON.stringify({ status: "ok", ignored_event: eventType }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ===== STEP 4: Ignore own messages =====
     if (fromMe) {
-      return new Response(JSON.stringify({ status: "ignored", reason: "from_me" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.log("Mensagem própria ignorada (fromMe)");
+      return new Response(JSON.stringify({ status: "ok", reason: "from_me" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Handle non-text messages (audio, image, video, sticker, etc.)
+    // ===== STEP 5: Handle non-text messages =====
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      // Log the non-text message but don't process it through AI
+      console.log(`Mídia recebida (${messageType}), ignorando processamento IA`);
       await supabase.from("chatbot_logs").insert({
         company_id: companyIdParam,
         phone: normalizePhone(senderPhone),
@@ -299,20 +387,16 @@ Deno.serve(async (req: Request) => {
         status: "ignored",
         error_message: `Tipo de mensagem não processável: ${messageType}`,
       });
-
-      return new Response(JSON.stringify({ status: "ignored", reason: "non_text_message", type: messageType }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ status: "ok", reason: "non_text", type: messageType }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // ===== STEP 6: Validate required fields =====
     if (!messageText || !senderPhone || !companyIdParam) {
       const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
-      const debugDetails = `Missing fields -> text:${!!messageText} phone:${!!senderPhone} company_id:${!!companyIdParam} type:${messageType} keys:${bodyKeys.join(",")}`;
-      console.error("Invalid chatbot webhook payload", {
-        debugDetails,
-        senderRaw,
-        bodyPreview: JSON.stringify(body).slice(0, 2000),
-      });
+      const debugDetails = `Missing: text=${!!messageText} phone=${!!senderPhone} company=${!!companyIdParam} type=${messageType} event=${eventType} keys=[${bodyKeys.join(",")}]`;
+      console.error("Payload inválido:", debugDetails);
 
       if (companyIdParam) {
         await supabase.from("chatbot_logs").insert({
@@ -323,44 +407,52 @@ Deno.serve(async (req: Request) => {
           message_sent: "",
           context_type: "invalid_payload",
           status: "error",
-          error_message: debugDetails.slice(0, 500),
+          error_message: `${debugDetails} | preview: ${JSON.stringify(body).slice(0, 300)}`,
         });
       }
 
-      return new Response(JSON.stringify({ error: "Missing required fields", details: debugDetails }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Return 200 to prevent UAZAPI retries
+      return new Response(JSON.stringify({ status: "ok", info: "missing_fields", details: debugDetails }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const phone = normalizePhone(senderPhone);
+    console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
 
-    // 1. Fetch chatbot settings
+    // ===== STEP 7: Fetch chatbot settings =====
+    console.log(`Buscando configurações do chatbot para empresa: ${companyIdParam}`);
     const { data: chatSettings } = await supabase
       .from("chatbot_settings").select("*").eq("company_id", companyIdParam).single();
 
     if (!chatSettings?.is_active) {
-      return new Response(JSON.stringify({ status: "bot_disabled" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.log("Chatbot desativado para esta empresa");
+      return new Response(JSON.stringify({ status: "ok", reason: "bot_disabled" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("Chatbot ativo, personalidade:", (chatSettings.personality || "").slice(0, 80));
 
-    // 2. Check blocked contacts
+    // ===== STEP 8: Check blocked contacts =====
     const { data: blocked } = await supabase
       .from("chatbot_blocked_contacts").select("id").eq("company_id", companyIdParam).eq("phone", phone).maybeSingle();
 
     if (blocked) {
-      return new Response(JSON.stringify({ status: "blocked" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.log(`Contato bloqueado: ${phone}`);
+      return new Response(JSON.stringify({ status: "ok", reason: "blocked" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Fetch API credentials
+    // ===== STEP 9: Fetch API credentials =====
+    console.log("Buscando credenciais da API UAZAPI...");
     const { data: apiSettings } = await supabase
       .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
 
     if (!apiSettings?.api_url || !apiSettings?.api_token) {
-      return new Response(JSON.stringify({ error: "API not configured" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("API não configurada para esta empresa");
+      return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -368,54 +460,53 @@ Deno.serve(async (req: Request) => {
     const apiToken = apiSettings.api_token;
     const minDelay = chatSettings.min_delay_seconds ?? 3;
     const maxDelay = chatSettings.max_delay_seconds ?? 6;
+    console.log(`API URL: ${apiUrl}, delay: ${minDelay}-${maxDelay}s`);
 
-    // 4. Check business hours
+    // ===== STEP 10: Check business hours =====
     if (!isWithinBusinessHours(chatSettings)) {
+      console.log("Fora do horário comercial");
       const awayMsg = chatSettings.away_message?.trim();
       if (awayMsg) {
         await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
         await sendText(apiUrl, apiToken, phone, awayMsg);
-        
         await supabase.from("chatbot_logs").insert({
           company_id: companyIdParam, phone, client_name: "Fora do horário",
           message_received: messageText.slice(0, 500), message_sent: awayMsg.slice(0, 500),
           context_type: "away", status: "success",
         });
       }
-      return new Response(JSON.stringify({ status: "outside_hours" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ status: "ok", reason: "outside_hours" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 5. Check transfer keyword
+    // ===== STEP 11: Check transfer keyword =====
     const transferKw = (chatSettings.transfer_keyword || "").trim().toLowerCase();
     if (transferKw && messageText.toLowerCase().trim().includes(transferKw)) {
+      console.log("Keyword de transferência detectada");
       const transferMsg = chatSettings.transfer_message?.trim() || "Transferindo para um atendente...";
       await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
       await sendText(apiUrl, apiToken, phone, transferMsg);
-      
       await supabase.from("chatbot_logs").insert({
         company_id: companyIdParam, phone, client_name: "Transferência",
         message_received: messageText.slice(0, 500), message_sent: transferMsg.slice(0, 500),
         context_type: "transfer", status: "success",
       });
-      
-      return new Response(JSON.stringify({ status: "transferred" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ status: "ok", reason: "transferred" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 6. Check auto-replies (keyword triggers)
+    // ===== STEP 12: Check auto-replies =====
     const { data: autoReplies } = await supabase
       .from("chatbot_auto_replies").select("*").eq("company_id", companyIdParam);
 
     if (autoReplies && autoReplies.length > 0) {
       const matchedReply = checkAutoReply(messageText, autoReplies);
       if (matchedReply) {
+        console.log("Auto-reply encontrada:", matchedReply.trigger_keyword);
         await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
         await sendText(apiUrl, apiToken, phone, matchedReply.response_text);
-        
-        // If reply has media, send it too
         if (matchedReply.response_media_id) {
           const { data: media } = await supabase
             .from("chatbot_media").select("*").eq("id", matchedReply.response_media_id).single();
@@ -425,20 +516,18 @@ Deno.serve(async (req: Request) => {
             await sendMedia(apiUrl, apiToken, phone, media.file_url, media.file_type);
           }
         }
-        
         await supabase.from("chatbot_logs").insert({
           company_id: companyIdParam, phone, client_name: "Auto-Reply",
           message_received: messageText.slice(0, 500), message_sent: matchedReply.response_text.slice(0, 500),
           context_type: "auto_reply", status: "success",
         });
-        
-        return new Response(JSON.stringify({ status: "auto_reply" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ status: "ok", reason: "auto_reply" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    // 6.5 Send interactive menu if enabled (always as first response)
+    // ===== STEP 12.5: Interactive menu =====
     const menuEnabled = chatSettings.interactive_menu_enabled;
     const menuItems: any[] = chatSettings.interactive_menu_items || [];
     if (menuEnabled && menuItems.length > 0 && menuItems.some((i: any) => i.title)) {
@@ -451,30 +540,27 @@ Deno.serve(async (req: Request) => {
 
       try {
         await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
-        
         if (menuType === "buttons") {
           await sendButtons(apiUrl, apiToken, phone, menuTitle, menuBody, menuFooter, validItems.slice(0, 3));
         } else {
           await sendList(apiUrl, apiToken, phone, menuTitle, menuBody, menuFooter, menuButtonText, validItems.slice(0, 10));
         }
-
         await supabase.from("chatbot_logs").insert({
           company_id: companyIdParam, phone, client_name: "Menu Interativo",
-          message_received: messageText.slice(0, 500), 
+          message_received: messageText.slice(0, 500),
           message_sent: `[MENU ${menuType.toUpperCase()}] ${validItems.map((i: any) => i.title).join(" | ")}`.slice(0, 500),
           context_type: "auto_reply", status: "success",
         });
-
-        return new Response(JSON.stringify({ status: "interactive_menu_sent" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ status: "ok", reason: "interactive_menu" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (menuErr: any) {
-        console.error("Failed to send interactive menu, falling through to AI:", menuErr);
-        // Fall through to normal AI processing if menu fails
+        console.error("Falha ao enviar menu interativo, continuando para IA:", menuErr);
       }
     }
 
-    // 7. Check if sender is a known client
+    // ===== STEP 13: Check client context =====
+    console.log(`Buscando dados do cliente com telefone: ${phone}`);
     const { data: clientData } = await supabase
       .from("clients").select("id, name, status, company_id")
       .eq("company_id", companyIdParam)
@@ -488,6 +574,7 @@ Deno.serve(async (req: Request) => {
     if (clientData) {
       contextType = "client";
       clientName = clientData.name;
+      console.log(`Cliente encontrado: ${clientName} (${clientData.status})`);
 
       const { data: subData } = await supabase
         .from("client_subscriptions")
@@ -515,36 +602,33 @@ CONTEXTO DO CLIENTE:
 Ofereça ajuda e sugira planos disponíveis.`;
       }
     } else {
-      // Check for welcome message for new contacts
+      console.log("Novo contato - não encontrado na base");
       const welcomeMsg = chatSettings.welcome_message?.trim();
       if (welcomeMsg) {
-        // Check if we've already sent a welcome (avoid repeating)
         const { data: previousLogs } = await supabase
           .from("chatbot_logs").select("id")
           .eq("company_id", companyIdParam).eq("phone", phone)
           .eq("context_type", "welcome").limit(1).maybeSingle();
-        
+
         if (!previousLogs) {
+          console.log("Enviando mensagem de boas-vindas");
           await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
           await sendText(apiUrl, apiToken, phone, welcomeMsg);
-          
           await supabase.from("chatbot_logs").insert({
             company_id: companyIdParam, phone, client_name: "Novo Contato",
             message_received: messageText.slice(0, 500), message_sent: welcomeMsg.slice(0, 500),
             context_type: "welcome", status: "success",
           });
-          // Small delay before AI response
           await sleep(1500);
         }
       }
-      
       clientContext = `
 CONTEXTO: Este é um NOVO CONTATO que não é cliente.
 Foque em vendas: apresente o serviço, benefícios e como contratar.
 Seja persuasivo mas educado.`;
     }
 
-    // 8. Fetch available media
+    // ===== STEP 14: Fetch media =====
     const { data: mediaFiles } = await supabase
       .from("chatbot_media").select("file_name, file_url, file_type").eq("company_id", companyIdParam);
 
@@ -558,7 +642,7 @@ Para enviar mídia, responda EXATAMENTE neste formato na primeira linha:
 Seguido da mensagem de texto que acompanha o envio.`;
     }
 
-    // 9. Call AI
+    // ===== STEP 15: Call AI =====
     if (!lovableApiKey) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
@@ -578,6 +662,7 @@ REGRAS IMPORTANTES:
 - NUNCA revele que é uma IA ou bot.
 - Se não souber algo, diga que vai verificar e retornar.`;
 
+    console.log(`Chamando IA (${aiModel}) para gerar resposta...`);
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
@@ -597,10 +682,12 @@ REGRAS IMPORTANTES:
     }
 
     const aiData = await aiResponse.json();
-    let replyText = aiData.choices?.[0]?.message?.content || 
+    let replyText = aiData.choices?.[0]?.message?.content ||
       (chatSettings.unknown_message?.trim() || "Desculpe, não consegui processar sua mensagem.");
 
-    // 10. Check if AI wants to send media
+    console.log("Resposta da IA gerada:", replyText.slice(0, 200));
+
+    // ===== STEP 16: Check media in AI response =====
     let mediaToSend: any = null;
     const mediaMatch = replyText.match(/^\[ENVIAR_MEDIA:(.+?)\]/);
     if (mediaMatch && mediaFiles) {
@@ -611,23 +698,24 @@ REGRAS IMPORTANTES:
       replyText = replyText.replace(/^\[ENVIAR_MEDIA:.+?\]\s*/i, "").trim();
     }
 
-    // 11. Simulate presence and send
+    // ===== STEP 17: Send response =====
+    console.log("Tentando enviar via UAZAPI...");
     if (mediaToSend) {
       const presenceType = mediaToSend.file_type === "audio" ? "recording" : "composing";
-      const presenceDuration = getRandomDelay(minDelay + 2, maxDelay + 3);
-
       if (replyText) {
         await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
         await sendText(apiUrl, apiToken, phone, replyText);
       }
-      await simulatePresence(apiUrl, apiToken, phone, presenceType as any, presenceDuration);
+      await simulatePresence(apiUrl, apiToken, phone, presenceType as any, getRandomDelay(minDelay + 2, maxDelay + 3));
       await sendMedia(apiUrl, apiToken, phone, mediaToSend.file_url, mediaToSend.file_type);
     } else {
       await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
       await sendText(apiUrl, apiToken, phone, replyText);
     }
 
-    // 12. Log interaction
+    console.log("Mensagem enviada com sucesso!");
+
+    // ===== STEP 18: Log =====
     await supabase.from("chatbot_logs").insert({
       company_id: companyIdParam, phone, client_name: clientName,
       message_received: messageText.slice(0, 500), message_sent: replyText.slice(0, 500),
@@ -635,24 +723,24 @@ REGRAS IMPORTANTES:
     });
 
     return new Response(JSON.stringify({ status: "ok", context: contextType }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("Chatbot webhook error:", error);
+    console.error("Chatbot webhook error:", error?.message || error);
     try {
-      const companyId = new URL(req.url).searchParams.get("company_id");
-      if (companyId) {
+      if (companyIdParam) {
         await supabase.from("chatbot_logs").insert({
-          company_id: companyId, phone: "unknown", client_name: "Erro",
+          company_id: companyIdParam, phone: "unknown", client_name: "Erro",
           message_received: "", message_sent: "",
           context_type: "error", status: "error",
-          error_message: error?.message?.slice(0, 500) || "Unknown error",
+          error_message: (error?.message || "Unknown error").slice(0, 500),
         });
       }
     } catch (_) {}
 
-    return new Response(JSON.stringify({ error: error?.message || "Internal error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // ALWAYS return 200 to prevent UAZAPI retries
+    return new Response(JSON.stringify({ status: "ok", error: error?.message || "Internal error" }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
