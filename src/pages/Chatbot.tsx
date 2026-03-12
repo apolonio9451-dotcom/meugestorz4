@@ -829,12 +829,15 @@ export default function Chatbot() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 h-auto">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 h-auto">
           <TabsTrigger value="personality" className="text-xs py-2">
             <Brain className="w-3.5 h-3.5 mr-1" />Personalidade
           </TabsTrigger>
           <TabsTrigger value="messages" className="text-xs py-2">
             <MessageSquare className="w-3.5 h-3.5 mr-1" />Mensagens
+          </TabsTrigger>
+          <TabsTrigger value="menu" className="text-xs py-2">
+            <Layers className="w-3.5 h-3.5 mr-1" />Menu
           </TabsTrigger>
           <TabsTrigger value="autoreplies" className="text-xs py-2">
             <Zap className="w-3.5 h-3.5 mr-1" />Gatilhos
