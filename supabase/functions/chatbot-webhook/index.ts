@@ -145,6 +145,56 @@ function getRandomDelay(min: number, max: number): number {
   return (min + Math.random() * (max - min)) * 1000;
 }
 
+function pickFirstString(values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function cleanJid(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
+}
+
+function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string } {
+  const messageText = pickFirstString([
+    body?.message?.text,
+    body?.message?.body,
+    body?.message?.conversation,
+    body?.message?.extendedTextMessage?.text,
+    body?.message?.buttonReply?.selectedDisplayText,
+    body?.message?.listReply?.title,
+    body?.text,
+    body?.body,
+    body?.data?.text,
+    body?.data?.body,
+    body?.data?.message?.text,
+    body?.data?.message?.conversation,
+    body?.data?.message?.extendedTextMessage?.text,
+    body?.data?.buttonResponse?.title,
+    body?.data?.listResponse?.title,
+  ]);
+
+  const senderRaw = pickFirstString([
+    body?.message?.from,
+    body?.from,
+    body?.phone,
+    body?.sender,
+    body?.data?.from,
+    body?.data?.phone,
+    body?.data?.sender,
+    body?.data?.key?.remoteJid,
+    body?.key?.remoteJid,
+  ]);
+
+  return {
+    messageText,
+    senderPhone: cleanJid(senderRaw),
+    senderRaw,
+  };
+}
+
 function checkAutoReply(message: string, autoReplies: any[]): any | null {
   const lowerMsg = message.toLowerCase().trim();
   // Sort by priority descending
@@ -184,12 +234,32 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const messageText = body?.message?.text || body?.text || body?.body || "";
-    const senderPhone = body?.message?.from || body?.from || body?.phone || "";
+    const { messageText, senderPhone, senderRaw } = extractIncomingPayload(body);
     const companyIdParam = new URL(req.url).searchParams.get("company_id");
 
     if (!messageText || !senderPhone || !companyIdParam) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+      const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
+      const debugDetails = `Missing fields -> text:${!!messageText} phone:${!!senderPhone} company_id:${!!companyIdParam} keys:${bodyKeys.join(",")}`;
+      console.error("Invalid chatbot webhook payload", {
+        debugDetails,
+        senderRaw,
+        bodyPreview: JSON.stringify(body).slice(0, 500),
+      });
+
+      if (companyIdParam) {
+        await supabase.from("chatbot_logs").insert({
+          company_id: companyIdParam,
+          phone: normalizePhone(senderPhone || ""),
+          client_name: "Payload inválido",
+          message_received: (messageText || "").slice(0, 500),
+          message_sent: "",
+          context_type: "invalid_payload",
+          status: "error",
+          error_message: debugDetails.slice(0, 500),
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Missing required fields", details: debugDetails }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
