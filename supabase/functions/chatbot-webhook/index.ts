@@ -93,28 +93,28 @@ async function sendList(
   title: string, body: string, footer: string,
   buttonText: string, items: { id: string; title: string; description?: string }[]
 ) {
-  const resp = await fetch(`${apiUrl}/send/list`, {
+  const choices: string[] = [];
+  if (title) choices.push(`[${title}]`);
+  for (const item of items) {
+    const parts = [item.title, item.id];
+    if (item.description) parts.push(item.description);
+    choices.push(parts.join("|"));
+  }
+  const resp = await fetch(`${apiUrl}/send/menu`, {
     method: "POST",
     headers: { "Content-Type": "application/json", token: apiToken },
     body: JSON.stringify({
       number: to,
-      title: title || undefined,
-      text: body,
-      footer: footer || undefined,
-      buttonText: buttonText || "Ver Opções",
-      sections: [{
-        title: title || "Opções",
-        rows: items.map((item) => ({
-          rowId: item.id,
-          title: item.title,
-          description: item.description || "",
-        })),
-      }],
+      type: "list",
+      text: body || "Selecione uma opção:",
+      choices,
+      listButton: buttonText || "Ver Opções",
+      footerText: footer || undefined,
     }),
   });
   if (!resp.ok) {
     const respBody = await resp.text();
-    throw new Error(`UAZAPI send/list failed: ${resp.status} - ${respBody}`);
+    throw new Error(`UAZAPI send/menu (list) failed: ${resp.status} - ${respBody}`);
   }
   return resp.json();
 }
