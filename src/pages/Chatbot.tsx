@@ -60,6 +60,8 @@ const CONTEXT_LABELS: Record<string, { label: string; color: string }> = {
   transfer: { label: "Transferência", color: "outline" },
   auto_reply: { label: "Resposta Auto", color: "default" },
   error: { label: "Erro", color: "destructive" },
+  invalid_payload: { label: "Payload Inválido", color: "destructive" },
+  media_received: { label: "Mídia Recebida", color: "secondary" },
 };
 
 export default function Chatbot() {
