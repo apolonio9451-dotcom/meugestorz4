@@ -64,6 +64,60 @@ async function sendMedia(
   return resp.json();
 }
 
+async function sendButtons(
+  apiUrl: string, apiToken: string, to: string,
+  title: string, body: string, footer: string,
+  buttons: { id: string; title: string }[]
+) {
+  const resp = await fetch(`${apiUrl}/send/buttons`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token: apiToken },
+    body: JSON.stringify({
+      number: to,
+      title: title || undefined,
+      text: body,
+      footer: footer || undefined,
+      buttons: buttons.map((b) => ({ buttonId: b.id, buttonText: b.title })),
+    }),
+  });
+  if (!resp.ok) {
+    const respBody = await resp.text();
+    throw new Error(`UAZAPI send/buttons failed: ${resp.status} - ${respBody}`);
+  }
+  return resp.json();
+}
+
+async function sendList(
+  apiUrl: string, apiToken: string, to: string,
+  title: string, body: string, footer: string,
+  buttonText: string, items: { id: string; title: string; description?: string }[]
+) {
+  const resp = await fetch(`${apiUrl}/send/list`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", token: apiToken },
+    body: JSON.stringify({
+      number: to,
+      title: title || undefined,
+      text: body,
+      footer: footer || undefined,
+      buttonText: buttonText || "Ver Opções",
+      sections: [{
+        title: title || "Opções",
+        rows: items.map((item) => ({
+          rowId: item.id,
+          title: item.title,
+          description: item.description || "",
+        })),
+      }],
+    }),
+  });
+  if (!resp.ok) {
+    const respBody = await resp.text();
+    throw new Error(`UAZAPI send/list failed: ${resp.status} - ${respBody}`);
+  }
+  return resp.json();
+}
+
 function isWithinBusinessHours(settings: any): boolean {
   if (!settings.business_hours_enabled) return true;
   
@@ -242,6 +296,42 @@ Deno.serve(async (req: Request) => {
         return new Response(JSON.stringify({ status: "auto_reply" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+    }
+
+    // 6.5 Send interactive menu if enabled (always as first response)
+    const menuEnabled = chatSettings.interactive_menu_enabled;
+    const menuItems: any[] = chatSettings.interactive_menu_items || [];
+    if (menuEnabled && menuItems.length > 0 && menuItems.some((i: any) => i.title)) {
+      const menuType = chatSettings.interactive_menu_type || "buttons";
+      const menuTitle = chatSettings.interactive_menu_title || "";
+      const menuBody = chatSettings.interactive_menu_body || "Selecione uma opção:";
+      const menuFooter = chatSettings.interactive_menu_footer || "";
+      const menuButtonText = chatSettings.interactive_menu_button_text || "Ver Opções";
+      const validItems = menuItems.filter((i: any) => i.title);
+
+      try {
+        await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+        
+        if (menuType === "buttons") {
+          await sendButtons(apiUrl, apiToken, phone, menuTitle, menuBody, menuFooter, validItems.slice(0, 3));
+        } else {
+          await sendList(apiUrl, apiToken, phone, menuTitle, menuBody, menuFooter, menuButtonText, validItems.slice(0, 10));
+        }
+
+        await supabase.from("chatbot_logs").insert({
+          company_id: companyIdParam, phone, client_name: "Menu Interativo",
+          message_received: messageText.slice(0, 500), 
+          message_sent: `[MENU ${menuType.toUpperCase()}] ${validItems.map((i: any) => i.title).join(" | ")}`.slice(0, 500),
+          context_type: "auto_reply", status: "success",
+        });
+
+        return new Response(JSON.stringify({ status: "interactive_menu_sent" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (menuErr: any) {
+        console.error("Failed to send interactive menu, falling through to AI:", menuErr);
+        // Fall through to normal AI processing if menu fails
       }
     }
 
