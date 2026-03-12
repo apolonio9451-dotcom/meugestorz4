@@ -112,6 +112,132 @@ export type Database = {
           },
         ]
       }
+      chatbot_logs: {
+        Row: {
+          client_name: string
+          company_id: string
+          context_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_received: string
+          message_sent: string
+          phone: string
+          status: string
+        }
+        Insert: {
+          client_name?: string
+          company_id: string
+          context_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_received?: string
+          message_sent?: string
+          phone?: string
+          status?: string
+        }
+        Update: {
+          client_name?: string
+          company_id?: string
+          context_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_received?: string
+          message_sent?: string
+          phone?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_media: {
+        Row: {
+          company_id: string
+          created_at: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_media_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_settings: {
+        Row: {
+          billing_cron_hour: number
+          billing_cron_minute: number
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          personality: string
+          updated_at: string
+        }
+        Insert: {
+          billing_cron_hour?: number
+          billing_cron_minute?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          personality?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_cron_hour?: number
+          billing_cron_minute?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          personality?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_activity_logs: {
         Row: {
           action: string
