@@ -20,9 +20,10 @@ import {
   MessageSquare, Shield, Pencil, ToggleLeft, Copy, Check,
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
   Globe, Link2, Eye, EyeOff, Volume2, Info, Search,
-  ChevronDown, ChevronUp, Hash, Layers, Download
+  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone
 } from "lucide-react";
 import { format } from "date-fns";
+import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
@@ -68,7 +69,7 @@ export default function Chatbot() {
   const { companyId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("personality");
+  const [activeTab, setActiveTab] = useState("connection");
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
@@ -831,7 +832,10 @@ export default function Chatbot() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 h-auto">
+        <TabsList className="grid w-full grid-cols-5 md:grid-cols-9 h-auto">
+          <TabsTrigger value="connection" className="text-xs py-2">
+            <Smartphone className="w-3.5 h-3.5 mr-1" />Conexão
+          </TabsTrigger>
           <TabsTrigger value="personality" className="text-xs py-2">
             <Brain className="w-3.5 h-3.5 mr-1" />Personalidade
           </TabsTrigger>
@@ -860,6 +864,11 @@ export default function Chatbot() {
             <AlertCircle className="w-3.5 h-3.5 mr-1" />Diagnóstico
           </TabsTrigger>
         </TabsList>
+
+        {/* CONNECTION TAB */}
+        <TabsContent value="connection" className="space-y-4 mt-4">
+          <WhatsAppInstanceSection companyId={companyId} />
+        </TabsContent>
 
         {/* PERSONALITY TAB */}
         <TabsContent value="personality" className="space-y-4 mt-4">
