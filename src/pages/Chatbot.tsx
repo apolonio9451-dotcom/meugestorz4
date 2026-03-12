@@ -862,7 +862,7 @@ export default function Chatbot() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex w-full overflow-x-auto scrollbar-hide md:grid md:grid-cols-10 h-auto gap-1 p-1">
+        <TabsList className="grid w-full grid-cols-5 h-auto gap-1 p-1">
           <TabsTrigger value="connection" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
             <Smartphone className="w-3 h-3 mr-1" />Conexão
           </TabsTrigger>
