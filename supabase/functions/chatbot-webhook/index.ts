@@ -145,6 +145,56 @@ function getRandomDelay(min: number, max: number): number {
   return (min + Math.random() * (max - min)) * 1000;
 }
 
+function pickFirstString(values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function cleanJid(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
+}
+
+function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string } {
+  const messageText = pickFirstString([
+    body?.message?.text,
+    body?.message?.body,
+    body?.message?.conversation,
+    body?.message?.extendedTextMessage?.text,
+    body?.message?.buttonReply?.selectedDisplayText,
+    body?.message?.listReply?.title,
+    body?.text,
+    body?.body,
+    body?.data?.text,
+    body?.data?.body,
+    body?.data?.message?.text,
+    body?.data?.message?.conversation,
+    body?.data?.message?.extendedTextMessage?.text,
+    body?.data?.buttonResponse?.title,
+    body?.data?.listResponse?.title,
+  ]);
+
+  const senderRaw = pickFirstString([
+    body?.message?.from,
+    body?.from,
+    body?.phone,
+    body?.sender,
+    body?.data?.from,
+    body?.data?.phone,
+    body?.data?.sender,
+    body?.data?.key?.remoteJid,
+    body?.key?.remoteJid,
+  ]);
+
+  return {
+    messageText,
+    senderPhone: cleanJid(senderRaw),
+    senderRaw,
+  };
+}
+
 function checkAutoReply(message: string, autoReplies: any[]): any | null {
   const lowerMsg = message.toLowerCase().trim();
   // Sort by priority descending
