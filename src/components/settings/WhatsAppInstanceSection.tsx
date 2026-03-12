@@ -22,7 +22,6 @@ interface Props {
 }
 
 export default function WhatsAppInstanceSection({ companyId }: Props) {
-  const { userName } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
