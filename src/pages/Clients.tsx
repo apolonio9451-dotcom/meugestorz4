@@ -1217,7 +1217,7 @@ export default function Clients() {
               if (!renewConfirm) return;
               if (renewConfirm.type === "same") {
                 await handleRenewSameDate(renewConfirm.clientId);
-              } else {
+              } else if (renewConfirm.type === "months") {
                 await handleRenew(renewConfirm.clientId, renewConfirm.days!);
               }
               setRenewConfirm(null);
