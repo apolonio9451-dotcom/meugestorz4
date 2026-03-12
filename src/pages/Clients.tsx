@@ -921,12 +921,6 @@ export default function Clients() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openDialog(client)}><Pencil className="w-3.5 h-3.5 mr-2" /> Editar</DropdownMenuItem>
-                          {sub && (<>
-                            <DropdownMenuItem onClick={() => handleRenewSameDate(client.id)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRenew(client.id, 30)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRenew(client.id, 60)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRenew(client.id, 90)}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
-                          </>)}
                           <DropdownMenuSeparator />
                           {mainFilter === "status" && statusSubFilter === "suporte" ? (
                             <DropdownMenuItem onClick={async () => {
