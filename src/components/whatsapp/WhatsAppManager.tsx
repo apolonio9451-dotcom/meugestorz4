@@ -166,6 +166,8 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         if (data?.qrCode) {
           setQrCode(normalizeQrCode(data.qrCode));
           setStatus("qr");
+        } else {
+          setStatus("waiting_qr");
         }
 
         if (attempts >= 60) {
