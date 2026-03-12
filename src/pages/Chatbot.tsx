@@ -975,42 +975,42 @@ export default function Chatbot() {
             </div>
 
             {/* Section 2: New Contact Script */}
-            <div className="space-y-3 border-t border-border pt-5">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">2</div>
-                <Label className="text-sm font-semibold">Script de Vendas — Novo Contato</Label>
+            <div className="space-y-2 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">2</div>
+                <Label className="text-xs md:text-sm font-semibold">Script de Vendas — Novo Contato</Label>
               </div>
-              <p className="text-xs text-muted-foreground ml-8">
-                Instruções usadas quando o número <strong>NÃO</strong> é um cliente cadastrado. Foque em captar e vender.
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-7">
+                Instruções quando o número <strong>NÃO</strong> é cliente. Foque em captar e vender.
               </p>
               <Textarea
                 value={newContactInstructions}
                 onChange={(e) => setNewContactInstructions(e.target.value)}
                 placeholder={EXAMPLE_NEW_CONTACT}
-                className="bg-secondary/50 border-border min-h-[140px] text-sm"
+                className="bg-secondary/50 border-border min-h-[100px] md:min-h-[140px] text-xs md:text-sm"
               />
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setNewContactInstructions(EXAMPLE_NEW_CONTACT)}>
-                <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo pronto
+              <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setNewContactInstructions(EXAMPLE_NEW_CONTACT)}>
+                <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
               </Button>
             </div>
 
             {/* Section 3: Client Support Script */}
-            <div className="space-y-3 border-t border-border pt-5">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">3</div>
-                <Label className="text-sm font-semibold">Regras de Suporte — Cliente Existente</Label>
+            <div className="space-y-2 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">3</div>
+                <Label className="text-xs md:text-sm font-semibold">Regras de Suporte — Cliente Existente</Label>
               </div>
-              <p className="text-xs text-muted-foreground ml-8">
-                Instruções usadas quando o número <strong>É</strong> um cliente. A IA já recebe nome, plano e vencimento automaticamente.
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-7">
+                Instruções quando o número <strong>É</strong> cliente. A IA recebe nome, plano e vencimento automaticamente.
               </p>
               <Textarea
                 value={clientInstructions}
                 onChange={(e) => setClientInstructions(e.target.value)}
                 placeholder={EXAMPLE_CLIENT}
-                className="bg-secondary/50 border-border min-h-[140px] text-sm"
+                className="bg-secondary/50 border-border min-h-[100px] md:min-h-[140px] text-xs md:text-sm"
               />
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setClientInstructions(EXAMPLE_CLIENT)}>
-                <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo pronto
+              <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setClientInstructions(EXAMPLE_CLIENT)}>
+                <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
               </Button>
             </div>
 
