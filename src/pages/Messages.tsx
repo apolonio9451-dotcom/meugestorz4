@@ -132,8 +132,9 @@ export default function Messages() {
         );
       if (error) throw error;
       toast({ title: "Salvo!", description: "Mensagem atualizada com sucesso." });
-    } catch {
-      toast({ title: "Erro", description: "Não foi possível salvar.", variant: "destructive" });
+    } catch (err: any) {
+      console.error("Erro ao salvar template:", err);
+      toast({ title: "Erro", description: err?.message || "Não foi possível salvar.", variant: "destructive" });
     } finally {
       setSaving(null);
     }
