@@ -69,7 +69,7 @@ export default function Chatbot() {
   const { companyId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("personality");
+  const [activeTab, setActiveTab] = useState("connection");
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
