@@ -69,20 +69,21 @@ async function sendButtons(
   title: string, body: string, footer: string,
   buttons: { id: string; title: string }[]
 ) {
-  const resp = await fetch(`${apiUrl}/send/buttons`, {
+  const choices = buttons.map((b) => `${b.title}|${b.id}`);
+  const resp = await fetch(`${apiUrl}/send/menu`, {
     method: "POST",
     headers: { "Content-Type": "application/json", token: apiToken },
     body: JSON.stringify({
       number: to,
-      title: title || undefined,
-      text: body,
-      footer: footer || undefined,
-      buttons: buttons.map((b) => ({ buttonId: b.id, buttonText: b.title })),
+      type: "button",
+      text: body || title || "Selecione uma opção:",
+      choices,
+      footerText: footer || undefined,
     }),
   });
   if (!resp.ok) {
     const respBody = await resp.text();
-    throw new Error(`UAZAPI send/buttons failed: ${resp.status} - ${respBody}`);
+    throw new Error(`UAZAPI send/menu (button) failed: ${resp.status} - ${respBody}`);
   }
   return resp.json();
 }
