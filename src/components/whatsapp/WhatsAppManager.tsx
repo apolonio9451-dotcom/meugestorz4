@@ -21,9 +21,10 @@ interface ConnectionData {
 interface Props {
   userName: string;
   companyId?: string | null;
+  onConnected?: (data: { profileName?: string; phoneNumber?: string }) => void;
 }
 
-export default function WhatsAppManager({ userName, companyId }: Props) {
+export default function WhatsAppManager({ userName, companyId, onConnected }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionData | null>(null);
