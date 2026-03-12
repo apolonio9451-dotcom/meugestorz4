@@ -844,9 +844,12 @@ export default function Chatbot() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 md:grid-cols-9 h-auto">
+        <TabsList className="grid w-full grid-cols-5 md:grid-cols-10 h-auto">
           <TabsTrigger value="connection" className="text-xs py-2">
             <Smartphone className="w-3.5 h-3.5 mr-1" />Conexão
+          </TabsTrigger>
+          <TabsTrigger value="behavior" className="text-xs py-2">
+            <Sparkles className="w-3.5 h-3.5 mr-1" />Comportamento
           </TabsTrigger>
           <TabsTrigger value="personality" className="text-xs py-2">
             <Brain className="w-3.5 h-3.5 mr-1" />Personalidade
@@ -880,6 +883,101 @@ export default function Chatbot() {
         {/* CONNECTION TAB */}
         <TabsContent value="connection" className="space-y-4 mt-4">
           <WhatsAppInstanceSection companyId={companyId} />
+        </TabsContent>
+
+        {/* BEHAVIOR TAB */}
+        <TabsContent value="behavior" className="space-y-4 mt-4">
+          <div className="glass-card rounded-xl p-6 space-y-6">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Comportamento Inteligente
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Configure como a IA se comporta com novos contatos (foco em vendas) e clientes existentes (foco em suporte). Estas instruções são injetadas automaticamente no contexto da IA.
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Script de Vendas — Novo Contato
+              </Label>
+              <Textarea
+                value={newContactInstructions}
+                onChange={(e) => setNewContactInstructions(e.target.value)}
+                placeholder="Ex: Quando um novo contato mandar mensagem, apresente nossos serviços de IPTV. Destaque a qualidade HD, variedade de canais e preço competitivo. Ofereça um teste gratuito. Pergunte o nome do cliente e anote."
+                className="bg-secondary/50 border-border min-h-[140px] text-sm"
+              />
+              <p className="text-muted-foreground text-[11px]">
+                Estas instruções são usadas quando o número NÃO é um cliente cadastrado. Foque em vendas e captação.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <User className="w-4 h-4 text-primary" />
+                Instruções para Cliente Existente
+              </Label>
+              <Textarea
+                value={clientInstructions}
+                onChange={(e) => setClientInstructions(e.target.value)}
+                placeholder="Ex: Ao atender um cliente existente, saúde pelo nome, pergunte como pode ajudar. Foque em resolver o problema rapidamente. Se o plano estiver próximo do vencimento, lembre sobre a renovação. Se o cliente reclamar, seja empático e ofereça soluções."
+                className="bg-secondary/50 border-border min-h-[140px] text-sm"
+              />
+              <p className="text-muted-foreground text-[11px]">
+                Estas instruções são usadas quando o número É um cliente. A IA já recebe nome, plano e vencimento automaticamente.
+              </p>
+            </div>
+
+            <div className="border-t border-border pt-4 space-y-4">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-primary" />
+                Humanização
+              </h3>
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Simular presença humana</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Envia "digitando..." ou "gravando..." antes de cada resposta, simulando uma pessoa real.
+                  </p>
+                </div>
+                <Switch checked={presenceEnabled} onCheckedChange={setPresenceEnabled} />
+              </div>
+
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Log de decisões da IA</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Registra o "pensamento" da IA em cada interação (ex: "Identificado como Novo Contato → Enviando Menu").
+                  </p>
+                </div>
+                <Switch checked={aiDecisionLog} onCheckedChange={setAiDecisionLog} />
+              </div>
+            </div>
+
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
+              <h4 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
+                <Info className="w-3.5 h-3.5 text-primary" />
+                Tags de Comando da IA
+              </h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                A IA pode executar comandos automaticamente usando estas tags na resposta:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MENU]</span> — Envia o menu interativo configurado</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_CATALOGO]</span> — Envia lista de planos/preços</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_BOTOES:A|B|C]</span> — Envia botões rápidos (máx 3)</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_LISTA:A|B|C]</span> — Envia menu de lista expansível</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MEDIA:arquivo.mp3]</span> — Envia mídia da biblioteca</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleSaveSettings} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Comportamento
+              </Button>
+            </div>
+          </div>
         </TabsContent>
 
         {/* PERSONALITY TAB */}
