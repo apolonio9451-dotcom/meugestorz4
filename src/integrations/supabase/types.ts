@@ -291,6 +291,7 @@ export type Database = {
       }
       chatbot_settings: {
         Row: {
+          ai_decision_log: boolean
           ai_model: string
           ai_temperature: number
           away_message: string
@@ -300,6 +301,7 @@ export type Database = {
           business_hours_enabled: boolean
           business_hours_end: string
           business_hours_start: string
+          client_instructions: string
           closing_message: string
           company_id: string
           created_at: string
@@ -315,7 +317,9 @@ export type Database = {
           max_delay_seconds: number
           max_messages_per_contact: number
           min_delay_seconds: number
+          new_contact_instructions: string
           personality: string
+          presence_enabled: boolean
           send_welcome_media_id: string | null
           transfer_keyword: string
           transfer_message: string
@@ -325,6 +329,7 @@ export type Database = {
           welcome_message: string
         }
         Insert: {
+          ai_decision_log?: boolean
           ai_model?: string
           ai_temperature?: number
           away_message?: string
@@ -334,6 +339,7 @@ export type Database = {
           business_hours_enabled?: boolean
           business_hours_end?: string
           business_hours_start?: string
+          client_instructions?: string
           closing_message?: string
           company_id: string
           created_at?: string
@@ -349,7 +355,9 @@ export type Database = {
           max_delay_seconds?: number
           max_messages_per_contact?: number
           min_delay_seconds?: number
+          new_contact_instructions?: string
           personality?: string
+          presence_enabled?: boolean
           send_welcome_media_id?: string | null
           transfer_keyword?: string
           transfer_message?: string
@@ -359,6 +367,7 @@ export type Database = {
           welcome_message?: string
         }
         Update: {
+          ai_decision_log?: boolean
           ai_model?: string
           ai_temperature?: number
           away_message?: string
@@ -368,6 +377,7 @@ export type Database = {
           business_hours_enabled?: boolean
           business_hours_end?: string
           business_hours_start?: string
+          client_instructions?: string
           closing_message?: string
           company_id?: string
           created_at?: string
@@ -383,7 +393,9 @@ export type Database = {
           max_delay_seconds?: number
           max_messages_per_contact?: number
           min_delay_seconds?: number
+          new_contact_instructions?: string
           personality?: string
+          presence_enabled?: boolean
           send_welcome_media_id?: string | null
           transfer_keyword?: string
           transfer_message?: string
