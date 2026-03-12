@@ -862,39 +862,39 @@ export default function Chatbot() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 md:grid-cols-10 h-auto">
-          <TabsTrigger value="connection" className="text-xs py-2">
-            <Smartphone className="w-3.5 h-3.5 mr-1" />1. Conexão
+        <TabsList className="flex w-full overflow-x-auto scrollbar-hide md:grid md:grid-cols-10 h-auto gap-1 p-1">
+          <TabsTrigger value="connection" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <Smartphone className="w-3 h-3 mr-1" />Conexão
           </TabsTrigger>
-          <TabsTrigger value="training" className="text-xs py-2">
-            <Brain className="w-3.5 h-3.5 mr-1" />2. Treinamento
+          <TabsTrigger value="training" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <Brain className="w-3 h-3 mr-1" />Treinamento
           </TabsTrigger>
-          <TabsTrigger value="messages" className="text-xs py-2">
-            <MessageSquare className="w-3.5 h-3.5 mr-1" />3. Mensagens
+          <TabsTrigger value="messages" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <MessageSquare className="w-3 h-3 mr-1" />Mensagens
           </TabsTrigger>
-          <TabsTrigger value="media" className="text-xs py-2">
-            <Music className="w-3.5 h-3.5 mr-1" />4. Mídia
+          <TabsTrigger value="media" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <Music className="w-3 h-3 mr-1" />Mídia
           </TabsTrigger>
-          <TabsTrigger value="menu" className="text-xs py-2">
-            <Layers className="w-3.5 h-3.5 mr-1" />5. Menu
+          <TabsTrigger value="menu" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <Layers className="w-3 h-3 mr-1" />Menu
           </TabsTrigger>
-          <TabsTrigger value="autoreplies" className="text-xs py-2">
-            <Zap className="w-3.5 h-3.5 mr-1" />6. Gatilhos
+          <TabsTrigger value="autoreplies" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <Zap className="w-3 h-3 mr-1" />Gatilhos
           </TabsTrigger>
-          <TabsTrigger value="advanced" className="text-xs py-2">
-            <Settings2 className="w-3.5 h-3.5 mr-1" />7. Avançado
+          <TabsTrigger value="advanced" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <Settings2 className="w-3 h-3 mr-1" />Avançado
           </TabsTrigger>
-          <TabsTrigger value="simulator" className="text-xs py-2">
-            <MessageCircle className="w-3.5 h-3.5 mr-1" />8. Simulador
+          <TabsTrigger value="simulator" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <MessageCircle className="w-3 h-3 mr-1" />Simulador
           </TabsTrigger>
-          <TabsTrigger value="logs" className="text-xs py-2">
-            <MessageCircle className="w-3.5 h-3.5 mr-1" />9. Logs
+          <TabsTrigger value="logs" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <MessageCircle className="w-3 h-3 mr-1" />Logs
             {logStats.errors > 0 && (
-              <span className="ml-1 bg-destructive text-destructive-foreground text-[9px] rounded-full px-1.5">{logStats.errors}</span>
+              <span className="ml-1 bg-destructive text-destructive-foreground text-[9px] rounded-full px-1">{logStats.errors}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="diagnostics" className="text-xs py-2">
-            <AlertCircle className="w-3.5 h-3.5 mr-1" />10. Diagnóstico
+          <TabsTrigger value="diagnostics" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+            <AlertCircle className="w-3 h-3 mr-1" />Diagnóstico
           </TabsTrigger>
         </TabsList>
 
