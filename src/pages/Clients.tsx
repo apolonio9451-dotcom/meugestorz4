@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { addDays, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
+import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Client {
@@ -79,7 +79,7 @@ export default function Clients() {
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
-  const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days"; days?: number; label: string } | null>(null);
+  const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -366,12 +366,12 @@ export default function Clients() {
     }
   };
 
-  const handleRenew = async (clientId: string, days: number) => {
+  const handleRenew = async (clientId: string, months: number) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
     const currentEnd = parseISO(sub.end_date);
     const baseDate = currentEnd > new Date() ? currentEnd : new Date();
-    const newEnd = addDays(baseDate, days);
+    const newEnd = addMonths(baseDate, months);
     const { error } = await supabase
       .from("client_subscriptions")
       .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
@@ -379,8 +379,8 @@ export default function Clients() {
     if (error) toast.error(error.message);
     else {
       const client = clients.find(c => c.id === clientId);
-      await logActivity("renovação", client?.name || "", clientId, `Renovado +${days} dias`);
-      toast.success(`Renovado por +${days} dias!`); fetchSubscriptions(); fetchActivityLogs();
+      await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)`);
+      toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs();
     }
   };
 
@@ -1070,9 +1070,9 @@ export default function Clients() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "same", label: "Renovar mesma data" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "days", days: 30, label: "Renovar +1 mês" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "days", days: 60, label: "Renovar +2 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "days", days: 90, label: "Renovar +3 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "months", days: 1, label: "Renovar +1 mês" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "months", days: 2, label: "Renovar +2 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "months", days: 3, label: "Renovar +3 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -1217,7 +1217,7 @@ export default function Clients() {
               if (!renewConfirm) return;
               if (renewConfirm.type === "same") {
                 await handleRenewSameDate(renewConfirm.clientId);
-              } else {
+              } else if (renewConfirm.type === "months") {
                 await handleRenew(renewConfirm.clientId, renewConfirm.days!);
               }
               setRenewConfirm(null);
