@@ -23,9 +23,10 @@ interface Message {
 
 interface Props {
   companyId: string;
+  onRuleSaved?: () => void;
 }
 
-export default function ChatSimulator({ companyId }: Props) {
+export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -316,7 +317,7 @@ export default function ChatSimulator({ companyId }: Props) {
             triggerQuestion={trainingPanel!.question}
             currentBotReply={trainingPanel!.reply}
             onClose={() => setTrainingPanel(null)}
-            onSaved={() => fetchRulesCount()}
+            onSaved={() => { fetchRulesCount(); onRuleSaved?.(); }}
           />
         </div>
       )}

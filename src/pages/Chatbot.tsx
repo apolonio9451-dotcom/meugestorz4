@@ -28,6 +28,7 @@ import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSecti
 import WhatsAppManager from "@/components/whatsapp/WhatsAppManager";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
 import ChatSimulator from "@/components/chatbot/ChatSimulator";
+import TrainingRulesList from "@/components/chatbot/TrainingRulesList";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
@@ -89,7 +90,8 @@ export default function Chatbot() {
   const { companyId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("pensamento");
+  const [activeTab, setActiveTab] = useState("simulador");
+  const [trainingRulesRefresh, setTrainingRulesRefresh] = useState(0);
   const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
   const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
   const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
@@ -1409,9 +1411,16 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        {/* ============ ABA: SIMULADOR ============ */}
+        {/* ============ ABA: SIMULADOR & TREINAMENTO ATIVO ============ */}
         <TabsContent value="simulador" className="space-y-4 mt-4">
-          {companyId && <ChatSimulator companyId={companyId} />}
+          {companyId && (
+            <>
+              <ChatSimulator companyId={companyId} onRuleSaved={() => setTrainingRulesRefresh(prev => prev + 1)} />
+              <div className="glass-card rounded-xl p-3 md:p-6">
+                <TrainingRulesList companyId={companyId} refreshKey={trainingRulesRefresh} />
+              </div>
+            </>
+          )}
           {!companyId && (
             <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">Carregando...</div>
           )}
