@@ -25,6 +25,7 @@ import TrialAccess from "@/pages/TrialAccess";
 import Trials from "@/pages/Trials";
 import Profile from "@/pages/Profile";
 import ResellerPanel from "@/pages/ResellerPanel";
+import Chatbot from "@/pages/Chatbot";
 
 const queryClient = new QueryClient();
 
