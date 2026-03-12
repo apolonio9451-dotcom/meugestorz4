@@ -539,7 +539,23 @@ export default function Chatbot() {
           }`}>
             <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
             <span className="text-sm font-medium">{isActive ? "Bot Ativo" : "Bot Desativado"}</span>
-            <Switch checked={isActive} onCheckedChange={(v) => { setIsActive(v); }} />
+            <Switch checked={isActive} onCheckedChange={async (v) => {
+              setIsActive(v);
+              if (companyId) {
+                try {
+                  if (settingsId) {
+                    await supabase.from("chatbot_settings").update({ is_active: v }).eq("id", settingsId);
+                  } else {
+                    const { data } = await supabase.from("chatbot_settings").insert({ company_id: companyId, is_active: v }).select().single();
+                    if (data) setSettingsId((data as any).id);
+                  }
+                  toast({ title: v ? "✅ Bot ativado!" : "Bot desativado" });
+                } catch (err: any) {
+                  setIsActive(!v);
+                  toast({ title: "Erro ao alterar status", description: err?.message, variant: "destructive" });
+                }
+              }
+            }} />
           </div>
         </div>
       </div>
