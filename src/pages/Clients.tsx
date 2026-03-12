@@ -260,7 +260,8 @@ export default function Clients() {
     return digits;
   };
 
-  const getMessageCategory = (days: number | null): string => {
+  const getMessageCategory = (days: number | null, forcedCategory?: "vencidos" | "vence_hoje" | "vence_amanha" | "a_vencer"): string => {
+    if (forcedCategory) return forcedCategory;
     if (days === null) return "vencidos";
     if (days < 0) return "vencidos";
     if (days === 0) return "vence_hoje";
@@ -273,9 +274,10 @@ export default function Clients() {
     client: Client,
     sub: Subscription | undefined,
     days: number | null,
-    templatesOverride?: Record<string, string>
+    templatesOverride?: Record<string, string>,
+    forcedCategory?: "vencidos" | "vence_hoje" | "vence_amanha" | "a_vencer"
   ): string => {
-    const category = getMessageCategory(days);
+    const category = getMessageCategory(days, forcedCategory);
     const defaultMessages: Record<string, string> = {
       vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
       vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
@@ -1245,10 +1247,18 @@ export default function Clients() {
                               }
                             }
 
+                            const forcedCategory =
+                              mainFilter === "vencidos"
+                                ? "vencidos"
+                                : mainFilter === "status" && ["vence_hoje", "vence_amanha", "a_vencer"].includes(statusSubFilter)
+                                  ? (statusSubFilter as "vence_hoje" | "vence_amanha" | "a_vencer")
+                                  : undefined;
+
                             (async () => {
                               try {
                                 const freshTemplates = await fetchLatestMessageTemplates();
-                                const msg = buildCobrancaMessage(client, sub, days, freshTemplates);
+                                const currentDays = sub ? getDaysRemaining(sub.end_date) : null;
+                                const msg = buildCobrancaMessage(client, sub, currentDays, freshTemplates, forcedCategory);
                                 const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
                                 if (isMobileDevice) {
