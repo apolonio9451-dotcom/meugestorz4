@@ -142,8 +142,17 @@ export default function Chatbot() {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts()]);
+    await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts(), fetchApiStatus()]);
     setLoading(false);
+  };
+
+  const fetchApiStatus = async () => {
+    const { data } = await supabase
+      .from("api_settings" as any)
+      .select("api_url, api_token")
+      .eq("company_id", companyId!)
+      .maybeSingle();
+    setApiConfigured(!!(data && (data as any).api_url && (data as any).api_token));
   };
 
   const fetchSettings = async () => {
