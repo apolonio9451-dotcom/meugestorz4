@@ -803,7 +803,7 @@ export default function Chatbot() {
             <Layers className="w-3 h-3 mr-1" />Interação & Mídia
           </TabsTrigger>
           <TabsTrigger value="simulador" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <MessageCircle className="w-3 h-3 mr-1" />Simulador
+            <Brain className="w-3 h-3 mr-1" />Treinar IA
           </TabsTrigger>
           <TabsTrigger value="conexao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Smartphone className="w-3 h-3 mr-1" />Conexão
@@ -1411,10 +1411,20 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        {/* ============ ABA: SIMULADOR & TREINAMENTO ATIVO ============ */}
+        {/* ============ ABA: TREINAMENTO ATIVO DA IA ============ */}
         <TabsContent value="simulador" className="space-y-4 mt-4">
           {companyId && (
             <>
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 md:p-4 flex items-start gap-3">
+                <Brain className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Central de Treinamento Ativo</h3>
+                  <p className="text-[11px] md:text-xs text-muted-foreground mt-1">
+                    Este não é apenas um simulador — <strong>tudo que você instruir aqui será aplicado em tempo real</strong> no atendimento do WhatsApp.
+                    Envie uma mensagem, clique em <span className="text-primary font-medium">✏️ Instruir</span> na resposta do bot e ensine como ele deve responder. A regra é salva no banco de dados e usada automaticamente nas próximas conversas reais.
+                  </p>
+                </div>
+              </div>
               <ChatSimulator companyId={companyId} onRuleSaved={() => setTrainingRulesRefresh(prev => prev + 1)} />
               <div className="glass-card rounded-xl p-3 md:p-6">
                 <TrainingRulesList companyId={companyId} refreshKey={trainingRulesRefresh} />

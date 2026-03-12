@@ -95,7 +95,7 @@ export default function TrainingInstructionPanel({
         if (error) throw error;
       }
 
-      toast({ title: "✅ Regra de treinamento salva!" });
+      toast({ title: "✅ Regra salva! O bot usará esta instrução nas conversas reais." });
       onSaved();
       onClose();
     } catch (err: any) {
@@ -111,7 +111,7 @@ export default function TrainingInstructionPanel({
       <div className="bg-primary/10 border-b border-border/30 px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <Pencil className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Configurar Resposta Ideal</span>
+          <span className="text-sm font-semibold text-foreground">Instruir Resposta (Treinamento Real)</span>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
           <X className="w-4 h-4" />

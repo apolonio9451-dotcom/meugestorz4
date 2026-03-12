@@ -154,9 +154,9 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
               <Smartphone className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">Simulador de Treinamento</p>
+              <p className="text-sm font-semibold text-foreground">Treinamento da IA</p>
               <p className="text-[10px] text-muted-foreground">
-                Teste e treine o bot — clique em ✏️ para instruir respostas
+                Converse e instrua respostas reais — as regras são aplicadas no WhatsApp
               </p>
             </div>
           </div>
@@ -194,13 +194,13 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-background/30">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center gap-3 opacity-60">
-              <Bot className="w-12 h-12 text-muted-foreground" />
+              <Bot className="w-12 h-12 text-primary/60" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Simulador de Treinamento</p>
+                <p className="text-sm font-medium text-foreground">Treine sua IA aqui</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Digite uma mensagem para testar. Clique no ícone ✏️ nas respostas do bot
+                  Envie uma mensagem como se fosse um cliente. O bot responde usando as configurações atuais.
                   <br />
-                  para instruir como ele deve responder nessa situação.
+                  Clique em <span className="text-primary font-medium">✏️ Instruir</span> para ensinar a resposta correta — <strong>vale para o WhatsApp real</strong>.
                 </p>
               </div>
             </div>
@@ -247,7 +247,7 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
                       title="Instruir como o bot deve responder"
                     >
                       <Pencil className="w-2.5 h-2.5" />
-                      Instruir
+                      Instruir (treino real)
                     </button>
 
                     {msg.decisions && msg.decisions.length > 0 && (
