@@ -669,8 +669,18 @@ export default function Clients() {
                         setFormPlanId(v);
                         const plan = plans.find(p => p.id === v);
                         if (plan) {
-                          setFormAmount(String(plan.price));
-                          setFormEndDate(addDays(new Date(), plan.duration_days));
+                          setFormAmount(String(plan.price ?? 0));
+                          const days = plan.duration_days ?? 30;
+                          try {
+                            const newDate = addDays(new Date(), days);
+                            if (!isNaN(newDate.getTime())) {
+                              setFormEndDate(newDate);
+                            } else {
+                              setFormEndDate(addDays(new Date(), 30));
+                            }
+                          } catch {
+                            setFormEndDate(addDays(new Date(), 30));
+                          }
                         }
                       }}>
                         <SelectTrigger className="h-10 text-sm border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
