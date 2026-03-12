@@ -901,7 +901,7 @@ export default function Chatbot() {
 
         {/* CONNECTION TAB */}
         <TabsContent value="connection" className="space-y-6 mt-4">
-          <WhatsAppManager userName={fullName || "Usuário"} />
+          <WhatsAppManager userName="Usuário" />
           <WhatsAppInstanceSection companyId={companyId} />
         </TabsContent>
 
