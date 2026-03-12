@@ -805,9 +805,6 @@ export default function Chatbot() {
           <TabsTrigger value="media" className="text-xs py-2">
             <Music className="w-3.5 h-3.5 mr-1" />Mídia
           </TabsTrigger>
-          <TabsTrigger value="schedule" className="text-xs py-2">
-            <Clock className="w-3.5 h-3.5 mr-1" />Agendamento
-          </TabsTrigger>
           <TabsTrigger value="advanced" className="text-xs py-2">
             <Settings2 className="w-3.5 h-3.5 mr-1" />Avançado
           </TabsTrigger>
@@ -1303,78 +1300,6 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        {/* SCHEDULE TAB */}
-        <TabsContent value="schedule" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Agendamento & Horários
-            </h2>
-
-            <div className="space-y-4">
-              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  Horário de Funcionamento do Bot
-                </h3>
-                <div className="flex items-center gap-3">
-                  <Switch checked={businessHoursEnabled} onCheckedChange={setBusinessHoursEnabled} />
-                  <span className="text-sm text-foreground">
-                    {businessHoursEnabled ? "✅ Bot responde apenas no horário configurado" : "Bot responde 24 horas"}
-                  </span>
-                </div>
-                {businessHoursEnabled && (
-                  <div className="space-y-3 pl-4 border-l-2 border-primary/30 mt-3">
-                    <div className="flex gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Início</Label>
-                        <Input type="time" value={businessHoursStart} onChange={(e) => setBusinessHoursStart(e.target.value)} className="bg-secondary/50 w-32" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Fim</Label>
-                        <Input type="time" value={businessHoursEnd} onChange={(e) => setBusinessHoursEnd(e.target.value)} className="bg-secondary/50 w-32" />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Dias da semana</Label>
-                      <div className="flex gap-2 flex-wrap">
-                        {DAYS_OF_WEEK.map((day) => (
-                          <button
-                            key={day.value}
-                            onClick={() => toggleDay(day.value)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                              businessDays.includes(day.value)
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                            }`}
-                          >
-                            {day.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
-                  <Info className="w-3.5 h-3.5 text-primary" />
-                  O horário de disparo das cobranças automáticas é configurado no menu <strong>Configuração Geral</strong>.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Salvar Agendamento
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ADVANCED TAB */}
         <TabsContent value="advanced" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-6">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
