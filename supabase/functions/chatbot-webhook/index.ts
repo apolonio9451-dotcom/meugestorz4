@@ -366,7 +366,7 @@ Deno.serve(async (req: Request) => {
     console.log("Dados extraídos:", JSON.stringify({ messageText: messageText.slice(0, 200), senderPhone, fromMe, messageType, eventType }));
 
     // ===== STEP 3: Filter non-message events =====
-    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels"];
+    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels", "messages_update", "chat_labels", "receipt"];
     const eventLower = eventType.toLowerCase();
     if (eventLower && ignoredEvents.some(e => eventLower.includes(e))) {
       console.log("Evento ignorado:", eventType);
