@@ -260,6 +260,21 @@ export default function Clients() {
     return digits;
   };
 
+  const sanitizeWhatsappMessage = (message: string) =>
+    (message || "").replace(/\r\n/g, "\n").normalize("NFC");
+
+  const isMobileWhatsAppClient = () =>
+    /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  const getWhatsAppSendUrl = (phone: string, message: string) => {
+    const normalizedPhone = normalizeWhatsappPhone(phone);
+    const whatsappBaseUrl = isMobileWhatsAppClient()
+      ? "https://api.whatsapp.com/send"
+      : "https://web.whatsapp.com/send";
+
+    return `${whatsappBaseUrl}?phone=${normalizedPhone}&text=${encodeURIComponent(sanitizeWhatsappMessage(message))}`;
+  };
+
   const getMessageCategory = (days: number | null, forcedCategory?: "vencidos" | "vence_hoje" | "vence_amanha" | "a_vencer"): string => {
     if (forcedCategory) return forcedCategory;
     if (days === null) return "vencidos";
