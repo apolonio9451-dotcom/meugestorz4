@@ -553,10 +553,89 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // ===== STEP 12.5: Interactive menu =====
+    // ===== STEP 12.5: Handle menu item responses =====
     const menuEnabled = chatSettings.interactive_menu_enabled;
     const menuItems: any[] = chatSettings.interactive_menu_items || [];
-    if (menuEnabled && menuItems.length > 0 && menuItems.some((i: any) => i.title)) {
+    const lowerText = messageText.toLowerCase().trim();
+    
+    // Check if user's message matches a menu item (button reply)
+    const isMenuResponse = menuEnabled && menuItems.length > 0 && menuItems.some((item: any) => {
+      const itemTitle = (item.title || "").toLowerCase().trim();
+      const itemId = (item.id || "").toLowerCase().trim();
+      return itemTitle && (lowerText === itemTitle || lowerText === itemId || lowerText.includes(itemTitle));
+    });
+
+    if (isMenuResponse) {
+      // Handle "ver catalogo" - send subscription plans as interactive list
+      if (lowerText.includes("ver catalogo") || lowerText.includes("ver catálogo") || lowerText.includes("catalogo") || lowerText.includes("catálogo")) {
+        console.log("Resposta de menu: ver catálogo - buscando planos...");
+        const { data: plans } = await supabase
+          .from("subscription_plans")
+          .select("id, name, price, duration_days, description")
+          .eq("company_id", companyIdParam)
+          .eq("is_active", true)
+          .order("price", { ascending: true })
+          .limit(10);
+
+        if (plans && plans.length > 0) {
+          const catalogItems = plans.map((plan: any) => ({
+            id: `plan_${plan.id}`,
+            title: plan.name,
+            description: `R$ ${Number(plan.price).toFixed(2)} - ${plan.duration_days} dias`,
+          }));
+
+          try {
+            await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+            await sendList(
+              apiUrl, apiToken, phone,
+              "📋 Nosso Catálogo",
+              "Confira nossos planos disponíveis! Selecione um para mais informações:",
+              "Preços atualizados",
+              "Ver Planos",
+              catalogItems
+            );
+            await supabase.from("chatbot_logs").insert({
+              company_id: companyIdParam, phone, client_name: "Catálogo",
+              message_received: messageText.slice(0, 500),
+              message_sent: `[CATÁLOGO] ${plans.map((p: any) => p.name).join(" | ")}`.slice(0, 500),
+              context_type: "auto_reply", status: "success",
+            });
+            return new Response(JSON.stringify({ status: "ok", reason: "catalog_sent" }), {
+              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          } catch (catErr: any) {
+            console.error("Erro ao enviar catálogo:", catErr);
+            // Fallback: send as text
+            const textCatalog = plans.map((p: any) => 
+              `📦 *${p.name}*\n💰 R$ ${Number(p.price).toFixed(2)}\n⏱️ ${p.duration_days} dias${p.description ? `\n📝 ${p.description}` : ""}`
+            ).join("\n\n");
+            await sendText(apiUrl, apiToken, phone, `📋 *Nosso Catálogo de Planos:*\n\n${textCatalog}\n\nPara contratar, fale com nosso atendente! 😊`);
+            await supabase.from("chatbot_logs").insert({
+              company_id: companyIdParam, phone, client_name: "Catálogo (texto)",
+              message_received: messageText.slice(0, 500),
+              message_sent: textCatalog.slice(0, 500),
+              context_type: "auto_reply", status: "success",
+            });
+            return new Response(JSON.stringify({ status: "ok", reason: "catalog_text_fallback" }), {
+              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          // No plans found - send friendly message
+          await simulatePresence(apiUrl, apiToken, phone, "composing", getRandomDelay(minDelay, maxDelay));
+          await sendText(apiUrl, apiToken, phone, "No momento não temos planos cadastrados no catálogo. Entre em contato com nosso atendente para mais informações! 😊");
+          return new Response(JSON.stringify({ status: "ok", reason: "no_plans" }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+      
+      // Other menu responses - pass to AI for handling
+      console.log("Resposta de menu não mapeada, passando para IA:", lowerText);
+    }
+
+    // ===== STEP 12.6: Send interactive menu (only for non-menu-response messages) =====
+    if (!isMenuResponse && menuEnabled && menuItems.length > 0 && menuItems.some((i: any) => i.title)) {
       const menuType = chatSettings.interactive_menu_type || "buttons";
       const menuTitle = chatSettings.interactive_menu_title || "";
       const menuBody = chatSettings.interactive_menu_body || "Selecione uma opção:";
