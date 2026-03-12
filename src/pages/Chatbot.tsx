@@ -90,7 +90,8 @@ export default function Chatbot() {
   const { companyId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("pensamento");
+  const [activeTab, setActiveTab] = useState("simulador");
+  const [trainingRulesRefresh, setTrainingRulesRefresh] = useState(0);
   const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
   const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
   const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
