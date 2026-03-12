@@ -379,11 +379,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Ignore group messages
-    const isGroup = body?.message?.isGroup === true || body?.chat?.wa_isGroup === true || 
+    // Ignore group messages - check all possible indicators
+    const rawJid = body?.data?.key?.remoteJid || body?.key?.remoteJid || 
+      body?.message?.chatid || body?.chat?.wa_chatid || body?.from || "";
+    const isGroup = 
+      rawJid.includes("@g.us") || 
+      rawJid.includes("@broadcast") ||
+      body?.message?.isGroup === true || 
+      body?.chat?.wa_isGroup === true || 
+      body?.data?.isGroup === true ||
+      (body?.data?.key?.remoteJid || "").endsWith("@g.us") ||
       (senderPhone && senderPhone.includes("120363"));
     if (isGroup) {
-      console.log("Mensagem de grupo ignorada:", senderPhone);
+      console.log("Mensagem de grupo ignorada:", senderPhone, "JID:", rawJid);
       return new Response(JSON.stringify({ status: "ok", reason: "group_message" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
