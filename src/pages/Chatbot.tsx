@@ -89,6 +89,8 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("connection");
+  const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
+  const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
