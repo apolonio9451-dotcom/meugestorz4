@@ -260,7 +260,7 @@ Deno.serve(async (req: Request) => {
       console.error("Invalid chatbot webhook payload", {
         debugDetails,
         senderRaw,
-        bodyPreview: JSON.stringify(body).slice(0, 500),
+        bodyPreview: JSON.stringify(body).slice(0, 2000),
       });
 
       if (companyIdParam) {
