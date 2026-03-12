@@ -25,7 +25,7 @@ async function simulatePresence(
   try {
     await fetch(`${apiUrl}/operations/presence`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
+      headers: { "Content-Type": "application/json", token: apiToken },
       body: JSON.stringify({ phone: to, presence: type }),
     });
     await sleep(durationMs);
