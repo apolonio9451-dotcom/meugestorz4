@@ -157,16 +157,25 @@ function cleanJid(value: string): string {
   return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
 }
 
-function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string } {
+function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string; eventType: string; fromMe: boolean } {
+  const eventType = (body?.EventType || body?.event || "").toString().toLowerCase();
+  const fromMe = body?.message?.fromMe === true;
+
   const messageText = pickFirstString([
+    // UAZAPI V2 format: message.text is the primary text field
     body?.message?.text,
+    body?.message?.convertOptions, // button/list selection response
     body?.message?.body,
     body?.message?.conversation,
     body?.message?.extendedTextMessage?.text,
     body?.message?.buttonReply?.selectedDisplayText,
+    body?.message?.buttonResponseMessage?.selectedDisplayText,
     body?.message?.listReply?.title,
+    body?.message?.listResponseMessage?.title,
+    // Flat format
     body?.text,
     body?.body,
+    // Nested data format
     body?.data?.text,
     body?.data?.body,
     body?.data?.message?.text,
@@ -177,6 +186,11 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
   ]);
 
   const senderRaw = pickFirstString([
+    // UAZAPI V2: message.sender has the sender JID/phone
+    body?.message?.sender,
+    body?.message?.sender_pn,
+    // chat.id may also contain the phone for 1:1 chats
+    body?.chat?.id,
     body?.message?.from,
     body?.from,
     body?.phone,
@@ -192,6 +206,8 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     messageText,
     senderPhone: cleanJid(senderRaw),
     senderRaw,
+    eventType,
+    fromMe,
   };
 }
 
@@ -234,8 +250,22 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { messageText, senderPhone, senderRaw } = extractIncomingPayload(body);
+    const { messageText, senderPhone, senderRaw, eventType, fromMe } = extractIncomingPayload(body);
     const companyIdParam = new URL(req.url).searchParams.get("company_id");
+
+    // Ignore non-message events from UAZAPI (e.g. "chats", "status", "connection", etc.)
+    if (eventType && eventType !== "messages" && eventType !== "message" && eventType !== "") {
+      return new Response(JSON.stringify({ status: "ignored", event: eventType }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Ignore messages sent by the bot itself to avoid loops
+    if (fromMe) {
+      return new Response(JSON.stringify({ status: "ignored", reason: "from_me" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!messageText || !senderPhone || !companyIdParam) {
       const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
@@ -243,7 +273,7 @@ Deno.serve(async (req: Request) => {
       console.error("Invalid chatbot webhook payload", {
         debugDetails,
         senderRaw,
-        bodyPreview: JSON.stringify(body).slice(0, 500),
+        bodyPreview: JSON.stringify(body).slice(0, 2000),
       });
 
       if (companyIdParam) {
