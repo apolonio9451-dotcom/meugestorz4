@@ -268,6 +268,13 @@ export default function Chatbot() {
         closing_message: closingMessage.trim(),
         ai_model: aiModel,
         ai_temperature: aiTemperature,
+        interactive_menu_enabled: menuEnabled,
+        interactive_menu_type: menuType,
+        interactive_menu_title: menuTitle.trim(),
+        interactive_menu_body: menuBody.trim(),
+        interactive_menu_footer: menuFooter.trim(),
+        interactive_menu_button_text: menuButtonText.trim(),
+        interactive_menu_items: menuItems,
       };
       let error;
       if (settingsId) {
