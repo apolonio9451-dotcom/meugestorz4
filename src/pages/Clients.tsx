@@ -1247,10 +1247,17 @@ export default function Clients() {
                               }
                             }
 
+                            const forcedCategory =
+                              mainFilter === "vencidos"
+                                ? "vencidos"
+                                : mainFilter === "status" && ["vence_hoje", "vence_amanha", "a_vencer"].includes(statusSubFilter)
+                                  ? (statusSubFilter as "vence_hoje" | "vence_amanha" | "a_vencer")
+                                  : undefined;
+
                             (async () => {
                               try {
                                 const freshTemplates = await fetchLatestMessageTemplates();
-                                const msg = buildCobrancaMessage(client, sub, days, freshTemplates);
+                                const msg = buildCobrancaMessage(client, sub, days, freshTemplates, forcedCategory);
                                 const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
                                 if (isMobileDevice) {
