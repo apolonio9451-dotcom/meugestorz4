@@ -1274,10 +1274,7 @@ export default function Clients() {
                                 const freshTemplates = await fetchLatestMessageTemplates();
                                 const currentDays = sub ? getDaysRemaining(sub.end_date) : null;
                                 const msg = buildCobrancaMessage(client, sub, currentDays, freshTemplates, forcedCategory);
-                                const whatsappBaseUrl = isMobileDevice
-                                  ? "https://api.whatsapp.com/send"
-                                  : "https://web.whatsapp.com/send";
-                                const url = `${whatsappBaseUrl}?phone=${phone}&text=${encodeURIComponent(msg)}`;
+                                const url = getWhatsAppSendUrl(phone, msg);
 
                                 if (isMobileDevice) {
                                   window.location.href = url;
