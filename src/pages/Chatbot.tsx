@@ -28,6 +28,7 @@ import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSecti
 import WhatsAppManager from "@/components/whatsapp/WhatsAppManager";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
 import ChatSimulator from "@/components/chatbot/ChatSimulator";
+import TrainingRulesList from "@/components/chatbot/TrainingRulesList";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
