@@ -455,6 +455,37 @@ export default function Chatbot() {
     toast({ title: "📋 URL do Webhook copiada!" });
   };
 
+  const handleTestWebhook = async () => {
+    if (!companyId || !testPhone.trim()) {
+      toast({ title: "Preencha o número de telefone para teste", variant: "destructive" });
+      return;
+    }
+    setTestingWebhook(true);
+    setTestResult(null);
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: { text: testMessage, from: testPhone.replace(/\D/g, "") },
+        }),
+      });
+      const data = await response.json();
+      setTestResult({ status: response.ok ? "success" : "error", data });
+      if (response.ok) {
+        toast({ title: "✅ Teste enviado com sucesso!", description: `Status: ${data.status || data.context}` });
+        fetchLogs();
+      } else {
+        toast({ title: "❌ Erro no teste", description: data.error || JSON.stringify(data), variant: "destructive" });
+      }
+    } catch (err: any) {
+      setTestResult({ status: "error", data: { error: err.message } });
+      toast({ title: "❌ Falha na conexão", description: err.message, variant: "destructive" });
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
   const filteredLogs = logs.filter((log) => {
     if (logFilter !== "all" && log.context_type !== logFilter) return false;
     if (logSearch) {
