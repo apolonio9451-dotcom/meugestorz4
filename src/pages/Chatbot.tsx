@@ -893,11 +893,8 @@ export default function Chatbot() {
               <span className="ml-1 bg-destructive text-destructive-foreground text-[9px] rounded-full px-1.5">{logStats.errors}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="simulator" className="text-xs py-2">
-            <MessageCircle className="w-3.5 h-3.5 mr-1" />Simulador
-          </TabsTrigger>
           <TabsTrigger value="diagnostics" className="text-xs py-2">
-            <AlertCircle className="w-3.5 h-3.5 mr-1" />Diagnóstico
+            <AlertCircle className="w-3.5 h-3.5 mr-1" />10. Diagnóstico
           </TabsTrigger>
         </TabsList>
 
