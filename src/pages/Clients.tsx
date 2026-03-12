@@ -1231,10 +1231,19 @@ export default function Clients() {
                               /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                               window.matchMedia("(pointer: coarse)").matches;
 
-                            // Desktop: abre popup imediatamente para evitar bloqueio
+                            // Desktop: abre popup imediatamente para preservar gesto do usuário
                             const popup = !isMobileDevice
-                              ? window.open("about:blank", "_blank", "noopener,noreferrer")
+                              ? window.open("about:blank", "_blank")
                               : null;
+
+                            // Evita acesso reverso ao opener sem perder referência do popup
+                            if (popup) {
+                              try {
+                                popup.opener = null;
+                              } catch {
+                                // noop
+                              }
+                            }
 
                             (async () => {
                               try {
@@ -1247,10 +1256,11 @@ export default function Clients() {
                                   return;
                                 }
 
-                                if (popup) {
-                                  popup.location.href = url;
+                                if (popup && !popup.closed) {
+                                  popup.location.replace(url);
                                 } else {
-                                  window.open(url, "_blank", "noopener,noreferrer");
+                                  // fallback confiável caso o navegador não retorne referência do popup
+                                  window.location.href = url;
                                 }
                               } catch (error) {
                                 console.error("Erro ao gerar cobrança manual:", error);
