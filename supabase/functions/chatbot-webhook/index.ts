@@ -789,16 +789,57 @@ REGRAS IMPORTANTES:
 - Quando o cliente pedir para ver planos/catálogo, use [ENVIAR_CATALOGO].
 - Quando quiser dar opções ao cliente, use [ENVIAR_BOTOES:...] ou [ENVIAR_LISTA:...].`;
 
+    // ===== CONVERSATION MEMORY =====
+    // Fetch recent messages from this contact (last 24h, max 20 messages)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: conversationHistory } = await supabase
+      .from("chatbot_conversation_messages")
+      .select("role, content")
+      .eq("company_id", companyIdParam)
+      .eq("phone", phone)
+      .gte("created_at", twentyFourHoursAgo)
+      .order("created_at", { ascending: true })
+      .limit(20);
+
+    const historyMessages = (conversationHistory || []).map((msg: any) => ({
+      role: msg.role as string,
+      content: msg.content as string,
+    }));
+
+    if (historyMessages.length > 0) {
+      decisions.push(`🧠 Memória: ${historyMessages.length} mensagens anteriores carregadas (últimas 24h)`);
+    }
+
+    // Save the incoming user message to conversation memory
+    await supabase.from("chatbot_conversation_messages").insert({
+      company_id: companyIdParam,
+      phone,
+      role: "user",
+      content: messageText.slice(0, 2000),
+    });
+
+    // Cleanup old messages (older than 24h) for this contact
+    await supabase
+      .from("chatbot_conversation_messages")
+      .delete()
+      .eq("company_id", companyIdParam)
+      .eq("phone", phone)
+      .lt("created_at", twentyFourHoursAgo);
+
+    // Build AI messages with conversation history
+    const aiMessages: { role: string; content: string }[] = [
+      { role: "system", content: systemPrompt },
+      ...historyMessages,
+      { role: "user", content: messageText },
+    ];
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: aiModel,
         temperature: aiTemperature,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: messageText },
-        ],
+        messages: aiMessages,
       }),
     });
 
