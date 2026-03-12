@@ -54,6 +54,22 @@ REGRAS:
 - Se não souber algo, diga que vai verificar e retornar
 - Seja educado, objetivo e prestativo`;
 
+const EXAMPLE_NEW_CONTACT = `Quando um novo contato mandar mensagem:
+1. Cumprimente de forma amigável e pergunte o nome
+2. Apresente nossos serviços de IPTV (qualidade HD/4K, +500 canais, filmes e séries)
+3. Destaque os diferenciais: sem travamento, suporte 24h, teste grátis
+4. Pergunte qual tipo de conteúdo o cliente mais assiste
+5. Ofereça um teste gratuito de 24h
+6. Se o cliente aceitar, use [ENVIAR_CATALOGO] para mostrar os planos`;
+
+const EXAMPLE_CLIENT = `Ao atender um cliente existente:
+1. Saúde pelo nome e pergunte como pode ajudar
+2. Se for problema técnico: peça detalhes e tente resolver
+3. Se o plano vencer em menos de 5 dias: lembre sobre renovação
+4. Se pedir 2ª via ou pagamento: use [ENVIAR_BOTOES:Pix|Boleto|Cartão]
+5. Se reclamar: seja empático, ofereça solução e, se necessário, transfira
+6. Finalize perguntando se precisa de mais alguma coisa`;
+
 const CONTEXT_LABELS: Record<string, { label: string; color: string }> = {
   client: { label: "Cliente", color: "default" },
   new_contact: { label: "Novo Contato", color: "secondary" },
