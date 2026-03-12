@@ -334,7 +334,7 @@ Seguido da mensagem de texto que acompanha o envio.`;
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    const aiModel = chatSettings.ai_model || "google/gemini-2.5-flash";
+    const aiModel = chatSettings.ai_model || "google/gemini-3-flash-preview";
     const aiTemperature = chatSettings.ai_temperature ?? 0.7;
 
     const systemPrompt = `${chatSettings.personality || "Você é um assistente virtual profissional."}
