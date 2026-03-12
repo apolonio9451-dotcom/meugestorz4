@@ -366,12 +366,12 @@ export default function Clients() {
     }
   };
 
-  const handleRenew = async (clientId: string, days: number) => {
+  const handleRenew = async (clientId: string, months: number) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
     const currentEnd = parseISO(sub.end_date);
     const baseDate = currentEnd > new Date() ? currentEnd : new Date();
-    const newEnd = addDays(baseDate, days);
+    const newEnd = addMonths(baseDate, months);
     const { error } = await supabase
       .from("client_subscriptions")
       .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
@@ -379,8 +379,8 @@ export default function Clients() {
     if (error) toast.error(error.message);
     else {
       const client = clients.find(c => c.id === clientId);
-      await logActivity("renovação", client?.name || "", clientId, `Renovado +${days} dias`);
-      toast.success(`Renovado por +${days} dias!`); fetchSubscriptions(); fetchActivityLogs();
+      await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)`);
+      toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs();
     }
   };
 
