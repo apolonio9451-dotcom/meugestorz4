@@ -899,201 +899,210 @@ export default function Chatbot() {
           <WhatsAppInstanceSection companyId={companyId} />
         </TabsContent>
 
-        {/* BEHAVIOR TAB */}
-        <TabsContent value="behavior" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              Comportamento Inteligente
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Configure como a IA se comporta com novos contatos (foco em vendas) e clientes existentes (foco em suporte). Estas instruções são injetadas automaticamente no contexto da IA.
-            </p>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Script de Vendas — Novo Contato
-              </Label>
-              <Textarea
-                value={newContactInstructions}
-                onChange={(e) => setNewContactInstructions(e.target.value)}
-                placeholder="Ex: Quando um novo contato mandar mensagem, apresente nossos serviços de IPTV. Destaque a qualidade HD, variedade de canais e preço competitivo. Ofereça um teste gratuito. Pergunte o nome do cliente e anote."
-                className="bg-secondary/50 border-border min-h-[140px] text-sm"
-              />
-              <p className="text-muted-foreground text-[11px]">
-                Estas instruções são usadas quando o número NÃO é um cliente cadastrado. Foque em vendas e captação.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" />
-                Instruções para Cliente Existente
-              </Label>
-              <Textarea
-                value={clientInstructions}
-                onChange={(e) => setClientInstructions(e.target.value)}
-                placeholder="Ex: Ao atender um cliente existente, saúde pelo nome, pergunte como pode ajudar. Foque em resolver o problema rapidamente. Se o plano estiver próximo do vencimento, lembre sobre a renovação. Se o cliente reclamar, seja empático e ofereça soluções."
-                className="bg-secondary/50 border-border min-h-[140px] text-sm"
-              />
-              <p className="text-muted-foreground text-[11px]">
-                Estas instruções são usadas quando o número É um cliente. A IA já recebe nome, plano e vencimento automaticamente.
-              </p>
-            </div>
-
-            <div className="border-t border-border pt-4 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-primary" />
-                Humanização
-              </h3>
-              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Simular presença humana</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Envia "digitando..." ou "gravando..." antes de cada resposta, simulando uma pessoa real.
-                  </p>
-                </div>
-                <Switch checked={presenceEnabled} onCheckedChange={setPresenceEnabled} />
-              </div>
-
-              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Log de decisões da IA</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Registra o "pensamento" da IA em cada interação (ex: "Identificado como Novo Contato → Enviando Menu").
-                  </p>
-                </div>
-                <Switch checked={aiDecisionLog} onCheckedChange={setAiDecisionLog} />
-              </div>
-            </div>
-
-            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
-              <h4 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
-                <Info className="w-3.5 h-3.5 text-primary" />
-                Tags de Comando da IA
-              </h4>
-              <p className="text-xs text-muted-foreground mb-2">
-                A IA pode executar comandos automaticamente usando estas tags na resposta:
-              </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
-                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MENU]</span> — Envia o menu interativo configurado</div>
-                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_CATALOGO]</span> — Envia lista de planos/preços</div>
-                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_BOTOES:A|B|C]</span> — Envia botões rápidos (máx 3)</div>
-                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_LISTA:A|B|C]</span> — Envia menu de lista expansível</div>
-                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MEDIA:arquivo.mp3]</span> — Envia mídia da biblioteca</div>
-                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[AUDIO:nome]</span> — Atalho para enviar áudio gravado pelo nome</div>
-                </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Salvar Comportamento
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* PERSONALITY TAB */}
-        <TabsContent value="personality" className="space-y-4 mt-4">
+        {/* TRAINING TAB (unified) */}
+        <TabsContent value="training" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Brain className="w-5 h-5 text-primary" />
-                Personalidade & Treino da IA
+                Treinamento da IA
               </h2>
               <Button variant="outline" size="sm" onClick={handleRestoreDefaults}>
                 <RotateCcw className="w-3.5 h-3.5 mr-1" />
                 Restaurar Padrão
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Configure tudo que a IA precisa saber em um só lugar. O treinamento é dividido em 3 seções: personalidade base, script de vendas e regras de suporte.
+            </p>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Instruções do Sistema (System Prompt)
-              </Label>
+            {/* How it works - visual diagram */}
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
+              <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-3">
+                <Info className="w-3.5 h-3.5 text-primary" />
+                Como funciona o fluxo de atendimento
+              </h3>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-xs text-muted-foreground">
+                <div className="bg-background/60 rounded-lg p-3 border border-border/30 text-center flex-1">
+                  <MessageCircle className="w-4 h-4 text-primary mx-auto mb-1" />
+                  <p className="font-semibold text-foreground">Mensagem chega</p>
+                </div>
+                <span className="text-primary font-bold hidden md:block">→</span>
+                <div className="bg-background/60 rounded-lg p-3 border border-border/30 text-center flex-1">
+                  <Search className="w-4 h-4 text-primary mx-auto mb-1" />
+                  <p className="font-semibold text-foreground">É cliente?</p>
+                  <p className="text-[10px]">Busca no banco de dados</p>
+                </div>
+                <span className="text-primary font-bold hidden md:block">→</span>
+                <div className="grid grid-cols-2 gap-2 flex-1">
+                  <div className="bg-primary/10 rounded-lg p-2 border border-primary/20 text-center">
+                    <p className="font-semibold text-primary text-[11px]">✅ Sim</p>
+                    <p className="text-[10px]">Personalidade + Regras de Suporte + dados do plano</p>
+                  </div>
+                  <div className="bg-accent/30 rounded-lg p-2 border border-accent/30 text-center">
+                    <p className="font-semibold text-foreground text-[11px]">❌ Não</p>
+                    <p className="text-[10px]">Personalidade + Script de Vendas + Menu de boas-vindas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 1: Personality */}
+            <div className="space-y-3 border-t border-border pt-5">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">1</div>
+                <Label className="text-sm font-semibold">Personalidade Base (System Prompt)</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                O "DNA" do bot — define quem ele é, tom de voz, nome e regras gerais. Usado em TODAS as conversas.
+              </p>
               <Textarea
                 value={personality}
                 onChange={(e) => setPersonality(e.target.value)}
                 placeholder={DEFAULT_PERSONALITY}
-                className="bg-secondary/50 border-border min-h-[220px] text-sm font-mono"
+                className="bg-secondary/50 border-border min-h-[180px] text-sm font-mono"
               />
               <div className="flex items-center justify-between">
-                <p className="text-muted-foreground text-[11px]">
-                  Este texto define como a IA se comporta. Inclua: tom de voz, nome, regras, informações sobre o serviço e instruções de vendas/suporte.
-                </p>
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setPersonality(DEFAULT_PERSONALITY)}>
+                  <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo pronto
+                </Button>
                 <span className="text-[11px] text-muted-foreground">{personality.length} caracteres</span>
               </div>
             </div>
 
-            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
-              <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
-                <Info className="w-3.5 h-3.5 text-primary" />
-                Como a IA usa o contexto automaticamente
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-muted-foreground">
-                <div className="bg-background/50 rounded p-3 space-y-1">
-                  <span className="font-semibold text-foreground flex items-center gap-1">
-                    <User className="w-3 h-3 text-primary" /> Cliente Existente
-                  </span>
-                  <p>A IA recebe automaticamente: nome, plano, vencimento e valor. Foca em suporte personalizado.</p>
+            {/* Section 2: New Contact Script */}
+            <div className="space-y-3 border-t border-border pt-5">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">2</div>
+                <Label className="text-sm font-semibold">Script de Vendas — Novo Contato</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Instruções usadas quando o número <strong>NÃO</strong> é um cliente cadastrado. Foque em captar e vender.
+              </p>
+              <Textarea
+                value={newContactInstructions}
+                onChange={(e) => setNewContactInstructions(e.target.value)}
+                placeholder={EXAMPLE_NEW_CONTACT}
+                className="bg-secondary/50 border-border min-h-[140px] text-sm"
+              />
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setNewContactInstructions(EXAMPLE_NEW_CONTACT)}>
+                <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo pronto
+              </Button>
+            </div>
+
+            {/* Section 3: Client Support Script */}
+            <div className="space-y-3 border-t border-border pt-5">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">3</div>
+                <Label className="text-sm font-semibold">Regras de Suporte — Cliente Existente</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Instruções usadas quando o número <strong>É</strong> um cliente. A IA já recebe nome, plano e vencimento automaticamente.
+              </p>
+              <Textarea
+                value={clientInstructions}
+                onChange={(e) => setClientInstructions(e.target.value)}
+                placeholder={EXAMPLE_CLIENT}
+                className="bg-secondary/50 border-border min-h-[140px] text-sm"
+              />
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setClientInstructions(EXAMPLE_CLIENT)}>
+                <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo pronto
+              </Button>
+            </div>
+
+            {/* AI Model + Temperature */}
+            <div className="border-t border-border pt-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">4</div>
+                <Label className="text-sm font-semibold">Modelo e Configuração da IA</Label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Modelo de IA</Label>
+                  <Select value={aiModel} onValueChange={setAiModel}>
+                    <SelectTrigger className="bg-secondary/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AI_MODELS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          <div>
+                            <span>{m.label}</span>
+                            <span className="text-muted-foreground text-xs ml-2">— {m.desc}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="bg-background/50 rounded p-3 space-y-1">
-                  <span className="font-semibold text-foreground flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-primary" /> Novo Contato
-                  </span>
-                  <p>A IA é instruída a focar em vendas: apresentar o serviço, benefícios e como contratar.</p>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Criatividade: {aiTemperature.toFixed(1)}
+                  </Label>
+                  <Slider
+                    value={[aiTemperature]}
+                    onValueChange={([v]) => setAiTemperature(v)}
+                    min={0}
+                    max={1.5}
+                    step={0.1}
+                    className="mt-2"
+                  />
+                  <p className="text-muted-foreground text-[11px]">
+                    0 = preciso e previsível • 0.7 = equilibrado • 1.5 = muito criativo
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-primary" />
-                  Modelo de IA
-                </Label>
-                <Select value={aiModel} onValueChange={setAiModel}>
-                  <SelectTrigger className="bg-secondary/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AI_MODELS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        <div>
-                          <span>{m.label}</span>
-                          <span className="text-muted-foreground text-xs ml-2">— {m.desc}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Humanization toggles */}
+            <div className="border-t border-border pt-5 space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">5</div>
+                <Label className="text-sm font-semibold">Humanização e Logs</Label>
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold flex items-center gap-2">
-                  <Settings2 className="w-4 h-4 text-primary" />
-                  Criatividade: {aiTemperature.toFixed(1)}
-                </Label>
-                <Slider
-                  value={[aiTemperature]}
-                  onValueChange={([v]) => setAiTemperature(v)}
-                  min={0}
-                  max={1.5}
-                  step={0.1}
-                  className="mt-2"
-                />
-                <p className="text-muted-foreground text-[11px]">
-                  0 = preciso e previsível • 0.7 = equilibrado • 1.5 = muito criativo
-                </p>
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Simular presença humana</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Envia "digitando..." ou "gravando..." antes de cada resposta.
+                  </p>
+                </div>
+                <Switch checked={presenceEnabled} onCheckedChange={setPresenceEnabled} />
+              </div>
+              <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Log de decisões da IA</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Registra o "pensamento" da IA (ex: "Novo Contato → Enviando Menu").
+                  </p>
+                </div>
+                <Switch checked={aiDecisionLog} onCheckedChange={setAiDecisionLog} />
+              </div>
+            </div>
+
+            {/* Command Tags Reference */}
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
+              <h4 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
+                <Zap className="w-3.5 h-3.5 text-primary" />
+                Tags de Comando (use na personalidade ou scripts)
+              </h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                Inclua estas tags nos textos acima para a IA executar ações automáticas:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MENU]</span> — Menu interativo configurado</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_CATALOGO]</span> — Lista de planos/preços</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_BOTOES:A|B|C]</span> — Botões rápidos (máx 3)</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_LISTA:A|B|C]</span> — Menu lista expansível</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MEDIA:arquivo.mp3]</span> — Mídia da biblioteca</div>
+                <div className="bg-background/50 rounded p-2"><span className="text-primary">[AUDIO:nome]</span> — Áudio gravado pelo nome</div>
               </div>
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={saving}>
+              <Button onClick={handleSaveSettings} disabled={saving} size="lg">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Salvar Personalidade
+                Salvar Treinamento
               </Button>
             </div>
           </div>
