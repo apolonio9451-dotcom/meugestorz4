@@ -25,7 +25,7 @@ async function simulatePresence(
   try {
     await fetch(`${apiUrl}/operations/presence`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
+      headers: { "Content-Type": "application/json", token: apiToken },
       body: JSON.stringify({ phone: to, presence: type }),
     });
     await sleep(durationMs);
@@ -37,8 +37,8 @@ async function simulatePresence(
 async function sendText(apiUrl: string, apiToken: string, to: string, text: string) {
   const resp = await fetch(`${apiUrl}/send/text`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
-    body: JSON.stringify({ phone: to, message: text }),
+    headers: { "Content-Type": "application/json", token: apiToken },
+    body: JSON.stringify({ number: to, text: text, linkPreview: true }),
   });
   if (!resp.ok) {
     const body = await resp.text();
@@ -54,8 +54,8 @@ async function sendMedia(
   const endpoint = type === "audio" ? "/send/audio" : "/send/video";
   const resp = await fetch(`${apiUrl}${endpoint}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
-    body: JSON.stringify({ phone: to, url: mediaUrl, caption: caption || "" }),
+    headers: { "Content-Type": "application/json", token: apiToken },
+    body: JSON.stringify({ number: to, url: mediaUrl, caption: caption || "" }),
   });
   if (!resp.ok) {
     const body = await resp.text();
