@@ -238,6 +238,10 @@ function extractGenericPayload(body: any): ExtractedPayload {
 
   const textCandidates = [
     body?.message?.text,
+    body?.message?.content?.text,
+    body?.message?.content?.selectedDisplayText,
+    body?.message?.content?.conversation,
+    body?.message?.content?.extendedTextMessage?.text,
     body?.message?.convertOptions,
     body?.message?.body,
     body?.message?.conversation,
@@ -246,6 +250,7 @@ function extractGenericPayload(body: any): ExtractedPayload {
     body?.message?.buttonResponseMessage?.selectedDisplayText,
     body?.message?.listReply?.title,
     body?.message?.listResponseMessage?.title,
+    body?.message?.templateButtonReplyMessage?.selectedDisplayText,
     body?.text,
     body?.body,
     body?.data?.text,
@@ -282,10 +287,17 @@ function extractGenericPayload(body: any): ExtractedPayload {
     if (typeof val === "string" && val.trim()) { senderRaw = val.trim(); break; }
   }
 
-  // Detect type
+  // Detect type based on UAZAPI message fields
   const msg = body?.message || {};
+  const msgType = (msg.messageType || msg.type || "").toLowerCase();
   let messageType = "text";
-  if (msg.content?.URL) {
+  
+  if (msgType.includes("image") || msg.mediaType === "image") messageType = "image";
+  else if (msgType.includes("audio") || msg.mediaType === "audio") messageType = "audio";
+  else if (msgType.includes("video") || msg.mediaType === "video") messageType = "video";
+  else if (msgType.includes("document") || msg.mediaType === "document") messageType = "document";
+  else if (msgType.includes("sticker")) messageType = "sticker";
+  else if (msg.content?.URL && !messageText) {
     const lastType = (body?.chat?.wa_lastMessageType || "").toLowerCase();
     if (lastType.includes("audio")) messageType = "audio";
     else if (lastType.includes("video")) messageType = "video";
@@ -361,11 +373,21 @@ Deno.serve(async (req: Request) => {
     console.log("Dados extraídos:", JSON.stringify({ messageText: messageText.slice(0, 200), senderPhone, fromMe, messageType, eventType }));
 
     // ===== STEP 3: Filter non-message events =====
-    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels"];
+    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels", "messages_update", "chat_labels", "receipt"];
     const eventLower = eventType.toLowerCase();
     if (eventLower && ignoredEvents.some(e => eventLower.includes(e))) {
       console.log("Evento ignorado:", eventType);
       return new Response(JSON.stringify({ status: "ok", ignored_event: eventType }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ===== STEP 3.5: Ignore group messages =====
+    const isGroup = body?.message?.isGroup === true || body?.chat?.wa_isGroup === true || 
+      (senderPhone && senderPhone.includes("120363"));
+    if (isGroup) {
+      console.log("Mensagem de grupo ignorada:", senderPhone);
+      return new Response(JSON.stringify({ status: "ok", reason: "group_message" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
