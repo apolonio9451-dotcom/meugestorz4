@@ -199,6 +199,10 @@ export default function Chatbot() {
       setClosingMessage(d.closing_message || "");
       setAiModel(d.ai_model || "google/gemini-3-flash-preview");
       setAiTemperature(d.ai_temperature ?? 0.7);
+      setNewContactInstructions(d.new_contact_instructions || "");
+      setClientInstructions(d.client_instructions || "");
+      setPresenceEnabled(d.presence_enabled !== false);
+      setAiDecisionLog(d.ai_decision_log !== false);
       setMenuEnabled(d.interactive_menu_enabled ?? false);
       setMenuType(d.interactive_menu_type || "buttons");
       setMenuTitle(d.interactive_menu_title || "");
