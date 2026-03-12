@@ -20,9 +20,10 @@ import {
   MessageSquare, Shield, Pencil, ToggleLeft, Copy, Check,
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
   Globe, Link2, Eye, EyeOff, Volume2, Info, Search,
-  ChevronDown, ChevronUp, Hash, Layers, Download
+  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone
 } from "lucide-react";
 import { format } from "date-fns";
+import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
