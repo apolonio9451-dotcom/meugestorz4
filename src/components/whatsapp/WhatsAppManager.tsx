@@ -81,7 +81,8 @@ export default function WhatsAppManager({ userName }: Props) {
         setStatus("connected");
         toast.success("WhatsApp conectado!");
       } else if (data.qrCode) {
-        setQrCode(data.qrCode);
+        const qr = data.qrCode;
+        setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
         setConnection({ token: data.token, instanceId: data.instanceId });
         setStatus("qr");
         startPolling(data.token, data.instanceId);
