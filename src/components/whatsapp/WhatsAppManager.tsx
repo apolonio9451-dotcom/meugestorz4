@@ -111,6 +111,7 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
           stopPolling();
           void persistToken(instanceToken);
           toast.success("WhatsApp conectado com sucesso!");
+          onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
           return;
         }
 
