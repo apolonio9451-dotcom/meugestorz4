@@ -824,6 +824,56 @@ COMANDOS ESPECIAIS (Tags que você pode usar na resposta para executar ações):
 - [AUDIO:nome] → Atalho para enviar áudio da biblioteca (busca por nome, com ou sem extensão)
 Use esses comandos quando achar relevante. O sistema processará automaticamente.`;
 
+    // ===== CHECK TRAINING RULES BEFORE AI =====
+    const { data: trainingRules } = await supabase
+      .from("bot_training_rules")
+      .select("*")
+      .eq("company_id", companyIdParam)
+      .eq("is_active", true);
+
+    if (trainingRules && trainingRules.length > 0) {
+      const lowerQuestion = messageText.toLowerCase().trim();
+      const matchedRule = trainingRules.find((rule: any) => {
+        const trigger = (rule.trigger_question || "").toLowerCase().trim();
+        if (!trigger) return false;
+        // Check similarity: exact match, contains, or significant overlap
+        return lowerQuestion === trigger || 
+               lowerQuestion.includes(trigger) || 
+               trigger.includes(lowerQuestion) ||
+               trigger.split(" ").filter((w: string) => w.length > 3 && lowerQuestion.includes(w)).length >= 2;
+      });
+
+      if (matchedRule) {
+        decisions.push(`📚 Regra de treinamento encontrada: "${matchedRule.trigger_question.slice(0, 50)}"`);
+        // Inject the training instruction into context
+        contextInstructions += `\n\nINSTRUÇÃO ESPECÍFICA DE TREINAMENTO (PRIORIDADE MÁXIMA):
+${matchedRule.instruction}`;
+        decisions.push("📝 Instrução de treinamento aplicada ao contexto da IA");
+
+        // Handle action types
+        if (matchedRule.action_type === "buttons" && matchedRule.action_config?.buttons) {
+          const btnTitles = matchedRule.action_config.buttons.split("|").map((t: string) => t.trim()).filter(Boolean).slice(0, 3);
+          if (btnTitles.length > 0) {
+            contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_BOTOES:${btnTitles.join("|")}] na sua resposta.`;
+            decisions.push(`🔘 Ação configurada: enviar botões [${btnTitles.join(", ")}]`);
+          }
+        } else if (matchedRule.action_type === "list" && matchedRule.action_config?.items) {
+          const listItems = matchedRule.action_config.items.split("|").map((t: string) => t.trim()).filter(Boolean);
+          if (listItems.length > 0) {
+            contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_LISTA:${listItems.join("|")}] na sua resposta.`;
+            decisions.push(`📋 Ação configurada: enviar lista [${listItems.join(", ")}]`);
+          }
+        } else if (matchedRule.action_type === "media" && matchedRule.media_id) {
+          const { data: ruleMedia } = await supabase
+            .from("chatbot_media").select("file_name").eq("id", matchedRule.media_id).single();
+          if (ruleMedia) {
+            contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_MEDIA:${ruleMedia.file_name}] na sua resposta.`;
+            decisions.push(`📎 Ação configurada: enviar mídia [${ruleMedia.file_name}]`);
+          }
+        }
+      }
+    }
+
     // Call AI
     if (!lovableApiKey) {
       throw new Error("LOVABLE_API_KEY not configured");

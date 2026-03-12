@@ -136,6 +136,43 @@ COMANDOS ESPECIAIS (Tags):
 - [ENVIAR_MEDIA:arquivo.mp3] → Mídia da biblioteca
 - [AUDIO:nome] → Atalho para áudio`;
 
+    // ===== CHECK TRAINING RULES =====
+    const { data: trainingRules } = await supabase
+      .from("bot_training_rules")
+      .select("*")
+      .eq("company_id", company_id)
+      .eq("is_active", true);
+
+    if (trainingRules && trainingRules.length > 0) {
+      const lowerQuestion = message.toLowerCase().trim();
+      const matchedRule = trainingRules.find((rule: any) => {
+        const trigger = (rule.trigger_question || "").toLowerCase().trim();
+        if (!trigger) return false;
+        return lowerQuestion === trigger || 
+               lowerQuestion.includes(trigger) || 
+               trigger.includes(lowerQuestion) ||
+               trigger.split(" ").filter((w: string) => w.length > 3 && lowerQuestion.includes(w)).length >= 2;
+      });
+
+      if (matchedRule) {
+        decisions.push(`📚 Regra de treinamento encontrada: "${matchedRule.trigger_question.slice(0, 50)}"`);
+        contextInstructions += `\n\nINSTRUÇÃO ESPECÍFICA DE TREINAMENTO (PRIORIDADE MÁXIMA):
+${matchedRule.instruction}`;
+
+        if (matchedRule.action_type === "buttons" && matchedRule.action_config?.buttons) {
+          contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_BOTOES:${matchedRule.action_config.buttons}] na sua resposta.`;
+        } else if (matchedRule.action_type === "list" && matchedRule.action_config?.items) {
+          contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_LISTA:${matchedRule.action_config.items}] na sua resposta.`;
+        } else if (matchedRule.action_type === "media" && matchedRule.media_id) {
+          const { data: ruleMedia } = await supabase
+            .from("chatbot_media").select("file_name").eq("id", matchedRule.media_id).single();
+          if (ruleMedia) {
+            contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_MEDIA:${ruleMedia.file_name}] na sua resposta.`;
+          }
+        }
+      }
+    }
+
     const aiModel = chatSettings.ai_model || "google/gemini-3-flash-preview";
     const aiTemperature = chatSettings.ai_temperature ?? 0.7;
 
