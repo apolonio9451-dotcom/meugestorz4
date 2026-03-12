@@ -25,6 +25,7 @@ import {
 import { format } from "date-fns";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
+import ChatSimulator from "@/components/chatbot/ChatSimulator";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
