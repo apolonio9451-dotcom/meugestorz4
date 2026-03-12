@@ -69,6 +69,7 @@ export default function Clients() {
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [formMacKeys, setFormMacKeys] = useState<MacKey[]>([]);
+  const [formCredentials, setFormCredentials] = useState<Credential[]>([{ username: "", password: "", label: "" }]);
   const [plans, setPlans] = useState<{ id: string; name: string; price: number; duration_days: number }[]>([]);
   const [formPlanId, setFormPlanId] = useState("");
   const [formAmount, setFormAmount] = useState("");
