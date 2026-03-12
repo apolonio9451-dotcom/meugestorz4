@@ -20,7 +20,7 @@ import {
   MessageSquare, Shield, Pencil, ToggleLeft, Copy, Check,
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
   Globe, Link2, Eye, EyeOff, Volume2, Info, Search,
-  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone
+  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone, QrCode
 } from "lucide-react";
 import { format } from "date-fns";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
