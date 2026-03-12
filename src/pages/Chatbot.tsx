@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
+import AudioRecorder from "@/components/chatbot/AudioRecorder";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
