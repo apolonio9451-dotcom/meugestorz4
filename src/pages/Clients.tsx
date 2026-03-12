@@ -1158,52 +1158,64 @@ export default function Clients() {
                       <div className="flex">
                         <button
                           className="w-1/2 inline-flex items-center justify-center gap-1.5 py-2.5 text-emerald-400 hover:bg-emerald-500/10 transition-all text-xs font-bold"
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            // Fetch fresh templates from DB to ensure latest version
-                            let freshTemplates = { ...messageTemplates };
-                            if (companyId) {
-                              const { data } = await supabase
-                                .from("message_templates")
-                                .select("category, message")
-                                .eq("company_id", companyId);
-                              if (data) {
-                                data.forEach((t) => { freshTemplates[t.category] = t.message; });
-                                setMessageTemplates(freshTemplates);
+                            e.preventDefault();
+                            // Open window immediately to preserve user gesture (mobile popup blocker)
+                            const phone = client.whatsapp.replace(/\D/g, "");
+                            const newWindow = window.open("about:blank", "_blank");
+
+                            // Then fetch fresh templates async
+                            (async () => {
+                              let freshTemplates = { ...messageTemplates };
+                              if (companyId) {
+                                const { data } = await supabase
+                                  .from("message_templates")
+                                  .select("category, message")
+                                  .eq("company_id", companyId);
+                                if (data) {
+                                  data.forEach((t) => { freshTemplates[t.category] = t.message; });
+                                  setMessageTemplates(freshTemplates);
+                                }
                               }
-                            }
-                            const category = getMessageCategory(days);
-                            const defaultMessages: Record<string, string> = {
-                              vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
-                              vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
-                              a_vencer: "Olá {primeiro_nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
-                              vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
-                              followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
-                            };
-                            let msg = freshTemplates[category] || defaultMessages[category] || defaultMessages.vencidos;
-                            const clientMks = macKeys[client.id] || [];
-                            const firstName = (client.name || "").split(" ")[0];
-                            const now = new Date();
-                            const brasilHour = (now.getUTCHours() - 3 + 24) % 24;
-                            const saudacao = brasilHour >= 5 && brasilHour < 12 ? "Bom dia" : brasilHour >= 12 && brasilHour < 18 ? "Boa tarde" : "Boa noite";
-                            const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-                            const endDateObj = sub ? parseISO(sub.end_date) : new Date();
-                            msg = msg
-                              .replace(/{primeiro_nome}/g, firstName)
-                              .replace(/{nome}/g, client.name || "")
-                              .replace(/{saudacao}/g, saudacao)
-                              .replace(/{dia_semana}/g, diasSemana[endDateObj.getDay()])
-                              .replace(/{dia}/g, String(endDateObj.getDate()))
-                              .replace(/{plano}/g, sub?.plan_name || "")
-                              .replace(/{valor}/g, sub ? Number(sub.amount).toFixed(2).replace(".", ",") : "")
-                              .replace(/{vencimento}/g, sub ? format(endDateObj, "dd/MM/yyyy") : "")
-                              .replace(/{dias}/g, days !== null ? String(Math.abs(days)) : "")
-                              .replace(/{mac}/g, clientMks[0]?.mac || "")
-                              .replace(/{usuario}/g, client.iptv_user || "")
-                              .replace(/{senha}/g, client.iptv_password || "")
-                              .replace(/{servidor}/g, client.server || "")
-                              .replace(/{sua_chave_pix}/g, pixKey);
-                            window.open(`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+                              const category = getMessageCategory(days);
+                              const defaultMessages: Record<string, string> = {
+                                vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
+                                vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
+                                a_vencer: "Olá {primeiro_nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
+                                vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
+                                followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
+                              };
+                              let msg = freshTemplates[category] || defaultMessages[category] || defaultMessages.vencidos;
+                              const clientMks = macKeys[client.id] || [];
+                              const firstName = (client.name || "").split(" ")[0];
+                              const now = new Date();
+                              const brasilHour = (now.getUTCHours() - 3 + 24) % 24;
+                              const saudacao = brasilHour >= 5 && brasilHour < 12 ? "Bom dia" : brasilHour >= 12 && brasilHour < 18 ? "Boa tarde" : "Boa noite";
+                              const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+                              const endDateObj = sub ? parseISO(sub.end_date) : new Date();
+                              msg = msg
+                                .replace(/{primeiro_nome}/g, firstName)
+                                .replace(/{nome}/g, client.name || "")
+                                .replace(/{saudacao}/g, saudacao)
+                                .replace(/{dia_semana}/g, diasSemana[endDateObj.getDay()])
+                                .replace(/{dia}/g, String(endDateObj.getDate()))
+                                .replace(/{plano}/g, sub?.plan_name || "")
+                                .replace(/{valor}/g, sub ? Number(sub.amount).toFixed(2).replace(".", ",") : "")
+                                .replace(/{vencimento}/g, sub ? format(endDateObj, "dd/MM/yyyy") : "")
+                                .replace(/{dias}/g, days !== null ? String(Math.abs(days)) : "")
+                                .replace(/{mac}/g, clientMks[0]?.mac || "")
+                                .replace(/{usuario}/g, client.iptv_user || "")
+                                .replace(/{senha}/g, client.iptv_password || "")
+                                .replace(/{servidor}/g, client.server || "")
+                                .replace(/{sua_chave_pix}/g, pixKey);
+                              const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+                              if (newWindow) {
+                                newWindow.location.href = url;
+                              } else {
+                                window.location.href = url;
+                              }
+                            })();
                           }}
                         >
                           <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.386 0-4.586-.826-6.32-2.208l-.442-.362-3.263 1.093 1.093-3.263-.362-.442A9.956 9.956 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
