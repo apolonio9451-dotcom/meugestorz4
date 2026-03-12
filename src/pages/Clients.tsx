@@ -1192,7 +1192,8 @@ export default function Clients() {
                     {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at ? (
                       <div className="flex">
                         <a
-                          href={`https://api.whatsapp.com/send?phone=${client.whatsapp.replace(/\D/g, "")}&text=${encodeURIComponent(
+                          href={getWhatsAppSendUrl(
+                            client.whatsapp,
                             (() => {
                               const defaultSupportMsg = "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
                               let msg = messageTemplates["suporte"] || defaultSupportMsg;
@@ -1206,7 +1207,7 @@ export default function Clients() {
                                 .replace(/{servidor}/g, client.server || "");
                               return msg;
                             })()
-                          )}`}
+                          )}
                           target="_blank" rel="noopener noreferrer"
                           className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-violet-400 hover:bg-violet-500/10 transition-all text-xs font-bold"
                           onClick={(e) => e.stopPropagation()}
