@@ -269,7 +269,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { messageText, senderPhone, senderRaw, eventType, fromMe } = extractIncomingPayload(body);
+    const { messageText, senderPhone, senderRaw, eventType, fromMe, messageType } = extractIncomingPayload(body);
     const companyIdParam = new URL(req.url).searchParams.get("company_id");
 
     // Ignore non-message events from UAZAPI (e.g. "chats", "status", "connection", etc.)
