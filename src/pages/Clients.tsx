@@ -79,6 +79,7 @@ export default function Clients() {
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
+  const [pixKey, setPixKey] = useState("");
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
   const fetchClients = async () => {
     if (!companyId) return;
@@ -186,7 +187,17 @@ export default function Clients() {
     });
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); }, [companyId]);
+  const fetchPixKey = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("api_settings")
+      .select("pix_key")
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (data) setPixKey(data.pix_key || "");
+  };
+
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchPixKey(); }, [companyId]);
 
   const getMessageCategory = (days: number | null): string => {
     if (days === null) return "vencidos";
@@ -228,7 +239,8 @@ export default function Clients() {
       .replace(/{mac}/g, clientMks[0]?.mac || "")
       .replace(/{usuario}/g, client.iptv_user || "")
       .replace(/{senha}/g, client.iptv_password || "")
-      .replace(/{servidor}/g, client.server || "");
+      .replace(/{servidor}/g, client.server || "")
+      .replace(/{sua_chave_pix}/g, pixKey);
     return msg;
   };
 
