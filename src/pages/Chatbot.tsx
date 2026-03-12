@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   Bot, Save, Loader2, Upload, Trash2, Clock, Music, Video,
   MessageCircle, User, AlertCircle, RefreshCw,
@@ -129,6 +130,11 @@ export default function Chatbot() {
   const [testMessage, setTestMessage] = useState("Olá, isso é um teste do chatbot!");
   const [testResult, setTestResult] = useState<{ status: string; data: any } | null>(null);
 
+  // API check
+  const [apiConfigured, setApiConfigured] = useState(false);
+  const [showApiModal, setShowApiModal] = useState(false);
+  const [showSchedulePanel, setShowSchedulePanel] = useState(false);
+
   useEffect(() => {
     if (!companyId) { setLoading(false); return; }
     fetchAll();
@@ -136,8 +142,17 @@ export default function Chatbot() {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts()]);
+    await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts(), fetchApiStatus()]);
     setLoading(false);
+  };
+
+  const fetchApiStatus = async () => {
+    const { data } = await supabase
+      .from("api_settings" as any)
+      .select("api_url, api_token")
+      .eq("company_id", companyId!)
+      .maybeSingle();
+    setApiConfigured(!!(data && (data as any).api_url && (data as any).api_token));
   };
 
   const fetchSettings = async () => {
@@ -521,44 +536,157 @@ export default function Chatbot() {
       <audio ref={audioRef} onEnded={() => setPlayingMedia(null)} className="hidden" />
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
-            <Bot className="w-7 h-7 text-primary" />
-            Chatbot IA
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Atendimento automático inteligente via WhatsApp — Configuração completa
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-            isActive
-              ? "bg-primary/10 border-primary/30 text-primary"
-              : "bg-secondary border-border text-muted-foreground"
-          }`}>
-            <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
-            <span className="text-sm font-medium">{isActive ? "Bot Ativo" : "Bot Desativado"}</span>
-            <Switch checked={isActive} onCheckedChange={async (v) => {
-              setIsActive(v);
-              if (companyId) {
-                try {
-                  if (settingsId) {
-                    await supabase.from("chatbot_settings").update({ is_active: v }).eq("id", settingsId);
-                  } else {
-                    const { data } = await supabase.from("chatbot_settings").insert({ company_id: companyId, is_active: v }).select().single();
-                    if (data) setSettingsId((data as any).id);
-                  }
-                  toast({ title: v ? "✅ Bot ativado!" : "Bot desativado" });
-                } catch (err: any) {
-                  setIsActive(!v);
-                  toast({ title: "Erro ao alterar status", description: err?.message, variant: "destructive" });
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
+              <Bot className="w-7 h-7 text-primary" />
+              Chatbot IA
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Atendimento automático inteligente via WhatsApp — Configuração completa
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+              isActive
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-secondary border-border text-muted-foreground"
+            }`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
+              <span className="text-sm font-medium">{isActive ? "Bot Ativo" : "Bot Desativado"}</span>
+              <Switch checked={isActive} onCheckedChange={async (v) => {
+                if (v && !apiConfigured) {
+                  setShowApiModal(true);
+                  return;
                 }
-              }
-            }} />
+                setIsActive(v);
+                if (companyId) {
+                  try {
+                    if (settingsId) {
+                      await supabase.from("chatbot_settings").update({ is_active: v }).eq("id", settingsId);
+                    } else {
+                      const { data } = await supabase.from("chatbot_settings").insert({ company_id: companyId, is_active: v }).select().single();
+                      if (data) setSettingsId((data as any).id);
+                    }
+                    toast({ title: v ? "✅ Bot ativado!" : "Bot desativado" });
+                  } catch (err: any) {
+                    setIsActive(!v);
+                    toast({ title: "Erro ao alterar status", description: err?.message, variant: "destructive" });
+                  }
+                }
+              }} />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs gap-1"
+              onClick={() => setShowSchedulePanel(!showSchedulePanel)}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Horário
+              {showSchedulePanel ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </Button>
           </div>
         </div>
+
+        {/* Schedule Panel */}
+        {showSchedulePanel && (
+          <div className="glass-card rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Período de Atividade do Bot</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Ativar horário comercial</Label>
+                <Switch checked={businessHoursEnabled} onCheckedChange={setBusinessHoursEnabled} />
+              </div>
+            </div>
+
+            {businessHoursEnabled && (
+              <>
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Início</Label>
+                    <Input
+                      type="time"
+                      value={businessHoursStart}
+                      onChange={(e) => setBusinessHoursStart(e.target.value)}
+                      className="h-8 text-sm w-32 mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Fim</Label>
+                    <Input
+                      type="time"
+                      value={businessHoursEnd}
+                      onChange={(e) => setBusinessHoursEnd(e.target.value)}
+                      className="h-8 text-sm w-32 mt-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Dias ativos</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_OF_WEEK.map((day) => (
+                      <button
+                        key={day.value}
+                        onClick={() => toggleDay(day.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                          businessDays.includes(day.value)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  Fora do horário, o bot enviará a mensagem de ausência configurada na aba "Mensagens".
+                </p>
+              </>
+            )}
+
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                Salvar Horário
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* API Not Configured Modal */}
+      <Dialog open={showApiModal} onOpenChange={setShowApiModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-destructive" />
+              API não configurada
+            </DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <p>
+                Para ativar o Chatbot IA, é necessário configurar a <strong>URL da API</strong> e o <strong>Token</strong> da sua instância UAZAPI.
+              </p>
+              <p>
+                Acesse o menu <strong>Configuração Geral</strong> → seção <strong>API de WhatsApp (UAZAPI)</strong> e preencha os campos obrigatórios.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowApiModal(false)}>Entendi</Button>
+            <Button onClick={() => { setShowApiModal(false); window.location.href = "/dashboard/settings"; }}>
+              <Settings2 className="w-4 h-4 mr-1" />
+              Ir para Configuração
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
