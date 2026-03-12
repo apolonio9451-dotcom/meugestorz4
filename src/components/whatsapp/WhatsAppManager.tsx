@@ -99,6 +99,7 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         }
 
         if (data?.connected) {
+          console.log("[WhatsApp] ✅ Connected! Calling onConnected...", { profileName: data.profileName, phoneNumber: data.phoneNumber });
           setStatus("connected");
           setQrCode(null);
           setConnection((prev) => ({
@@ -111,7 +112,12 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
           stopPolling();
           void persistToken(instanceToken);
           toast.success("WhatsApp conectado com sucesso!");
-          onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
+          
+          // Delay slightly to ensure state updates before closing modal
+          setTimeout(() => {
+            console.log("[WhatsApp] Firing onConnected callback");
+            onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
+          }, 500);
           return;
         }
 
@@ -152,7 +158,7 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         setQrCode(null);
         setStatus("connected");
         toast.success("WhatsApp conectado!");
-        onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
+        setTimeout(() => onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber }), 500);
       } else if (data.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
@@ -191,7 +197,7 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         }));
         void persistToken(connection.token);
         toast.success("WhatsApp conectado!");
-        onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
+        setTimeout(() => onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber }), 500);
       } else if (data?.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setStatus("qr");
@@ -305,6 +311,8 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
             profileName: statusData.profileName,
             phoneNumber: statusData.phoneNumber,
           });
+          // Auto-close modal if already connected
+          setTimeout(() => onConnected?.({ profileName: statusData.profileName, phoneNumber: statusData.phoneNumber }), 500);
         } else if (statusData?.qrCode) {
           setQrCode(normalizeQrCode(statusData.qrCode));
           setStatus("qr");
