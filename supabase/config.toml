@@ -11,3 +11,21 @@ verify_jwt = false
 
 [functions.manage-instance]
 verify_jwt = false
+
+[functions.whatsapp-connect]
+verify_jwt = false
+
+[functions.whatsapp-status]
+verify_jwt = false
+
+[functions.whatsapp-disconnect]
+verify_jwt = false
+
+[functions.whatsapp-delete]
+verify_jwt = false
+
+[functions.whatsapp-send]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
+import WhatsAppManager from "@/components/whatsapp/WhatsAppManager";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
 import ChatSimulator from "@/components/chatbot/ChatSimulator";
 
@@ -899,7 +900,8 @@ export default function Chatbot() {
         </TabsList>
 
         {/* CONNECTION TAB */}
-        <TabsContent value="connection" className="space-y-4 mt-4">
+        <TabsContent value="connection" className="space-y-6 mt-4">
+          <WhatsAppManager userName="Usuário" />
           <WhatsAppInstanceSection companyId={companyId} />
         </TabsContent>
 
