@@ -693,16 +693,57 @@ export default function Clients() {
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Acesso ao Portal</p>
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Usuário *</Label>
-                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                  {formCredentials.map((cred, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-primary/15 bg-primary/5">
+                      <div className="flex gap-2">
+                        <div className="flex-1 space-y-2">
+                          {formCredentials.length > 1 && (
+                            <Input
+                              placeholder="Rótulo (ex: TV Sala, Celular...)"
+                              value={cred.label}
+                              onChange={(e) => {
+                                const updated = [...formCredentials];
+                                updated[i] = { ...updated[i], label: e.target.value };
+                                setFormCredentials(updated);
+                              }}
+                              className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                            />
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              placeholder="Usuário"
+                              value={cred.username}
+                              onChange={(e) => {
+                                const updated = [...formCredentials];
+                                updated[i] = { ...updated[i], username: e.target.value };
+                                setFormCredentials(updated);
+                              }}
+                              required={i === 0}
+                              className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                            />
+                            <Input
+                              placeholder="Senha"
+                              value={cred.password}
+                              onChange={(e) => {
+                                const updated = [...formCredentials];
+                                updated[i] = { ...updated[i], password: e.target.value };
+                                setFormCredentials(updated);
+                              }}
+                              className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                            />
+                          </div>
+                        </div>
+                        {formCredentials.length > 1 && (
+                          <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 self-center" onClick={() => setFormCredentials(formCredentials.filter((_, idx) => idx !== i))}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Senha</Label>
-                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
-                    </div>
-                  </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFormCredentials([...formCredentials, { username: "", password: "", label: "" }])}>
+                    <Plus className="w-3 h-3 mr-1" /> Adicionar Usuário
+                  </Button>
                 </div>
               </div>
               <div>
