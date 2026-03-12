@@ -135,6 +135,15 @@ export default function Chatbot() {
   const [showApiModal, setShowApiModal] = useState(false);
   const [showSchedulePanel, setShowSchedulePanel] = useState(false);
 
+  // Interactive menu
+  const [menuEnabled, setMenuEnabled] = useState(false);
+  const [menuType, setMenuType] = useState("buttons");
+  const [menuTitle, setMenuTitle] = useState("");
+  const [menuBody, setMenuBody] = useState("");
+  const [menuFooter, setMenuFooter] = useState("");
+  const [menuButtonText, setMenuButtonText] = useState("Ver Opções");
+  const [menuItems, setMenuItems] = useState<{ id: string; title: string; description?: string }[]>([]);
+
   useEffect(() => {
     if (!companyId) { setLoading(false); return; }
     fetchAll();
