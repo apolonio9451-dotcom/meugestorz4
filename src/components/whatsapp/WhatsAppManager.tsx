@@ -152,6 +152,7 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         setQrCode(null);
         setStatus("connected");
         toast.success("WhatsApp conectado!");
+        onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
       } else if (data.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
