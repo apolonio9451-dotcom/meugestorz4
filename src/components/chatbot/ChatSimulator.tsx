@@ -154,9 +154,9 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
               <Smartphone className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">Simulador de Treinamento</p>
+              <p className="text-sm font-semibold text-foreground">Treinamento da IA</p>
               <p className="text-[10px] text-muted-foreground">
-                Teste e treine o bot — clique em ✏️ para instruir respostas
+                Converse e instrua respostas reais — as regras são aplicadas no WhatsApp
               </p>
             </div>
           </div>
