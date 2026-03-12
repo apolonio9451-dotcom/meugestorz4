@@ -260,6 +260,21 @@ export default function Clients() {
     return digits;
   };
 
+  const sanitizeWhatsappMessage = (message: string) =>
+    (message || "").replace(/\r\n/g, "\n").normalize("NFC");
+
+  const isMobileWhatsAppClient = () =>
+    /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  const getWhatsAppSendUrl = (phone: string, message: string) => {
+    const normalizedPhone = normalizeWhatsappPhone(phone);
+    const whatsappBaseUrl = isMobileWhatsAppClient()
+      ? "https://api.whatsapp.com/send"
+      : "https://web.whatsapp.com/send";
+
+    return `${whatsappBaseUrl}?phone=${normalizedPhone}&text=${encodeURIComponent(sanitizeWhatsappMessage(message))}`;
+  };
+
   const getMessageCategory = (days: number | null, forcedCategory?: "vencidos" | "vence_hoje" | "vence_amanha" | "a_vencer"): string => {
     if (forcedCategory) return forcedCategory;
     if (days === null) return "vencidos";
@@ -1177,7 +1192,8 @@ export default function Clients() {
                     {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at ? (
                       <div className="flex">
                         <a
-                          href={`https://api.whatsapp.com/send?phone=${client.whatsapp.replace(/\D/g, "")}&text=${encodeURIComponent(
+                          href={getWhatsAppSendUrl(
+                            client.whatsapp,
                             (() => {
                               const defaultSupportMsg = "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
                               let msg = messageTemplates["suporte"] || defaultSupportMsg;
@@ -1191,7 +1207,7 @@ export default function Clients() {
                                 .replace(/{servidor}/g, client.server || "");
                               return msg;
                             })()
-                          )}`}
+                          )}
                           target="_blank" rel="noopener noreferrer"
                           className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-violet-400 hover:bg-violet-500/10 transition-all text-xs font-bold"
                           onClick={(e) => e.stopPropagation()}
@@ -1230,9 +1246,7 @@ export default function Clients() {
                               return;
                             }
 
-                            const isMobileDevice =
-                              /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                              window.matchMedia("(pointer: coarse)").matches;
+                            const isMobileDevice = isMobileWhatsAppClient();
 
                             // Desktop: abre popup imediatamente para preservar gesto do usuário
                             const popup = !isMobileDevice
@@ -1260,10 +1274,7 @@ export default function Clients() {
                                 const freshTemplates = await fetchLatestMessageTemplates();
                                 const currentDays = sub ? getDaysRemaining(sub.end_date) : null;
                                 const msg = buildCobrancaMessage(client, sub, currentDays, freshTemplates, forcedCategory);
-                                const whatsappBaseUrl = isMobileDevice
-                                  ? "https://api.whatsapp.com/send"
-                                  : "https://web.whatsapp.com/send";
-                                const url = `${whatsappBaseUrl}?phone=${phone}&text=${encodeURIComponent(msg)}`;
+                                const url = getWhatsAppSendUrl(phone, msg);
 
                                 if (isMobileDevice) {
                                   window.location.href = url;
@@ -1346,10 +1357,9 @@ export default function Clients() {
               onClick={() => {
                 if (welcomeData?.whatsapp) {
                   const msg = `Olá ${welcomeData.name}! 🎉\n\nSeus dados de acesso:\n\n📋 Plano: ${welcomeData.planName}\n💰 Valor: R$ ${welcomeData.amount}\n📅 Vencimento: ${welcomeData.endDate}\n👤 Usuário: ${welcomeData.user || "—"}\n🔑 Senha: ${welcomeData.password || "—"}\n\nBem-vindo!`;
-                  const phone = welcomeData.whatsapp.replace(/\D/g, "");
-                  // If 10-11 digits (BR without country code), add 55; otherwise use as-is
-                  const fullPhone = (phone.length === 10 || phone.length === 11) ? "55" + phone : phone;
-                  window.open(`https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(msg)}`, "_blank");
+                  
+                  const url = getWhatsAppSendUrl(welcomeData.whatsapp, msg);
+                  window.open(url, "_blank");
                 } else {
                   toast.error("WhatsApp não informado para este cliente.");
                 }

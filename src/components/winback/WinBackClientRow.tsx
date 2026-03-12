@@ -82,13 +82,18 @@ export default function WinBackClientRow({ client, companyId, currentStep, lastS
       .replace(/{dias}/g, String(client.days_expired))
       .replace(/{servidor}/g, client.server || "—");
 
-    const phone = client.whatsapp.replace(/\D/g, "");
+    const phoneDigits = client.whatsapp.replace(/\D/g, "");
+    const normalizedPhone = phoneDigits.length === 10 || phoneDigits.length === 11 ? `55${phoneDigits}` : phoneDigits;
     if (!available) {
       toast.warning(`Aguarde mais ${daysLeft} dia(s) para enviar ${step.label}`);
       return;
     }
 
-    window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`, "_blank");
+    const whatsappBaseUrl = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      ? "https://api.whatsapp.com/send"
+      : "https://web.whatsapp.com/send";
+
+    window.open(`${whatsappBaseUrl}?phone=${normalizedPhone}&text=${encodeURIComponent(msg.normalize("NFC"))}`, "_blank");
 
     const nowISO = new Date().toISOString();
     const newStep = currentStep + 1;
