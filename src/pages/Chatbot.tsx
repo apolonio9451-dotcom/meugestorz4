@@ -1411,9 +1411,16 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        {/* ============ ABA: SIMULADOR ============ */}
+        {/* ============ ABA: SIMULADOR & TREINAMENTO ATIVO ============ */}
         <TabsContent value="simulador" className="space-y-4 mt-4">
-          {companyId && <ChatSimulator companyId={companyId} />}
+          {companyId && (
+            <>
+              <ChatSimulator companyId={companyId} onRuleSaved={() => setTrainingRulesRefresh(prev => prev + 1)} />
+              <div className="glass-card rounded-xl p-3 md:p-6">
+                <TrainingRulesList companyId={companyId} refreshKey={trainingRulesRefresh} />
+              </div>
+            </>
+          )}
           {!companyId && (
             <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">Carregando...</div>
           )}
