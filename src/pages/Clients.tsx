@@ -1220,59 +1220,42 @@ export default function Clients() {
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            // Open window immediately to preserve user gesture (mobile popup blocker)
-                            const phone = client.whatsapp.replace(/\D/g, "");
-                            const newWindow = window.open("about:blank", "_blank");
 
-                            // Then fetch fresh templates async
+                            const phone = normalizeWhatsappPhone(client.whatsapp);
+                            if (!phone) {
+                              toast.error("WhatsApp inválido para este cliente.");
+                              return;
+                            }
+
+                            const isMobileDevice =
+                              /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                              window.matchMedia("(pointer: coarse)").matches;
+
+                            // Desktop: abre popup imediatamente para evitar bloqueio
+                            const popup = !isMobileDevice
+                              ? window.open("about:blank", "_blank", "noopener,noreferrer")
+                              : null;
+
                             (async () => {
-                              let freshTemplates = { ...messageTemplates };
-                              if (companyId) {
-                                const { data } = await supabase
-                                  .from("message_templates")
-                                  .select("category, message")
-                                  .eq("company_id", companyId);
-                                if (data) {
-                                  data.forEach((t) => { freshTemplates[t.category] = t.message; });
-                                  setMessageTemplates(freshTemplates);
+                              try {
+                                const freshTemplates = await fetchLatestMessageTemplates();
+                                const msg = buildCobrancaMessage(client, sub, days, freshTemplates);
+                                const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+                                if (isMobileDevice) {
+                                  window.location.href = url;
+                                  return;
                                 }
-                              }
-                              const category = getMessageCategory(days);
-                              const defaultMessages: Record<string, string> = {
-                                vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
-                                vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
-                                a_vencer: "Olá {primeiro_nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
-                                vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
-                                followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
-                              };
-                              let msg = freshTemplates[category] || defaultMessages[category] || defaultMessages.vencidos;
-                              const clientMks = macKeys[client.id] || [];
-                              const firstName = (client.name || "").split(" ")[0];
-                              const now = new Date();
-                              const brasilHour = (now.getUTCHours() - 3 + 24) % 24;
-                              const saudacao = brasilHour >= 5 && brasilHour < 12 ? "Bom dia" : brasilHour >= 12 && brasilHour < 18 ? "Boa tarde" : "Boa noite";
-                              const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-                              const endDateObj = sub ? parseISO(sub.end_date) : new Date();
-                              msg = msg
-                                .replace(/{primeiro_nome}/g, firstName)
-                                .replace(/{nome}/g, client.name || "")
-                                .replace(/{saudacao}/g, saudacao)
-                                .replace(/{dia_semana}/g, diasSemana[endDateObj.getDay()])
-                                .replace(/{dia}/g, String(endDateObj.getDate()))
-                                .replace(/{plano}/g, sub?.plan_name || "")
-                                .replace(/{valor}/g, sub ? Number(sub.amount).toFixed(2).replace(".", ",") : "")
-                                .replace(/{vencimento}/g, sub ? format(endDateObj, "dd/MM/yyyy") : "")
-                                .replace(/{dias}/g, days !== null ? String(Math.abs(days)) : "")
-                                .replace(/{mac}/g, clientMks[0]?.mac || "")
-                                .replace(/{usuario}/g, client.iptv_user || "")
-                                .replace(/{senha}/g, client.iptv_password || "")
-                                .replace(/{servidor}/g, client.server || "")
-                                .replace(/{sua_chave_pix}/g, pixKey);
-                              const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-                              if (newWindow) {
-                                newWindow.location.href = url;
-                              } else {
-                                window.location.href = url;
+
+                                if (popup) {
+                                  popup.location.href = url;
+                                } else {
+                                  window.open(url, "_blank", "noopener,noreferrer");
+                                }
+                              } catch (error) {
+                                console.error("Erro ao gerar cobrança manual:", error);
+                                if (popup) popup.close();
+                                toast.error("Não foi possível abrir o WhatsApp. Tente novamente.");
                               }
                             })();
                           }}
