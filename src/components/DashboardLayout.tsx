@@ -64,6 +64,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/settings", label: "Geral", icon: Settings },
     ],
   },
+  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
   { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
 ];
 
