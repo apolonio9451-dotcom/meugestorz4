@@ -20,6 +20,7 @@ interface ConnectionData {
 
 interface Props {
   userName: string;
+  companyId?: string | null;
 }
 
 export default function WhatsAppManager({ userName }: Props) {
