@@ -91,6 +91,7 @@ export default function Chatbot() {
   const [activeTab, setActiveTab] = useState("connection");
   const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
   const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
+  const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
@@ -594,7 +595,27 @@ export default function Chatbot() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <audio ref={audioRef} onEnded={() => setPlayingMedia(null)} className="hidden" />
 
-      {/* Header */}
+      {/* Connected Banner */}
+      {connectedBanner && (
+        <div className="bg-success/10 border border-success/30 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+              <Smartphone className="w-5 h-5 text-success" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-success">✅ WhatsApp Conectado com Sucesso!</p>
+              <p className="text-xs text-muted-foreground">
+                {connectedBanner.profileName && <span>👤 {connectedBanner.profileName}</span>}
+                {connectedBanner.phoneNumber && <span className="ml-2">📞 {connectedBanner.phoneNumber}</span>}
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setConnectedBanner(null)} className="text-muted-foreground hover:text-foreground">
+            ✕
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -927,7 +948,15 @@ export default function Chatbot() {
                       Crie uma nova instância e escaneie o QR Code para conectar.
                     </DialogDescription>
                   </DialogHeader>
-                  <WhatsAppManager userName="Usuário" companyId={companyId} />
+                  <WhatsAppManager
+                    userName="Usuário"
+                    companyId={companyId}
+                    onConnected={(data) => {
+                      setShowNewInstanceModal(false);
+                      setConnectedBanner(data);
+                      setTimeout(() => setConnectedBanner(null), 15000);
+                    }}
+                  />
                 </DialogContent>
               </Dialog>
 

@@ -21,9 +21,10 @@ interface ConnectionData {
 interface Props {
   userName: string;
   companyId?: string | null;
+  onConnected?: (data: { profileName?: string; phoneNumber?: string }) => void;
 }
 
-export default function WhatsAppManager({ userName, companyId }: Props) {
+export default function WhatsAppManager({ userName, companyId, onConnected }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionData | null>(null);
@@ -110,6 +111,7 @@ export default function WhatsAppManager({ userName, companyId }: Props) {
           stopPolling();
           void persistToken(instanceToken);
           toast.success("WhatsApp conectado com sucesso!");
+          onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
           return;
         }
 
@@ -150,6 +152,7 @@ export default function WhatsAppManager({ userName, companyId }: Props) {
         setQrCode(null);
         setStatus("connected");
         toast.success("WhatsApp conectado!");
+        onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
       } else if (data.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
@@ -188,6 +191,7 @@ export default function WhatsAppManager({ userName, companyId }: Props) {
         }));
         void persistToken(connection.token);
         toast.success("WhatsApp conectado!");
+        onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
       } else if (data?.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setStatus("qr");
