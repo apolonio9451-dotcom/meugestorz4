@@ -593,14 +593,28 @@ export default function Chatbot() {
         {/* Schedule Panel */}
         {showSchedulePanel && (
           <div className="glass-card rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold text-foreground">Período de Atividade do Bot</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">Ativar horário comercial</Label>
-                <Switch checked={businessHoursEnabled} onCheckedChange={setBusinessHoursEnabled} />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant={!businessHoursEnabled ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs h-7 gap-1"
+                  onClick={() => {
+                    setBusinessHoursEnabled(false);
+                    setBusinessDays([0, 1, 2, 3, 4, 5, 6]);
+                  }}
+                >
+                  <Zap className="w-3 h-3" />
+                  24/7
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Horário comercial</Label>
+                  <Switch checked={businessHoursEnabled} onCheckedChange={setBusinessHoursEnabled} />
+                </div>
               </div>
             </div>
 
