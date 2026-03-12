@@ -687,6 +687,8 @@ export default function Chatbot() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="glass-card rounded-lg p-3 text-center">
           <p className="text-2xl font-bold text-foreground">{logStats.total}</p>
