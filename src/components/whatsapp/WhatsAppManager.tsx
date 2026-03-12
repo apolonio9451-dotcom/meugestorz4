@@ -20,9 +20,10 @@ interface ConnectionData {
 
 interface Props {
   userName: string;
+  companyId?: string | null;
 }
 
-export default function WhatsAppManager({ userName }: Props) {
+export default function WhatsAppManager({ userName, companyId }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionData | null>(null);
@@ -34,6 +35,9 @@ export default function WhatsAppManager({ userName }: Props) {
 
   const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
+  const normalizeQrCode = (qr: string) =>
+    qr.startsWith("data:") || qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`;
+
   const stopPolling = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -41,12 +45,46 @@ export default function WhatsAppManager({ userName }: Props) {
     }
   };
 
+  const persistToken = async (token: string) => {
+    if (!companyId || !token) return;
+
+    const { error } = await supabase
+      .from("api_settings" as any)
+      .upsert(
+        {
+          company_id: companyId,
+          api_token: token,
+          instance_name: userName || "Minha Instância",
+        },
+        { onConflict: "company_id" }
+      );
+
+    if (error) {
+      console.error("[WhatsApp] Erro ao persistir token:", error);
+    }
+  };
+
+  const clearPersistedToken = async () => {
+    if (!companyId) return;
+
+    const { error } = await supabase
+      .from("api_settings" as any)
+      .update({ api_token: "" })
+      .eq("company_id", companyId);
+
+    if (error) {
+      console.error("[WhatsApp] Erro ao limpar token:", error);
+    }
+  };
+
   const startPolling = (instanceToken: string, instanceId: string) => {
     stopPolling();
     let attempts = 0;
+
     intervalRef.current = setInterval(async () => {
       attempts++;
       console.log(`[WhatsApp] Polling attempt ${attempts}...`);
+
       try {
         const { data, error } = await supabase.functions.invoke("whatsapp-status", {
           body: { token: instanceToken },
@@ -61,20 +99,25 @@ export default function WhatsAppManager({ userName }: Props) {
 
         if (data?.connected) {
           setStatus("connected");
+          setQrCode(null);
           setConnection((prev) => ({
-            ...prev!,
+            token: prev?.token ?? instanceToken,
+            instanceId: data.instanceId ?? prev?.instanceId ?? instanceId,
             profileName: data.profileName,
             phoneNumber: data.phoneNumber,
           }));
+
           stopPolling();
+          void persistToken(instanceToken);
           toast.success("WhatsApp conectado com sucesso!");
-        } else if (data?.qrCode) {
-          const qr = data.qrCode;
-          setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
+          return;
+        }
+
+        if (data?.qrCode) {
+          setQrCode(normalizeQrCode(data.qrCode));
           setStatus("qr");
         }
 
-        // Stop polling after 60 attempts (3 min)
         if (attempts >= 60) {
           stopPolling();
           toast.error("Tempo esgotado. Tente conectar novamente.");
@@ -88,26 +131,34 @@ export default function WhatsAppManager({ userName }: Props) {
 
   const connect = async () => {
     setStatus("loading");
+
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
         body: { userName, webhookUrl: WEBHOOK_URL },
       });
+
       if (error) throw error;
+      if (data?.token) void persistToken(data.token);
 
       if (data.status === "connected") {
-        setConnection({ token: data.token, instanceId: data.instanceId });
+        setConnection({
+          token: data.token,
+          instanceId: data.instanceId ?? "",
+          profileName: data.profileName,
+          phoneNumber: data.phoneNumber,
+        });
+        setQrCode(null);
         setStatus("connected");
         toast.success("WhatsApp conectado!");
       } else if (data.qrCode) {
-        const qr = data.qrCode;
-        setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
-        setConnection({ token: data.token, instanceId: data.instanceId });
+        setQrCode(normalizeQrCode(data.qrCode));
+        setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
         setStatus("qr");
-        startPolling(data.token, data.instanceId);
+        startPolling(data.token, data.instanceId ?? "");
       } else {
-        setConnection({ token: data.token, instanceId: data.instanceId });
+        setConnection({ token: data.token, instanceId: data.instanceId ?? "" });
         setStatus("waiting_qr");
-        startPolling(data.token, data.instanceId);
+        startPolling(data.token, data.instanceId ?? "");
       }
     } catch (err: any) {
       console.error("Erro ao conectar:", err);
@@ -118,18 +169,29 @@ export default function WhatsAppManager({ userName }: Props) {
 
   const checkStatus = async () => {
     if (!connection?.token) return;
+
     try {
-      const { data } = await supabase.functions.invoke("whatsapp-status", {
+      const { data, error } = await supabase.functions.invoke("whatsapp-status", {
         body: { token: connection.token },
       });
+
+      if (error) throw error;
+
       if (data?.connected) {
         setStatus("connected");
+        setQrCode(null);
         setConnection((prev) => ({
-          ...prev!,
+          token: prev?.token ?? connection.token,
+          instanceId: data.instanceId ?? prev?.instanceId ?? connection.instanceId,
           profileName: data.profileName,
           phoneNumber: data.phoneNumber,
         }));
+        void persistToken(connection.token);
         toast.success("WhatsApp conectado!");
+      } else if (data?.qrCode) {
+        setQrCode(normalizeQrCode(data.qrCode));
+        setStatus("qr");
+        startPolling(connection.token, data.instanceId ?? connection.instanceId);
       } else {
         setStatus("disconnected");
         toast.info("WhatsApp desconectado");
@@ -142,10 +204,12 @@ export default function WhatsAppManager({ userName }: Props) {
 
   const disconnect = async () => {
     if (!connection?.token) return;
+
     try {
       await supabase.functions.invoke("whatsapp-disconnect", {
         body: { token: connection.token },
       });
+
       setStatus("disconnected");
       setQrCode(null);
       stopPolling();
@@ -158,10 +222,13 @@ export default function WhatsAppManager({ userName }: Props) {
 
   const deleteInstance = async () => {
     if (!connection?.instanceId) return;
+
     try {
       await supabase.functions.invoke("whatsapp-delete", {
         body: { instanceId: connection.instanceId },
       });
+
+      await clearPersistedToken();
       setStatus("idle");
       setConnection(null);
       setQrCode(null);
@@ -177,14 +244,16 @@ export default function WhatsAppManager({ userName }: Props) {
   const sendTestMessage = async () => {
     if (!connection?.token || !testPhone || !testMessage) return;
     setSending(true);
+
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+      const { error } = await supabase.functions.invoke("whatsapp-send", {
         body: {
           token: connection.token,
           phone: testPhone.replace(/\D/g, ""),
           message: testMessage,
         },
       });
+
       if (error) throw error;
       toast.success("Mensagem enviada com sucesso!");
     } catch (err) {
@@ -196,8 +265,61 @@ export default function WhatsAppManager({ userName }: Props) {
   };
 
   useEffect(() => {
-    return () => stopPolling();
-  }, []);
+    let mounted = true;
+
+    const restoreConnection = async () => {
+      if (!companyId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("api_settings" as any)
+          .select("api_token")
+          .eq("company_id", companyId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const savedToken = (data as any)?.api_token?.trim();
+        if (!savedToken || !mounted) return;
+
+        setConnection({ token: savedToken, instanceId: "" });
+        setStatus("loading");
+
+        const { data: statusData, error: statusError } = await supabase.functions.invoke("whatsapp-status", {
+          body: { token: savedToken },
+        });
+
+        if (statusError) throw statusError;
+        if (!mounted) return;
+
+        if (statusData?.connected) {
+          setStatus("connected");
+          setQrCode(null);
+          setConnection({
+            token: savedToken,
+            instanceId: statusData.instanceId ?? "",
+            profileName: statusData.profileName,
+            phoneNumber: statusData.phoneNumber,
+          });
+        } else if (statusData?.qrCode) {
+          setQrCode(normalizeQrCode(statusData.qrCode));
+          setStatus("qr");
+          startPolling(savedToken, statusData.instanceId ?? "");
+        } else {
+          setStatus("disconnected");
+        }
+      } catch (err) {
+        console.error("[WhatsApp] Erro ao restaurar instância:", err);
+      }
+    };
+
+    void restoreConnection();
+
+    return () => {
+      mounted = false;
+      stopPolling();
+    };
+  }, [companyId]);
 
   const statusConfig: Record<Status, { color: string; label: string }> = {
     idle: { color: "bg-muted-foreground", label: "Não conectado" },
