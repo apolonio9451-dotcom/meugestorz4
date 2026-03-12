@@ -1121,28 +1121,10 @@ export default function Chatbot() {
                 )}
               </div>
 
-              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Timer className="w-4 h-4 text-primary" />
-                  Cobrança Automática (Cron Job)
-                </h3>
-                <div className="flex items-center gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Horário exato de disparo</Label>
-                    <Input
-                      type="time"
-                      value={`${String(billingHour).padStart(2, "0")}:${String(billingMinute).padStart(2, "0")}`}
-                      onChange={(e) => {
-                        const [h, m] = e.target.value.split(":").map(Number);
-                        if (!isNaN(h)) setBillingHour(h);
-                        if (!isNaN(m)) setBillingMinute(m);
-                      }}
-                      className="bg-secondary/50 w-40"
-                    />
-                  </div>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  💡 Dica: Configure um horário quebrado (ex: 08:07) para parecer mais humano e evitar picos de envio em horários redondos.
+              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Info className="w-3.5 h-3.5 text-primary" />
+                  O horário de disparo das cobranças automáticas é configurado no menu <strong>Configuração Geral</strong>.
                 </p>
               </div>
             </div>
