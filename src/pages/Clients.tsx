@@ -1257,7 +1257,8 @@ export default function Clients() {
                             (async () => {
                               try {
                                 const freshTemplates = await fetchLatestMessageTemplates();
-                                const msg = buildCobrancaMessage(client, sub, days, freshTemplates, forcedCategory);
+                                const currentDays = sub ? getDaysRemaining(sub.end_date) : null;
+                                const msg = buildCobrancaMessage(client, sub, currentDays, freshTemplates, forcedCategory);
                                 const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
                                 if (isMobileDevice) {
