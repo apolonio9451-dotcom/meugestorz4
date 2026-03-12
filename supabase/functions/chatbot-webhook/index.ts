@@ -287,10 +287,17 @@ function extractGenericPayload(body: any): ExtractedPayload {
     if (typeof val === "string" && val.trim()) { senderRaw = val.trim(); break; }
   }
 
-  // Detect type
+  // Detect type based on UAZAPI message fields
   const msg = body?.message || {};
+  const msgType = (msg.messageType || msg.type || "").toLowerCase();
   let messageType = "text";
-  if (msg.content?.URL) {
+  
+  if (msgType.includes("image") || msg.mediaType === "image") messageType = "image";
+  else if (msgType.includes("audio") || msg.mediaType === "audio") messageType = "audio";
+  else if (msgType.includes("video") || msg.mediaType === "video") messageType = "video";
+  else if (msgType.includes("document") || msg.mediaType === "document") messageType = "document";
+  else if (msgType.includes("sticker")) messageType = "sticker";
+  else if (msg.content?.URL && !messageText) {
     const lastType = (body?.chat?.wa_lastMessageType || "").toLowerCase();
     if (lastType.includes("audio")) messageType = "audio";
     else if (lastType.includes("video")) messageType = "video";
