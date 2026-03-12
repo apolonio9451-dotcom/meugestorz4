@@ -753,6 +753,7 @@ COMANDOS ESPECIAIS (Tags que você pode usar na resposta para executar ações):
 - [ENVIAR_BOTOES:Opção 1|Opção 2|Opção 3] → Envia botões rápidos (máx 3)
 - [ENVIAR_LISTA:Item 1|Item 2|Item 3] → Envia um menu de lista expansível
 - [ENVIAR_MEDIA:arquivo.mp3] → Envia mídia da biblioteca
+- [AUDIO:nome] → Atalho para enviar áudio da biblioteca (busca por nome, com ou sem extensão)
 Use esses comandos quando achar relevante. O sistema processará automaticamente.`;
 
     // Call AI

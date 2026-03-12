@@ -1592,20 +1592,23 @@ export default function Chatbot() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Layers className="w-5 h-5 text-primary" />
-                  Biblioteca de Mídia
+                  Biblioteca de Mídia & Gravador
                 </h2>
                 <p className="text-muted-foreground text-xs mt-1">
-                  Áudios e vídeos que o bot pode enviar. Use o botão "Copiar Ref." para obter o código de referência.
+                  Grave áudios pelo navegador ou faça upload. Use <code className="text-primary">[AUDIO:nome]</code> na personalidade para a IA enviar automaticamente.
                 </p>
               </div>
               <div>
-                <input ref={fileInputRef} type="file" accept=".mp3,.mp4,audio/mpeg,video/mp4" className="hidden" onChange={handleUploadMedia} />
+                <input ref={fileInputRef} type="file" accept=".mp3,.mp4,.ogg,audio/mpeg,audio/ogg,video/mp4" className="hidden" onChange={handleUploadMedia} />
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                   Upload Mídia
                 </Button>
               </div>
             </div>
+
+            {/* Audio Recorder */}
+            {companyId && <AudioRecorder companyId={companyId} onUploaded={fetchMedia} />}
 
             <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-xs text-muted-foreground">
               <p className="flex items-center gap-1 font-semibold text-foreground mb-1">
