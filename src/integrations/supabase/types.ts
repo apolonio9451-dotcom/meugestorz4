@@ -204,6 +204,41 @@ export type Database = {
           },
         ]
       }
+      chatbot_conversation_messages: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          phone: string
+          role: string
+        }
+        Insert: {
+          company_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          phone?: string
+          role?: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          phone?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_conversation_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_logs: {
         Row: {
           client_name: string
