@@ -1246,9 +1246,7 @@ export default function Clients() {
                               return;
                             }
 
-                            const isMobileDevice =
-                              /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                              window.matchMedia("(pointer: coarse)").matches;
+                            const isMobileDevice = isMobileWhatsAppClient();
 
                             // Desktop: abre popup imediatamente para preservar gesto do usuário
                             const popup = !isMobileDevice
