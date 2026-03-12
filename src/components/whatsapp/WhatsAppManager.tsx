@@ -23,7 +23,7 @@ interface Props {
   companyId?: string | null;
 }
 
-export default function WhatsAppManager({ userName }: Props) {
+export default function WhatsAppManager({ userName, companyId }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionData | null>(null);

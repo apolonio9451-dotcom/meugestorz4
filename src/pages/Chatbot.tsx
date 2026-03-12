@@ -927,7 +927,7 @@ export default function Chatbot() {
                       Crie uma nova instância e escaneie o QR Code para conectar.
                     </DialogDescription>
                   </DialogHeader>
-                  <WhatsAppManager userName="Usuário" />
+                  <WhatsAppManager userName="Usuário" companyId={companyId} />
                 </DialogContent>
               </Dialog>
 

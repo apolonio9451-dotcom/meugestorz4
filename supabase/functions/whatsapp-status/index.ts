@@ -30,20 +30,42 @@ serve(async (req) => {
       data = {};
     }
 
-    // UAZAPI pode retornar o status em diferentes formatos
+    // UAZAPI pode retornar status em formatos diferentes (string, booleans e objeto status)
     const instance = data?.instance || data;
-    const isConnected = 
-      data?.status === "connected" || 
-      instance?.status === "connected" ||
-      data?.state === "open" ||
-      instance?.state === "open";
+    const statusObject =
+      typeof data?.status === "object" && data?.status !== null
+        ? data.status
+        : typeof instance?.status === "object" && instance?.status !== null
+          ? instance.status
+          : null;
+
+    const normalizedState = [data?.status, instance?.status, data?.state, instance?.state]
+      .filter((value) => typeof value === "string")
+      .map((value) => String(value).toLowerCase());
+
+    const isConnected =
+      normalizedState.some((value) => ["connected", "open", "online", "ready", "authenticated"].includes(value)) ||
+      data?.connected === true ||
+      instance?.connected === true ||
+      statusObject?.connected === true ||
+      statusObject?.loggedIn === true ||
+      Boolean(statusObject?.jid);
 
     const qrCode = data?.qrcode || instance?.qrcode || data?.qr || instance?.qr || null;
-    const phoneNumber = data?.phone || instance?.phone || data?.owner || instance?.owner || null;
-    const profileName = data?.name || instance?.name || data?.pushname || instance?.pushname || null;
-    const profilePic = data?.profilePic || instance?.profilePic || data?.profilePictureUrl || instance?.profilePictureUrl || null;
+    const rawPhone = data?.phone || instance?.phone || data?.owner || instance?.owner || statusObject?.jid || null;
+    const phoneNumber = typeof rawPhone === "string" ? rawPhone.split(":")[0] : rawPhone;
+    const profileName = data?.name || instance?.name || data?.pushname || instance?.pushname || data?.profileName || instance?.profileName || null;
+    const profilePic =
+      data?.profilePic ||
+      instance?.profilePic ||
+      data?.profilePictureUrl ||
+      instance?.profilePictureUrl ||
+      data?.profilePicUrl ||
+      instance?.profilePicUrl ||
+      null;
+    const instanceId = data?.instanceId || instance?.id || data?.id || null;
 
-    console.log("Parsed status:", { isConnected, hasQr: !!qrCode, phoneNumber, profileName });
+    console.log("Parsed status:", { isConnected, hasQr: !!qrCode, phoneNumber, profileName, instanceId });
 
     return new Response(
       JSON.stringify({
@@ -53,6 +75,7 @@ serve(async (req) => {
         phoneNumber,
         profileName,
         profilePic,
+        instanceId,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
