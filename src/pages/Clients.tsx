@@ -161,15 +161,40 @@ export default function Clients() {
     setServers(data || []);
   };
 
+  const mapTemplatesFromRows = (rows: { category: string; message: string }[] | null) => {
+    const map: Record<string, string> = {};
+    (rows || []).forEach((t) => {
+      map[t.category] = t.message;
+    });
+    return map;
+  };
+
   const fetchMessageTemplates = async () => {
     if (!companyId) return;
     const { data } = await supabase
       .from("message_templates")
       .select("category, message")
       .eq("company_id", companyId);
-    const map: Record<string, string> = {};
-    (data || []).forEach((t) => { map[t.category] = t.message; });
-    setMessageTemplates(map);
+
+    setMessageTemplates(mapTemplatesFromRows(data));
+  };
+
+  const fetchLatestMessageTemplates = async () => {
+    if (!companyId) return { ...messageTemplates };
+
+    const { data, error } = await supabase
+      .from("message_templates")
+      .select("category, message")
+      .eq("company_id", companyId);
+
+    if (error) {
+      console.error("Erro ao buscar templates atualizados:", error);
+      return { ...messageTemplates };
+    }
+
+    const freshTemplates = mapTemplatesFromRows(data);
+    setMessageTemplates(freshTemplates);
+    return freshTemplates;
   };
 
   const fetchActivityLogs = async () => {
@@ -207,6 +232,34 @@ export default function Clients() {
 
   useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchPixKey(); }, [companyId]);
 
+  useEffect(() => {
+    if (!companyId) return;
+
+    const refreshTemplates = () => {
+      void fetchMessageTemplates();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshTemplates();
+      }
+    };
+
+    window.addEventListener("focus", refreshTemplates);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", refreshTemplates);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [companyId]);
+
+  const normalizeWhatsappPhone = (rawPhone: string) => {
+    const digits = (rawPhone || "").replace(/\D/g, "");
+    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+    return digits;
+  };
+
   const getMessageCategory = (days: number | null): string => {
     if (days === null) return "vencidos";
     if (days < 0) return "vencidos";
@@ -216,7 +269,12 @@ export default function Clients() {
     return "a_vencer";
   };
 
-  const buildCobrancaMessage = (client: Client, sub: Subscription | undefined, days: number | null): string => {
+  const buildCobrancaMessage = (
+    client: Client,
+    sub: Subscription | undefined,
+    days: number | null,
+    templatesOverride?: Record<string, string>
+  ): string => {
     const category = getMessageCategory(days);
     const defaultMessages: Record<string, string> = {
       vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
@@ -225,7 +283,8 @@ export default function Clients() {
       vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
       followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
     };
-    let msg = messageTemplates[category] || defaultMessages[category] || defaultMessages.vencidos;
+    const templateSource = templatesOverride || messageTemplates;
+    let msg = templateSource[category] || defaultMessages[category] || defaultMessages.vencidos;
     const clientMks = macKeys[client.id] || [];
     const firstName = (client.name || "").split(" ")[0];
     const now = new Date();
