@@ -968,6 +968,16 @@ REGRAS IMPORTANTES:
 
     console.log("Mensagem enviada com sucesso!");
 
+    // Save assistant reply to conversation memory
+    if (replyText.trim()) {
+      await supabase.from("chatbot_conversation_messages").insert({
+        company_id: companyIdParam,
+        phone,
+        role: "assistant",
+        content: replyText.slice(0, 2000),
+      });
+    }
+
     // Log with decision trail
     await supabase.from("chatbot_logs").insert({
       company_id: companyIdParam, phone, client_name: clientName,
