@@ -192,6 +192,13 @@ export default function Chatbot() {
       setClosingMessage(d.closing_message || "");
       setAiModel(d.ai_model || "google/gemini-3-flash-preview");
       setAiTemperature(d.ai_temperature ?? 0.7);
+      setMenuEnabled(d.interactive_menu_enabled ?? false);
+      setMenuType(d.interactive_menu_type || "buttons");
+      setMenuTitle(d.interactive_menu_title || "");
+      setMenuBody(d.interactive_menu_body || "");
+      setMenuFooter(d.interactive_menu_footer || "");
+      setMenuButtonText(d.interactive_menu_button_text || "Ver Opções");
+      setMenuItems(d.interactive_menu_items || []);
       setSettingsId(d.id);
     }
   };
