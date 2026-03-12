@@ -54,8 +54,8 @@ async function sendMedia(
   const endpoint = type === "audio" ? "/send/audio" : "/send/video";
   const resp = await fetch(`${apiUrl}${endpoint}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiToken}` },
-    body: JSON.stringify({ phone: to, url: mediaUrl, caption: caption || "" }),
+    headers: { "Content-Type": "application/json", token: apiToken },
+    body: JSON.stringify({ number: to, url: mediaUrl, caption: caption || "" }),
   });
   if (!resp.ok) {
     const body = await resp.text();
