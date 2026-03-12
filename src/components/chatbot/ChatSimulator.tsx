@@ -23,6 +23,7 @@ interface Message {
 
 interface Props {
   companyId: string;
+  onRuleSaved?: () => void;
 }
 
 export default function ChatSimulator({ companyId }: Props) {
