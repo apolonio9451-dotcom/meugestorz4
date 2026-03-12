@@ -79,7 +79,7 @@ export default function Clients() {
   const [macModalClientId, setMacModalClientId] = useState<string | null>(null);
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
-  const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days"; days?: number; label: string } | null>(null);
+  const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
