@@ -58,7 +58,8 @@ export default function WhatsAppManager({ userName }: Props) {
           }));
           stopPolling();
         } else if (data?.qrCode) {
-          setQrCode(data.qrCode);
+          const qr = data.qrCode;
+          setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
           setStatus("qr");
         }
       } catch (err) {
