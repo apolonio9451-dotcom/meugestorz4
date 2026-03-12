@@ -901,8 +901,54 @@ export default function Chatbot() {
 
         {/* CONNECTION TAB */}
         <TabsContent value="connection" className="space-y-6 mt-4">
-          <WhatsAppManager userName="Usuário" />
-          <WhatsAppInstanceSection companyId={companyId} />
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-primary" />
+              Conexão WhatsApp
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Gerencie suas instâncias do WhatsApp para envio e recebimento de mensagens.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Dialog open={showNewInstanceModal} onOpenChange={setShowNewInstanceModal}>
+                <Button onClick={() => setShowNewInstanceModal(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Instância (QR Code)
+                </Button>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <QrCode className="w-5 h-5 text-primary" />
+                      Nova Instância WhatsApp
+                    </DialogTitle>
+                    <DialogDescription>
+                      Crie uma nova instância e escaneie o QR Code para conectar.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <WhatsAppManager userName="Usuário" />
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showTokenInstanceModal} onOpenChange={setShowTokenInstanceModal}>
+                <Button variant="outline" onClick={() => setShowTokenInstanceModal(true)} className="gap-2">
+                  <Link2 className="w-4 h-4" />
+                  Conectar via Token (UAZAPI)
+                </Button>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Smartphone className="w-5 h-5 text-primary" />
+                      Conexão via Token UAZAPI
+                    </DialogTitle>
+                    <DialogDescription>
+                      Cole o token da sua instância UAZAPI existente.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <WhatsAppInstanceSection companyId={companyId} />
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </TabsContent>
 
         {/* TRAINING TAB (unified) */}
