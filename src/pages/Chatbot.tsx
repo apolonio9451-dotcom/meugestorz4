@@ -130,6 +130,11 @@ export default function Chatbot() {
   const [testMessage, setTestMessage] = useState("Olá, isso é um teste do chatbot!");
   const [testResult, setTestResult] = useState<{ status: string; data: any } | null>(null);
 
+  // API check
+  const [apiConfigured, setApiConfigured] = useState(false);
+  const [showApiModal, setShowApiModal] = useState(false);
+  const [showSchedulePanel, setShowSchedulePanel] = useState(false);
+
   useEffect(() => {
     if (!companyId) { setLoading(false); return; }
     fetchAll();
