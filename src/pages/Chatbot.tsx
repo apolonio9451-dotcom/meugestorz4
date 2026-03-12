@@ -20,7 +20,8 @@ import {
   MessageSquare, Shield, Pencil, ToggleLeft, Copy, Check,
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
   Globe, Link2, Eye, EyeOff, Volume2, Info, Search,
-  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone, QrCode
+  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone, QrCode,
+  BookOpen, Route, Palette
 } from "lucide-react";
 import { format } from "date-fns";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
@@ -88,7 +89,7 @@ export default function Chatbot() {
   const { companyId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("connection");
+  const [activeTab, setActiveTab] = useState("pensamento");
   const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
   const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
   const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
@@ -498,9 +499,7 @@ export default function Chatbot() {
   };
 
   const handleCopyMediaRef = (media: any) => {
-    const ref = media.file_type === "audio"
-      ? `[ENVIAR_MEDIA:${media.file_name}]`
-      : `[ENVIAR_MEDIA:${media.file_name}]`;
+    const ref = `[ENVIAR_MEDIA:${media.file_name}]`;
     navigator.clipboard.writeText(ref);
     setCopiedMediaId(media.id);
     setTimeout(() => setCopiedMediaId(null), 2000);
@@ -616,15 +615,16 @@ export default function Chatbot() {
         </div>
       )}
 
+      {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
-              <Bot className="w-7 h-7 text-primary" />
-              Chatbot IA
+              <Brain className="w-7 h-7 text-primary" />
+              Central de Treinamento IA
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Atendimento automático inteligente via WhatsApp — Configuração completa
+              Treine sua IA para vendas e suporte em uma interface simples e objetiva
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -703,21 +703,11 @@ export default function Chatbot() {
                 <div className="flex flex-wrap gap-4 items-end">
                   <div>
                     <Label className="text-xs text-muted-foreground">Início</Label>
-                    <Input
-                      type="time"
-                      value={businessHoursStart}
-                      onChange={(e) => setBusinessHoursStart(e.target.value)}
-                      className="h-8 text-sm w-32 mt-1"
-                    />
+                    <Input type="time" value={businessHoursStart} onChange={(e) => setBusinessHoursStart(e.target.value)} className="h-8 text-sm w-32 mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Fim</Label>
-                    <Input
-                      type="time"
-                      value={businessHoursEnd}
-                      onChange={(e) => setBusinessHoursEnd(e.target.value)}
-                      className="h-8 text-sm w-32 mt-1"
-                    />
+                    <Input type="time" value={businessHoursEnd} onChange={(e) => setBusinessHoursEnd(e.target.value)} className="h-8 text-sm w-32 mt-1" />
                   </div>
                 </div>
                 <div>
@@ -740,7 +730,7 @@ export default function Chatbot() {
                 </div>
                 <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                   <Info className="w-3 h-3" />
-                  Fora do horário, o bot enviará a mensagem de ausência configurada na aba "Mensagens".
+                  Fora do horário, o bot enviará a mensagem de ausência configurada.
                 </p>
               </>
             )}
@@ -764,12 +754,8 @@ export default function Chatbot() {
               API não configurada
             </DialogTitle>
             <DialogDescription className="space-y-3 pt-2">
-              <p>
-                Para ativar o Chatbot IA, é necessário configurar a <strong>URL da API</strong> e o <strong>Token</strong> da sua instância UAZAPI.
-              </p>
-              <p>
-                Acesse o menu <strong>Configuração Geral</strong> → seção <strong>API de WhatsApp (UAZAPI)</strong> e preencha os campos obrigatórios.
-              </p>
+              <p>Para ativar o Chatbot IA, é necessário configurar a <strong>URL da API</strong> e o <strong>Token</strong> da sua instância UAZAPI.</p>
+              <p>Acesse o menu <strong>Configuração Geral</strong> → seção <strong>API de WhatsApp (UAZAPI)</strong> e preencha os campos obrigatórios.</p>
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-2">
@@ -802,208 +788,55 @@ export default function Chatbot() {
         </div>
       </div>
 
-      {/* Webhook URL */}
-      <div className="glass-card rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Link2 className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">URL do Webhook (UAZAPI)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowWebhookUrl(!showWebhookUrl)}>
-              {showWebhookUrl ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleCopyWebhook}>
-              {webhookCopied ? <Check className="w-3.5 h-3.5 mr-1 text-primary" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
-              {webhookCopied ? "Copiado!" : "Copiar"}
-            </Button>
-          </div>
-        </div>
-        <div className="bg-secondary/50 rounded-lg px-3 py-2 font-mono text-xs text-muted-foreground overflow-x-auto">
-          {showWebhookUrl ? webhookUrl : "••••••••••••••••••••••••••••••••••••••••••••••"}
-        </div>
-        <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
-          <Info className="w-3 h-3" />
-          Configure esta URL no painel da UAZAPI como webhook de mensagens recebidas.
-        </p>
-
-        {/* Teste do Webhook */}
-        <div className="mt-4 pt-4 border-t border-border/50">
-          <p className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-            <Zap className="w-4 h-4 text-primary" />
-            Testar Webhook
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Telefone de teste</Label>
-              <Input
-                placeholder="Digite o número (ex: 5511999999999)"
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
-                className="h-8 text-sm mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Mensagem de teste</Label>
-              <Input
-                placeholder="Olá, isso é um teste!"
-                value={testMessage}
-                onChange={(e) => setTestMessage(e.target.value)}
-                className="h-8 text-sm mt-1"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={handleTestWebhook}
-                disabled={testingWebhook}
-                className="h-8 w-full"
-                variant="outline"
-              >
-                {testingWebhook ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
-                ) : (
-                  <Send className="w-3.5 h-3.5 mr-1" />
-                )}
-                {testingWebhook ? "Testando..." : "Enviar Teste"}
-              </Button>
-            </div>
-          </div>
-          {testResult && (
-            <div className={`mt-3 rounded-lg p-3 text-xs font-mono overflow-x-auto ${
-              testResult.status === "success"
-                ? "bg-primary/10 border border-primary/30 text-primary"
-                : "bg-destructive/10 border border-destructive/30 text-destructive"
-            }`}>
-              <p className="font-semibold mb-1">{testResult.status === "success" ? "✅ Resposta:" : "❌ Erro:"}</p>
-              <pre className="whitespace-pre-wrap">{JSON.stringify(testResult.data, null, 2)}</pre>
-            </div>
-          )}
-          <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            O teste simula uma mensagem recebida. Se o bot estiver ativo e a API configurada, ele responderá via WhatsApp ao número informado.
-          </p>
-        </div>
-      </div>
-
+      {/* ============ MAIN TABS ============ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto gap-1 p-1">
-          <TabsTrigger value="connection" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <Smartphone className="w-3 h-3 mr-1" />Conexão
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 h-auto gap-1 p-1">
+          <TabsTrigger value="pensamento" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
+            <Route className="w-3 h-3 mr-1" />Linhas de Pensamento
           </TabsTrigger>
-          <TabsTrigger value="training" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <Brain className="w-3 h-3 mr-1" />Treinamento
+          <TabsTrigger value="treinamento" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
+            <BookOpen className="w-3 h-3 mr-1" />Treinamento
           </TabsTrigger>
-          <TabsTrigger value="messages" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <MessageSquare className="w-3 h-3 mr-1" />Mensagens
+          <TabsTrigger value="interacao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
+            <Layers className="w-3 h-3 mr-1" />Interação & Mídia
           </TabsTrigger>
-          <TabsTrigger value="media" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <Music className="w-3 h-3 mr-1" />Mídia
-          </TabsTrigger>
-          <TabsTrigger value="menu" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <Layers className="w-3 h-3 mr-1" />Menu
-          </TabsTrigger>
-          <TabsTrigger value="autoreplies" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <Zap className="w-3 h-3 mr-1" />Gatilhos
-          </TabsTrigger>
-          <TabsTrigger value="advanced" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <Settings2 className="w-3 h-3 mr-1" />Avançado
-          </TabsTrigger>
-          <TabsTrigger value="simulator" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+          <TabsTrigger value="simulador" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <MessageCircle className="w-3 h-3 mr-1" />Simulador
           </TabsTrigger>
-          <TabsTrigger value="logs" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
+          <TabsTrigger value="conexao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
+            <Smartphone className="w-3 h-3 mr-1" />Conexão
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <MessageCircle className="w-3 h-3 mr-1" />Logs
             {logStats.errors > 0 && (
               <span className="ml-1 bg-destructive text-destructive-foreground text-[9px] rounded-full px-1">{logStats.errors}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="diagnostics" className="text-[10px] md:text-xs py-1.5 px-2 shrink-0">
-            <AlertCircle className="w-3 h-3 mr-1" />Diagnóstico
+          <TabsTrigger value="avancado" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
+            <Settings2 className="w-3 h-3 mr-1" />Avançado
           </TabsTrigger>
         </TabsList>
 
-        {/* CONNECTION TAB */}
-        <TabsContent value="connection" className="space-y-6 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
-              <Smartphone className="w-5 h-5 text-primary" />
-              Conexão WhatsApp
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Gerencie suas instâncias do WhatsApp para envio e recebimento de mensagens.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Dialog open={showNewInstanceModal} onOpenChange={setShowNewInstanceModal}>
-                <Button onClick={() => setShowNewInstanceModal(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Nova Instância (QR Code)
-                </Button>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <QrCode className="w-5 h-5 text-primary" />
-                      Nova Instância WhatsApp
-                    </DialogTitle>
-                    <DialogDescription>
-                      Crie uma nova instância e escaneie o QR Code para conectar.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <WhatsAppManager
-                    userName="Usuário"
-                    companyId={companyId}
-                    onConnected={(data) => {
-                      setShowNewInstanceModal(false);
-                      setConnectedBanner(data);
-                      setTimeout(() => setConnectedBanner(null), 15000);
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={showTokenInstanceModal} onOpenChange={setShowTokenInstanceModal}>
-                <Button variant="outline" onClick={() => setShowTokenInstanceModal(true)} className="gap-2">
-                  <Link2 className="w-4 h-4" />
-                  Conectar via Token (UAZAPI)
-                </Button>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Smartphone className="w-5 h-5 text-primary" />
-                      Conexão via Token UAZAPI
-                    </DialogTitle>
-                    <DialogDescription>
-                      Cole o token da sua instância UAZAPI existente.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <WhatsAppInstanceSection companyId={companyId} />
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* TRAINING TAB (unified) */}
-        <TabsContent value="training" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-3 md:p-6 space-y-4 md:space-y-6">
+        {/* ============ ABA 1: LINHAS DE PENSAMENTO ============ */}
+        <TabsContent value="pensamento" className="space-y-4 mt-4">
+          <div className="glass-card rounded-xl p-3 md:p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm md:text-lg font-semibold text-foreground flex items-center gap-2">
-                <Brain className="w-4 h-4 text-primary" />
-                Treinamento da IA
-              </h2>
-              <Button variant="outline" size="sm" className="text-[10px] md:text-xs h-7 md:h-8" onClick={handleRestoreDefaults}>
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Restaurar Padrão
-              </Button>
+              <div>
+                <h2 className="text-sm md:text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Route className="w-5 h-5 text-primary" />
+                  Linhas de Pensamento
+                </h2>
+                <p className="text-[11px] md:text-sm text-muted-foreground mt-1">
+                  Defina os scripts que a IA segue para cada tipo de atendimento. A IA classifica automaticamente cada mensagem em: <strong>Boas-Vindas</strong>, <strong>Vendas</strong> ou <strong>Suporte</strong>.
+                </p>
+              </div>
             </div>
-            <p className="text-[11px] md:text-sm text-muted-foreground">
-              Configure tudo que a IA precisa saber em um só lugar. O treinamento é dividido em 3 seções: personalidade base, script de vendas e regras de suporte.
-            </p>
 
-            {/* How it works - visual diagram */}
+            {/* Flow diagram */}
             <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
               <h3 className="text-[10px] md:text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
                 <Info className="w-3 h-3 text-primary" />
-                Como funciona o fluxo de atendimento
+                Fluxo de Decisão da IA
               </h3>
               <div className="flex flex-col md:flex-row items-start md:items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-muted-foreground">
                 <div className="bg-background/60 rounded-lg p-2 border border-border/30 text-center flex-1 w-full md:w-auto">
@@ -1013,99 +846,305 @@ export default function Chatbot() {
                 <span className="text-primary font-bold hidden md:block">→</span>
                 <div className="bg-background/60 rounded-lg p-2 border border-border/30 text-center flex-1 w-full md:w-auto">
                   <Search className="w-3.5 h-3.5 text-primary mx-auto mb-0.5" />
-                  <p className="font-semibold text-foreground text-[11px]">É cliente?</p>
-                  <p className="text-[9px]">Busca no banco de dados</p>
+                  <p className="font-semibold text-foreground text-[11px]">Classifica intenção</p>
+                  <p className="text-[9px]">Informação • Compra • Suporte</p>
                 </div>
                 <span className="text-primary font-bold hidden md:block">→</span>
-                <div className="grid grid-cols-2 gap-1.5 flex-1 w-full md:w-auto">
+                <div className="grid grid-cols-3 gap-1.5 flex-1 w-full md:w-auto">
+                  <div className="bg-accent/30 rounded-lg p-1.5 border border-accent/30 text-center">
+                    <p className="font-semibold text-foreground text-[10px]">👋 Boas-Vindas</p>
+                    <p className="text-[9px]">1º contato</p>
+                  </div>
                   <div className="bg-primary/10 rounded-lg p-1.5 border border-primary/20 text-center">
-                    <p className="font-semibold text-primary text-[10px]">✅ Sim</p>
-                    <p className="text-[9px]">Personalidade + Regras de Suporte + dados do plano</p>
+                    <p className="font-semibold text-primary text-[10px]">💰 Vendas</p>
+                    <p className="text-[9px]">Novo lead</p>
                   </div>
                   <div className="bg-accent/30 rounded-lg p-1.5 border border-accent/30 text-center">
-                    <p className="font-semibold text-foreground text-[10px]">❌ Não</p>
-                    <p className="text-[9px]">Personalidade + Script de Vendas + Menu de boas-vindas</p>
+                    <p className="font-semibold text-foreground text-[10px]">🛠 Suporte</p>
+                    <p className="text-[9px]">Cliente</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Section 1: Personality */}
+            {/* Script de Boas-Vindas */}
             <div className="space-y-2 border-t border-border pt-4">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">1</div>
-                <Label className="text-xs md:text-sm font-semibold">Personalidade Base (System Prompt)</Label>
+                <div className="w-6 h-6 rounded-full bg-accent/30 flex items-center justify-center text-foreground text-[10px] font-bold">👋</div>
+                <Label className="text-xs md:text-sm font-semibold">Script de Boas-Vindas</Label>
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground ml-7">
-                O "DNA" do bot — define quem ele é, tom de voz, nome e regras gerais.
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-8">
+                Mensagem automática enviada no primeiro contato de um número desconhecido. Deixe vazio para a IA responder direto.
               </p>
               <Textarea
-                value={personality}
-                onChange={(e) => setPersonality(e.target.value)}
-                placeholder={DEFAULT_PERSONALITY}
-                className="bg-secondary/50 border-border min-h-[120px] md:min-h-[180px] text-xs md:text-sm font-mono"
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                placeholder="Olá! 👋 Bem-vindo(a)! Como posso ajudar você hoje?"
+                className="bg-secondary/50 border-border min-h-[80px] text-xs md:text-sm"
               />
-              <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setPersonality(DEFAULT_PERSONALITY)}>
-                  <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
-                </Button>
-                <span className="text-[10px] text-muted-foreground">{personality.length} chars</span>
-              </div>
             </div>
 
-            {/* Section 2: New Contact Script */}
+            {/* Script de Vendas */}
             <div className="space-y-2 border-t border-border pt-4">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">2</div>
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">💰</div>
                 <Label className="text-xs md:text-sm font-semibold">Script de Vendas — Novo Contato</Label>
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground ml-7">
-                Instruções quando o número <strong>NÃO</strong> é cliente. Foque em captar e vender.
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-8">
+                Instruções para quando o número <strong>NÃO</strong> é cliente. Foque em captar e converter.
               </p>
               <Textarea
                 value={newContactInstructions}
                 onChange={(e) => setNewContactInstructions(e.target.value)}
                 placeholder={EXAMPLE_NEW_CONTACT}
-                className="bg-secondary/50 border-border min-h-[100px] md:min-h-[140px] text-xs md:text-sm"
+                className="bg-secondary/50 border-border min-h-[120px] md:min-h-[150px] text-xs md:text-sm"
               />
               <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setNewContactInstructions(EXAMPLE_NEW_CONTACT)}>
                 <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
               </Button>
             </div>
 
-            {/* Section 3: Client Support Script */}
+            {/* Script de Suporte */}
             <div className="space-y-2 border-t border-border pt-4">
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">3</div>
-                <Label className="text-xs md:text-sm font-semibold">Regras de Suporte — Cliente Existente</Label>
+                <div className="w-6 h-6 rounded-full bg-accent/30 flex items-center justify-center text-foreground text-[10px] font-bold">🛠</div>
+                <Label className="text-xs md:text-sm font-semibold">Script de Suporte — Cliente Existente</Label>
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground ml-7">
-                Instruções quando o número <strong>É</strong> cliente. A IA recebe nome, plano e vencimento automaticamente.
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-8">
+                Instruções para quando o número <strong>É</strong> cliente. A IA recebe automaticamente nome, plano e data de vencimento.
               </p>
               <Textarea
                 value={clientInstructions}
                 onChange={(e) => setClientInstructions(e.target.value)}
                 placeholder={EXAMPLE_CLIENT}
-                className="bg-secondary/50 border-border min-h-[100px] md:min-h-[140px] text-xs md:text-sm"
+                className="bg-secondary/50 border-border min-h-[120px] md:min-h-[150px] text-xs md:text-sm"
               />
               <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setClientInstructions(EXAMPLE_CLIENT)}>
                 <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
               </Button>
             </div>
 
-            {/* AI Model + Temperature */}
+            {/* Palavras-Chave de Gatilho */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">⚡</div>
+                  <Label className="text-xs md:text-sm font-semibold">Palavras-Chave de Gatilho</Label>
+                </div>
+                <Button onClick={() => setShowAddReply(!showAddReply)} size="sm" className="text-xs h-7">
+                  <Plus className="w-3 h-3 mr-1" />
+                  Novo Gatilho
+                </Button>
+              </div>
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-8">
+                Quando o cliente digitar uma dessas palavras, a IA assume automaticamente a linha correspondente (ex: "ajuda" → Suporte, "preço" → Vendas).
+              </p>
+
+              {showAddReply && (
+                <div className="bg-secondary/30 rounded-lg p-4 border border-primary/20 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Palavra-chave</Label>
+                      <Input value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} placeholder="preço, ajuda, teste..." className="bg-background" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tipo de gatilho</Label>
+                      <Select value={newTriggerType} onValueChange={setNewTriggerType}>
+                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contains">Contém</SelectItem>
+                          <SelectItem value="exact">Exata</SelectItem>
+                          <SelectItem value="starts_with">Começa com</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Prioridade</Label>
+                      <Input type="number" value={newReplyPriority} onChange={(e) => setNewReplyPriority(Number(e.target.value))} className="bg-background" min={0} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Resposta automática</Label>
+                    <Textarea value={newResponseText} onChange={(e) => setNewResponseText(e.target.value)} placeholder="Texto da resposta... Pode incluir [ENVIAR_MEDIA:arquivo.mp3]" className="bg-background min-h-[80px] text-sm" />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddReply(false)}>Cancelar</Button>
+                    <Button size="sm" onClick={handleAddAutoReply} disabled={!newKeyword.trim()}>
+                      <Save className="w-3.5 h-3.5 mr-1" />Salvar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {autoReplies.length > 0 && (
+                <div className="space-y-2">
+                  {autoReplies.map((reply) => (
+                    <div key={reply.id} className={`rounded-lg px-4 py-3 border transition-all ${
+                      reply.is_active ? "bg-secondary/30 border-border/50" : "bg-secondary/10 border-border/20 opacity-60"
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-[10px] font-mono">P{reply.priority}</Badge>
+                          <Badge variant={reply.is_active ? "default" : "secondary"} className="text-[10px]">
+                            {reply.trigger_type === "contains" ? "Contém" : reply.trigger_type === "exact" ? "Exata" : "Começa com"}
+                          </Badge>
+                          {editingReply === reply.id ? (
+                            <Input
+                              value={reply.trigger_keyword}
+                              onChange={(e) => setAutoReplies((prev) => prev.map((r) => r.id === reply.id ? { ...r, trigger_keyword: e.target.value } : r))}
+                              onBlur={() => { handleUpdateReply(reply.id, "trigger_keyword", reply.trigger_keyword); setEditingReply(null); }}
+                              className="h-7 text-sm w-40" autoFocus
+                            />
+                          ) : (
+                            <span className="text-sm font-semibold text-foreground">"{reply.trigger_keyword}"</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReply(reply.id)}><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleReply(reply)}>
+                            <ToggleLeft className={`w-3.5 h-3.5 ${reply.is_active ? "text-primary" : "text-muted-foreground"}`} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteReply(reply.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                      {editingReplyText === reply.id ? (
+                        <Textarea
+                          value={reply.response_text}
+                          onChange={(e) => setAutoReplies((prev) => prev.map((r) => r.id === reply.id ? { ...r, response_text: e.target.value } : r))}
+                          onBlur={() => { handleUpdateReply(reply.id, "response_text", reply.response_text); setEditingReplyText(null); }}
+                          className="text-sm min-h-[60px]" autoFocus
+                        />
+                      ) : (
+                        <div className="text-xs text-muted-foreground bg-background/50 rounded p-2 cursor-pointer hover:bg-background/70 transition-colors" onClick={() => setEditingReplyText(reply.id)}>
+                          {reply.response_text || <span className="italic">Clique para editar a resposta</span>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Mensagens especiais */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-accent/30 flex items-center justify-center text-foreground text-[10px] font-bold">💬</div>
+                <Label className="text-xs md:text-sm font-semibold">Mensagens Especiais</Label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Fora do Horário</Label>
+                  <Textarea value={awayMessage} onChange={(e) => setAwayMessage(e.target.value)} placeholder="Estamos fora do horário. Retornaremos em breve! ⏰" className="bg-secondary/50 min-h-[70px] text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Não Compreendida</Label>
+                  <Textarea value={unknownMessage} onChange={(e) => setUnknownMessage(e.target.value)} placeholder="Desculpe, não entendi. Pode reformular? 🤔" className="bg-secondary/50 min-h-[70px] text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Encerramento (após limite)</Label>
+                  <Textarea value={closingMessage} onChange={(e) => setClosingMessage(e.target.value)} placeholder="Obrigado pelo contato! Estamos à disposição. 😊" className="bg-secondary/50 min-h-[70px] text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Transferência para Humano</Label>
+                  <Textarea value={transferMessage} onChange={(e) => setTransferMessage(e.target.value)} placeholder="Transferindo para um atendente humano..." className="bg-secondary/50 min-h-[70px] text-xs" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Palavra-chave de transferência</Label>
+                  <Input value={transferKeyword} onChange={(e) => setTransferKeyword(e.target.value)} placeholder="atendente" className="bg-secondary/50" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">WhatsApp do atendente</Label>
+                  <Input value={transferPhone} onChange={(e) => setTransferPhone(e.target.value)} placeholder="5511999999999" className="bg-secondary/50" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveSettings} disabled={saving} size="lg">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ============ ABA 2: TREINAMENTO PASSO A PASSO ============ */}
+        <TabsContent value="treinamento" className="space-y-4 mt-4">
+          <div className="glass-card rounded-xl p-3 md:p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm md:text-lg font-semibold text-foreground flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  Treinamento Passo a Passo
+                </h2>
+                <p className="text-[11px] md:text-sm text-muted-foreground mt-1">
+                  Defina a identidade, o tom de voz e as perguntas frequentes que a IA deve consultar antes de responder.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="text-[10px] md:text-xs h-7 md:h-8" onClick={handleRestoreDefaults}>
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Restaurar Padrão
+              </Button>
+            </div>
+
+            {/* Personalidade */}
+            <div className="space-y-2 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">1</div>
+                <Label className="text-xs md:text-sm font-semibold">Instruções de Personalidade (System Prompt)</Label>
+              </div>
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-8">
+                Escreva livremente como o bot deve agir: tom de voz, gírias permitidas, nome do bot, o que <strong>nunca</strong> pode dizer, limites, etc.
+              </p>
+              <Textarea
+                value={personality}
+                onChange={(e) => setPersonality(e.target.value)}
+                placeholder={DEFAULT_PERSONALITY}
+                className="bg-secondary/50 border-border min-h-[150px] md:min-h-[200px] text-xs md:text-sm font-mono"
+              />
+              <div className="flex items-center justify-between">
+                <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setPersonality(DEFAULT_PERSONALITY)}>
+                  <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
+                </Button>
+                <span className="text-[10px] text-muted-foreground">{personality.length} caracteres</span>
+              </div>
+            </div>
+
+            {/* Perguntas Frequentes */}
+            <div className="space-y-2 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">2</div>
+                <Label className="text-xs md:text-sm font-semibold">Perguntas Frequentes (FAQ)</Label>
+              </div>
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-8">
+                Liste aqui perguntas e respostas que a IA deve consultar <strong>antes</strong> de formular a resposta. Formato sugerido: <code className="bg-secondary rounded px-1 text-primary">P: pergunta | R: resposta</code>
+              </p>
+              <div className="bg-secondary/30 border border-border/50 rounded-lg p-3">
+                <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+                  <Info className="w-3 h-3 text-primary" />
+                  Dica: inclua as dúvidas mais comuns na <strong>Personalidade</strong> acima. A IA utilizará tudo que estiver lá para formular respostas inteligentes. Exemplo:
+                </p>
+                <div className="bg-background/60 rounded p-2 text-[11px] font-mono text-muted-foreground space-y-1">
+                  <p>P: Quanto custa o plano? | R: Temos planos a partir de R$25/mês</p>
+                  <p>P: Tem teste grátis? | R: Sim! Oferecemos 24h de teste gratuito</p>
+                  <p>P: Aceita Pix? | R: Sim, aceitamos Pix, boleto e cartão</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modelo e Configuração da IA */}
             <div className="border-t border-border pt-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">4</div>
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">3</div>
                 <Label className="text-xs md:text-sm font-semibold">Modelo e Configuração da IA</Label>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Modelo de IA</Label>
                   <Select value={aiModel} onValueChange={setAiModel}>
-                    <SelectTrigger className="bg-secondary/50">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="bg-secondary/50"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {AI_MODELS.map((m) => (
                         <SelectItem key={m.value} value={m.value}>
@@ -1119,59 +1158,41 @@ export default function Chatbot() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Criatividade: {aiTemperature.toFixed(1)}
-                  </Label>
-                  <Slider
-                    value={[aiTemperature]}
-                    onValueChange={([v]) => setAiTemperature(v)}
-                    min={0}
-                    max={1.5}
-                    step={0.1}
-                    className="mt-2"
-                  />
-                  <p className="text-muted-foreground text-[11px]">
-                    0 = preciso e previsível • 0.7 = equilibrado • 1.5 = muito criativo
-                  </p>
+                  <Label className="text-xs text-muted-foreground">Criatividade: {aiTemperature.toFixed(1)}</Label>
+                  <Slider value={[aiTemperature]} onValueChange={([v]) => setAiTemperature(v)} min={0} max={1.5} step={0.1} className="mt-2" />
+                  <p className="text-muted-foreground text-[11px]">0 = preciso • 0.7 = equilibrado • 1.5 = criativo</p>
                 </div>
               </div>
             </div>
 
-            {/* Humanization toggles */}
-            <div className="border-t border-border pt-5 space-y-3">
+            {/* Humanização */}
+            <div className="border-t border-border pt-4 space-y-3">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">5</div>
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">4</div>
                 <Label className="text-sm font-semibold">Humanização e Logs</Label>
               </div>
               <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
                 <div>
                   <p className="text-sm font-medium text-foreground">Simular presença humana</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Envia "digitando..." ou "gravando..." antes de cada resposta.
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Envia "digitando..." ou "gravando..." antes de cada resposta.</p>
                 </div>
                 <Switch checked={presenceEnabled} onCheckedChange={setPresenceEnabled} />
               </div>
               <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-4 border border-border/50">
                 <div>
                   <p className="text-sm font-medium text-foreground">Log de decisões da IA</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Registra o "pensamento" da IA (ex: "Novo Contato → Enviando Menu").
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Registra o "pensamento" da IA nos logs.</p>
                 </div>
                 <Switch checked={aiDecisionLog} onCheckedChange={setAiDecisionLog} />
               </div>
             </div>
 
-            {/* Command Tags Reference */}
+            {/* Tags de Comando */}
             <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
               <h4 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
                 <Zap className="w-3.5 h-3.5 text-primary" />
-                Tags de Comando (use na personalidade ou scripts)
+                Tags de Comando (use nos scripts ou personalidade)
               </h4>
-              <p className="text-xs text-muted-foreground mb-2">
-                Inclua estas tags nos textos acima para a IA executar ações automáticas:
-              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
                 <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MENU]</span> — Menu interativo configurado</div>
                 <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_CATALOGO]</span> — Lista de planos/preços</div>
@@ -1182,134 +1203,21 @@ export default function Chatbot() {
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <Button onClick={handleSaveSettings} disabled={saving} size="lg">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Salvar Treinamento
+                Salvar Alterações
               </Button>
             </div>
           </div>
         </TabsContent>
 
-        {/* MESSAGES TAB */}
-        <TabsContent value="messages" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-primary" />
-              Mensagens Automáticas
-            </h2>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <Send className="w-4 h-4 text-primary" />
-                Mensagem de Boas-Vindas (Primeiro Contato)
-              </Label>
-              <Textarea
-                value={welcomeMessage}
-                onChange={(e) => setWelcomeMessage(e.target.value)}
-                placeholder="Olá! 👋 Bem-vindo(a)! Como posso ajudar você hoje?"
-                className="bg-secondary/50 border-border min-h-[80px] text-sm"
-              />
-              <p className="text-muted-foreground text-[11px]">
-                Enviada automaticamente apenas no primeiro contato de um número desconhecido. Deixe vazio para a IA responder diretamente.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                Mensagem Fora do Horário
-              </Label>
-              <Textarea
-                value={awayMessage}
-                onChange={(e) => setAwayMessage(e.target.value)}
-                placeholder="Olá! No momento estamos fora do horário de atendimento. Retornaremos em breve! ⏰"
-                className="bg-secondary/50 border-border min-h-[80px] text-sm"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-primary" />
-                Mensagem para Perguntas Não Compreendidas
-              </Label>
-              <Textarea
-                value={unknownMessage}
-                onChange={(e) => setUnknownMessage(e.target.value)}
-                placeholder="Desculpe, não entendi sua pergunta. Pode reformular? 🤔"
-                className="bg-secondary/50 border-border min-h-[60px] text-sm"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-primary" />
-                Mensagem de Encerramento
-              </Label>
-              <Textarea
-                value={closingMessage}
-                onChange={(e) => setClosingMessage(e.target.value)}
-                placeholder="Obrigado pelo contato! Se precisar de algo mais, estamos à disposição. 😊"
-                className="bg-secondary/50 border-border min-h-[60px] text-sm"
-              />
-              <p className="text-muted-foreground text-[11px]">
-                Enviada quando o limite de mensagens por contato é atingido.
-              </p>
-            </div>
-
-            <div className="border-t border-border pt-4 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <ArrowRightLeft className="w-4 h-4 text-primary" />
-                Transferência para Atendente Humano
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Palavra-chave de transferência</Label>
-                  <Input
-                    value={transferKeyword}
-                    onChange={(e) => setTransferKeyword(e.target.value)}
-                    placeholder="atendente"
-                    className="bg-secondary/50"
-                  />
-                  <p className="text-muted-foreground text-[11px]">
-                    Quando o cliente digitar essa palavra, o bot para e envia a mensagem de transferência.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">WhatsApp do atendente</Label>
-                  <Input
-                    value={transferPhone}
-                    onChange={(e) => setTransferPhone(e.target.value)}
-                    placeholder="5511999999999"
-                    className="bg-secondary/50"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Mensagem de transferência</Label>
-                <Textarea
-                  value={transferMessage}
-                  onChange={(e) => setTransferMessage(e.target.value)}
-                  placeholder="Estou transferindo você para um atendente humano. Aguarde um momento..."
-                  className="bg-secondary/50 min-h-[60px] text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Salvar Mensagens
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* INTERACTIVE MENU TAB */}
-        <TabsContent value="menu" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-6">
+        {/* ============ ABA 3: INTERAÇÃO & MÍDIA ============ */}
+        <TabsContent value="interacao" className="space-y-4 mt-4">
+          {/* Menu Interativo */}
+          <div className="glass-card rounded-xl p-3 md:p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <h2 className="text-sm md:text-lg font-semibold text-foreground flex items-center gap-2">
                 <Layers className="w-5 h-5 text-primary" />
                 Menu Interativo WhatsApp
               </h2>
@@ -1319,8 +1227,8 @@ export default function Chatbot() {
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground">
-              Configure um menu interativo que será enviado como primeira resposta a cada mensagem recebida. O cliente escolhe uma opção antes da IA responder.
+            <p className="text-[11px] md:text-sm text-muted-foreground">
+              Configure menus de <strong>Botões Rápidos</strong> ou <strong>Lista Expansível</strong> como primeira resposta automática.
             </p>
 
             <div className="space-y-4">
@@ -1328,18 +1236,14 @@ export default function Chatbot() {
                 <Label className="text-sm font-semibold">Tipo de Menu</Label>
                 <Select value={menuType} onValueChange={(v) => {
                   setMenuType(v);
-                  if (v === "buttons" && menuItems.length > 3) {
-                    setMenuItems(menuItems.slice(0, 3));
-                  }
+                  if (v === "buttons" && menuItems.length > 3) setMenuItems(menuItems.slice(0, 3));
                 }}>
-                  <SelectTrigger className="bg-secondary/50 mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="bg-secondary/50 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="buttons">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">Botões Rápidos</span>
-                        <span className="text-xs text-muted-foreground">— Máx 3 botões</span>
+                        <span className="text-xs text-muted-foreground">— Máx 3</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="list">
@@ -1354,125 +1258,56 @@ export default function Chatbot() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm">Título da Mensagem</Label>
-                  <Input
-                    value={menuTitle}
-                    onChange={(e) => setMenuTitle(e.target.value)}
-                    placeholder="Ex: Olá! Como posso ajudar?"
-                    className="bg-secondary/50"
-                    maxLength={60}
-                  />
-                  <p className="text-[10px] text-muted-foreground">{menuTitle.length}/60</p>
+                  <Label className="text-sm">Título</Label>
+                  <Input value={menuTitle} onChange={(e) => setMenuTitle(e.target.value)} placeholder="Ex: Olá! Como posso ajudar?" className="bg-secondary/50" maxLength={60} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm">Rodapé (opcional)</Label>
-                  <Input
-                    value={menuFooter}
-                    onChange={(e) => setMenuFooter(e.target.value)}
-                    placeholder="Ex: Escolha uma opção abaixo"
-                    className="bg-secondary/50"
-                    maxLength={60}
-                  />
+                  <Input value={menuFooter} onChange={(e) => setMenuFooter(e.target.value)} placeholder="Ex: Escolha uma opção" className="bg-secondary/50" maxLength={60} />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-sm">Corpo da Mensagem</Label>
-                <Textarea
-                  value={menuBody}
-                  onChange={(e) => setMenuBody(e.target.value)}
-                  placeholder="Ex: Selecione o motivo do seu contato para que eu possa te atender melhor 😊"
-                  className="bg-secondary/50 min-h-[80px]"
-                  maxLength={1024}
-                />
+                <Textarea value={menuBody} onChange={(e) => setMenuBody(e.target.value)} placeholder="Selecione o motivo do contato 😊" className="bg-secondary/50 min-h-[80px]" maxLength={1024} />
               </div>
 
               {menuType === "list" && (
                 <div className="space-y-2">
                   <Label className="text-sm">Texto do Botão da Lista</Label>
-                  <Input
-                    value={menuButtonText}
-                    onChange={(e) => setMenuButtonText(e.target.value)}
-                    placeholder="Ver Opções"
-                    className="bg-secondary/50"
-                    maxLength={20}
-                  />
-                  <p className="text-[10px] text-muted-foreground">Texto exibido no botão que abre a lista</p>
+                  <Input value={menuButtonText} onChange={(e) => setMenuButtonText(e.target.value)} placeholder="Ver Opções" className="bg-secondary/50" maxLength={20} />
                 </div>
               )}
 
+              {/* Menu Items */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold">
-                    Opções do Menu ({menuItems.length}/{menuType === "buttons" ? 3 : 10})
-                  </Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const maxItems = menuType === "buttons" ? 3 : 10;
-                      if (menuItems.length >= maxItems) {
-                        toast({ title: `Máximo de ${maxItems} opções`, variant: "destructive" });
-                        return;
-                      }
-                      setMenuItems([...menuItems, { id: `opt_${Date.now()}`, title: "", description: "" }]);
-                    }}
-                    disabled={menuItems.length >= (menuType === "buttons" ? 3 : 10)}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" />
-                    Adicionar Opção
+                  <Label className="text-sm font-semibold">Opções ({menuItems.length}/{menuType === "buttons" ? 3 : 10})</Label>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const maxItems = menuType === "buttons" ? 3 : 10;
+                    if (menuItems.length >= maxItems) { toast({ title: `Máximo de ${maxItems} opções`, variant: "destructive" }); return; }
+                    setMenuItems([...menuItems, { id: `opt_${Date.now()}`, title: "", description: "" }]);
+                  }} disabled={menuItems.length >= (menuType === "buttons" ? 3 : 10)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" />Adicionar
                   </Button>
                 </div>
-
-                {menuItems.length === 0 && (
-                  <div className="text-center py-6 text-muted-foreground text-sm bg-secondary/30 rounded-lg">
-                    <Layers className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    <p>Nenhuma opção adicionada.</p>
-                  </div>
-                )}
-
                 {menuItems.map((item, index) => (
                   <div key={item.id || index} className="bg-secondary/30 rounded-lg p-3 border border-border/50 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted-foreground">Opção {index + 1}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setMenuItems(menuItems.filter((_, i) => i !== index))}
-                      >
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setMenuItems(menuItems.filter((_, i) => i !== index))}>
                         <Trash2 className="w-3 h-3 text-destructive" />
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <div>
                         <Label className="text-[11px] text-muted-foreground">Título *</Label>
-                        <Input
-                          value={item.title}
-                          onChange={(e) => {
-                            const updated = [...menuItems];
-                            updated[index] = { ...updated[index], title: e.target.value };
-                            setMenuItems(updated);
-                          }}
-                          placeholder={menuType === "buttons" ? "Ex: Ver Catálogo" : "Ex: 📋 Ver Catálogo"}
-                          className="h-8 text-sm bg-background/50"
-                          maxLength={menuType === "buttons" ? 20 : 24}
-                        />
+                        <Input value={item.title} onChange={(e) => { const u = [...menuItems]; u[index] = { ...u[index], title: e.target.value }; setMenuItems(u); }} placeholder={menuType === "buttons" ? "Ver Catálogo" : "📋 Ver Catálogo"} className="h-8 text-sm bg-background/50" maxLength={menuType === "buttons" ? 20 : 24} />
                       </div>
                       {menuType === "list" && (
                         <div>
-                          <Label className="text-[11px] text-muted-foreground">Descrição (opcional)</Label>
-                          <Input
-                            value={item.description || ""}
-                            onChange={(e) => {
-                              const updated = [...menuItems];
-                              updated[index] = { ...updated[index], description: e.target.value };
-                              setMenuItems(updated);
-                            }}
-                            placeholder="Ex: Confira nossos planos"
-                            className="h-8 text-sm bg-background/50"
-                            maxLength={72}
-                          />
+                          <Label className="text-[11px] text-muted-foreground">Descrição</Label>
+                          <Input value={item.description || ""} onChange={(e) => { const u = [...menuItems]; u[index] = { ...u[index], description: e.target.value }; setMenuItems(u); }} placeholder="Confira nossos planos" className="h-8 text-sm bg-background/50" maxLength={72} />
                         </div>
                       )}
                     </div>
@@ -1484,10 +1319,7 @@ export default function Chatbot() {
             {/* Preview */}
             {menuItems.filter(i => i.title).length > 0 && (
               <div className="bg-secondary/20 rounded-xl p-4 border border-border/30">
-                <p className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1">
-                  <Eye className="w-3.5 h-3.5" />
-                  Pré-visualização
-                </p>
+                <p className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Pré-visualização</p>
                 <div className="bg-background rounded-lg p-4 max-w-sm border border-border/50 shadow-sm">
                   {menuTitle && <p className="font-semibold text-sm text-foreground">{menuTitle}</p>}
                   {menuBody && <p className="text-sm text-muted-foreground mt-1">{menuBody}</p>}
@@ -1495,38 +1327,17 @@ export default function Chatbot() {
                   <div className="mt-3 space-y-1.5">
                     {menuType === "buttons" ? (
                       menuItems.filter(i => i.title).map((item, idx) => (
-                        <div key={idx} className="bg-primary/10 text-primary text-center py-2 rounded-lg text-sm font-medium border border-primary/20">
-                          {item.title}
-                        </div>
+                        <div key={idx} className="bg-primary/10 text-primary text-center py-2 rounded-lg text-sm font-medium border border-primary/20">{item.title}</div>
                       ))
                     ) : (
                       <div className="bg-primary/10 text-primary text-center py-2 rounded-lg text-sm font-medium border border-primary/20 flex items-center justify-center gap-2">
-                        <Layers className="w-3.5 h-3.5" />
-                        {menuButtonText || "Ver Opções"}
+                        <Layers className="w-3.5 h-3.5" />{menuButtonText || "Ver Opções"}
                       </div>
                     )}
                   </div>
                 </div>
-                {menuType === "list" && (
-                  <div className="mt-3 bg-background rounded-lg p-3 max-w-sm border border-border/50">
-                    <p className="text-[10px] text-muted-foreground mb-2 font-semibold">Ao clicar, o cliente vê:</p>
-                    {menuItems.filter(i => i.title).map((item, idx) => (
-                      <div key={idx} className="py-2 border-b border-border/30 last:border-0">
-                        <p className="text-sm font-medium text-foreground">{item.title}</p>
-                        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
-
-            <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Info className="w-3.5 h-3.5 text-primary shrink-0" />
-                Quando ativado, o menu será enviado como primeira resposta a cada mensagem. Use as <strong className="text-foreground mx-0.5">Respostas Automáticas (Gatilhos)</strong> para responder a opções específicas do menu.
-              </p>
-            </div>
 
             <div className="flex justify-end">
               <Button onClick={handleSaveSettings} disabled={saving}>
@@ -1535,268 +1346,60 @@ export default function Chatbot() {
               </Button>
             </div>
           </div>
-        </TabsContent>
 
-        {/* AUTO REPLIES TAB */}
-        <TabsContent value="autoreplies" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-4">
+          {/* Biblioteca de Mídia */}
+          <div className="glass-card rounded-xl p-3 md:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
-                  Gatilhos & Respostas Automáticas
-                </h2>
-                <p className="text-muted-foreground text-xs mt-1">
-                  Respostas imediatas sem passar pela IA. Prioridade maior = disparada primeiro.
-                </p>
-              </div>
-              <Button onClick={() => setShowAddReply(!showAddReply)} size="sm">
-                <Plus className="w-4 h-4 mr-1" />
-                Novo Gatilho
-              </Button>
-            </div>
-
-            {showAddReply && (
-              <div className="bg-secondary/30 rounded-lg p-4 border border-primary/20 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Palavra-chave</Label>
-                    <Input
-                      value={newKeyword}
-                      onChange={(e) => setNewKeyword(e.target.value)}
-                      placeholder="preço, plano, teste..."
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Tipo de gatilho</Label>
-                    <Select value={newTriggerType} onValueChange={setNewTriggerType}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="contains">Contém</SelectItem>
-                        <SelectItem value="exact">Exata</SelectItem>
-                        <SelectItem value="starts_with">Começa com</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Prioridade</Label>
-                    <Input
-                      type="number"
-                      value={newReplyPriority}
-                      onChange={(e) => setNewReplyPriority(Number(e.target.value))}
-                      className="bg-background"
-                      min={0}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Texto da resposta</Label>
-                  <Textarea
-                    value={newResponseText}
-                    onChange={(e) => setNewResponseText(e.target.value)}
-                    placeholder="Texto da resposta automática... Pode incluir [ENVIAR_MEDIA:nome_do_arquivo.mp3] para enviar mídia junto."
-                    className="bg-background min-h-[80px] text-sm"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddReply(false)}>Cancelar</Button>
-                  <Button size="sm" onClick={handleAddAutoReply} disabled={!newKeyword.trim()}>
-                    <Save className="w-3.5 h-3.5 mr-1" />Salvar Gatilho
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {autoReplies.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm">
-                <Zap className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Nenhum gatilho configurado.</p>
-                <p className="text-xs mt-1">Gatilhos respondem instantaneamente sem usar a IA.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {autoReplies.map((reply) => (
-                  <div key={reply.id} className={`rounded-lg px-4 py-3 border transition-all ${
-                    reply.is_active ? "bg-secondary/30 border-border/50" : "bg-secondary/10 border-border/20 opacity-60"
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-[10px] font-mono">
-                          P{reply.priority}
-                        </Badge>
-                        <Badge variant={reply.is_active ? "default" : "secondary"} className="text-[10px]">
-                          {reply.trigger_type === "contains" ? "Contém" : reply.trigger_type === "exact" ? "Exata" : "Começa com"}
-                        </Badge>
-                        {editingReply === reply.id ? (
-                          <Input
-                            value={reply.trigger_keyword}
-                            onChange={(e) => {
-                              setAutoReplies((prev) =>
-                                prev.map((r) => r.id === reply.id ? { ...r, trigger_keyword: e.target.value } : r)
-                              );
-                            }}
-                            onBlur={() => {
-                              handleUpdateReply(reply.id, "trigger_keyword", reply.trigger_keyword);
-                              setEditingReply(null);
-                            }}
-                            className="h-7 text-sm w-40"
-                            autoFocus
-                          />
-                        ) : (
-                          <span className="text-sm font-semibold text-foreground">"{reply.trigger_keyword}"</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingReply(reply.id)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleReply(reply)}>
-                          <ToggleLeft className={`w-3.5 h-3.5 ${reply.is_active ? "text-primary" : "text-muted-foreground"}`} />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteReply(reply.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    {editingReplyText === reply.id ? (
-                      <Textarea
-                        value={reply.response_text}
-                        onChange={(e) => {
-                          setAutoReplies((prev) =>
-                            prev.map((r) => r.id === reply.id ? { ...r, response_text: e.target.value } : r)
-                          );
-                        }}
-                        onBlur={() => {
-                          handleUpdateReply(reply.id, "response_text", reply.response_text);
-                          setEditingReplyText(null);
-                        }}
-                        className="text-sm min-h-[60px]"
-                        autoFocus
-                      />
-                    ) : (
-                      <div
-                        className="text-xs text-muted-foreground bg-background/50 rounded p-2 cursor-pointer hover:bg-background/70 transition-colors"
-                        onClick={() => setEditingReplyText(reply.id)}
-                      >
-                        {reply.response_text || <span className="italic">Clique para editar a resposta</span>}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* MEDIA TAB */}
-        <TabsContent value="media" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-primary" />
+                <h2 className="text-sm md:text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Music className="w-5 h-5 text-primary" />
                   Biblioteca de Mídia & Gravador
                 </h2>
-                <p className="text-muted-foreground text-xs mt-1">
-                  Grave áudios pelo navegador ou faça upload. Use <code className="text-primary">[AUDIO:nome]</code> na personalidade para a IA enviar automaticamente.
+                <p className="text-muted-foreground text-[11px] md:text-xs mt-1">
+                  Grave áudios pelo navegador ou faça upload. Use <code className="text-primary">[ENVIAR_MEDIA:nome]</code> nos scripts para a IA enviar automaticamente.
                 </p>
               </div>
               <div>
                 <input ref={fileInputRef} type="file" accept=".mp3,.mp4,.ogg,audio/mpeg,audio/ogg,video/mp4" className="hidden" onChange={handleUploadMedia} />
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                  Upload Mídia
+                  Upload
                 </Button>
               </div>
             </div>
 
-            {/* Audio Recorder */}
             {companyId && <AudioRecorder companyId={companyId} onUploaded={fetchMedia} />}
 
-            <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-xs text-muted-foreground">
-              <p className="flex items-center gap-1 font-semibold text-foreground mb-1">
-                <Info className="w-3 h-3 text-primary" />
-                Como usar mídia nas respostas:
-              </p>
-              <p>
-                A IA pode enviar mídia automaticamente. Basta incluir na personalidade ou resposta automática:
-                <code className="bg-background rounded px-1.5 py-0.5 mx-1 font-mono text-primary">[ENVIAR_MEDIA:nome_do_arquivo.mp3]</code>
-              </p>
-            </div>
-
             {mediaFiles.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm">
-                <Video className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                <Video className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p>Nenhuma mídia enviada ainda.</p>
-                <p className="text-xs mt-1">Envie arquivos MP3 (áudio) ou MP4 (vídeo) de até 50MB.</p>
+                <p className="text-xs mt-1">MP3 (áudio) ou MP4 (vídeo) até 50MB.</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {mediaFiles.map((media) => (
                   <div key={media.id} className="flex items-center justify-between bg-secondary/30 rounded-lg px-4 py-3 border border-border/50">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {media.file_type === "audio" ? (
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <FileAudio className="w-5 h-5 text-primary" />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <FileVideo className="w-5 h-5 text-primary" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${media.file_type === "audio" ? "bg-primary/10" : "bg-accent/20"}`}>
+                        {media.file_type === "audio" ? <FileAudio className="w-4 h-4 text-primary" /> : <FileVideo className="w-4 h-4 text-foreground" />}
+                      </div>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{media.file_name}</p>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <span>{media.file_type === "audio" ? "🎵 Áudio" : "🎬 Vídeo"}</span>
-                          <span>•</span>
-                          <span>{formatFileSize(media.file_size)}</span>
-                          <span>•</span>
-                          <span className="font-mono text-primary">{media.file_name}</span>
-                        </div>
+                        <p className="text-[11px] text-muted-foreground">{formatFileSize(media.file_size)} • {format(new Date(media.created_at), "dd/MM/yy HH:mm")}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <div className="flex items-center gap-1 shrink-0">
                       {media.file_type === "audio" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handlePlayMedia(media)}
-                        >
-                          {playingMedia === media.id ? (
-                            <Pause className="w-4 h-4 text-primary" />
-                          ) : (
-                            <Play className="w-4 h-4" />
-                          )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePlayMedia(media)}>
+                          {playingMedia === media.id ? <Pause className="w-3.5 h-3.5 text-primary" /> : <Play className="w-3.5 h-3.5" />}
                         </Button>
                       )}
-                      {media.file_type === "video" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => window.open(media.file_url, "_blank")}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleCopyMediaRef(media)}
-                      >
-                        {copiedMediaId === media.id ? (
-                          <Check className="w-4 h-4 text-primary" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopyMediaRef(media)}>
+                        {copiedMediaId === media.id ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteMedia(media)}>
-                        <Trash2 className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteMedia(media)}>
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -1806,106 +1409,106 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        <TabsContent value="advanced" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Settings2 className="w-5 h-5 text-primary" />
-              Configurações Avançadas
+        {/* ============ ABA: SIMULADOR ============ */}
+        <TabsContent value="simulador" className="space-y-4 mt-4">
+          {companyId && <ChatSimulator companyId={companyId} />}
+          {!companyId && (
+            <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">Carregando...</div>
+          )}
+        </TabsContent>
+
+        {/* ============ ABA: CONEXÃO ============ */}
+        <TabsContent value="conexao" className="space-y-6 mt-4">
+          <div className="glass-card rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-primary" />
+              Conexão WhatsApp
             </h2>
+            <p className="text-muted-foreground text-sm">Gerencie suas instâncias do WhatsApp para envio e recebimento de mensagens.</p>
+            <div className="flex flex-wrap gap-3">
+              <Dialog open={showNewInstanceModal} onOpenChange={setShowNewInstanceModal}>
+                <Button onClick={() => setShowNewInstanceModal(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />Nova Instância (QR Code)
+                </Button>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><QrCode className="w-5 h-5 text-primary" />Nova Instância WhatsApp</DialogTitle>
+                    <DialogDescription>Crie uma nova instância e escaneie o QR Code para conectar.</DialogDescription>
+                  </DialogHeader>
+                  <WhatsAppManager userName="Usuário" companyId={companyId} onConnected={(data) => { setShowNewInstanceModal(false); setConnectedBanner(data); setTimeout(() => setConnectedBanner(null), 15000); }} />
+                </DialogContent>
+              </Dialog>
 
-            <div className="space-y-4">
-              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Timer className="w-4 h-4 text-primary" />
-                  Humanização — Simulação de Presença
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Antes de cada resposta, o bot simula "digitando..." ou "gravando áudio..." na UAZAPI para parecer humano.
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Delay mínimo: {minDelay}s</Label>
-                    <Slider value={[minDelay]} onValueChange={([v]) => setMinDelay(v)} min={1} max={15} step={1} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Delay máximo: {maxDelay}s</Label>
-                    <Slider value={[maxDelay]} onValueChange={([v]) => setMaxDelay(v)} min={2} max={20} step={1} />
-                  </div>
-                </div>
-                <div className="bg-background/50 rounded p-2 text-[11px] text-muted-foreground">
-                  <strong>Texto:</strong> "Digitando..." por {minDelay}-{maxDelay}s &nbsp;•&nbsp;
-                  <strong>Áudio:</strong> "Gravando..." por {minDelay + 2}-{maxDelay + 3}s
-                </div>
+              <Dialog open={showTokenInstanceModal} onOpenChange={setShowTokenInstanceModal}>
+                <Button variant="outline" onClick={() => setShowTokenInstanceModal(true)} className="gap-2">
+                  <Link2 className="w-4 h-4" />Conectar via Token (UAZAPI)
+                </Button>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><Smartphone className="w-5 h-5 text-primary" />Conexão via Token UAZAPI</DialogTitle>
+                    <DialogDescription>Cole o token da sua instância UAZAPI existente.</DialogDescription>
+                  </DialogHeader>
+                  <WhatsAppInstanceSection companyId={companyId} />
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          {/* Webhook */}
+          <div className="glass-card rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">URL do Webhook (UAZAPI)</span>
               </div>
-
-              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-primary" />
-                  Limite de Mensagens por Contato
-                </h3>
-                <div className="space-y-2">
-                  <Label className="text-xs">Máximo por conversa: {maxMessagesPerContact === 0 ? "♾️ Ilimitado" : maxMessagesPerContact}</Label>
-                  <Slider value={[maxMessagesPerContact]} onValueChange={([v]) => setMaxMessagesPerContact(v)} min={0} max={50} step={1} />
-                  <p className="text-[11px] text-muted-foreground">
-                    0 = ilimitado. Ao atingir o limite, a mensagem de encerramento é enviada e o bot para de responder.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Ban className="w-4 h-4 text-primary" />
-                  Contatos Bloqueados
-                </h3>
-                <p className="text-[11px] text-muted-foreground">
-                  O bot ignora completamente mensagens destes números.
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  <Input
-                    value={newBlockPhone}
-                    onChange={(e) => setNewBlockPhone(e.target.value)}
-                    placeholder="5511999999999"
-                    className="bg-background flex-1 min-w-[140px]"
-                  />
-                  <Input
-                    value={newBlockReason}
-                    onChange={(e) => setNewBlockReason(e.target.value)}
-                    placeholder="Motivo (opcional)"
-                    className="bg-background flex-1 min-w-[140px]"
-                  />
-                  <Button size="sm" onClick={handleAddBlockedContact} disabled={!newBlockPhone.trim()}>
-                    <Ban className="w-3.5 h-3.5 mr-1" />Bloquear
-                  </Button>
-                </div>
-                {blockedContacts.length > 0 && (
-                  <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                    {blockedContacts.map((bc) => (
-                      <div key={bc.id} className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Ban className="w-3.5 h-3.5 text-destructive" />
-                          <span className="font-mono text-foreground text-xs">{bc.phone}</span>
-                          {bc.reason && <span className="text-muted-foreground text-[11px]">— {bc.reason}</span>}
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveBlocked(bc.id)}>
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowWebhookUrl(!showWebhookUrl)}>
+                  {showWebhookUrl ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleCopyWebhook}>
+                  {webhookCopied ? <Check className="w-3.5 h-3.5 mr-1 text-primary" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                  {webhookCopied ? "Copiado!" : "Copiar"}
+                </Button>
               </div>
             </div>
+            <div className="bg-secondary/50 rounded-lg px-3 py-2 font-mono text-xs text-muted-foreground overflow-x-auto">
+              {showWebhookUrl ? webhookUrl : "••••••••••••••••••••••••••••••••••••••••••••••"}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              Configure esta URL no painel da UAZAPI como webhook de mensagens recebidas.
+            </p>
 
-            <div className="flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Salvar Configurações
-              </Button>
+            {/* Teste do Webhook */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3"><Zap className="w-4 h-4 text-primary" />Testar Webhook</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Telefone de teste</Label>
+                  <Input placeholder="5511999999999" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} className="h-8 text-sm mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Mensagem de teste</Label>
+                  <Input placeholder="Olá, isso é um teste!" value={testMessage} onChange={(e) => setTestMessage(e.target.value)} className="h-8 text-sm mt-1" />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={handleTestWebhook} disabled={testingWebhook} className="h-8 w-full" variant="outline">
+                    {testingWebhook ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
+                    {testingWebhook ? "Testando..." : "Enviar Teste"}
+                  </Button>
+                </div>
+              </div>
+              {testResult && (
+                <div className={`mt-3 rounded-lg p-3 text-xs font-mono overflow-x-auto ${testResult.status === "success" ? "bg-primary/10 border border-primary/30 text-primary" : "bg-destructive/10 border border-destructive/30 text-destructive"}`}>
+                  <p className="font-semibold mb-1">{testResult.status === "success" ? "✅ Resposta:" : "❌ Erro:"}</p>
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(testResult.data, null, 2)}</pre>
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
 
-        {/* LOGS TAB */}
+        {/* ============ ABA: LOGS ============ */}
         <TabsContent value="logs" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1916,18 +1519,10 @@ export default function Chatbot() {
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={logSearch}
-                    onChange={(e) => setLogSearch(e.target.value)}
-                    placeholder="Buscar..."
-                    className="bg-secondary/50 pl-8 h-8 w-40 text-xs"
-                  />
+                  <Input value={logSearch} onChange={(e) => setLogSearch(e.target.value)} placeholder="Buscar..." className="bg-secondary/50 pl-8 h-8 w-40 text-xs" />
                 </div>
                 <Select value={logFilter} onValueChange={setLogFilter}>
-                  <SelectTrigger className="bg-secondary/50 h-8 w-36 text-xs">
-                    <Filter className="w-3 h-3 mr-1" />
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="bg-secondary/50 h-8 w-36 text-xs"><Filter className="w-3 h-3 mr-1" /><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="client">Clientes</SelectItem>
@@ -1958,29 +1553,17 @@ export default function Chatbot() {
                   const ctx = CONTEXT_LABELS[log.context_type] || CONTEXT_LABELS.new_contact;
                   const isExpanded = expandedLog === log.id;
                   return (
-                    <div
-                      key={log.id}
-                      className={`rounded-lg border transition-all cursor-pointer ${
-                        log.status === "error"
-                          ? "bg-destructive/5 border-destructive/20"
-                          : "bg-secondary/30 border-border/50 hover:border-border"
-                      }`}
-                      onClick={() => setExpandedLog(isExpanded ? null : log.id)}
-                    >
+                    <div key={log.id} className={`rounded-lg border transition-all cursor-pointer ${log.status === "error" ? "bg-destructive/5 border-destructive/20" : "bg-secondary/30 border-border/50 hover:border-border"}`} onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
                       <div className="flex items-center justify-between px-4 py-2.5">
                         <div className="flex items-center gap-2 min-w-0">
                           <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="text-sm font-medium text-foreground truncate">{log.client_name}</span>
-                          <Badge variant={ctx.color as any} className="text-[9px] shrink-0">
-                            {ctx.label}
-                          </Badge>
+                          <Badge variant={ctx.color as any} className="text-[9px] shrink-0">{ctx.label}</Badge>
                           <span className="text-[11px] font-mono text-muted-foreground hidden md:inline">{log.phone}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {log.status === "error" && <AlertCircle className="w-3.5 h-3.5 text-destructive" />}
-                          <span className="text-[11px] text-muted-foreground">
-                            {format(new Date(log.created_at), "dd/MM HH:mm")}
-                          </span>
+                          <span className="text-[11px] text-muted-foreground">{format(new Date(log.created_at), "dd/MM HH:mm")}</span>
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
                         </div>
                       </div>
@@ -1988,23 +1571,17 @@ export default function Chatbot() {
                         <div className="px-4 pb-3 space-y-2 border-t border-border/30 pt-2">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                             <div className="bg-background/50 rounded p-2.5">
-                              <span className="text-muted-foreground block mb-1 font-semibold">📩 Mensagem Recebida:</span>
+                              <span className="text-muted-foreground block mb-1 font-semibold">📩 Recebida:</span>
                               <span className="text-foreground whitespace-pre-wrap">{log.message_received || "—"}</span>
                             </div>
                             <div className="bg-background/50 rounded p-2.5">
-                              <span className="text-muted-foreground block mb-1 font-semibold">🤖 Resposta Enviada:</span>
+                              <span className="text-muted-foreground block mb-1 font-semibold">🤖 Enviada:</span>
                               <span className="text-foreground whitespace-pre-wrap">{log.message_sent || "—"}</span>
                             </div>
                           </div>
-                          {log.error_message && (
-                            <p className="text-xs text-destructive bg-destructive/10 rounded p-2">⚠️ {log.error_message}</p>
-                          )}
+                          {log.error_message && <p className="text-xs text-destructive bg-destructive/10 rounded p-2">⚠️ {log.error_message}</p>}
                           <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                            <span>📱 {log.phone}</span>
-                            <span>•</span>
-                            <span>Tipo: {ctx.label}</span>
-                            <span>•</span>
-                            <span>Status: {log.status}</span>
+                            <span>📱 {log.phone}</span><span>•</span><span>Tipo: {ctx.label}</span><span>•</span><span>Status: {log.status}</span>
                           </div>
                         </div>
                       )}
@@ -2012,162 +1589,131 @@ export default function Chatbot() {
                   );
                 })}
                 {logs.length >= logsLimit && (
-                  <Button
-                    variant="ghost"
-                    className="w-full text-xs"
-                    onClick={() => {
-                      setLogsLimit((prev) => prev + 50);
-                      fetchLogs();
-                    }}
-                  >
-                    Carregar mais...
-                  </Button>
+                  <Button variant="ghost" className="w-full text-xs" onClick={() => { setLogsLimit((prev) => prev + 50); fetchLogs(); }}>Carregar mais...</Button>
                 )}
               </div>
             )}
           </div>
         </TabsContent>
 
-        {/* SIMULATOR TAB */}
-        <TabsContent value="simulator" className="space-y-4 mt-4">
-          {companyId && <ChatSimulator companyId={companyId} />}
-          {!companyId && (
-            <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">
-              Carregando...
-            </div>
-          )}
-        </TabsContent>
+        {/* ============ ABA: AVANÇADO (merge advanced + diagnostics) ============ */}
+        <TabsContent value="avancado" className="space-y-4 mt-4">
+          <div className="glass-card rounded-xl p-6 space-y-6">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Settings2 className="w-5 h-5 text-primary" />
+              Configurações Avançadas
+            </h2>
 
-        {/* DIAGNOSTICS TAB */}
-        <TabsContent value="diagnostics" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-primary" />
-                  Painel de Diagnóstico
-                </h2>
-                <p className="text-muted-foreground text-xs mt-1">
-                  Eventos recentes do webhook — falhas, payloads inválidos e mídias não processáveis.
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={logsLoading} className="h-8">
-                <RefreshCw className={`w-3.5 h-3.5 mr-1 ${logsLoading ? "animate-spin" : ""}`} />
-                Atualizar
-              </Button>
-            </div>
-
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-center">
-                <p className="text-2xl font-bold text-foreground">{logStats.total}</p>
-                <p className="text-[11px] text-muted-foreground">Total de Eventos</p>
-              </div>
-              <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 text-center">
-                <p className="text-2xl font-bold text-primary">{logStats.success}</p>
-                <p className="text-[11px] text-muted-foreground">Processados</p>
-              </div>
-              <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20 text-center">
-                <p className="text-2xl font-bold text-destructive">{logStats.errors}</p>
-                <p className="text-[11px] text-muted-foreground">Erros</p>
-              </div>
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {logs.filter((l) => l.context_type === "media_received" || l.context_type === "invalid_payload").length}
-                </p>
-                <p className="text-[11px] text-muted-foreground">Ignorados/Inválidos</p>
+            {/* Humanização delays */}
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Timer className="w-4 h-4 text-primary" />Simulação de Presença</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Delay mínimo: {minDelay}s</Label>
+                  <Slider value={[minDelay]} onValueChange={([v]) => setMinDelay(v)} min={1} max={15} step={1} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Delay máximo: {maxDelay}s</Label>
+                  <Slider value={[maxDelay]} onValueChange={([v]) => setMaxDelay(v)} min={2} max={20} step={1} />
+                </div>
               </div>
             </div>
 
-            {/* Diagnostic events list */}
-            {(() => {
-              const diagnosticLogs = logs.filter(
-                (l) => l.status === "error" || l.status === "ignored" || l.context_type === "invalid_payload" || l.context_type === "media_received"
-              );
-              if (diagnosticLogs.length === 0) {
+            {/* Rate limit */}
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Shield className="w-4 h-4 text-primary" />Limite de Mensagens por Contato</h3>
+              <div className="space-y-2">
+                <Label className="text-xs">Máximo: {maxMessagesPerContact === 0 ? "♾️ Ilimitado" : maxMessagesPerContact}</Label>
+                <Slider value={[maxMessagesPerContact]} onValueChange={([v]) => setMaxMessagesPerContact(v)} min={0} max={50} step={1} />
+                <p className="text-[11px] text-muted-foreground">0 = ilimitado. Ao atingir, envia mensagem de encerramento.</p>
+              </div>
+            </div>
+
+            {/* Blocked contacts */}
+            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Ban className="w-4 h-4 text-primary" />Contatos Bloqueados</h3>
+              <div className="flex gap-2 flex-wrap">
+                <Input value={newBlockPhone} onChange={(e) => setNewBlockPhone(e.target.value)} placeholder="5511999999999" className="bg-background flex-1 min-w-[140px]" />
+                <Input value={newBlockReason} onChange={(e) => setNewBlockReason(e.target.value)} placeholder="Motivo (opcional)" className="bg-background flex-1 min-w-[140px]" />
+                <Button size="sm" onClick={handleAddBlockedContact} disabled={!newBlockPhone.trim()}><Ban className="w-3.5 h-3.5 mr-1" />Bloquear</Button>
+              </div>
+              {blockedContacts.length > 0 && (
+                <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                  {blockedContacts.map((bc) => (
+                    <div key={bc.id} className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Ban className="w-3.5 h-3.5 text-destructive" />
+                        <span className="font-mono text-foreground text-xs">{bc.phone}</span>
+                        {bc.reason && <span className="text-muted-foreground text-[11px]">— {bc.reason}</span>}
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveBlocked(bc.id)}><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Diagnostics Summary */}
+            <div className="border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3"><AlertCircle className="w-4 h-4 text-primary" />Diagnóstico</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-center">
+                  <p className="text-2xl font-bold text-foreground">{logStats.total}</p>
+                  <p className="text-[11px] text-muted-foreground">Total</p>
+                </div>
+                <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 text-center">
+                  <p className="text-2xl font-bold text-primary">{logStats.success}</p>
+                  <p className="text-[11px] text-muted-foreground">Processados</p>
+                </div>
+                <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20 text-center">
+                  <p className="text-2xl font-bold text-destructive">{logStats.errors}</p>
+                  <p className="text-[11px] text-muted-foreground">Erros</p>
+                </div>
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 text-center">
+                  <p className="text-2xl font-bold text-foreground">{logs.filter((l) => l.context_type === "media_received" || l.context_type === "invalid_payload").length}</p>
+                  <p className="text-[11px] text-muted-foreground">Ignorados</p>
+                </div>
+              </div>
+
+              {(() => {
+                const diagnosticLogs = logs.filter((l) => l.status === "error" || l.status === "ignored" || l.context_type === "invalid_payload" || l.context_type === "media_received");
+                if (diagnosticLogs.length === 0) {
+                  return (
+                    <div className="text-center py-6 text-muted-foreground text-sm mt-3">
+                      <Check className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p>Nenhum problema encontrado! 🎉</p>
+                    </div>
+                  );
+                }
                 return (
-                  <div className="text-center py-10 text-muted-foreground text-sm">
-                    <Check className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>Nenhum problema encontrado! 🎉</p>
-                    <p className="text-xs mt-1">Todos os webhooks foram processados com sucesso.</p>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto mt-3">
+                    {diagnosticLogs.slice(0, 20).map((log) => {
+                      const ctx = CONTEXT_LABELS[log.context_type] || CONTEXT_LABELS.error;
+                      return (
+                        <div key={log.id} className={`rounded-lg border px-4 py-2.5 ${log.status === "error" ? "bg-destructive/5 border-destructive/20" : "bg-secondary/30 border-border/50"}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {log.status === "error" ? <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" /> : <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                              <span className="text-sm font-medium text-foreground truncate">{log.client_name}</span>
+                              <Badge variant={ctx.color as any} className="text-[9px] shrink-0">{ctx.label}</Badge>
+                            </div>
+                            <span className="text-[11px] text-muted-foreground">{format(new Date(log.created_at), "dd/MM HH:mm")}</span>
+                          </div>
+                          {log.error_message && <p className="text-xs text-destructive mt-1">⚠️ {log.error_message}</p>}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              }
-              return (
-                <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                  {diagnosticLogs.map((log) => {
-                    const ctx = CONTEXT_LABELS[log.context_type] || CONTEXT_LABELS.error;
-                    const isExpanded = expandedLog === log.id;
-                    return (
-                      <div
-                        key={log.id}
-                        className={`rounded-lg border transition-all cursor-pointer ${
-                          log.status === "error"
-                            ? "bg-destructive/5 border-destructive/20"
-                            : log.status === "ignored"
-                            ? "bg-muted/30 border-border/50"
-                            : "bg-secondary/30 border-border/50"
-                        }`}
-                        onClick={() => setExpandedLog(isExpanded ? null : log.id)}
-                      >
-                        <div className="flex items-center justify-between px-4 py-2.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {log.status === "error" ? (
-                              <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0" />
-                            ) : (
-                              <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            )}
-                            <span className="text-sm font-medium text-foreground truncate">{log.client_name}</span>
-                            <Badge variant={ctx.color as any} className="text-[9px] shrink-0">
-                              {ctx.label}
-                            </Badge>
-                            <Badge variant="outline" className="text-[9px] shrink-0">
-                              {log.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[11px] font-mono text-muted-foreground hidden md:inline">{log.phone}</span>
-                            <span className="text-[11px] text-muted-foreground">
-                              {format(new Date(log.created_at), "dd/MM HH:mm:ss")}
-                            </span>
-                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
-                          </div>
-                        </div>
-                        {isExpanded && (
-                          <div className="px-4 pb-3 space-y-2 border-t border-border/30 pt-2">
-                            {log.error_message && (
-                              <div className="bg-destructive/10 rounded p-2.5 text-xs">
-                                <span className="text-destructive font-semibold block mb-1">⚠️ Motivo da falha:</span>
-                                <span className="text-foreground font-mono text-[11px] break-all">{log.error_message}</span>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                              <div className="bg-background/50 rounded p-2.5">
-                                <span className="text-muted-foreground block mb-1 font-semibold">📩 Mensagem Recebida:</span>
-                                <span className="text-foreground whitespace-pre-wrap">{log.message_received || "—"}</span>
-                              </div>
-                              <div className="bg-background/50 rounded p-2.5">
-                                <span className="text-muted-foreground block mb-1 font-semibold">🤖 Resposta Enviada:</span>
-                                <span className="text-foreground whitespace-pre-wrap">{log.message_sent || "—"}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                              <span>📱 {log.phone}</span>
-                              <span>•</span>
-                              <span>Tipo: {ctx.label}</span>
-                              <span>•</span>
-                              <span>Status: {log.status}</span>
-                              <span>•</span>
-                              <span>ID: <span className="font-mono">{log.id.slice(0, 8)}</span></span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+              })()}
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleSaveSettings} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Configurações
+              </Button>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
