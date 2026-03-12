@@ -298,6 +298,13 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          interactive_menu_body: string
+          interactive_menu_button_text: string
+          interactive_menu_enabled: boolean
+          interactive_menu_footer: string
+          interactive_menu_items: Json
+          interactive_menu_title: string
+          interactive_menu_type: string
           is_active: boolean
           max_delay_seconds: number
           max_messages_per_contact: number
@@ -325,6 +332,13 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          interactive_menu_body?: string
+          interactive_menu_button_text?: string
+          interactive_menu_enabled?: boolean
+          interactive_menu_footer?: string
+          interactive_menu_items?: Json
+          interactive_menu_title?: string
+          interactive_menu_type?: string
           is_active?: boolean
           max_delay_seconds?: number
           max_messages_per_contact?: number
@@ -352,6 +366,13 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          interactive_menu_body?: string
+          interactive_menu_button_text?: string
+          interactive_menu_enabled?: boolean
+          interactive_menu_footer?: string
+          interactive_menu_items?: Json
+          interactive_menu_title?: string
+          interactive_menu_type?: string
           is_active?: boolean
           max_delay_seconds?: number
           max_messages_per_contact?: number
