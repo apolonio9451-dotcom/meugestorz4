@@ -118,6 +118,60 @@ export type Database = {
           },
         ]
       }
+      bot_training_rules: {
+        Row: {
+          action_config: Json
+          action_type: string
+          company_id: string
+          created_at: string
+          id: string
+          instruction: string
+          is_active: boolean
+          media_id: string | null
+          trigger_question: string
+          updated_at: string
+        }
+        Insert: {
+          action_config?: Json
+          action_type?: string
+          company_id: string
+          created_at?: string
+          id?: string
+          instruction?: string
+          is_active?: boolean
+          media_id?: string | null
+          trigger_question?: string
+          updated_at?: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          instruction?: string
+          is_active?: boolean
+          media_id?: string | null
+          trigger_question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_training_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_training_rules_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_auto_replies: {
         Row: {
           company_id: string
