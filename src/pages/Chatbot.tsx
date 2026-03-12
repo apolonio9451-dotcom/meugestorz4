@@ -1074,6 +1074,238 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
+        {/* INTERACTIVE MENU TAB */}
+        <TabsContent value="menu" className="space-y-4 mt-4">
+          <div className="glass-card rounded-xl p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Layers className="w-5 h-5 text-primary" />
+                Menu Interativo WhatsApp
+              </h2>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Ativo</Label>
+                <Switch checked={menuEnabled} onCheckedChange={setMenuEnabled} />
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Configure um menu interativo que será enviado como primeira resposta a cada mensagem recebida. O cliente escolhe uma opção antes da IA responder.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-semibold">Tipo de Menu</Label>
+                <Select value={menuType} onValueChange={(v) => {
+                  setMenuType(v);
+                  if (v === "buttons" && menuItems.length > 3) {
+                    setMenuItems(menuItems.slice(0, 3));
+                  }
+                }}>
+                  <SelectTrigger className="bg-secondary/50 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buttons">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Botões Rápidos</span>
+                        <span className="text-xs text-muted-foreground">— Máx 3 botões</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="list">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Menu de Lista</span>
+                        <span className="text-xs text-muted-foreground">— Até 10 opções</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Título da Mensagem</Label>
+                  <Input
+                    value={menuTitle}
+                    onChange={(e) => setMenuTitle(e.target.value)}
+                    placeholder="Ex: Olá! Como posso ajudar?"
+                    className="bg-secondary/50"
+                    maxLength={60}
+                  />
+                  <p className="text-[10px] text-muted-foreground">{menuTitle.length}/60</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Rodapé (opcional)</Label>
+                  <Input
+                    value={menuFooter}
+                    onChange={(e) => setMenuFooter(e.target.value)}
+                    placeholder="Ex: Escolha uma opção abaixo"
+                    className="bg-secondary/50"
+                    maxLength={60}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Corpo da Mensagem</Label>
+                <Textarea
+                  value={menuBody}
+                  onChange={(e) => setMenuBody(e.target.value)}
+                  placeholder="Ex: Selecione o motivo do seu contato para que eu possa te atender melhor 😊"
+                  className="bg-secondary/50 min-h-[80px]"
+                  maxLength={1024}
+                />
+              </div>
+
+              {menuType === "list" && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Texto do Botão da Lista</Label>
+                  <Input
+                    value={menuButtonText}
+                    onChange={(e) => setMenuButtonText(e.target.value)}
+                    placeholder="Ver Opções"
+                    className="bg-secondary/50"
+                    maxLength={20}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Texto exibido no botão que abre a lista</p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">
+                    Opções do Menu ({menuItems.length}/{menuType === "buttons" ? 3 : 10})
+                  </Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const maxItems = menuType === "buttons" ? 3 : 10;
+                      if (menuItems.length >= maxItems) {
+                        toast({ title: `Máximo de ${maxItems} opções`, variant: "destructive" });
+                        return;
+                      }
+                      setMenuItems([...menuItems, { id: `opt_${Date.now()}`, title: "", description: "" }]);
+                    }}
+                    disabled={menuItems.length >= (menuType === "buttons" ? 3 : 10)}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Adicionar Opção
+                  </Button>
+                </div>
+
+                {menuItems.length === 0 && (
+                  <div className="text-center py-6 text-muted-foreground text-sm bg-secondary/30 rounded-lg">
+                    <Layers className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p>Nenhuma opção adicionada.</p>
+                  </div>
+                )}
+
+                {menuItems.map((item, index) => (
+                  <div key={item.id || index} className="bg-secondary/30 rounded-lg p-3 border border-border/50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground">Opção {index + 1}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setMenuItems(menuItems.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">Título *</Label>
+                        <Input
+                          value={item.title}
+                          onChange={(e) => {
+                            const updated = [...menuItems];
+                            updated[index] = { ...updated[index], title: e.target.value };
+                            setMenuItems(updated);
+                          }}
+                          placeholder={menuType === "buttons" ? "Ex: Ver Catálogo" : "Ex: 📋 Ver Catálogo"}
+                          className="h-8 text-sm bg-background/50"
+                          maxLength={menuType === "buttons" ? 20 : 24}
+                        />
+                      </div>
+                      {menuType === "list" && (
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">Descrição (opcional)</Label>
+                          <Input
+                            value={item.description || ""}
+                            onChange={(e) => {
+                              const updated = [...menuItems];
+                              updated[index] = { ...updated[index], description: e.target.value };
+                              setMenuItems(updated);
+                            }}
+                            placeholder="Ex: Confira nossos planos"
+                            className="h-8 text-sm bg-background/50"
+                            maxLength={72}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview */}
+            {menuItems.filter(i => i.title).length > 0 && (
+              <div className="bg-secondary/20 rounded-xl p-4 border border-border/30">
+                <p className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1">
+                  <Eye className="w-3.5 h-3.5" />
+                  Pré-visualização
+                </p>
+                <div className="bg-background rounded-lg p-4 max-w-sm border border-border/50 shadow-sm">
+                  {menuTitle && <p className="font-semibold text-sm text-foreground">{menuTitle}</p>}
+                  {menuBody && <p className="text-sm text-muted-foreground mt-1">{menuBody}</p>}
+                  {menuFooter && <p className="text-[11px] text-muted-foreground/70 mt-2">{menuFooter}</p>}
+                  <div className="mt-3 space-y-1.5">
+                    {menuType === "buttons" ? (
+                      menuItems.filter(i => i.title).map((item, idx) => (
+                        <div key={idx} className="bg-primary/10 text-primary text-center py-2 rounded-lg text-sm font-medium border border-primary/20">
+                          {item.title}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="bg-primary/10 text-primary text-center py-2 rounded-lg text-sm font-medium border border-primary/20 flex items-center justify-center gap-2">
+                        <Layers className="w-3.5 h-3.5" />
+                        {menuButtonText || "Ver Opções"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {menuType === "list" && (
+                  <div className="mt-3 bg-background rounded-lg p-3 max-w-sm border border-border/50">
+                    <p className="text-[10px] text-muted-foreground mb-2 font-semibold">Ao clicar, o cliente vê:</p>
+                    {menuItems.filter(i => i.title).map((item, idx) => (
+                      <div key={idx} className="py-2 border-b border-border/30 last:border-0">
+                        <p className="text-sm font-medium text-foreground">{item.title}</p>
+                        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Info className="w-3.5 h-3.5 text-primary shrink-0" />
+                Quando ativado, o menu será enviado como primeira resposta a cada mensagem. Use as <strong className="text-foreground mx-0.5">Respostas Automáticas (Gatilhos)</strong> para responder a opções específicas do menu.
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleSaveSettings} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Menu
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* AUTO REPLIES TAB */}
         <TabsContent value="autoreplies" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-4">
