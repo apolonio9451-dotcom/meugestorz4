@@ -317,7 +317,7 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
             triggerQuestion={trainingPanel!.question}
             currentBotReply={trainingPanel!.reply}
             onClose={() => setTrainingPanel(null)}
-            onSaved={() => fetchRulesCount()}
+            onSaved={() => { fetchRulesCount(); onRuleSaved?.(); }}
           />
         </div>
       )}
