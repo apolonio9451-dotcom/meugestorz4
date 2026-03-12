@@ -191,6 +191,7 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
         }));
         void persistToken(connection.token);
         toast.success("WhatsApp conectado!");
+        onConnected?.({ profileName: data.profileName, phoneNumber: data.phoneNumber });
       } else if (data?.qrCode) {
         setQrCode(normalizeQrCode(data.qrCode));
         setStatus("qr");
