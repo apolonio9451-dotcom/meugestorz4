@@ -337,7 +337,6 @@ export default function WhatsAppManager({ userName, companyId, onConnected }: Pr
             profileName: statusData.profileName,
             phoneNumber: statusData.phoneNumber,
           });
-          // Auto-close modal if already connected
           setTimeout(() => onConnected?.({ profileName: statusData.profileName, phoneNumber: statusData.phoneNumber }), 500);
         } else if (statusData?.qrCode) {
           setQrCode(normalizeQrCode(statusData.qrCode));
