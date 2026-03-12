@@ -244,8 +244,15 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { messageText, senderPhone, senderRaw } = extractIncomingPayload(body);
+    const { messageText, senderPhone, senderRaw, eventType } = extractIncomingPayload(body);
     const companyIdParam = new URL(req.url).searchParams.get("company_id");
+
+    // Ignore non-message events from UAZAPI (e.g. "chats", "status", "connection", etc.)
+    if (eventType && eventType !== "messages" && eventType !== "message" && eventType !== "") {
+      return new Response(JSON.stringify({ status: "ignored", event: eventType }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!messageText || !senderPhone || !companyIdParam) {
       const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
