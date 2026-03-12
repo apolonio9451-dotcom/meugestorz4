@@ -239,7 +239,8 @@ export default function Clients() {
       .replace(/{mac}/g, clientMks[0]?.mac || "")
       .replace(/{usuario}/g, client.iptv_user || "")
       .replace(/{senha}/g, client.iptv_password || "")
-      .replace(/{servidor}/g, client.server || "");
+      .replace(/{servidor}/g, client.server || "")
+      .replace(/{sua_chave_pix}/g, pixKey);
     return msg;
   };
 
