@@ -286,9 +286,28 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Handle non-text messages (audio, image, video, sticker, etc.)
+    if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
+      // Log the non-text message but don't process it through AI
+      await supabase.from("chatbot_logs").insert({
+        company_id: companyIdParam,
+        phone: normalizePhone(senderPhone),
+        client_name: `Mídia (${messageType})`,
+        message_received: `[${messageType.toUpperCase()}]`,
+        message_sent: "",
+        context_type: "media_received",
+        status: "ignored",
+        error_message: `Tipo de mensagem não processável: ${messageType}`,
+      });
+
+      return new Response(JSON.stringify({ status: "ignored", reason: "non_text_message", type: messageType }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!messageText || !senderPhone || !companyIdParam) {
       const bodyKeys = body && typeof body === "object" ? Object.keys(body).slice(0, 20) : [];
-      const debugDetails = `Missing fields -> text:${!!messageText} phone:${!!senderPhone} company_id:${!!companyIdParam} keys:${bodyKeys.join(",")}`;
+      const debugDetails = `Missing fields -> text:${!!messageText} phone:${!!senderPhone} company_id:${!!companyIdParam} type:${messageType} keys:${bodyKeys.join(",")}`;
       console.error("Invalid chatbot webhook payload", {
         debugDetails,
         senderRaw,
