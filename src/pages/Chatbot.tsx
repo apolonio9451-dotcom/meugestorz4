@@ -1949,6 +1949,16 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
+        {/* SIMULATOR TAB */}
+        <TabsContent value="simulator" className="space-y-4 mt-4">
+          {companyId && <ChatSimulator companyId={companyId} />}
+          {!companyId && (
+            <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">
+              Carregando...
+            </div>
+          )}
+        </TabsContent>
+
         {/* DIAGNOSTICS TAB */}
         <TabsContent value="diagnostics" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-4">
