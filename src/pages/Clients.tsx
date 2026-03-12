@@ -1346,7 +1346,7 @@ export default function Clients() {
                   const phone = welcomeData.whatsapp.replace(/\D/g, "");
                   // If 10-11 digits (BR without country code), add 55; otherwise use as-is
                   const fullPhone = (phone.length === 10 || phone.length === 11) ? "55" + phone : phone;
-                  window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+                  window.open(`https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(msg)}`, "_blank");
                 } else {
                   toast.error("WhatsApp não informado para este cliente.");
                 }

@@ -88,7 +88,7 @@ export default function WinBackClientRow({ client, companyId, currentStep, lastS
       return;
     }
 
-    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`, "_blank");
 
     const nowISO = new Date().toISOString();
     const newStep = currentStep + 1;
