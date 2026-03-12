@@ -1161,7 +1161,7 @@ export default function Clients() {
                       <div className={`h-full rounded-full transition-all ${getBarColor(days)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-[10px] font-medium", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
+                      <span className={cn("text-[10px] font-medium", days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
                         {getDaysLabel(days)}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">
