@@ -382,6 +382,7 @@ export default function Clients() {
     setDialogOpen(false);
     setEditing(null);
     setFormMacKeys([]);
+    setFormCredentials([{ username: "", password: "", label: "" }]);
     setFormPlanId("");
     setFormAmount("");
     setFormEndDate(undefined);
