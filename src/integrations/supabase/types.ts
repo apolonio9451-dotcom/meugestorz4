@@ -497,6 +497,51 @@ export type Database = {
           },
         ]
       }
+      client_credentials: {
+        Row: {
+          client_id: string
+          company_id: string
+          created_at: string
+          id: string
+          label: string
+          password: string
+          username: string
+        }
+        Insert: {
+          client_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          label?: string
+          password?: string
+          username?: string
+        }
+        Update: {
+          client_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          password?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_credentials_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_mac_keys: {
         Row: {
           app_name: string

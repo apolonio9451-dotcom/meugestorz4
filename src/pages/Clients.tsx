@@ -50,6 +50,13 @@ interface MacKey {
   expires_at: string;
 }
 
+interface Credential {
+  id?: string;
+  username: string;
+  password: string;
+  label: string;
+}
+
 export default function Clients() {
   const { companyId, user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
@@ -62,6 +69,7 @@ export default function Clients() {
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
   const [formMacKeys, setFormMacKeys] = useState<MacKey[]>([]);
+  const [formCredentials, setFormCredentials] = useState<Credential[]>([{ username: "", password: "", label: "" }]);
   const [plans, setPlans] = useState<{ id: string; name: string; price: number; duration_days: number }[]>([]);
   const [formPlanId, setFormPlanId] = useState("");
   const [formAmount, setFormAmount] = useState("");
@@ -252,6 +260,15 @@ export default function Clients() {
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
       setFormReferredBy(client.referred_by || "");
       setReferralSearch(client.referred_by || "");
+      // Load credentials from DB
+      supabase.from("client_credentials").select("id, username, password, label").eq("client_id", client.id).then(({ data }) => {
+        if (data && data.length > 0) {
+          setFormCredentials(data.map(c => ({ id: c.id, username: c.username, password: c.password, label: c.label || "" })));
+        } else {
+          // Fallback: use legacy iptv_user/iptv_password
+          setFormCredentials([{ username: client.iptv_user || "", password: client.iptv_password || "", label: "" }]);
+        }
+      });
       const sub = subscriptions[client.id];
       if (sub) {
         setFormPlanId(sub.plan_id);
@@ -265,6 +282,7 @@ export default function Clients() {
     } else {
       setEditing(null);
       setFormMacKeys([]);
+      setFormCredentials([{ username: "", password: "", label: "" }]);
       setFormBirthDate(undefined);
       setFormReferredBy("");
       setReferralSearch("");
@@ -288,8 +306,8 @@ export default function Clients() {
       cpf: formBirthDate ? format(formBirthDate, "dd/MM/yyyy") : "",
       notes: form.get("notes") as string,
       server: form.get("server") as string,
-      iptv_user: form.get("iptv_user") as string,
-      iptv_password: form.get("iptv_password") as string,
+      iptv_user: formCredentials[0]?.username || "",
+      iptv_password: formCredentials[0]?.password || "",
       phone: "",
       address: "",
       status: "active",
@@ -329,6 +347,21 @@ export default function Clients() {
         );
       }
 
+      // Save credentials
+      await supabase.from("client_credentials").delete().eq("client_id", clientId);
+      const validCreds = formCredentials.filter(c => c.username.trim() || c.password.trim());
+      if (validCreds.length > 0) {
+        await supabase.from("client_credentials").insert(
+          validCreds.map(c => ({
+            client_id: clientId!,
+            company_id: companyId,
+            username: c.username.trim(),
+            password: c.password.trim(),
+            label: c.label.trim(),
+          }))
+        );
+      }
+
       // Save subscription
       if (formPlanId && formEndDate) {
         await supabase.from("client_subscriptions").delete().eq("client_id", clientId);
@@ -349,6 +382,7 @@ export default function Clients() {
     setDialogOpen(false);
     setEditing(null);
     setFormMacKeys([]);
+    setFormCredentials([{ username: "", password: "", label: "" }]);
     setFormPlanId("");
     setFormAmount("");
     setFormEndDate(undefined);
@@ -566,7 +600,7 @@ export default function Clients() {
 
   return (
     <div className="space-y-3 sm:space-y-6">
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditing(null); setFormMacKeys([]); setFormCredentials([{ username: "", password: "", label: "" }]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -659,16 +693,57 @@ export default function Clients() {
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Acesso ao Portal</p>
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Usuário *</Label>
-                      <Input name="iptv_user" required placeholder="usuario" defaultValue={editing?.iptv_user || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                  {formCredentials.map((cred, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-primary/15 bg-primary/5">
+                      <div className="flex gap-2">
+                        <div className="flex-1 space-y-2">
+                          {formCredentials.length > 1 && (
+                            <Input
+                              placeholder="Rótulo (ex: TV Sala, Celular...)"
+                              value={cred.label}
+                              onChange={(e) => {
+                                const updated = [...formCredentials];
+                                updated[i] = { ...updated[i], label: e.target.value };
+                                setFormCredentials(updated);
+                              }}
+                              className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                            />
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              placeholder="Usuário"
+                              value={cred.username}
+                              onChange={(e) => {
+                                const updated = [...formCredentials];
+                                updated[i] = { ...updated[i], username: e.target.value };
+                                setFormCredentials(updated);
+                              }}
+                              required={i === 0}
+                              className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                            />
+                            <Input
+                              placeholder="Senha"
+                              value={cred.password}
+                              onChange={(e) => {
+                                const updated = [...formCredentials];
+                                updated[i] = { ...updated[i], password: e.target.value };
+                                setFormCredentials(updated);
+                              }}
+                              className="h-9 text-sm border-primary/20 focus:border-primary/50"
+                            />
+                          </div>
+                        </div>
+                        {formCredentials.length > 1 && (
+                          <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 self-center" onClick={() => setFormCredentials(formCredentials.filter((_, idx) => idx !== i))}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Senha</Label>
-                      <Input name="iptv_password" placeholder="senha" defaultValue={editing?.iptv_password || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
-                    </div>
-                  </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setFormCredentials([...formCredentials, { username: "", password: "", label: "" }])}>
+                    <Plus className="w-3 h-3 mr-1" /> Adicionar Usuário
+                  </Button>
                 </div>
               </div>
               <div>
