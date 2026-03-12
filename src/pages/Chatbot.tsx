@@ -93,6 +93,10 @@ export default function Chatbot() {
   const [closingMessage, setClosingMessage] = useState("");
   const [aiModel, setAiModel] = useState("google/gemini-3-flash-preview");
   const [aiTemperature, setAiTemperature] = useState(0.7);
+  const [newContactInstructions, setNewContactInstructions] = useState("");
+  const [clientInstructions, setClientInstructions] = useState("");
+  const [presenceEnabled, setPresenceEnabled] = useState(true);
+  const [aiDecisionLog, setAiDecisionLog] = useState(true);
 
   // Auto replies
   const [autoReplies, setAutoReplies] = useState<any[]>([]);
