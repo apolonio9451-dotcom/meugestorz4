@@ -1177,7 +1177,7 @@ export default function Clients() {
                     {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at ? (
                       <div className="flex">
                         <a
-                          href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+                          href={`https://api.whatsapp.com/send?phone=${client.whatsapp.replace(/\D/g, "")}&text=${encodeURIComponent(
                             (() => {
                               const defaultSupportMsg = "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
                               let msg = messageTemplates["suporte"] || defaultSupportMsg;
