@@ -805,9 +805,6 @@ export default function Chatbot() {
           <TabsTrigger value="media" className="text-xs py-2">
             <Music className="w-3.5 h-3.5 mr-1" />Mídia
           </TabsTrigger>
-          <TabsTrigger value="schedule" className="text-xs py-2">
-            <Clock className="w-3.5 h-3.5 mr-1" />Agendamento
-          </TabsTrigger>
           <TabsTrigger value="advanced" className="text-xs py-2">
             <Settings2 className="w-3.5 h-3.5 mr-1" />Avançado
           </TabsTrigger>
