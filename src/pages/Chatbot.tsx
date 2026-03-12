@@ -905,72 +905,72 @@ export default function Chatbot() {
 
         {/* TRAINING TAB (unified) */}
         <TabsContent value="training" className="space-y-4 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-6">
+          <div className="glass-card rounded-xl p-3 md:p-6 space-y-4 md:space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Brain className="w-5 h-5 text-primary" />
+              <h2 className="text-sm md:text-lg font-semibold text-foreground flex items-center gap-2">
+                <Brain className="w-4 h-4 text-primary" />
                 Treinamento da IA
               </h2>
-              <Button variant="outline" size="sm" onClick={handleRestoreDefaults}>
-                <RotateCcw className="w-3.5 h-3.5 mr-1" />
+              <Button variant="outline" size="sm" className="text-[10px] md:text-xs h-7 md:h-8" onClick={handleRestoreDefaults}>
+                <RotateCcw className="w-3 h-3 mr-1" />
                 Restaurar Padrão
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[11px] md:text-sm text-muted-foreground">
               Configure tudo que a IA precisa saber em um só lugar. O treinamento é dividido em 3 seções: personalidade base, script de vendas e regras de suporte.
             </p>
 
             {/* How it works - visual diagram */}
-            <div className="bg-secondary/30 rounded-lg p-4 border border-border/50">
-              <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-3">
-                <Info className="w-3.5 h-3.5 text-primary" />
+            <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+              <h3 className="text-[10px] md:text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
+                <Info className="w-3 h-3 text-primary" />
                 Como funciona o fluxo de atendimento
               </h3>
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-xs text-muted-foreground">
-                <div className="bg-background/60 rounded-lg p-3 border border-border/30 text-center flex-1">
-                  <MessageCircle className="w-4 h-4 text-primary mx-auto mb-1" />
-                  <p className="font-semibold text-foreground">Mensagem chega</p>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-muted-foreground">
+                <div className="bg-background/60 rounded-lg p-2 border border-border/30 text-center flex-1 w-full md:w-auto">
+                  <MessageCircle className="w-3.5 h-3.5 text-primary mx-auto mb-0.5" />
+                  <p className="font-semibold text-foreground text-[11px]">Mensagem chega</p>
                 </div>
                 <span className="text-primary font-bold hidden md:block">→</span>
-                <div className="bg-background/60 rounded-lg p-3 border border-border/30 text-center flex-1">
-                  <Search className="w-4 h-4 text-primary mx-auto mb-1" />
-                  <p className="font-semibold text-foreground">É cliente?</p>
-                  <p className="text-[10px]">Busca no banco de dados</p>
+                <div className="bg-background/60 rounded-lg p-2 border border-border/30 text-center flex-1 w-full md:w-auto">
+                  <Search className="w-3.5 h-3.5 text-primary mx-auto mb-0.5" />
+                  <p className="font-semibold text-foreground text-[11px]">É cliente?</p>
+                  <p className="text-[9px]">Busca no banco de dados</p>
                 </div>
                 <span className="text-primary font-bold hidden md:block">→</span>
-                <div className="grid grid-cols-2 gap-2 flex-1">
-                  <div className="bg-primary/10 rounded-lg p-2 border border-primary/20 text-center">
-                    <p className="font-semibold text-primary text-[11px]">✅ Sim</p>
-                    <p className="text-[10px]">Personalidade + Regras de Suporte + dados do plano</p>
+                <div className="grid grid-cols-2 gap-1.5 flex-1 w-full md:w-auto">
+                  <div className="bg-primary/10 rounded-lg p-1.5 border border-primary/20 text-center">
+                    <p className="font-semibold text-primary text-[10px]">✅ Sim</p>
+                    <p className="text-[9px]">Personalidade + Regras de Suporte + dados do plano</p>
                   </div>
-                  <div className="bg-accent/30 rounded-lg p-2 border border-accent/30 text-center">
-                    <p className="font-semibold text-foreground text-[11px]">❌ Não</p>
-                    <p className="text-[10px]">Personalidade + Script de Vendas + Menu de boas-vindas</p>
+                  <div className="bg-accent/30 rounded-lg p-1.5 border border-accent/30 text-center">
+                    <p className="font-semibold text-foreground text-[10px]">❌ Não</p>
+                    <p className="text-[9px]">Personalidade + Script de Vendas + Menu de boas-vindas</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Section 1: Personality */}
-            <div className="space-y-3 border-t border-border pt-5">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">1</div>
-                <Label className="text-sm font-semibold">Personalidade Base (System Prompt)</Label>
+            <div className="space-y-2 border-t border-border pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold">1</div>
+                <Label className="text-xs md:text-sm font-semibold">Personalidade Base (System Prompt)</Label>
               </div>
-              <p className="text-xs text-muted-foreground ml-8">
-                O "DNA" do bot — define quem ele é, tom de voz, nome e regras gerais. Usado em TODAS as conversas.
+              <p className="text-[10px] md:text-xs text-muted-foreground ml-7">
+                O "DNA" do bot — define quem ele é, tom de voz, nome e regras gerais.
               </p>
               <Textarea
                 value={personality}
                 onChange={(e) => setPersonality(e.target.value)}
                 placeholder={DEFAULT_PERSONALITY}
-                className="bg-secondary/50 border-border min-h-[180px] text-sm font-mono"
+                className="bg-secondary/50 border-border min-h-[120px] md:min-h-[180px] text-xs md:text-sm font-mono"
               />
               <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setPersonality(DEFAULT_PERSONALITY)}>
-                  <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo pronto
+                <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => setPersonality(DEFAULT_PERSONALITY)}>
+                  <Sparkles className="w-3 h-3 mr-1" /> Usar exemplo
                 </Button>
-                <span className="text-[11px] text-muted-foreground">{personality.length} caracteres</span>
+                <span className="text-[10px] text-muted-foreground">{personality.length} chars</span>
               </div>
             </div>
 
