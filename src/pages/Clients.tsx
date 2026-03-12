@@ -1177,7 +1177,7 @@ export default function Clients() {
                     {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at ? (
                       <div className="flex">
                         <a
-                          href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+                          href={`https://api.whatsapp.com/send?phone=${client.whatsapp.replace(/\D/g, "")}&text=${encodeURIComponent(
                             (() => {
                               const defaultSupportMsg = "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
                               let msg = messageTemplates["suporte"] || defaultSupportMsg;
@@ -1260,7 +1260,7 @@ export default function Clients() {
                                 const freshTemplates = await fetchLatestMessageTemplates();
                                 const currentDays = sub ? getDaysRemaining(sub.end_date) : null;
                                 const msg = buildCobrancaMessage(client, sub, currentDays, freshTemplates, forcedCategory);
-                                const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+                                const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`;
 
                                 if (isMobileDevice) {
                                   window.location.href = url;
@@ -1346,7 +1346,7 @@ export default function Clients() {
                   const phone = welcomeData.whatsapp.replace(/\D/g, "");
                   // If 10-11 digits (BR without country code), add 55; otherwise use as-is
                   const fullPhone = (phone.length === 10 || phone.length === 11) ? "55" + phone : phone;
-                  window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+                  window.open(`https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(msg)}`, "_blank");
                 } else {
                   toast.error("WhatsApp não informado para este cliente.");
                 }
