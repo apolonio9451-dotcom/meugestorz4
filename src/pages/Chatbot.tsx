@@ -1704,6 +1704,8 @@ export default function Chatbot() {
                     <SelectItem value="auto_reply">Respostas Auto</SelectItem>
                     <SelectItem value="transfer">Transferência</SelectItem>
                     <SelectItem value="away">Fora do Horário</SelectItem>
+                    <SelectItem value="media_received">Mídia Recebida</SelectItem>
+                    <SelectItem value="invalid_payload">Payload Inválido</SelectItem>
                     <SelectItem value="error">Erros</SelectItem>
                   </SelectContent>
                 </Select>
