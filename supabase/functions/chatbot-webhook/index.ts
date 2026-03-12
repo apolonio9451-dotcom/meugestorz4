@@ -333,7 +333,11 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const companyIdParam = new URL(req.url).searchParams.get("company_id");
+  // UAZAPI appends event type to URL path, which can pollute the company_id param
+  // e.g. "8979f2af-d095-41d0-9de3-7a5797a8fdc1/messages/text" — extract just the UUID
+  const rawCompanyId = new URL(req.url).searchParams.get("company_id") || "";
+  const uuidMatch = rawCompanyId.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  const companyIdParam = uuidMatch ? uuidMatch[1] : rawCompanyId || null;
 
   try {
     // ===== STEP 1: Parse body =====
