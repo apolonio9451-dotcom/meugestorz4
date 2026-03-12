@@ -200,19 +200,30 @@ export default function Clients() {
   const buildCobrancaMessage = (client: Client, sub: Subscription | undefined, days: number | null): string => {
     const category = getMessageCategory(days);
     const defaultMessages: Record<string, string> = {
-      vence_hoje: "Olá {nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
-      vence_amanha: "Olá {nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
-      a_vencer: "Olá {nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
-      vencidos: "Olá {nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
-      followup: "Olá {nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
+      vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
+      vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
+      a_vencer: "Olá {primeiro_nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
+      vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
+      followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
     };
     let msg = messageTemplates[category] || defaultMessages[category] || defaultMessages.vencidos;
     const clientMks = macKeys[client.id] || [];
+    const firstName = (client.name || "").split(" ")[0];
+    const now = new Date();
+    const brasilHour = (now.getUTCHours() - 3 + 24) % 24;
+    const saudacao = brasilHour >= 5 && brasilHour < 12 ? "Bom dia" : brasilHour >= 12 && brasilHour < 18 ? "Boa tarde" : "Boa noite";
+    const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+    const endDateObj = sub ? parseISO(sub.end_date) : new Date();
+
     msg = msg
+      .replace(/{primeiro_nome}/g, firstName)
       .replace(/{nome}/g, client.name || "")
+      .replace(/{saudacao}/g, saudacao)
+      .replace(/{dia_semana}/g, diasSemana[endDateObj.getDay()])
+      .replace(/{dia}/g, String(endDateObj.getDate()))
       .replace(/{plano}/g, sub?.plan_name || "")
       .replace(/{valor}/g, sub ? Number(sub.amount).toFixed(2).replace(".", ",") : "")
-      .replace(/{vencimento}/g, sub ? format(parseISO(sub.end_date), "dd/MM/yyyy") : "")
+      .replace(/{vencimento}/g, sub ? format(endDateObj, "dd/MM/yyyy") : "")
       .replace(/{dias}/g, days !== null ? String(Math.abs(days)) : "")
       .replace(/{mac}/g, clientMks[0]?.mac || "")
       .replace(/{usuario}/g, client.iptv_user || "")
