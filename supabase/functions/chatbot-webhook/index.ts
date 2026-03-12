@@ -317,6 +317,13 @@ function parseAiCommands(text: string): AiCommandResult {
     cleanText = cleanText.replace(/\[ENVIAR_MEDIA:.+?\]\s*/gi, "").trim();
   }
 
+  // [AUDIO:name] - shorthand trigger for audio files
+  const audioMatches = cleanText.matchAll(/\[AUDIO:(.+?)\]/gi);
+  for (const match of audioMatches) {
+    commands.push({ type: "send_audio", data: match[1].trim() });
+  }
+  cleanText = cleanText.replace(/\[AUDIO:.+?\]\s*/gi, "").trim();
+
   return { cleanText, commands };
 }
 
