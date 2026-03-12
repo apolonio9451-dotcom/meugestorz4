@@ -627,15 +627,15 @@ export default function Clients() {
   ];
 
   const getBarColor = (days: number) => {
-    if (days <= 0) return "bg-destructive/60";
-    if (days <= 1) return "bg-orange-500";
+    if (days < 0) return "bg-destructive/60";
+    if (days === 0) return "bg-orange-500";
     if (days <= 7) return "bg-yellow-500";
     return "bg-emerald-500";
   };
 
   const getBarTrackColor = (days: number) => {
-    if (days <= 0) return "bg-destructive/20";
-    if (days <= 1) return "bg-orange-500/20";
+    if (days < 0) return "bg-destructive/20";
+    if (days === 0) return "bg-orange-500/20";
     if (days <= 7) return "bg-yellow-500/20";
     return "bg-emerald-500/20";
   };
@@ -646,7 +646,8 @@ export default function Clients() {
   };
 
   const getDaysLabel = (days: number) => {
-    if (days <= 0) return "Vencido";
+    if (days < 0) return "Vencido";
+    if (days === 0) return "Vence hoje";
     if (days === 1) return "1 dia restante";
     return `${days} dias restantes`;
   };
@@ -1160,7 +1161,7 @@ export default function Clients() {
                       <div className={`h-full rounded-full transition-all ${getBarColor(days)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-[10px] font-medium", days <= 0 ? "text-destructive" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
+                      <span className={cn("text-[10px] font-medium", days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
                         {getDaysLabel(days)}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">
