@@ -375,6 +375,16 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // ===== STEP 3.5: Ignore group messages =====
+    const isGroup = body?.message?.isGroup === true || body?.chat?.wa_isGroup === true || 
+      (senderPhone && senderPhone.includes("120363"));
+    if (isGroup) {
+      console.log("Mensagem de grupo ignorada:", senderPhone);
+      return new Response(JSON.stringify({ status: "ok", reason: "group_message" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ===== STEP 4: Ignore own messages =====
     if (fromMe) {
       console.log("Mensagem própria ignorada (fromMe)");
