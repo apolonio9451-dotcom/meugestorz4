@@ -928,7 +928,15 @@ export default function Chatbot() {
                       Crie uma nova instância e escaneie o QR Code para conectar.
                     </DialogDescription>
                   </DialogHeader>
-                  <WhatsAppManager userName="Usuário" companyId={companyId} />
+                  <WhatsAppManager
+                    userName="Usuário"
+                    companyId={companyId}
+                    onConnected={(data) => {
+                      setShowNewInstanceModal(false);
+                      setConnectedBanner(data);
+                      setTimeout(() => setConnectedBanner(null), 15000);
+                    }}
+                  />
                 </DialogContent>
               </Dialog>
 
