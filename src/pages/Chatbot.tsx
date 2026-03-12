@@ -803,7 +803,7 @@ export default function Chatbot() {
             <Layers className="w-3 h-3 mr-1" />Interação & Mídia
           </TabsTrigger>
           <TabsTrigger value="simulador" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <MessageCircle className="w-3 h-3 mr-1" />Simulador
+            <Brain className="w-3 h-3 mr-1" />Treinar IA
           </TabsTrigger>
           <TabsTrigger value="conexao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Smartphone className="w-3 h-3 mr-1" />Conexão
