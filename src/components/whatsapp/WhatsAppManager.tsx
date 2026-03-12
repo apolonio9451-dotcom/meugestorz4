@@ -43,11 +43,21 @@ export default function WhatsAppManager({ userName }: Props) {
 
   const startPolling = (instanceToken: string, instanceId: string) => {
     stopPolling();
+    let attempts = 0;
     intervalRef.current = setInterval(async () => {
+      attempts++;
+      console.log(`[WhatsApp] Polling attempt ${attempts}...`);
       try {
-        const { data } = await supabase.functions.invoke("whatsapp-status", {
+        const { data, error } = await supabase.functions.invoke("whatsapp-status", {
           body: { token: instanceToken },
         });
+
+        console.log("[WhatsApp] Status response:", JSON.stringify(data));
+
+        if (error) {
+          console.error("[WhatsApp] Status error:", error);
+          return;
+        }
 
         if (data?.connected) {
           setStatus("connected");
@@ -57,13 +67,21 @@ export default function WhatsAppManager({ userName }: Props) {
             phoneNumber: data.phoneNumber,
           }));
           stopPolling();
+          toast.success("WhatsApp conectado com sucesso!");
         } else if (data?.qrCode) {
           const qr = data.qrCode;
           setQrCode(qr.startsWith("data:") ? qr : qr.startsWith("http") ? qr : `data:image/png;base64,${qr}`);
           setStatus("qr");
         }
+
+        // Stop polling after 60 attempts (3 min)
+        if (attempts >= 60) {
+          stopPolling();
+          toast.error("Tempo esgotado. Tente conectar novamente.");
+          setStatus("error");
+        }
       } catch (err) {
-        console.error("Erro no polling:", err);
+        console.error("[WhatsApp] Erro no polling:", err);
       }
     }, 3000);
   };
