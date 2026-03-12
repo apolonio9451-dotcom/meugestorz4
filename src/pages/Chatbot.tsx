@@ -963,13 +963,14 @@ export default function Chatbot() {
               <p className="text-xs text-muted-foreground mb-2">
                 A IA pode executar comandos automaticamente usando estas tags na resposta:
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
-                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MENU]</span> — Envia o menu interativo configurado</div>
-                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_CATALOGO]</span> — Envia lista de planos/preços</div>
-                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_BOTOES:A|B|C]</span> — Envia botões rápidos (máx 3)</div>
-                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_LISTA:A|B|C]</span> — Envia menu de lista expansível</div>
-                <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MEDIA:arquivo.mp3]</span> — Envia mídia da biblioteca</div>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MENU]</span> — Envia o menu interativo configurado</div>
+                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_CATALOGO]</span> — Envia lista de planos/preços</div>
+                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_BOTOES:A|B|C]</span> — Envia botões rápidos (máx 3)</div>
+                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_LISTA:A|B|C]</span> — Envia menu de lista expansível</div>
+                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[ENVIAR_MEDIA:arquivo.mp3]</span> — Envia mídia da biblioteca</div>
+                  <div className="bg-background/50 rounded p-2"><span className="text-primary">[AUDIO:nome]</span> — Atalho para enviar áudio gravado pelo nome</div>
+                </div>
             </div>
 
             <div className="flex justify-end">
