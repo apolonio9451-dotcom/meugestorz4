@@ -247,7 +247,7 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
                       title="Instruir como o bot deve responder"
                     >
                       <Pencil className="w-2.5 h-2.5" />
-                      Instruir
+                      Instruir (treino real)
                     </button>
 
                     {msg.decisions && msg.decisions.length > 0 && (

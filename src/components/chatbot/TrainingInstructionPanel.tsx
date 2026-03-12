@@ -95,7 +95,7 @@ export default function TrainingInstructionPanel({
         if (error) throw error;
       }
 
-      toast({ title: "✅ Regra de treinamento salva!" });
+      toast({ title: "✅ Regra salva! O bot usará esta instrução nas conversas reais." });
       onSaved();
       onClose();
     } catch (err: any) {
