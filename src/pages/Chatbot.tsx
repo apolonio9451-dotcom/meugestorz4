@@ -900,7 +900,8 @@ export default function Chatbot() {
         </TabsList>
 
         {/* CONNECTION TAB */}
-        <TabsContent value="connection" className="space-y-4 mt-4">
+        <TabsContent value="connection" className="space-y-6 mt-4">
+          <WhatsAppManager userName={fullName || "Usuário"} />
           <WhatsAppInstanceSection companyId={companyId} />
         </TabsContent>
 
