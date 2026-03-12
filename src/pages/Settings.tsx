@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone, Palette, Lock, Check } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
+import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
 import { themePresets, applyThemePreset, clearThemeOverrides, type ThemePreset } from "@/lib/themes";
 interface CompanySettings {
   id?: string;
