@@ -1,204 +1,289 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Smartphone, QrCode, CheckCircle2, WifiOff, RefreshCw, Zap } from "lucide-react";
+import {
+  Loader2,
+  Smartphone,
+  QrCode,
+  CheckCircle2,
+  WifiOff,
+  RefreshCw,
+  Save,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 interface Props {
   companyId: string | null;
 }
 
 export default function WhatsAppInstanceSection({ companyId }: Props) {
+  const { userName } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [fetchingQr, setFetchingQr] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [tokenInput, setTokenInput] = useState("");
+  const [showToken, setShowToken] = useState(false);
   const [hasInstance, setHasInstance] = useState(false);
-  const [instanceName, setInstanceName] = useState<string | null>(null);
-  const [connectionState, setConnectionState] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [instanceName, setInstanceName] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [profilePic, setProfilePic] = useState("");
+  const [owner, setOwner] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const checkStatus = useCallback(async () => {
-    if (!companyId) return;
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const resp = await supabase.functions.invoke("manage-instance", {
-        body: { action: "status", company_id: companyId },
-      });
-      if (resp.data) {
-        setHasInstance(resp.data.has_instance);
-        setInstanceName(resp.data.instance_name);
+  const fetchStatus = useCallback(
+    async (silent = false) => {
+      if (!companyId) return;
+      if (!silent) setChecking(true);
+      try {
+        const resp = await supabase.functions.invoke("manage-instance", {
+          body: { action: "status", company_id: companyId },
+        });
+        if (resp.data?.success) {
+          setHasInstance(resp.data.has_instance);
+          setConnected(resp.data.connected);
+          setInstanceName(resp.data.instance_name || "");
+          setProfileName(resp.data.profile_name || "");
+          setProfilePic(resp.data.profile_pic || "");
+          setOwner(resp.data.owner || "");
+
+          if (resp.data.qrcode) {
+            const qr = resp.data.qrcode;
+            setQrCode(
+              qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`
+            );
+            if (!resp.data.connected) setAutoRefresh(true);
+          } else {
+            setQrCode(null);
+            if (resp.data.connected) setAutoRefresh(false);
+          }
+        }
+      } catch (err) {
+        console.error("Status check error:", err);
+      } finally {
+        if (!silent) setChecking(false);
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Status check error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [companyId]);
+    },
+    [companyId]
+  );
 
+  // Load existing token from api_settings
   useEffect(() => {
-    checkStatus();
-  }, [checkStatus]);
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
+    const loadToken = async () => {
+      const { data } = await supabase
+        .from("api_settings" as any)
+        .select("api_token, instance_name")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (data) {
+        setTokenInput((data as any).api_token || "");
+        setInstanceName((data as any).instance_name || "");
+      }
+      fetchStatus();
+    };
+    loadToken();
+  }, [companyId, fetchStatus]);
 
-  const handleCreate = async () => {
-    if (!companyId) return;
-    setCreating(true);
+  // Auto-refresh when disconnected and QR is showing
+  useEffect(() => {
+    if (!autoRefresh || connected) return;
+    const interval = setInterval(() => fetchStatus(true), 12000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, connected, fetchStatus]);
+
+  const handleSave = async () => {
+    if (!companyId || !tokenInput.trim()) return;
+    setSaving(true);
     try {
       const resp = await supabase.functions.invoke("manage-instance", {
-        body: { action: "create", company_id: companyId, base_url: "https://ipazua.uazapi.com" },
+        body: {
+          action: "save",
+          company_id: companyId,
+          instance_token: tokenInput.trim(),
+          instance_name: userName || "instancia",
+        },
       });
 
       if (resp.error) throw new Error(resp.error.message);
       if (resp.data?.error) throw new Error(resp.data.error);
 
       setHasInstance(true);
-      setInstanceName(resp.data.instance_name);
-      toast({ title: "Instância criada com sucesso!", description: "Agora escaneie o QR Code para conectar." });
-
-      // Auto fetch QR code
-      setTimeout(() => fetchQrCode(), 2000);
-    } catch (err: any) {
-      toast({ title: "Erro ao criar instância", description: err?.message, variant: "destructive" });
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const fetchQrCode = async () => {
-    if (!companyId) return;
-    setFetchingQr(true);
-    try {
-      const resp = await supabase.functions.invoke("manage-instance", {
-        body: { action: "qrcode", company_id: companyId },
-      });
-
-      if (resp.error) throw new Error(resp.error.message);
-      if (resp.data?.error) throw new Error(resp.data.error);
-
-      const state = resp.data.state || "unknown";
-      setConnectionState(state);
+      setConnected(resp.data.connected);
+      setProfileName(resp.data.profile_name || "");
+      setProfilePic(resp.data.profile_pic || "");
+      setOwner(resp.data.owner || "");
 
       if (resp.data.qrcode) {
         const qr = resp.data.qrcode;
-        setQrCode(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-        setAutoRefresh(true);
-      } else {
-        setQrCode(null);
+        setQrCode(
+          qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`
+        );
+        if (!resp.data.connected) setAutoRefresh(true);
       }
+
+      toast({
+        title: "Token salvo com sucesso!",
+        description: resp.data.connected
+          ? "WhatsApp já está conectado."
+          : "Use o QR Code para conectar.",
+      });
     } catch (err: any) {
-      toast({ title: "Erro ao buscar QR Code", description: err?.message, variant: "destructive" });
+      toast({
+        title: "Erro ao salvar",
+        description: err?.message,
+        variant: "destructive",
+      });
     } finally {
-      setFetchingQr(false);
+      setSaving(false);
     }
   };
 
-  // Auto-refresh QR code every 15 seconds when disconnected
-  useEffect(() => {
-    if (!autoRefresh || connectionState === "connected") return;
-    const interval = setInterval(() => {
-      fetchQrCode();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, connectionState, companyId]);
+  const handleCheckStatus = async () => {
+    setChecking(true);
+    await fetchStatus();
+    setChecking(false);
+  };
 
   if (loading) return null;
-
-  const isConnected = connectionState === "connected";
 
   return (
     <div className="glass-card rounded-xl p-6 space-y-6">
       <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
         <Smartphone className="h-5 w-5 text-primary" />
-        Instância WhatsApp (UAZAPI)
+        Conexão WhatsApp (UAZAPI)
       </h2>
       <p className="text-muted-foreground text-sm -mt-4">
-        Crie e conecte automaticamente sua instância do WhatsApp para envio de mensagens.
+        Cole o token da sua instância UAZAPI. O webhook será configurado
+        automaticamente.
       </p>
 
-      {!hasInstance ? (
-        <div className="flex flex-col items-center gap-4 py-8">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Zap className="w-8 h-8 text-primary" />
-          </div>
-          <p className="text-center text-muted-foreground text-sm max-w-md">
-            Nenhuma instância encontrada. Clique abaixo para criar automaticamente sua instância e configurar o webhook.
-          </p>
-          <Button onClick={handleCreate} disabled={creating} size="lg">
-            {creating ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+      {/* Token input */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-foreground">
+          Token da Instância
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            type={showToken ? "text" : "password"}
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            placeholder="Cole o token da instância aqui"
+            className="bg-secondary/50 border-border font-mono"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowToken(!showToken)}
+          >
+            {showToken ? (
+              <EyeOff className="h-4 w-4" />
             ) : (
-              <Zap className="h-4 w-4 mr-2" />
+              <Eye className="h-4 w-4" />
             )}
-            {creating ? "Criando instância..." : "Criar Instância Automaticamente"}
           </Button>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Instance info */}
-          <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Instância</p>
-              <p className="text-sm font-mono text-foreground">{instanceName}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isConnected ? (
-                <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Conectado
-                </span>
-              ) : connectionState ? (
-                <span className="flex items-center gap-1.5 text-warning text-xs font-medium">
-                  <WifiOff className="w-4 h-4" />
-                  {connectionState}
-                </span>
-              ) : null}
-            </div>
-          </div>
+      </div>
 
-          {/* QR Code area */}
-          {isConnected ? (
+      <div className="flex gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={saving || !tokenInput.trim()}
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
+          {saving ? "Salvando..." : "Salvar e Configurar Webhook"}
+        </Button>
+        {hasInstance && (
+          <Button variant="outline" onClick={handleCheckStatus} disabled={checking}>
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${checking ? "animate-spin" : ""}`}
+            />
+            Verificar Status
+          </Button>
+        )}
+      </div>
+
+      {/* Connection status + QR Code */}
+      {hasInstance && (
+        <div className="space-y-4 pt-4 border-t border-border/30">
+          {connected ? (
             <div className="flex flex-col items-center gap-3 py-6">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+              {profilePic && (
+                <img
+                  src={profilePic}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full border-2 border-primary/30"
+                />
+              )}
+              {!profilePic && (
+                <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                </div>
+              )}
+              <div className="text-center">
+                <p className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  WhatsApp Conectado!
+                </p>
+                {profileName && (
+                  <p className="text-sm text-foreground mt-1">{profileName}</p>
+                )}
+                {owner && (
+                  <p className="text-xs text-muted-foreground">
+                    +{owner}
+                  </p>
+                )}
               </div>
-              <p className="text-emerald-400 font-semibold">WhatsApp Conectado!</p>
               <p className="text-muted-foreground text-xs text-center">
-                Sua instância está ativa e pronta para enviar/receber mensagens.
+                Sua instância está ativa e pronta para enviar/receber
+                mensagens.
               </p>
-              <Button variant="outline" size="sm" onClick={fetchQrCode} disabled={fetchingQr}>
-                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${fetchingQr ? "animate-spin" : ""}`} />
-                Verificar Status
-              </Button>
+            </div>
+          ) : qrCode ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="bg-white rounded-xl p-3 shadow-lg">
+                <img
+                  src={qrCode}
+                  alt="QR Code WhatsApp"
+                  className="w-64 h-64 object-contain"
+                />
+              </div>
+              <p className="text-muted-foreground text-xs text-center max-w-sm">
+                Abra o <strong>WhatsApp</strong> no celular →{" "}
+                <strong>Aparelhos conectados</strong> →{" "}
+                <strong>Conectar um aparelho</strong> → Escaneie o QR Code
+                acima.
+              </p>
+              <p className="text-muted-foreground/50 text-[10px] flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" /> Atualizando
+                automaticamente...
+              </p>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-4 py-4">
-              {qrCode ? (
-                <>
-                  <div className="bg-white rounded-xl p-3 shadow-lg">
-                    <img src={qrCode} alt="QR Code WhatsApp" className="w-64 h-64 object-contain" />
-                  </div>
-                  <p className="text-muted-foreground text-xs text-center max-w-sm">
-                    Abra o <strong>WhatsApp</strong> no seu celular → <strong>Aparelhos conectados</strong> → <strong>Conectar um aparelho</strong> → Escaneie o QR Code acima.
-                  </p>
-                  <p className="text-muted-foreground/50 text-[10px] flex items-center gap-1">
-                    <RefreshCw className="w-3 h-3 animate-spin" /> Atualizando automaticamente...
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <QrCode className="w-8 h-8 text-primary" />
-                  </div>
-                  <Button onClick={fetchQrCode} disabled={fetchingQr}>
-                    {fetchingQr ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <QrCode className="h-4 w-4 mr-2" />
-                    )}
-                    {fetchingQr ? "Gerando QR Code..." : "Gerar QR Code para Conectar"}
-                  </Button>
-                </>
-              )}
+            <div className="flex flex-col items-center gap-3 py-6">
+              <div className="w-12 h-12 rounded-full bg-warning/15 flex items-center justify-center">
+                <WifiOff className="w-6 h-6 text-warning" />
+              </div>
+              <p className="text-warning text-sm font-medium">
+                Instância desconectada
+              </p>
+              <p className="text-muted-foreground text-xs text-center">
+                Clique em "Verificar Status" para gerar o QR Code.
+              </p>
             </div>
           )}
         </div>
