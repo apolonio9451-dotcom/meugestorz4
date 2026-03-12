@@ -250,7 +250,7 @@ export function SlotDatePicker({
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (date) {
+    if (date && !isNaN(date.getTime())) {
       setDay(date.getDate());
       setMonth(date.getMonth());
       setYear(date.getFullYear());
