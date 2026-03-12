@@ -109,7 +109,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
           action: "save",
           company_id: companyId,
           instance_token: tokenInput.trim(),
-          instance_name: userName || "instancia",
+          instance_name: instanceName || "instancia",
         },
       });
 
