@@ -25,6 +25,7 @@ import {
 import { format } from "date-fns";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
+import ChatSimulator from "@/components/chatbot/ChatSimulator";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Dom" },
@@ -861,7 +862,7 @@ export default function Chatbot() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 md:grid-cols-9 h-auto">
+        <TabsList className="grid w-full grid-cols-5 md:grid-cols-10 h-auto">
           <TabsTrigger value="connection" className="text-xs py-2">
             <Smartphone className="w-3.5 h-3.5 mr-1" />Conexão
           </TabsTrigger>
@@ -888,6 +889,9 @@ export default function Chatbot() {
             {logStats.errors > 0 && (
               <span className="ml-1 bg-destructive text-destructive-foreground text-[9px] rounded-full px-1.5">{logStats.errors}</span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="simulator" className="text-xs py-2">
+            <MessageCircle className="w-3.5 h-3.5 mr-1" />Simulador
           </TabsTrigger>
           <TabsTrigger value="diagnostics" className="text-xs py-2">
             <AlertCircle className="w-3.5 h-3.5 mr-1" />Diagnóstico
@@ -1943,6 +1947,16 @@ export default function Chatbot() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* SIMULATOR TAB */}
+        <TabsContent value="simulator" className="space-y-4 mt-4">
+          {companyId && <ChatSimulator companyId={companyId} />}
+          {!companyId && (
+            <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">
+              Carregando...
+            </div>
+          )}
         </TabsContent>
 
         {/* DIAGNOSTICS TAB */}
