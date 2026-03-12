@@ -250,12 +250,19 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { messageText, senderPhone, senderRaw, eventType } = extractIncomingPayload(body);
+    const { messageText, senderPhone, senderRaw, eventType, fromMe } = extractIncomingPayload(body);
     const companyIdParam = new URL(req.url).searchParams.get("company_id");
 
     // Ignore non-message events from UAZAPI (e.g. "chats", "status", "connection", etc.)
     if (eventType && eventType !== "messages" && eventType !== "message" && eventType !== "") {
       return new Response(JSON.stringify({ status: "ignored", event: eventType }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Ignore messages sent by the bot itself to avoid loops
+    if (fromMe) {
+      return new Response(JSON.stringify({ status: "ignored", reason: "from_me" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
