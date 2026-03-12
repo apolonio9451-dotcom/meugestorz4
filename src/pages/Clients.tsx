@@ -1070,9 +1070,9 @@ export default function Clients() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "same", label: "Renovar mesma data" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar mesma data</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "days", days: 30, label: "Renovar +1 mês" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "days", days: 60, label: "Renovar +2 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "days", days: 90, label: "Renovar +3 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "months", days: 1, label: "Renovar +1 mês" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +1 mês</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "months", days: 2, label: "Renovar +2 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +2 meses</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRenewConfirm({ clientId: client.id, type: "months", days: 3, label: "Renovar +3 meses" })}><RefreshCw className="w-3.5 h-3.5 mr-2" /> Renovar +3 meses</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
