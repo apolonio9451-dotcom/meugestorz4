@@ -461,6 +461,52 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Check max messages per contact limit
+    const maxMsgsLimit = chatSettings.max_messages_per_contact || 0;
+    if (maxMsgsLimit > 0) {
+      const twentyFourHoursAgoCheck = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: msgCount } = await supabase
+        .from("chatbot_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", companyIdParam)
+        .eq("phone", phone)
+        .eq("status", "success")
+        .gte("created_at", twentyFourHoursAgoCheck);
+
+      if (msgCount !== null && msgCount >= maxMsgsLimit) {
+        decisions.push(`🛑 Limite de ${maxMsgsLimit} mensagens/24h atingido (${msgCount} enviadas)`);
+        const closingMsg = chatSettings.closing_message?.trim();
+        if (closingMsg) {
+          // Only send closing message once - check if already sent
+          const { data: alreadySentClosing } = await supabase
+            .from("chatbot_logs")
+            .select("id")
+            .eq("company_id", companyIdParam)
+            .eq("phone", phone)
+            .eq("context_type", "closing")
+            .gte("created_at", twentyFourHoursAgoCheck)
+            .limit(1)
+            .maybeSingle();
+
+          if (!alreadySentClosing) {
+            decisions.push("📩 Enviando mensagem de encerramento");
+            await doPresence("composing", minDelay, maxDelay);
+            await sendText(apiUrl, apiToken, phone, closingMsg);
+            await supabase.from("chatbot_logs").insert({
+              company_id: companyIdParam, phone, client_name: "Limite atingido",
+              message_received: messageText.slice(0, 500), message_sent: closingMsg.slice(0, 500),
+              context_type: "closing", status: "success",
+              error_message: aiDecisionLog ? decisions.join("\n") : null,
+            });
+          }
+        }
+        return new Response(JSON.stringify({ status: "ok", reason: "max_messages_reached" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      decisions.push(`📊 Mensagens enviadas: ${msgCount || 0}/${maxMsgsLimit} (24h)`);
+    }
+
     // Fetch API credentials
     const { data: apiSettings } = await supabase
       .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
