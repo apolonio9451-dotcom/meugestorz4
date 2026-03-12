@@ -26,7 +26,7 @@ interface Props {
   onRuleSaved?: () => void;
 }
 
-export default function ChatSimulator({ companyId }: Props) {
+export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
