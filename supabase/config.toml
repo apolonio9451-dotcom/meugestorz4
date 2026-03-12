@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.test-send-message]
 verify_jwt = false
+
+[functions.chatbot-webhook]
+verify_jwt = false

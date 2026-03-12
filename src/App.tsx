@@ -25,6 +25,7 @@ import TrialAccess from "@/pages/TrialAccess";
 import Trials from "@/pages/Trials";
 import Profile from "@/pages/Profile";
 import ResellerPanel from "@/pages/ResellerPanel";
+import Chatbot from "@/pages/Chatbot";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/dashboard/trials" element={<DashboardRoute><Trials /></DashboardRoute>} />
             <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
             <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
+            <Route path="/dashboard/chatbot" element={<DashboardRoute><Chatbot /></DashboardRoute>} />
             <Route path="/dashboard/reseller-panel" element={<DashboardRoute><ResellerPanel /></DashboardRoute>} />
             <Route path="/dashboard/profile" element={<DashboardRoute><Profile /></DashboardRoute>} />
             <Route path="/trial/:token" element={<TrialAccess />} />
