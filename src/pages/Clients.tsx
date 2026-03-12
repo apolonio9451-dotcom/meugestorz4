@@ -1358,9 +1358,8 @@ export default function Clients() {
                 if (welcomeData?.whatsapp) {
                   const msg = `Olá ${welcomeData.name}! 🎉\n\nSeus dados de acesso:\n\n📋 Plano: ${welcomeData.planName}\n💰 Valor: R$ ${welcomeData.amount}\n📅 Vencimento: ${welcomeData.endDate}\n👤 Usuário: ${welcomeData.user || "—"}\n🔑 Senha: ${welcomeData.password || "—"}\n\nBem-vindo!`;
                   const phone = welcomeData.whatsapp.replace(/\D/g, "");
-                  // If 10-11 digits (BR without country code), add 55; otherwise use as-is
-                  const fullPhone = (phone.length === 10 || phone.length === 11) ? "55" + phone : phone;
-                  window.open(`https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(msg)}`, "_blank");
+                  const url = getWhatsAppSendUrl(welcomeData.whatsapp, msg);
+                  window.open(url, "_blank");
                 } else {
                   toast.error("WhatsApp não informado para este cliente.");
                 }
