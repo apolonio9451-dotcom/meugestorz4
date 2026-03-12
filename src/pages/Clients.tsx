@@ -260,6 +260,15 @@ export default function Clients() {
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
       setFormReferredBy(client.referred_by || "");
       setReferralSearch(client.referred_by || "");
+      // Load credentials from DB
+      supabase.from("client_credentials").select("id, username, password, label").eq("client_id", client.id).then(({ data }) => {
+        if (data && data.length > 0) {
+          setFormCredentials(data.map(c => ({ id: c.id, username: c.username, password: c.password, label: c.label || "" })));
+        } else {
+          // Fallback: use legacy iptv_user/iptv_password
+          setFormCredentials([{ username: client.iptv_user || "", password: client.iptv_password || "", label: "" }]);
+        }
+      });
       const sub = subscriptions[client.id];
       if (sub) {
         setFormPlanId(sub.plan_id);
@@ -273,6 +282,7 @@ export default function Clients() {
     } else {
       setEditing(null);
       setFormMacKeys([]);
+      setFormCredentials([{ username: "", password: "", label: "" }]);
       setFormBirthDate(undefined);
       setFormReferredBy("");
       setReferralSearch("");
