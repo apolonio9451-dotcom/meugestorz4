@@ -157,16 +157,23 @@ function cleanJid(value: string): string {
   return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
 }
 
-function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string } {
+function extractIncomingPayload(body: any): { messageText: string; senderPhone: string; senderRaw: string; eventType: string } {
+  const eventType = (body?.EventType || body?.event || "").toString().toLowerCase();
+
   const messageText = pickFirstString([
+    // UAZAPI V2 format: body.message.text / body.message.conversation
     body?.message?.text,
     body?.message?.body,
     body?.message?.conversation,
     body?.message?.extendedTextMessage?.text,
     body?.message?.buttonReply?.selectedDisplayText,
+    body?.message?.buttonResponseMessage?.selectedDisplayText,
     body?.message?.listReply?.title,
+    body?.message?.listResponseMessage?.title,
+    // Flat format
     body?.text,
     body?.body,
+    // Nested data format
     body?.data?.text,
     body?.data?.body,
     body?.data?.message?.text,
@@ -177,6 +184,8 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
   ]);
 
   const senderRaw = pickFirstString([
+    // UAZAPI V2: phone is in chat.id (e.g. "5581985380657" or JID format)
+    body?.chat?.id,
     body?.message?.from,
     body?.from,
     body?.phone,
@@ -192,6 +201,7 @@ function extractIncomingPayload(body: any): { messageText: string; senderPhone: 
     messageText,
     senderPhone: cleanJid(senderRaw),
     senderRaw,
+    eventType,
   };
 }
 
