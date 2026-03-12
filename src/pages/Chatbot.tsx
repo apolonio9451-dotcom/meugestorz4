@@ -124,6 +124,10 @@ export default function Chatbot() {
   // Webhook
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [showWebhookUrl, setShowWebhookUrl] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("Olá, isso é um teste do chatbot!");
+  const [testResult, setTestResult] = useState<{ status: string; data: any } | null>(null);
 
   useEffect(() => {
     if (!companyId) { setLoading(false); return; }
@@ -451,6 +455,37 @@ export default function Chatbot() {
     toast({ title: "📋 URL do Webhook copiada!" });
   };
 
+  const handleTestWebhook = async () => {
+    if (!companyId || !testPhone.trim()) {
+      toast({ title: "Preencha o número de telefone para teste", variant: "destructive" });
+      return;
+    }
+    setTestingWebhook(true);
+    setTestResult(null);
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: { text: testMessage, from: testPhone.replace(/\D/g, "") },
+        }),
+      });
+      const data = await response.json();
+      setTestResult({ status: response.ok ? "success" : "error", data });
+      if (response.ok) {
+        toast({ title: "✅ Teste enviado com sucesso!", description: `Status: ${data.status || data.context}` });
+        fetchLogs();
+      } else {
+        toast({ title: "❌ Erro no teste", description: data.error || JSON.stringify(data), variant: "destructive" });
+      }
+    } catch (err: any) {
+      setTestResult({ status: "error", data: { error: err.message } });
+      toast({ title: "❌ Falha na conexão", description: err.message, variant: "destructive" });
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
   const filteredLogs = logs.filter((log) => {
     if (logFilter !== "all" && log.context_type !== logFilter) return false;
     if (logSearch) {
@@ -553,6 +588,63 @@ export default function Chatbot() {
           <Info className="w-3 h-3" />
           Configure esta URL no painel da UAZAPI como webhook de mensagens recebidas.
         </p>
+
+        {/* Teste do Webhook */}
+        <div className="mt-4 pt-4 border-t border-border/50">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+            <Zap className="w-4 h-4 text-primary" />
+            Testar Webhook
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Telefone de teste</Label>
+              <Input
+                placeholder="5511999999999"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="h-8 text-sm mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Mensagem de teste</Label>
+              <Input
+                placeholder="Olá, isso é um teste!"
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                className="h-8 text-sm mt-1"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={handleTestWebhook}
+                disabled={testingWebhook || !testPhone.trim()}
+                className="h-8 w-full"
+                variant="outline"
+              >
+                {testingWebhook ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                ) : (
+                  <Send className="w-3.5 h-3.5 mr-1" />
+                )}
+                {testingWebhook ? "Testando..." : "Enviar Teste"}
+              </Button>
+            </div>
+          </div>
+          {testResult && (
+            <div className={`mt-3 rounded-lg p-3 text-xs font-mono overflow-x-auto ${
+              testResult.status === "success"
+                ? "bg-primary/10 border border-primary/30 text-primary"
+                : "bg-destructive/10 border border-destructive/30 text-destructive"
+            }`}>
+              <p className="font-semibold mb-1">{testResult.status === "success" ? "✅ Resposta:" : "❌ Erro:"}</p>
+              <pre className="whitespace-pre-wrap">{JSON.stringify(testResult.data, null, 2)}</pre>
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            O teste simula uma mensagem recebida. Se o bot estiver ativo e a API configurada, ele responderá via WhatsApp ao número informado.
+          </p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
