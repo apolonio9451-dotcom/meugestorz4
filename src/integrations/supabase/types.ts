@@ -23,7 +23,9 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          instance_name: string
           pix_key: string
+          uazapi_base_url: string
           updated_at: string
           winback_paused: boolean
         }
@@ -35,7 +37,9 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          instance_name?: string
           pix_key?: string
+          uazapi_base_url?: string
           updated_at?: string
           winback_paused?: boolean
         }
@@ -47,7 +51,9 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          instance_name?: string
           pix_key?: string
+          uazapi_base_url?: string
           updated_at?: string
           winback_paused?: boolean
         }
