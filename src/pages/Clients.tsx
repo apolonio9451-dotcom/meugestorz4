@@ -539,6 +539,35 @@ export default function Clients() {
     }
   };
 
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja EXCLUIR PERMANENTEMENTE este cliente? Esta ação não pode ser desfeita.")) return;
+    const client = clients.find(c => c.id === id);
+    // Delete related data first
+    await supabase.from("client_mac_keys").delete().eq("client_id", id);
+    await supabase.from("client_credentials").delete().eq("client_id", id);
+    await supabase.from("client_subscriptions").delete().eq("client_id", id);
+    await supabase.from("client_activity_logs").delete().eq("client_id", id);
+    await supabase.from("winback_campaign_progress").delete().eq("client_id", id);
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Cliente excluído permanentemente!");
+      await logActivity("exclusão_permanente", client?.name || "", null, "Cliente removido definitivamente do sistema");
+      fetchClients(); fetchMacKeys(); fetchActivityLogs();
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    const client = clients.find(c => c.id === id);
+    const { error } = await supabase.from("clients").update({ status: "active" }).eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Cliente restaurado!");
+      await logActivity("restauração", client?.name || "", id, "Cliente restaurado dos excluídos");
+      fetchClients(); fetchActivityLogs();
+    }
+  };
+
   const handleRenew = async (clientId: string, months: number) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
