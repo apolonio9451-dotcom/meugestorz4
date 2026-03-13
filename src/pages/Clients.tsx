@@ -1517,6 +1517,32 @@ export default function Clients() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Duplicate WhatsApp confirmation */}
+      {duplicateWarning && pendingSubmitEvent && (
+        <Dialog open={!!pendingSubmitEvent} onOpenChange={(open) => { if (!open) { setPendingSubmitEvent(null); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                Contato duplicado
+              </DialogTitle>
+              <DialogDescription>
+                O WhatsApp informado já está cadastrado no cliente <strong>{duplicateWarning.name}</strong>. Deseja continuar mesmo assim?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => { setPendingSubmitEvent(null); setDuplicateWarning(null); }}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => {
+                setDuplicateConfirmed(true);
+                setPendingSubmitEvent(null);
+                // Re-submit the form
+                const formEl = document.querySelector<HTMLFormElement>("#client-form");
+                if (formEl) formEl.requestSubmit();
+              }}>Continuar com duplicidade</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
