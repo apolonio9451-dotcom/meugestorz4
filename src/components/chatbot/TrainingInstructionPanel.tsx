@@ -150,6 +150,7 @@ export default function TrainingInstructionPanel({
           <Label className="text-sm font-semibold">Instrução para a IA</Label>
           <p className="text-[10px] text-muted-foreground">
             Diga à IA como ela deve se comportar quando receber essa pergunta ou similar.
+            {actionType === "media" && " Para regra de áudio/mídia, você pode deixar esse campo vazio e apenas selecionar a mídia abaixo."}
           </p>
           <Textarea
             value={instruction}
