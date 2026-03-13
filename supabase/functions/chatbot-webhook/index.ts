@@ -845,20 +845,82 @@ Use esses comandos quando achar relevante. O sistema processará automaticamente
 
       if (matchedRule) {
         decisions.push(`📚 Regra de treinamento encontrada: "${matchedRule.trigger_question.slice(0, 50)}"`);
-        // Inject the training instruction into context
+
+        // Check if this is a split-messages rule (pre-defined message parts)
+        const ruleConfig = matchedRule.action_config || {};
+        if (ruleConfig.split_messages && Array.isArray(ruleConfig.message_parts) && ruleConfig.message_parts.length >= 2) {
+          decisions.push(`📨 Modo múltiplas mensagens: ${ruleConfig.message_parts.length} partes`);
+          
+          // Send each message part separately with presence simulation
+          for (let i = 0; i < ruleConfig.message_parts.length; i++) {
+            const part = ruleConfig.message_parts[i].trim();
+            if (!part) continue;
+            await doPresence("composing", minDelay, maxDelay);
+            await sendText(apiUrl, apiToken, phone, part);
+            decisions.push(`💬 Parte ${i + 1}/${ruleConfig.message_parts.length} enviada`);
+          }
+
+          // Handle attached action (media, buttons, list) after all text parts
+          if (matchedRule.action_type === "media" && matchedRule.media_id) {
+            const { data: ruleMedia } = await supabase
+              .from("chatbot_media").select("*").eq("id", matchedRule.media_id).single();
+            if (ruleMedia) {
+              const presType = ruleMedia.file_type === "audio" ? "recording" : "composing";
+              await doPresence(presType as any, minDelay + 2, maxDelay + 3);
+              await sendMedia(apiUrl, apiToken, phone, ruleMedia.file_url, ruleMedia.file_type);
+              decisions.push(`📎 Mídia anexada enviada: ${ruleMedia.file_name}`);
+            }
+          } else if (matchedRule.action_type === "buttons" && ruleConfig.buttons) {
+            const btnTitles = ruleConfig.buttons.split("|").map((t: string) => t.trim()).filter(Boolean).slice(0, 3);
+            if (btnTitles.length > 0) {
+              const btns = btnTitles.map((t: string, i: number) => ({ id: `rule_btn_${i}`, title: t.slice(0, 20) }));
+              try { await sendButtons(apiUrl, apiToken, phone, "", "Escolha uma opção:", "", btns); } catch (e) { console.error("Falha botões:", e); }
+            }
+          } else if (matchedRule.action_type === "list" && ruleConfig.items) {
+            const listItems = ruleConfig.items.split("|").map((t: string) => t.trim()).filter(Boolean);
+            if (listItems.length > 0) {
+              const items = listItems.map((t: string, i: number) => ({ id: `rule_list_${i}`, title: t.slice(0, 24) }));
+              try { await sendList(apiUrl, apiToken, phone, "Opções", "Selecione:", "", "Ver Opções", items); } catch (e) { console.error("Falha lista:", e); }
+            }
+          }
+
+          // Save conversation memory
+          await supabase.from("chatbot_conversation_messages").insert({
+            company_id: companyIdParam, phone, role: "user", content: messageText.slice(0, 2000),
+          });
+          const allParts = ruleConfig.message_parts.filter((p: string) => p.trim()).join(" | ");
+          await supabase.from("chatbot_conversation_messages").insert({
+            company_id: companyIdParam, phone, role: "assistant", content: allParts.slice(0, 2000),
+          });
+
+          // Log
+          await supabase.from("chatbot_logs").insert({
+            company_id: companyIdParam, phone, client_name: clientName,
+            message_received: messageText.slice(0, 500),
+            message_sent: `[MULTI-MSG ${ruleConfig.message_parts.length}x] ${allParts}`.slice(0, 500),
+            context_type: "training_rule", status: "success",
+            error_message: aiDecisionLog ? decisions.join("\n") : null,
+          });
+
+          return new Response(JSON.stringify({ status: "ok", reason: "training_rule_split" }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Standard single-message training rule: inject into AI context
         contextInstructions += `\n\nINSTRUÇÃO ESPECÍFICA DE TREINAMENTO (PRIORIDADE MÁXIMA):
 ${matchedRule.instruction}`;
         decisions.push("📝 Instrução de treinamento aplicada ao contexto da IA");
 
         // Handle action types
-        if (matchedRule.action_type === "buttons" && matchedRule.action_config?.buttons) {
-          const btnTitles = matchedRule.action_config.buttons.split("|").map((t: string) => t.trim()).filter(Boolean).slice(0, 3);
+        if (matchedRule.action_type === "buttons" && ruleConfig.buttons) {
+          const btnTitles = ruleConfig.buttons.split("|").map((t: string) => t.trim()).filter(Boolean).slice(0, 3);
           if (btnTitles.length > 0) {
             contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_BOTOES:${btnTitles.join("|")}] na sua resposta.`;
             decisions.push(`🔘 Ação configurada: enviar botões [${btnTitles.join(", ")}]`);
           }
-        } else if (matchedRule.action_type === "list" && matchedRule.action_config?.items) {
-          const listItems = matchedRule.action_config.items.split("|").map((t: string) => t.trim()).filter(Boolean);
+        } else if (matchedRule.action_type === "list" && ruleConfig.items) {
+          const listItems = ruleConfig.items.split("|").map((t: string) => t.trim()).filter(Boolean);
           if (listItems.length > 0) {
             contextInstructions += `\nIMPORTANTE: Inclua [ENVIAR_LISTA:${listItems.join("|")}] na sua resposta.`;
             decisions.push(`📋 Ação configurada: enviar lista [${listItems.join(", ")}]`);
