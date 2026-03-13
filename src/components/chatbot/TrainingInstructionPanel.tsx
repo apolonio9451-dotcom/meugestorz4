@@ -224,7 +224,7 @@ export default function TrainingInstructionPanel({
             <div className="space-y-2 bg-secondary/20 rounded-lg p-3">
               <Label className="text-xs">Selecionar Mídia</Label>
               {mediaFiles.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma mídia disponível. Envie na aba Interação & Mídia.</p>
+                <p className="text-xs text-muted-foreground">Nenhuma mídia disponível. Envie na aba Mídia.</p>
               ) : (
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {mediaFiles.map((m) => (
