@@ -385,6 +385,9 @@ export default function Clients() {
       setFormAmount("");
       setFormEndDate(undefined);
     }
+    setDuplicateWarning(null);
+    setDuplicateConfirmed(false);
+    setPendingSubmitEvent(null);
     setDialogOpen(true);
   };
 
