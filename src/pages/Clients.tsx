@@ -388,9 +388,28 @@ export default function Clients() {
     setDialogOpen(true);
   };
 
+  const [duplicateConfirmed, setDuplicateConfirmed] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!companyId) return;
+
+    // Check duplicate before proceeding
+    const form = new FormData(e.currentTarget);
+    const whatsappValue = (form.get("whatsapp") as string || "").replace(/\D/g, "");
+    if (whatsappValue.length >= 8 && !duplicateConfirmed) {
+      const found = clients.find(c => {
+        if (editing && c.id === editing.id) return false;
+        return (c.whatsapp || "").replace(/\D/g, "") === whatsappValue;
+      });
+      if (found) {
+        setDuplicateWarning({ name: found.name, whatsapp: found.whatsapp || "" });
+        setPendingSubmitEvent(e);
+        return;
+      }
+    }
+
+    setDuplicateConfirmed(false);
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const payload = {
