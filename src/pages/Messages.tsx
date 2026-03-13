@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Save, Info } from "lucide-react";
 import AutoSendLogs from "@/components/messages/AutoSendLogs";
+import AutoSendCategoryToggles from "@/components/messages/AutoSendCategoryToggles";
 import TestSendButton from "@/components/messages/TestSendButton";
 import {
   Dialog,
