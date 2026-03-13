@@ -149,10 +149,11 @@ export default function Financial() {
       );
       const clientCount = new Set(serverSubs.map((s) => s.clients?.name)).size;
       const revenue = serverSubs.reduce((sum, s) => sum + Number(s.amount), 0);
-      const cost = Number(srv.cost_per_credit);
+      const creditUnit = Number(srv.cost_per_credit);
+      const cost = creditUnit * clientCount;
       const profit = revenue - cost;
       const profitPerDay = profit / 30;
-      return { name: srv.name, credit: cost, clients: clientCount, revenue, cost, profit, profitPerDay };
+      return { name: srv.name, credit: creditUnit, clients: clientCount, revenue, cost, profit, profitPerDay };
     });
   }, [filteredSubs, servers]);
 
