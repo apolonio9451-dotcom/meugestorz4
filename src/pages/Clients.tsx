@@ -89,6 +89,24 @@ export default function Clients() {
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
   const [pixKey, setPixKey] = useState("");
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
+  const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
+  const formRef = useState<HTMLFormElement | null>(null);
+
+  const checkDuplicateWhatsapp = (whatsapp: string) => {
+    if (!whatsapp.trim() || !clients.length) {
+      setDuplicateWarning(null);
+      return;
+    }
+    const digits = whatsapp.replace(/\D/g, "");
+    if (digits.length < 8) { setDuplicateWarning(null); return; }
+    const found = clients.find(c => {
+      if (editing && c.id === editing.id) return false;
+      const cDigits = (c.whatsapp || "").replace(/\D/g, "");
+      return cDigits === digits;
+    });
+    setDuplicateWarning(found ? { name: found.name, whatsapp: found.whatsapp || "" } : null);
+  };
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
