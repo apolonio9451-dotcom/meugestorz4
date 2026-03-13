@@ -15,6 +15,7 @@ import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, 
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import SupportCountdown from "@/components/clients/SupportCountdown";
 
 interface Client {
   id: string;
@@ -1108,9 +1109,12 @@ export default function Clients() {
 
       {/* Suporte info text */}
       {mainFilter === "status" && statusSubFilter === "suporte" && (
-        <p className="text-xs text-muted-foreground bg-violet-400/5 border border-violet-400/20 rounded-lg px-3 py-2">
-          🎧 <span className="font-semibold text-violet-400">Suporte</span> — Clientes encaminhados para check-up de satisfação. Aparecem aqui 48h após serem enviados ao suporte. Foque na experiência, não em vendas.
-        </p>
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground bg-violet-400/5 border border-violet-400/20 rounded-lg px-3 py-2">
+            🎧 <span className="font-semibold text-violet-400">Suporte</span> — Clientes encaminhados para check-up de satisfação. Aparecem aqui 48h após serem enviados ao suporte. Foque na experiência, não em vendas.
+          </p>
+          {companyId && <SupportCountdown companyId={companyId} />}
+        </div>
       )}
 
       {/* Log view */}
