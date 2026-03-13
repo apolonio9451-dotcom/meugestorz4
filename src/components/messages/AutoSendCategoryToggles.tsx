@@ -119,6 +119,24 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
     }
   };
 
+  const handleTimeChange = async (value: string) => {
+    const [h, m] = value.split(":").map(Number);
+    if (isNaN(h) || isNaN(m)) return;
+    setAutoSendHour(h);
+    setAutoSendMinute(m);
+
+    const { error } = await supabase
+      .from("api_settings")
+      .update({ auto_send_hour: h, auto_send_minute: m })
+      .eq("company_id", companyId);
+
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar o horário.", variant: "destructive" });
+    } else {
+      toast({ title: "Horário atualizado", description: `Disparos programados para ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} (Brasília).` });
+    }
+  };
+
   if (loading || !companyId) return null;
 
   const activeCount = Object.values(activeCategories).filter(Boolean).length;
@@ -139,7 +157,7 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
           Escolha quais lembretes automáticos o sistema deve enviar.
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <TooltipProvider>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {autoSendCategories.map((cat) => (
@@ -168,6 +186,22 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
             ))}
           </div>
         </TooltipProvider>
+
+        <div className="border-t border-border/50 pt-4 space-y-2">
+          <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary" />
+            Horário de Disparo Automático
+          </Label>
+          <Input
+            type="time"
+            value={`${String(autoSendHour).padStart(2, "0")}:${String(autoSendMinute).padStart(2, "0")}`}
+            onChange={(e) => handleTimeChange(e.target.value)}
+            className="bg-secondary/50 border-border w-40"
+          />
+          <p className="text-muted-foreground text-xs">
+            Horário exato (HH:mm) em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
