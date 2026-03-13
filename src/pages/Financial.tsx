@@ -117,7 +117,9 @@ export default function Financial() {
       return d;
     });
 
-    const totalCostPerCredit = servers.reduce((sum, srv) => sum + Number(srv.cost_per_credit), 0);
+    // Build a map of server name -> cost_per_credit
+    const serverCostMap = new Map<string, number>();
+    servers.forEach((srv) => serverCostMap.set(srv.name, Number(srv.cost_per_credit)));
 
     return last3.map((m) => {
       const mMonth = m.getMonth();
@@ -132,8 +134,20 @@ export default function Financial() {
       });
 
       const entradas = monthSubs.reduce((sum, s) => sum + Number(s.amount), 0);
-      // Saídas = custo por crédito do servidor × nº de assinaturas ativas no mês
-      const saidas = monthSubs.length * totalCostPerCredit;
+
+      // Saídas: para cada servidor, conta clientes únicos no mês × custo por crédito daquele servidor
+      const clientsByServer = new Map<string, Set<string>>();
+      monthSubs.forEach((s) => {
+        const serverName = s.clients?.server || "";
+        if (!clientsByServer.has(serverName)) clientsByServer.set(serverName, new Set());
+        if (s.clients?.name) clientsByServer.get(serverName)!.add(s.clients.name);
+      });
+
+      let saidas = 0;
+      clientsByServer.forEach((clients, serverName) => {
+        const cost = serverCostMap.get(serverName) || 0;
+        saidas += cost * clients.size;
+      });
 
       return { label: capitalLabel, entradas, saidas, isCurrent: isCurrentMonth };
     });
