@@ -15,7 +15,6 @@ export default function ApiSettingsSection({ companyId }: Props) {
   const [apiToken, setApiToken] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [showToken, setShowToken] = useState(false);
-  const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [existingId, setExistingId] = useState<string | null>(null);
