@@ -106,6 +106,9 @@ export default function SupportCountdown({ companyId }: Props) {
                 Próximo envio automático (48h) em:
               </span>
               <span className="font-mono font-bold text-violet-400 text-sm">{countdown}</span>
+              <span className="text-muted-foreground">
+                (às {nearestDeadline.toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo" })})
+              </span>
             </>
           )}
         </div>
