@@ -792,13 +792,7 @@ export default function Chatbot() {
 
       {/* ============ MAIN TABS ============ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 h-auto gap-1 p-1">
-          <TabsTrigger value="pensamento" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <Route className="w-3 h-3 mr-1" />Linhas de Pensamento
-          </TabsTrigger>
-          <TabsTrigger value="treinamento" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <BookOpen className="w-3 h-3 mr-1" />Treinamento
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto gap-1 p-1">
           <TabsTrigger value="interacao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Layers className="w-3 h-3 mr-1" />Interação & Mídia
           </TabsTrigger>
