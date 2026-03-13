@@ -72,27 +72,41 @@ export default function TrainingInstructionPanel({
     }
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         company_id: companyId,
         trigger_question: triggerQuestion,
         instruction: instruction.trim(),
         action_type: actionType,
-        action_config: actionConfig,
-        media_id: mediaId,
+        action_config: actionConfig || {},
         is_active: true,
       };
 
+      // Only include media_id if it's a valid selection, otherwise set null
+      if (actionType === "media" && mediaId) {
+        payload.media_id = mediaId;
+      } else {
+        payload.media_id = null;
+      }
+
+      console.log("Saving training rule payload:", JSON.stringify(payload, null, 2));
+
       if (existingRuleId) {
         const { error } = await supabase
-          .from("bot_training_rules" as any)
+          .from("bot_training_rules")
           .update(payload)
           .eq("id", existingRuleId);
-        if (error) throw error;
+        if (error) {
+          console.error("Update error:", error);
+          throw error;
+        }
       } else {
         const { error } = await supabase
-          .from("bot_training_rules" as any)
+          .from("bot_training_rules")
           .insert(payload);
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error);
+          throw error;
+        }
       }
 
       toast({ title: "✅ Regra salva! O bot usará esta instrução nas conversas reais." });
