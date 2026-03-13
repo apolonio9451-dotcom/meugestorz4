@@ -1,0 +1,1 @@
+UPDATE storage.buckets SET allowed_mime_types = array['image/jpeg','image/png','image/gif','image/webp','audio/mpeg','audio/mp4','audio/ogg','audio/webm','audio/wav','audio/x-wav','audio/webm;codecs=opus','video/mp4','application/pdf','application/octet-stream'] WHERE id = 'chatbot-media';
