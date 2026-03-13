@@ -739,7 +739,20 @@ export default function Clients() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-sm">WhatsApp *</Label>
-                      <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                      <Input 
+                        name="whatsapp" 
+                        required 
+                        placeholder="5521999990000" 
+                        defaultValue={editing?.whatsapp || ""} 
+                        className={cn("h-10 text-sm border-primary/20 focus:border-primary/50", duplicateWarning && "border-destructive")}
+                        onChange={(e) => checkDuplicateWhatsapp(e.target.value)}
+                      />
+                      {duplicateWarning && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Contato já cadastrado em: <strong>{duplicateWarning.name}</strong>
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-sm">Email</Label>
