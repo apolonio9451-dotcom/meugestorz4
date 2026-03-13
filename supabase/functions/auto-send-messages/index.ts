@@ -114,12 +114,7 @@ Deno.serve(async (req) => {
       return configuredHour === brasiliaHour && configuredMinute === brasiliaMinute;
     });
 
-    if (eligibleConfigs.length === 0) {
-      return new Response(
-        JSON.stringify({ message: `Nenhuma empresa configurada para disparo às ${brasiliaHour}:${String(brasiliaMinute).padStart(2,"0")}. Hora atual (Brasília): ${brasiliaHour}:${String(brasiliaMinute).padStart(2,"0")}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Note: Don't return early here - support 48h check must always run below
 
     let totalSent = 0;
     let totalErrors = 0;
