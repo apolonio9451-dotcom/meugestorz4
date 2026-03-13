@@ -411,11 +411,11 @@ export default function Clients() {
 
     setDuplicateConfirmed(false);
     setLoading(true);
-    const form = new FormData(e.currentTarget);
+    const formData = new FormData(e.currentTarget);
     const payload = {
-      name: form.get("name") as string,
-      email: form.get("email") as string,
-      whatsapp: form.get("whatsapp") as string,
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      whatsapp: formData.get("whatsapp") as string,
       cpf: formBirthDate ? format(formBirthDate, "dd/MM/yyyy") : "",
       notes: form.get("notes") as string,
       server: form.get("server") as string,
