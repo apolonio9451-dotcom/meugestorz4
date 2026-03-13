@@ -131,6 +131,17 @@ Deno.serve(async (req) => {
       const apiToken = config.api_token;
       const companyId = config.company_id;
 
+      // Fetch category active settings
+      const { data: categorySettings } = await supabase
+        .from("auto_send_category_settings")
+        .select("category, is_active")
+        .eq("company_id", companyId);
+
+      const disabledCategories = new Set<string>();
+      categorySettings?.forEach((s: any) => {
+        if (!s.is_active) disabledCategories.add(s.category);
+      });
+
       // Fetch templates
       const { data: templateRows } = await supabase
         .from("message_templates")
@@ -174,6 +185,9 @@ Deno.serve(async (req) => {
 
         const category = getCategory(diffDays);
         if (!category) continue;
+
+        // Skip if category is disabled
+        if (disabledCategories.has(category)) continue;
 
         const template = templates[category];
         if (!template) continue;
