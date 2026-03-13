@@ -330,7 +330,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const open: Record<string, boolean> = {};
     navItems.forEach((item) => {
       if ("children" in item && item.children) {
-        if (item.children.some((c) => location.pathname.startsWith(c.href))) {
+        // Configurações sempre aberto por padrão
+        if (item.label === "Configurações" || item.children.some((c) => location.pathname.startsWith(c.href))) {
           open[item.label] = true;
         }
       }
