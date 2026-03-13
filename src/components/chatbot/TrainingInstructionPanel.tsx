@@ -260,7 +260,11 @@ export default function TrainingInstructionPanel({
 
       {/* Footer */}
       <div className="border-t border-border/30 p-3 shrink-0">
-        <Button onClick={handleSave} disabled={saving || !instruction.trim()} className="w-full">
+        <Button
+          onClick={handleSave}
+          disabled={saving || (actionType === "media" ? !mediaId : !instruction.trim())}
+          className="w-full"
+        >
           {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
           {existingRuleId ? "Atualizar Regra" : "Salvar Regra de Treinamento"}
         </Button>
