@@ -1190,28 +1190,41 @@ export default function Clients() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openDialog(client)}><Pencil className="w-3.5 h-3.5 mr-2" /> Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {mainFilter === "status" && statusSubFilter === "suporte" ? (
-                            <DropdownMenuItem onClick={async () => {
-                              const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
-                              if (error) toast.error("Erro ao finalizar suporte");
-                              else {
-                                toast.success(`Suporte finalizado para ${client.name}`);
-                                await logActivity("suporte_finalizado", client.name, client.id, "Check-up de satisfação realizado");
-                                fetchClients(); fetchActivityLogs();
-                              }
-                            }}><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> Finalizar Suporte</DropdownMenuItem>
+                          {client.status === "excluded" ? (
+                            <>
+                              <DropdownMenuItem onClick={() => handleRestore(client.id)}>
+                                <RefreshCw className="w-3.5 h-3.5 mr-2 text-emerald-500" /> Restaurar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={() => handlePermanentDelete(client.id)}>
+                                <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir Permanentemente
+                              </DropdownMenuItem>
+                            </>
                           ) : (
-                            <DropdownMenuItem onClick={async () => {
-                              const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
-                              if (error) toast.error("Erro ao enviar para suporte");
-                              else {
-                                toast.success(`${client.name} enviado para Suporte`);
-                                await logActivity("suporte", client.name, client.id, "Cliente encaminhado para check-up de suporte");
-                                fetchClients(); fetchActivityLogs();
-                              }
-                            }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
+                            <>
+                              {mainFilter === "status" && statusSubFilter === "suporte" ? (
+                                <DropdownMenuItem onClick={async () => {
+                                  const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
+                                  if (error) toast.error("Erro ao finalizar suporte");
+                                  else {
+                                    toast.success(`Suporte finalizado para ${client.name}`);
+                                    await logActivity("suporte_finalizado", client.name, client.id, "Check-up de satisfação realizado");
+                                    fetchClients(); fetchActivityLogs();
+                                  }
+                                }}><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> Finalizar Suporte</DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={async () => {
+                                  const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
+                                  if (error) toast.error("Erro ao enviar para suporte");
+                                  else {
+                                    toast.success(`${client.name} enviado para Suporte`);
+                                    await logActivity("suporte", client.name, client.id, "Cliente encaminhado para check-up de suporte");
+                                    fetchClients(); fetchActivityLogs();
+                                  }
+                                }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
+                            </>
                           )}
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
