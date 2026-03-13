@@ -89,6 +89,24 @@ export default function Clients() {
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
   const [pixKey, setPixKey] = useState("");
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
+  const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
+  const formRef = useState<HTMLFormElement | null>(null);
+
+  const checkDuplicateWhatsapp = (whatsapp: string) => {
+    if (!whatsapp.trim() || !clients.length) {
+      setDuplicateWarning(null);
+      return;
+    }
+    const digits = whatsapp.replace(/\D/g, "");
+    if (digits.length < 8) { setDuplicateWarning(null); return; }
+    const found = clients.find(c => {
+      if (editing && c.id === editing.id) return false;
+      const cDigits = (c.whatsapp || "").replace(/\D/g, "");
+      return cDigits === digits;
+    });
+    setDuplicateWarning(found ? { name: found.name, whatsapp: found.whatsapp || "" } : null);
+  };
   const fetchClients = async () => {
     if (!companyId) return;
     const { data } = await supabase
@@ -367,21 +385,43 @@ export default function Clients() {
       setFormAmount("");
       setFormEndDate(undefined);
     }
+    setDuplicateWarning(null);
+    setDuplicateConfirmed(false);
+    setPendingSubmitEvent(null);
     setDialogOpen(true);
   };
+
+  const [duplicateConfirmed, setDuplicateConfirmed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!companyId) return;
-    setLoading(true);
+
+    // Check duplicate before proceeding
     const form = new FormData(e.currentTarget);
+    const whatsappValue = (form.get("whatsapp") as string || "").replace(/\D/g, "");
+    if (whatsappValue.length >= 8 && !duplicateConfirmed) {
+      const found = clients.find(c => {
+        if (editing && c.id === editing.id) return false;
+        return (c.whatsapp || "").replace(/\D/g, "") === whatsappValue;
+      });
+      if (found) {
+        setDuplicateWarning({ name: found.name, whatsapp: found.whatsapp || "" });
+        setPendingSubmitEvent(e);
+        return;
+      }
+    }
+
+    setDuplicateConfirmed(false);
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
     const payload = {
-      name: form.get("name") as string,
-      email: form.get("email") as string,
-      whatsapp: form.get("whatsapp") as string,
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      whatsapp: formData.get("whatsapp") as string,
       cpf: formBirthDate ? format(formBirthDate, "dd/MM/yyyy") : "",
-      notes: form.get("notes") as string,
-      server: form.get("server") as string,
+      notes: formData.get("notes") as string,
+      server: formData.get("server") as string,
       iptv_user: formCredentials[0]?.username || "",
       iptv_password: formCredentials[0]?.password || "",
       phone: "",
@@ -691,7 +731,7 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle className="text-base">{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto max-h-[calc(98vh-80px)] scrollbar-hide">
+            <form id="client-form" onSubmit={handleSubmit} className="space-y-5 overflow-y-auto max-h-[calc(98vh-80px)] scrollbar-hide">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dados Pessoais</p>
                 <div className="space-y-3">
@@ -702,7 +742,20 @@ export default function Clients() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-sm">WhatsApp *</Label>
-                      <Input name="whatsapp" required placeholder="5521999990000" defaultValue={editing?.whatsapp || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                      <Input 
+                        name="whatsapp" 
+                        required 
+                        placeholder="5521999990000" 
+                        defaultValue={editing?.whatsapp || ""} 
+                        className={cn("h-10 text-sm border-primary/20 focus:border-primary/50", duplicateWarning && "border-destructive")}
+                        onChange={(e) => checkDuplicateWhatsapp(e.target.value)}
+                      />
+                      {duplicateWarning && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Contato já cadastrado em: <strong>{duplicateWarning.name}</strong>
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-sm">Email</Label>
@@ -1467,6 +1520,32 @@ export default function Clients() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Duplicate WhatsApp confirmation */}
+      {duplicateWarning && pendingSubmitEvent && (
+        <Dialog open={!!pendingSubmitEvent} onOpenChange={(open) => { if (!open) { setPendingSubmitEvent(null); } }}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                Contato duplicado
+              </DialogTitle>
+              <DialogDescription>
+                O WhatsApp informado já está cadastrado no cliente <strong>{duplicateWarning.name}</strong>. Deseja continuar mesmo assim?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => { setPendingSubmitEvent(null); setDuplicateWarning(null); }}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => {
+                setDuplicateConfirmed(true);
+                setPendingSubmitEvent(null);
+                // Re-submit the form
+                const formEl = document.querySelector<HTMLFormElement>("#client-form");
+                if (formEl) formEl.requestSubmit();
+              }}>Continuar com duplicidade</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
