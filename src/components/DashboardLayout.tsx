@@ -54,6 +54,8 @@ const navItems: NavItem[] = [
   },
   { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
   { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
+  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
+  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
   {
     label: "Configurações",
     icon: Settings,
@@ -64,8 +66,6 @@ const navItems: NavItem[] = [
       { href: "/dashboard/settings", label: "Geral", icon: Settings },
     ],
   },
-  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
