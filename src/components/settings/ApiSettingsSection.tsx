@@ -108,26 +108,6 @@ export default function ApiSettingsSection({ companyId }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Clock className="w-4 h-4 text-primary" />
-          Horário de Disparo Automático
-        </Label>
-        <Input
-          type="time"
-          value={`${String(autoSendHour).padStart(2, "0")}:${String(autoSendMinute).padStart(2, "0")}`}
-          onChange={(e) => {
-            const [h, m] = e.target.value.split(":").map(Number);
-            if (!isNaN(h)) setAutoSendHour(h);
-            if (!isNaN(m)) setAutoSendMinute(m);
-          }}
-          className="bg-secondary/50 border-border w-40"
-        />
-        <p className="text-muted-foreground text-xs">
-          Horário exato (HH:mm) em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
-        </p>
-      </div>
-
-      <div className="space-y-2">
         <Label className="text-sm font-semibold text-foreground">Chave Pix</Label>
         <Input
           value={pixKey}
