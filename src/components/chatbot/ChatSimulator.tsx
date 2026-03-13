@@ -52,7 +52,7 @@ export default function ChatSimulator({ companyId, onRuleSaved }: Props) {
 
   const fetchRulesCount = async () => {
     const { count } = await supabase
-      .from("bot_training_rules" as any)
+      .from("bot_training_rules")
       .select("*", { count: "exact", head: true })
       .eq("company_id", companyId)
       .eq("is_active", true);

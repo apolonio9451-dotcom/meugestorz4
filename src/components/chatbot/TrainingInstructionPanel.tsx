@@ -50,13 +50,13 @@ export default function TrainingInstructionPanel({
 
   const checkExistingRule = async () => {
     const { data } = await supabase
-      .from("bot_training_rules" as any)
+      .from("bot_training_rules")
       .select("*")
       .eq("company_id", companyId)
       .ilike("trigger_question", `%${triggerQuestion.slice(0, 50)}%`)
       .limit(1);
-    if (data && (data as any[]).length > 0) {
-      const rule = (data as any[])[0];
+    if (data && data.length > 0) {
+      const rule = data[0];
       setExistingRuleId(rule.id);
       setInstruction(rule.instruction || "");
       setActionType(rule.action_type || "text");
@@ -72,27 +72,41 @@ export default function TrainingInstructionPanel({
     }
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         company_id: companyId,
         trigger_question: triggerQuestion,
         instruction: instruction.trim(),
         action_type: actionType,
-        action_config: actionConfig,
-        media_id: mediaId,
+        action_config: actionConfig || {},
         is_active: true,
       };
 
+      // Only include media_id if it's a valid selection, otherwise set null
+      if (actionType === "media" && mediaId) {
+        payload.media_id = mediaId;
+      } else {
+        payload.media_id = null;
+      }
+
+      console.log("Saving training rule payload:", JSON.stringify(payload, null, 2));
+
       if (existingRuleId) {
         const { error } = await supabase
-          .from("bot_training_rules" as any)
+          .from("bot_training_rules")
           .update(payload)
           .eq("id", existingRuleId);
-        if (error) throw error;
+        if (error) {
+          console.error("Update error:", error);
+          throw error;
+        }
       } else {
         const { error } = await supabase
-          .from("bot_training_rules" as any)
+          .from("bot_training_rules")
           .insert(payload);
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error);
+          throw error;
+        }
       }
 
       toast({ title: "✅ Regra salva! O bot usará esta instrução nas conversas reais." });
@@ -210,7 +224,7 @@ export default function TrainingInstructionPanel({
             <div className="space-y-2 bg-secondary/20 rounded-lg p-3">
               <Label className="text-xs">Selecionar Mídia</Label>
               {mediaFiles.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma mídia disponível. Envie na aba Interação & Mídia.</p>
+                <p className="text-xs text-muted-foreground">Nenhuma mídia disponível. Envie na aba Mídia.</p>
               ) : (
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {mediaFiles.map((m) => (
