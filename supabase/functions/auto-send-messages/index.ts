@@ -247,8 +247,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Support check-up auto-send ---
-    for (const config of eligibleConfigs) {
+    // --- Support check-up auto-send (runs for ALL companies, independent of auto_send_hour) ---
+    for (const config of apiConfigs) {
       if (!config.api_url || !config.api_token) continue;
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
@@ -274,9 +274,8 @@ Deno.serve(async (req) => {
       const supportTemplate = supportTemplateRows?.[0]?.message ||
         "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
 
-      // Fetch clients with support_started_at set and >= 2 days ago
-      const twoDaysAgo = new Date();
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      // Fetch clients with support_started_at set and >= 48h ago
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
       const { data: supportClients } = await supabase
         .from("clients")
@@ -290,7 +289,7 @@ Deno.serve(async (req) => {
         .eq("company_id", companyId)
         .eq("status", "active")
         .not("support_started_at", "is", null)
-        .lte("support_started_at", twoDaysAgo.toISOString());
+        .lte("support_started_at", fortyEightHoursAgo.toISOString());
 
       if (!supportClients) continue;
 
@@ -337,7 +336,6 @@ Deno.serve(async (req) => {
           });
 
           if (sendResult.ok) {
-            // Clear support_started_at after successful auto-send
             await supabase.from("clients").update({ ultimo_envio_auto: today, support_started_at: null }).eq("id", client.id);
             totalSent++;
           } else {
