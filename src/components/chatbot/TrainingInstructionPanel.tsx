@@ -66,47 +66,44 @@ export default function TrainingInstructionPanel({
   };
 
   const handleSave = async () => {
-    if (!instruction.trim()) {
+    const trimmedInstruction = instruction.trim();
+    const isMediaAction = actionType === "media";
+
+    if (!trimmedInstruction && !isMediaAction) {
       toast({ title: "Escreva a instrução", variant: "destructive" });
       return;
     }
+
+    if (isMediaAction && !mediaId) {
+      toast({ title: "Selecione um áudio/mídia para anexar", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: any = {
         company_id: companyId,
         trigger_question: triggerQuestion,
-        instruction: instruction.trim(),
+        instruction:
+          trimmedInstruction ||
+          "Quando essa pergunta ocorrer, envie automaticamente a mídia selecionada e responda de forma natural.",
         action_type: actionType,
         action_config: actionConfig || {},
         is_active: true,
+        media_id: isMediaAction ? mediaId : null,
       };
-
-      // Only include media_id if it's a valid selection, otherwise set null
-      if (actionType === "media" && mediaId) {
-        payload.media_id = mediaId;
-      } else {
-        payload.media_id = null;
-      }
-
-      console.log("Saving training rule payload:", JSON.stringify(payload, null, 2));
 
       if (existingRuleId) {
         const { error } = await supabase
           .from("bot_training_rules")
           .update(payload)
           .eq("id", existingRuleId);
-        if (error) {
-          console.error("Update error:", error);
-          throw error;
-        }
+        if (error) throw error;
       } else {
         const { error } = await supabase
           .from("bot_training_rules")
           .insert(payload);
-        if (error) {
-          console.error("Insert error:", error);
-          throw error;
-        }
+        if (error) throw error;
       }
 
       toast({ title: "✅ Regra salva! O bot usará esta instrução nas conversas reais." });
@@ -153,6 +150,7 @@ export default function TrainingInstructionPanel({
           <Label className="text-sm font-semibold">Instrução para a IA</Label>
           <p className="text-[10px] text-muted-foreground">
             Diga à IA como ela deve se comportar quando receber essa pergunta ou similar.
+            {actionType === "media" && " Para regra de áudio/mídia, você pode deixar esse campo vazio e apenas selecionar a mídia abaixo."}
           </p>
           <Textarea
             value={instruction}
@@ -262,7 +260,11 @@ export default function TrainingInstructionPanel({
 
       {/* Footer */}
       <div className="border-t border-border/30 p-3 shrink-0">
-        <Button onClick={handleSave} disabled={saving || !instruction.trim()} className="w-full">
+        <Button
+          onClick={handleSave}
+          disabled={saving || (actionType === "media" ? !mediaId : !instruction.trim())}
+          className="w-full"
+        >
           {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
           {existingRuleId ? "Atualizar Regra" : "Salvar Regra de Treinamento"}
         </Button>
