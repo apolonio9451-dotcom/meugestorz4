@@ -59,23 +59,39 @@ interface Props {
 
 export default function AutoSendCategoryToggles({ companyId }: Props) {
   const [activeCategories, setActiveCategories] = useState<Record<string, boolean>>({});
+  const [autoSendHour, setAutoSendHour] = useState(8);
+  const [autoSendMinute, setAutoSendMinute] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!companyId) return;
     const fetchData = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("auto_send_category_settings")
-        .select("category, is_active")
-        .eq("company_id", companyId);
+
+      const [catResult, apiResult] = await Promise.all([
+        supabase
+          .from("auto_send_category_settings")
+          .select("category, is_active")
+          .eq("company_id", companyId),
+        supabase
+          .from("api_settings")
+          .select("auto_send_hour, auto_send_minute")
+          .eq("company_id", companyId)
+          .maybeSingle(),
+      ]);
 
       const map: Record<string, boolean> = {};
       autoSendCategories.forEach((c) => {
-        const found = data?.find((d: any) => d.category === c.key);
+        const found = catResult.data?.find((d: any) => d.category === c.key);
         map[c.key] = found ? found.is_active : true;
       });
       setActiveCategories(map);
+
+      if (apiResult.data) {
+        setAutoSendHour((apiResult.data as any).auto_send_hour ?? 8);
+        setAutoSendMinute((apiResult.data as any).auto_send_minute ?? 0);
+      }
+
       setLoading(false);
     };
     fetchData();
