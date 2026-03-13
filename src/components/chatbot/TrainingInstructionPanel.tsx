@@ -50,13 +50,13 @@ export default function TrainingInstructionPanel({
 
   const checkExistingRule = async () => {
     const { data } = await supabase
-      .from("bot_training_rules" as any)
+      .from("bot_training_rules")
       .select("*")
       .eq("company_id", companyId)
       .ilike("trigger_question", `%${triggerQuestion.slice(0, 50)}%`)
       .limit(1);
-    if (data && (data as any[]).length > 0) {
-      const rule = (data as any[])[0];
+    if (data && data.length > 0) {
+      const rule = data[0];
       setExistingRuleId(rule.id);
       setInstruction(rule.instruction || "");
       setActionType(rule.action_type || "text");
