@@ -794,7 +794,7 @@ export default function Chatbot() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto gap-1 p-1">
           <TabsTrigger value="interacao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <Layers className="w-3 h-3 mr-1" />Interação & Mídia
+            <Music className="w-3 h-3 mr-1" />Mídia
           </TabsTrigger>
           <TabsTrigger value="simulador" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Brain className="w-3 h-3 mr-1" />Treinar IA
