@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Clock, Zap, Timer } from "lucide-react";
+import { Zap, Timer } from "lucide-react";
 
 interface Props {
   companyId: string;
@@ -8,59 +8,74 @@ interface Props {
 
 export default function SupportCountdown({ companyId }: Props) {
   const [apiConfigured, setApiConfigured] = useState(false);
-  const [autoSendHour, setAutoSendHour] = useState(8);
-  const [autoSendMinute, setAutoSendMinute] = useState(0);
-  const [suporteActive, setSuporteActive] = useState(false);
+  const [nearestDeadline, setNearestDeadline] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState("");
 
   useEffect(() => {
     if (!companyId) return;
 
-    const fetchSettings = async () => {
-      const [apiResult, catResult] = await Promise.all([
+    const fetchData = async () => {
+      const [apiResult, clientsResult] = await Promise.all([
         supabase
           .from("api_settings")
-          .select("api_url, api_token, auto_send_hour, auto_send_minute")
+          .select("api_url, api_token")
           .eq("company_id", companyId)
           .maybeSingle(),
         supabase
-          .from("auto_send_category_settings")
-          .select("is_active")
+          .from("clients")
+          .select("support_started_at")
           .eq("company_id", companyId)
-          .eq("category", "suporte")
-          .maybeSingle(),
+          .not("support_started_at", "is", null),
       ]);
 
-      const hasApi = !!(apiResult.data?.api_url && apiResult.data?.api_token);
-      setApiConfigured(hasApi);
-      setAutoSendHour(apiResult.data?.auto_send_hour ?? 8);
-      setAutoSendMinute(apiResult.data?.auto_send_minute ?? 0);
-      setSuporteActive(catResult.data?.is_active ?? true);
+      setApiConfigured(!!(apiResult.data?.api_url && apiResult.data?.api_token));
+
+      // Find the nearest 48h deadline among support clients
+      if (clientsResult.data && clientsResult.data.length > 0) {
+        const now = Date.now();
+        const HOURS_48 = 48 * 60 * 60 * 1000;
+        let nearest: Date | null = null;
+
+        for (const c of clientsResult.data) {
+          const started = new Date((c as any).support_started_at).getTime();
+          const deadline = new Date(started + HOURS_48);
+          // Only consider future deadlines, or pick the most recent past one
+          if (!nearest || Math.abs(deadline.getTime() - now) < Math.abs(nearest.getTime() - now)) {
+            nearest = deadline;
+          }
+        }
+
+        // Find the next upcoming deadline
+        let nextUpcoming: Date | null = null;
+        for (const c of clientsResult.data) {
+          const started = new Date((c as any).support_started_at).getTime();
+          const deadline = new Date(started + HOURS_48);
+          if (deadline.getTime() > now) {
+            if (!nextUpcoming || deadline.getTime() < nextUpcoming.getTime()) {
+              nextUpcoming = deadline;
+            }
+          }
+        }
+
+        setNearestDeadline(nextUpcoming || nearest);
+      }
     };
 
-    fetchSettings();
+    fetchData();
   }, [companyId]);
 
   useEffect(() => {
-    if (!apiConfigured) return;
+    if (!nearestDeadline) return;
 
     const calcCountdown = () => {
-      const now = new Date();
-      // Convert to Brasília time (UTC-3)
-      const brasiliaOffset = -3 * 60;
-      const localOffset = now.getTimezoneOffset();
-      const diff = (brasiliaOffset + localOffset) * 60 * 1000;
-      const brasilia = new Date(now.getTime() + diff);
+      const now = Date.now();
+      const diffMs = nearestDeadline.getTime() - now;
 
-      const targetToday = new Date(brasilia);
-      targetToday.setHours(autoSendHour, autoSendMinute, 0, 0);
-
-      let target = targetToday;
-      if (brasilia >= targetToday) {
-        target = new Date(targetToday.getTime() + 24 * 60 * 60 * 1000);
+      if (diffMs <= 0) {
+        setCountdown("00:00:00");
+        return;
       }
 
-      const diffMs = target.getTime() - brasilia.getTime();
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
       const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
@@ -73,31 +88,42 @@ export default function SupportCountdown({ companyId }: Props) {
     calcCountdown();
     const interval = setInterval(calcCountdown, 1000);
     return () => clearInterval(interval);
-  }, [apiConfigured, autoSendHour, autoSendMinute]);
+  }, [nearestDeadline]);
 
-  if (apiConfigured) {
+  if (apiConfigured && nearestDeadline) {
+    const isReady = nearestDeadline.getTime() <= Date.now();
     return (
       <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-400/20 rounded-lg px-3 py-2">
         <Zap className="w-4 h-4 text-violet-400 shrink-0" />
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs">
-          <span className="text-muted-foreground">
-            Próximo envio automático {suporteActive ? "" : "(desativado)"} em:
-          </span>
-          <span className="font-mono font-bold text-violet-400 text-sm">{countdown}</span>
-          <span className="text-muted-foreground">
-            (às {String(autoSendHour).padStart(2, "0")}:{String(autoSendMinute).padStart(2, "0")} Brasília)
-          </span>
+          {isReady ? (
+            <span className="font-semibold text-emerald-400">
+              ✅ Próximo envio automático pronto — será disparado em breve
+            </span>
+          ) : (
+            <>
+              <span className="text-muted-foreground">
+                Próximo envio automático (48h) em:
+              </span>
+              <span className="font-mono font-bold text-violet-400 text-sm">{countdown}</span>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-400/20 rounded-lg px-3 py-2">
-      <Timer className="w-4 h-4 text-yellow-400 shrink-0" />
-      <span className="text-xs text-muted-foreground">
-        <span className="font-semibold text-yellow-400">Envio manual</span> — API não configurada. O check-up de suporte deve ser enviado manualmente após <span className="font-semibold text-yellow-400">48h</span> do cliente ser encaminhado.
-      </span>
-    </div>
-  );
+  if (!apiConfigured) {
+    return (
+      <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-400/20 rounded-lg px-3 py-2">
+        <Timer className="w-4 h-4 text-yellow-400 shrink-0" />
+        <span className="text-xs text-muted-foreground">
+          <span className="font-semibold text-yellow-400">Envio manual</span> — API não configurada. O check-up de suporte deve ser enviado manualmente após{" "}
+          <span className="font-semibold text-yellow-400">48h</span> do cliente ser encaminhado.
+        </span>
+      </div>
+    );
+  }
+
+  return null;
 }
