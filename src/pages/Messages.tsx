@@ -253,6 +253,7 @@ export default function Messages() {
         ))}
       </Tabs>
 
+      <AutoSendCategoryToggles companyId={companyId} />
       <AutoSendLogs companyId={companyId} />
     </div>
   );
