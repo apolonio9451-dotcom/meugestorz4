@@ -15,6 +15,7 @@ import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, 
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import SupportCountdown from "@/components/clients/SupportCountdown";
 
 interface Client {
   id: string;
