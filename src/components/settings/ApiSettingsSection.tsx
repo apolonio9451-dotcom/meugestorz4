@@ -29,7 +29,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
-        .select("id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key")
+        .select("id, api_url, api_token, pix_key")
         .eq("company_id", companyId)
         .maybeSingle();
       if (data) {
