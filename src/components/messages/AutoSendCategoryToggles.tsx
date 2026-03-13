@@ -3,14 +3,52 @@ import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell } from "lucide-react";
+import { Bell, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const autoSendCategories = [
-  { key: "vence_hoje", label: "Vence Hoje", color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
-  { key: "vence_amanha", label: "Vence Amanhã", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  { key: "a_vencer", label: "A Vencer", color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
-  { key: "vencidos", label: "Vencidos", color: "bg-destructive/20 text-destructive border-destructive/30" },
+  {
+    key: "vence_hoje",
+    label: "Vence Hoje",
+    color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    description: "Envia lembrete no dia do vencimento do plano do cliente.",
+  },
+  {
+    key: "vence_amanha",
+    label: "Vence Amanhã",
+    color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    description: "Envia lembrete 1 dia antes do vencimento do plano.",
+  },
+  {
+    key: "a_vencer",
+    label: "A Vencer",
+    color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30",
+    description: "Envia lembrete 3 dias antes do vencimento do plano.",
+  },
+  {
+    key: "vencidos",
+    label: "Vencidos",
+    color: "bg-destructive/20 text-destructive border-destructive/30",
+    description: "Envia cobrança para clientes com plano já vencido.",
+  },
+  {
+    key: "followup",
+    label: "Follow-up",
+    color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50",
+    description: "Envia mensagem de acompanhamento para clientes ativos com follow-up habilitado, verificando satisfação.",
+  },
+  {
+    key: "suporte",
+    label: "Suporte",
+    color: "bg-violet-400/20 text-violet-400 border-violet-400/50",
+    description: "Envia check-up automático 2 dias após o cliente receber suporte técnico.",
+  },
 ];
 
 interface Props {
@@ -23,7 +61,7 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
 
   useEffect(() => {
     if (!companyId) return;
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true);
       const { data } = await supabase
         .from("auto_send_category_settings")
@@ -33,12 +71,12 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
       const map: Record<string, boolean> = {};
       autoSendCategories.forEach((c) => {
         const found = data?.find((d: any) => d.category === c.key);
-        map[c.key] = found ? found.is_active : true; // default active
+        map[c.key] = found ? found.is_active : true;
       });
       setActiveCategories(map);
       setLoading(false);
     };
-    fetch();
+    fetchData();
   }, [companyId]);
 
   const handleToggle = async (category: string, checked: boolean) => {
@@ -84,24 +122,34 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {autoSendCategories.map((cat) => (
-            <div
-              key={cat.key}
-              className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3"
-            >
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={`${cat.color} border text-xs`}>
-                  {cat.label}
-                </Badge>
+        <TooltipProvider>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {autoSendCategories.map((cat) => (
+              <div
+                key={cat.key}
+                className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={`${cat.color} border text-xs`}>
+                    {cat.label}
+                  </Badge>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[250px] text-xs">
+                      {cat.description}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Switch
+                  checked={activeCategories[cat.key] ?? true}
+                  onCheckedChange={(checked) => handleToggle(cat.key, checked)}
+                />
               </div>
-              <Switch
-                checked={activeCategories[cat.key] ?? true}
-                onCheckedChange={(checked) => handleToggle(cat.key, checked)}
-              />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );

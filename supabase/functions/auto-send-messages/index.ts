@@ -254,6 +254,15 @@ Deno.serve(async (req) => {
       const apiToken = config.api_token;
       const companyId = config.company_id;
 
+      // Check if suporte category is disabled
+      const { data: supportCatSetting } = await supabase
+        .from("auto_send_category_settings")
+        .select("is_active")
+        .eq("company_id", companyId)
+        .eq("category", "suporte")
+        .maybeSingle();
+      if (supportCatSetting && !supportCatSetting.is_active) continue;
+
       // Fetch support template
       const { data: supportTemplateRows } = await supabase
         .from("message_templates")
