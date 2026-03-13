@@ -15,7 +15,7 @@ import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, 
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import SupportCountdown from "@/components/clients/SupportCountdown";
+import SupportCardCountdown from "@/components/clients/SupportCardCountdown";
 
 interface Client {
   id: string;
@@ -1109,12 +1109,9 @@ export default function Clients() {
 
       {/* Suporte info text */}
       {mainFilter === "status" && statusSubFilter === "suporte" && (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground bg-violet-400/5 border border-violet-400/20 rounded-lg px-3 py-2">
-            🎧 <span className="font-semibold text-violet-400">Suporte</span> — Clientes encaminhados para check-up de satisfação. Aparecem aqui 48h após serem enviados ao suporte. Foque na experiência, não em vendas.
-          </p>
-          {companyId && <SupportCountdown companyId={companyId} />}
-        </div>
+        <p className="text-xs text-muted-foreground bg-violet-400/5 border border-violet-400/20 rounded-lg px-3 py-2">
+          🎧 <span className="font-semibold text-violet-400">Suporte</span> — Clientes encaminhados para check-up de satisfação. Aparecem aqui 48h após serem enviados ao suporte. Foque na experiência, não em vendas.
+        </p>
       )}
 
       {/* Log view */}
@@ -1286,36 +1283,9 @@ export default function Clients() {
                 )}
 
                 {/* Individual 48h countdown for support clients */}
-                {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at && (() => {
-                  const started = new Date((client as any).support_started_at).getTime();
-                  const deadline = started + 48 * 60 * 60 * 1000;
-                  const now = Date.now();
-                  const diffMs = deadline - now;
-                  if (diffMs <= 0) {
-                    return (
-                      <div className="px-3.5 pb-1.5 sm:px-4">
-                        <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold">
-                          <Clock className="w-3 h-3" />
-                          ✅ 48h atingidas — pronto para envio
-                        </div>
-                      </div>
-                    );
-                  }
-                  const h = Math.floor(diffMs / (1000 * 60 * 60));
-                  const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                  const deadlineDate = new Date(deadline);
-                  return (
-                    <div className="px-3.5 pb-1.5 sm:px-4">
-                      <div className="flex items-center gap-1.5 text-[10px] text-violet-400">
-                        <Clock className="w-3 h-3" />
-                        <span className="font-medium">Envio em {h}h{String(m).padStart(2, "0")}min</span>
-                        <span className="text-muted-foreground">
-                          (às {deadlineDate.toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })})
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })()}
+                {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at && (
+                  <SupportCardCountdown supportStartedAt={(client as any).support_started_at} />
+                )}
 
                 {/* Action button */}
                 {client.whatsapp && (
