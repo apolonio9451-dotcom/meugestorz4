@@ -131,6 +131,8 @@ Deno.serve(async (req) => {
       const companyId = config.company_id;
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
       let isFirstSend = true;
+
+      // Fetch category active settings
       const { data: categorySettings } = await supabase
         .from("auto_send_category_settings")
         .select("category, is_active")
