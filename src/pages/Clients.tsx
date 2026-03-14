@@ -1041,7 +1041,7 @@ export default function Clients() {
           </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         {mainBlocks.map((block) => {
           const Icon = block.icon;
           const isActive = mainFilter === block.key;
