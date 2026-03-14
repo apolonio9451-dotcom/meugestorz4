@@ -262,6 +262,7 @@ Deno.serve(async (req) => {
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
       const companyId = config.company_id;
+      const supportIntervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
 
       // Check if suporte category is disabled
       const { data: supportCatSetting } = await supabase
