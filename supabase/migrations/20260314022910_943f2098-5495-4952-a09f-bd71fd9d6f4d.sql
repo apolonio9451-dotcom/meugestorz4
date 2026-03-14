@@ -1,0 +1,1 @@
+UPDATE public.client_subscriptions SET payment_status = 'paid' WHERE payment_status = 'pending';
