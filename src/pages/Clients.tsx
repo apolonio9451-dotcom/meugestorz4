@@ -267,10 +267,12 @@ export default function Clients() {
     };
 
     window.addEventListener("focus", refreshTemplates);
+    window.addEventListener("templates-updated", refreshTemplates);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("focus", refreshTemplates);
+      window.removeEventListener("templates-updated", refreshTemplates);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [companyId]);
