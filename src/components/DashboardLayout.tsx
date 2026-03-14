@@ -362,7 +362,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <img
               src={defaultBrandLogo}
               alt="Meu Gestor"
-              className="relative h-10 max-w-[180px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+              className="relative h-12 max-w-[200px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
             />
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
@@ -530,7 +530,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <TrialBanner />
-        <header className="h-16 glass-header flex items-center justify-between px-4 lg:px-6">
+        <header className="h-24 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-foreground" />
           </button>
@@ -544,7 +544,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <img
                 src={defaultBrandLogo}
                 alt="Meu Gestor"
-                className="relative h-10 sm:h-12 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
+                className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
               />
             </div>
           </div>
