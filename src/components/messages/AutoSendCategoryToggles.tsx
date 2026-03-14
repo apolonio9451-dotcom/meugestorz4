@@ -76,7 +76,7 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
           .eq("company_id", companyId),
         supabase
           .from("api_settings")
-          .select("auto_send_hour, auto_send_minute")
+          .select("auto_send_hour, auto_send_minute, send_interval_seconds")
           .eq("company_id", companyId)
           .maybeSingle(),
       ]);
