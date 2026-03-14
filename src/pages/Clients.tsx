@@ -915,7 +915,7 @@ export default function Clients() {
                     <Label className="text-sm">Servidor *</Label>
                     <Select name="server" defaultValue={editing?.server || ""}>
                       <SelectTrigger className="h-10 text-sm border-primary/20 focus:border-primary/50"><SelectValue placeholder="Selecione o servidor" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[9999]" position="popper" sideOffset={4}>
                         {servers.map(s => (
                           <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                         ))}
