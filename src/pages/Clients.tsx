@@ -687,6 +687,7 @@ export default function Clients() {
   const filterCounts = {
     todos: activeClients.length,
     vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
+    pendentes: searchFiltered.filter(c => { const sub = subscriptions[c.id]; return sub && sub.payment_status === "pending"; }).length,
     excluidos: excludedClients.length,
     ativos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0; }).length,
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
