@@ -690,7 +690,7 @@ export default function Clients() {
     ativos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d > 0; }).length,
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
-    a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d >= 2 && d <= 7; }).length,
+    a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d >= 2 && d <= 3; }).length,
     followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15 && (c as any).follow_up_active !== false; }).length,
     suporte: searchFiltered.filter(c => !!(c as any).support_started_at).length,
   };
