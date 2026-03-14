@@ -701,6 +701,7 @@ export default function Clients() {
     { key: "todos" as const, label: "Todos", icon: LayoutGrid, count: filterCounts.todos },
     { key: "status" as const, label: "Status", icon: Activity, count: filterCounts.ativos },
     { key: "vencidos" as const, label: "Vencidos", icon: AlertTriangle, count: filterCounts.vencidos },
+    { key: "pendentes" as const, label: "Pendentes", icon: Clock, count: filterCounts.pendentes },
     { key: "excluidos" as const, label: "Excluídos", icon: Trash2, count: filterCounts.excluidos },
     { key: "log" as const, label: "Log", icon: History, count: activityLogs.length },
   ];
