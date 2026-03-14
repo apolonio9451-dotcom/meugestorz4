@@ -184,9 +184,7 @@ export default function Financial() {
       const creditUnit = Number(srv.cost_per_credit);
       const cost = creditUnit * clientCount;
       const profit = revenue - cost;
-      const daysInPeriod = Math.max(1, Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-      const profitPerDay = profit / daysInPeriod;
-      return { name: srv.name, credit: creditUnit, clients: clientCount, revenue, cost, profit, profitPerDay };
+      return { name: srv.name, credit: creditUnit, clients: clientCount, revenue, cost, profit };
     });
   }, [filteredSubs, servers]);
 
@@ -197,9 +195,8 @@ export default function Financial() {
         revenue: acc.revenue + sp.revenue,
         cost: acc.cost + sp.cost,
         profit: acc.profit + sp.profit,
-        profitPerDay: acc.profitPerDay + sp.profitPerDay,
       }),
-      { clients: 0, revenue: 0, cost: 0, profit: 0, profitPerDay: 0 }
+      { clients: 0, revenue: 0, cost: 0, profit: 0 }
     );
   }, [serverProfits]);
 
@@ -439,13 +436,12 @@ export default function Financial() {
                 <TableHead className="text-right">Receita/Mês</TableHead>
                 <TableHead className="text-right">Custo/Mês</TableHead>
                 <TableHead className="text-right">Lucro/Mês</TableHead>
-                <TableHead className="text-right">Lucro/Dia</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {serverProfits.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhum servidor cadastrado
                   </TableCell>
                 </TableRow>
@@ -461,7 +457,6 @@ export default function Financial() {
                       <TableCell className={`text-right font-semibold ${sp.profit >= 0 ? "text-success" : "text-destructive"}`}>
                         {fmt(sp.profit)}
                       </TableCell>
-                      <TableCell className="text-right">{fmt(sp.profitPerDay)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="border-t-2 border-border/50 bg-muted/20">
@@ -473,7 +468,6 @@ export default function Financial() {
                     <TableCell className={`text-right font-bold ${serverTotals.profit >= 0 ? "text-success" : "text-destructive"}`}>
                       {fmt(serverTotals.profit)}
                     </TableCell>
-                    <TableCell className="text-right font-bold">{fmt(serverTotals.profitPerDay)}</TableCell>
                   </TableRow>
                 </>
               )}
