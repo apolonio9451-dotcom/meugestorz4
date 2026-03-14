@@ -61,6 +61,7 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
   const [activeCategories, setActiveCategories] = useState<Record<string, boolean>>({});
   const [autoSendHour, setAutoSendHour] = useState(8);
   const [autoSendMinute, setAutoSendMinute] = useState(0);
+  const [sendInterval, setSendInterval] = useState(60);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
