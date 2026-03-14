@@ -214,6 +214,12 @@ Deno.serve(async (req) => {
 
         const normalizedPhone = normalizePhone(phone);
 
+        // Delay between sends for flow optimization
+        if (!isFirstSend) {
+          await sleep(intervalMs);
+        }
+        isFirstSend = false;
+
         try {
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
@@ -225,6 +231,7 @@ Deno.serve(async (req) => {
             status: sendResult.ok ? "success" : "error",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
 
           if (sendResult.ok) {
@@ -242,6 +249,7 @@ Deno.serve(async (req) => {
             status: "error",
             error_message: String(sendErr),
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
           totalErrors++;
         }
