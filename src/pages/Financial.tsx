@@ -184,7 +184,8 @@ export default function Financial() {
       const creditUnit = Number(srv.cost_per_credit);
       const cost = creditUnit * clientCount;
       const profit = revenue - cost;
-      const profitPerDay = profit / 30;
+      const daysInPeriod = Math.max(1, Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const profitPerDay = profit / daysInPeriod;
       return { name: srv.name, credit: creditUnit, clients: clientCount, revenue, cost, profit, profitPerDay };
     });
   }, [filteredSubs, servers]);
