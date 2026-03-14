@@ -441,7 +441,7 @@ export default function Financial() {
             <TableBody>
               {serverProfits.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Nenhum servidor cadastrado
                   </TableCell>
                 </TableRow>
