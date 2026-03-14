@@ -150,20 +150,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (resellerData) {
-          // Reseller: fetch branding from reseller_settings
-          const { data: resellerSettings } = await supabase
-            .from("reseller_settings")
-            .select("service_name, logo_url")
-            .eq("reseller_id", resellerData.id)
-            .maybeSingle();
-
-          if (resellerSettings?.service_name) {
-            setBrandName(resellerSettings.service_name);
-          } else {
-            setBrandName("Meu gestor");
-          }
-          setBrandLogo(resellerSettings?.logo_url || defaultBrandLogo);
-
           // Reseller theme: fetch from company_settings (same as owner)
           const { data: compSettings } = await supabase
             .from("company_settings")
@@ -175,15 +161,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           // Regular user: fetch from company_settings
           const { data } = await supabase
             .from("company_settings")
-            .select("brand_name, logo_url, icon_url, primary_color, secondary_color, background_color")
+            .select("primary_color, secondary_color, background_color")
             .eq("company_id", companyId)
             .maybeSingle();
-          if (data?.brand_name) setBrandName(data.brand_name);
-          setBrandLogo(data?.logo_url || defaultBrandLogo);
           if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
         }
-      } finally {
-        setBrandLoaded(true);
+      } catch (e) {
+        console.error("Error fetching brand:", e);
       }
     };
 
