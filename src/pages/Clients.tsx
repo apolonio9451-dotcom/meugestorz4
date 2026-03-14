@@ -314,15 +314,9 @@ export default function Clients() {
     forcedCategory?: "vencidos" | "vence_hoje" | "vence_amanha" | "a_vencer"
   ): string => {
     const category = getMessageCategory(days, forcedCategory);
-    const defaultMessages: Record<string, string> = {
-      vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
-      vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
-      a_vencer: "Olá {primeiro_nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
-      vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
-      followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
-    };
     const templateSource = templatesOverride || messageTemplates;
-    let msg = templateSource[category] || defaultMessages[category] || defaultMessages.vencidos;
+    // Priority: DB custom message > rich defaults
+    let msg = templateSource[category] || defaultMessageTemplates[category] || `Olá {primeiro_nome}! Plano: {plano} Valor: R$ {valor}`;
     const clientMks = macKeys[client.id] || [];
     const firstName = (client.name || "").split(" ")[0];
     const now = new Date();
