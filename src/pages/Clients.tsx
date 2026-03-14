@@ -486,6 +486,7 @@ export default function Clients() {
           plan_id: formPlanId,
           amount: parseFloat(formAmount) || 0,
           end_date: format(formEndDate, "yyyy-MM-dd"),
+          payment_status: "paid",
         });
       }
     }
