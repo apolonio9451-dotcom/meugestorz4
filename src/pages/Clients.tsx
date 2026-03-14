@@ -926,21 +926,23 @@ export default function Clients() {
                     <div className="space-y-1.5">
                       <Label className="text-sm text-primary font-semibold">Plano *</Label>
                       <Select value={formPlanId} onValueChange={(v) => {
-                        setFormPlanId(v);
-                        const plan = plans.find(p => p.id === v);
-                        if (plan) {
-                          setFormAmount(String(plan.price ?? 0));
-                          const days = plan.duration_days ?? 30;
-                          try {
+                        console.log("[Plan Select] selected:", v);
+                        try {
+                          setFormPlanId(v);
+                          const plan = plans.find(p => p.id === v);
+                          if (plan) {
+                            setFormAmount(String(plan.price ?? 0));
+                            const days = plan.duration_days ?? 30;
                             const newDate = addDays(new Date(), days);
-                            if (!isNaN(newDate.getTime())) {
+                            if (newDate && !isNaN(newDate.getTime())) {
                               setFormEndDate(newDate);
                             } else {
                               setFormEndDate(addDays(new Date(), 30));
                             }
-                          } catch {
-                            setFormEndDate(addDays(new Date(), 30));
                           }
+                        } catch (err) {
+                          console.error("[Plan Select] Error:", err);
+                          setFormEndDate(addDays(new Date(), 30));
                         }
                       }}>
                         <SelectTrigger className="h-10 text-sm border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
