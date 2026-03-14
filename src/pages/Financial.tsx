@@ -86,7 +86,25 @@ export default function Financial() {
       .filter((s) => s.payment_status !== "cancelled")
       .reduce((sum, s) => sum + Number(s.amount), 0);
 
-    const totalCosts = servers.reduce((sum, srv) => sum + Number(srv.cost_per_credit), 0);
+    // Calculate costs: for each server, count unique clients in filtered subs × cost_per_credit
+    const serverCostMap = new Map<string, number>();
+    servers.forEach((srv) => serverCostMap.set(srv.name, Number(srv.cost_per_credit)));
+
+    const clientsByServer = new Map<string, Set<string>>();
+    filteredSubs
+      .filter((s) => s.payment_status !== "cancelled")
+      .forEach((s) => {
+        const serverName = s.clients?.server || "";
+        if (!clientsByServer.has(serverName)) clientsByServer.set(serverName, new Set());
+        if (s.clients?.name) clientsByServer.get(serverName)!.add(s.clients.name);
+      });
+
+    let totalCosts = 0;
+    clientsByServer.forEach((clients, serverName) => {
+      const cost = serverCostMap.get(serverName) || 0;
+      totalCosts += cost * clients.size;
+    });
+
     const monthlyProfit = monthlyRevenue - totalCosts;
 
     return { receivedToday, forecastToday, totalReceived, openInvoices, monthlyRevenue, monthlyProfit };
