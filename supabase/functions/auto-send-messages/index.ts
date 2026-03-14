@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
