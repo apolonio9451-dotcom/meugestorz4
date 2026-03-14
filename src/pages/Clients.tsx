@@ -1558,7 +1558,7 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      {/* Renewal Confirmation Dialog */}
+      {/* Renewal Confirmation Dialog - with payment question */}
       <Dialog open={!!renewConfirm} onOpenChange={(open) => !open && setRenewConfirm(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -1577,18 +1577,37 @@ export default function Clients() {
               })()}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRenewConfirm(null)}>Cancelar</Button>
-            <Button onClick={async () => {
+          <div className="border border-border rounded-xl p-4 space-y-2 bg-muted/30">
+            <p className="text-sm font-medium text-foreground">O pagamento foi realizado?</p>
+            <p className="text-xs text-muted-foreground">Se não, o cliente ficará na aba "Pendentes" até você confirmar o recebimento.</p>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button className="w-full" onClick={async () => {
               if (!renewConfirm) return;
               if (renewConfirm.type === "same") {
-                await handleRenewSameDate(renewConfirm.clientId);
+                await handleRenewSameDate(renewConfirm.clientId, true);
               } else if (renewConfirm.type === "months") {
-                await handleRenew(renewConfirm.clientId, renewConfirm.days!);
+                await handleRenew(renewConfirm.clientId, renewConfirm.days!, true);
               }
               setRenewConfirm(null);
             }}>
-              Confirmar Renovação
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Sim, pagamento recebido
+            </Button>
+            <Button variant="outline" className="w-full border-warning/50 text-warning hover:bg-warning/10" onClick={async () => {
+              if (!renewConfirm) return;
+              if (renewConfirm.type === "same") {
+                await handleRenewSameDate(renewConfirm.clientId, false);
+              } else if (renewConfirm.type === "months") {
+                await handleRenew(renewConfirm.clientId, renewConfirm.days!, false);
+              }
+              setRenewConfirm(null);
+            }}>
+              <Clock className="w-4 h-4 mr-2" />
+              Não, vai acertar depois
+            </Button>
+            <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setRenewConfirm(null)}>
+              Cancelar
             </Button>
           </DialogFooter>
         </DialogContent>
