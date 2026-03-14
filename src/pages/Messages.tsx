@@ -27,8 +27,7 @@ const categories = [
     label: "Vence Hoje",
     color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     description: "Mensagem enviada para clientes cujo plano vence hoje.",
-    defaultMessage:
-      "Olá, {primeiro_nome}, {saudacao}! ⏳\n\nSeu acesso vence hoje, {dia_semana} dia {dia}. Seu sinal pode cair a qualquer momento, confira os dados para renovação:\n\n📋 *Plano*: {plano}\n💰 *Valor*: R$ {valor}\n📅 *Vencimento*: {vencimento}\n\n💳 Pagamento Pix\nClique na chave para copiar:\n\n📌 Chave: {sua_chave_pix}\n👤 Nome: [Seu Nome]\n\n_Após o pagamento, envie o comprovante por aqui para liberação imediata._",
+    defaultMessage: defaultMessageTemplates.vence_hoje,
   },
   {
     key: "vence_amanha",
