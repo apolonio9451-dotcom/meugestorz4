@@ -944,7 +944,7 @@ export default function Clients() {
                         }
                       }}>
                         <SelectTrigger className="h-10 text-sm border-primary/30 focus:ring-primary/40"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[9999]" position="popper" sideOffset={4}>
                           {plans.map(p => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                           ))}
