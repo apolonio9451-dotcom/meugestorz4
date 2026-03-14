@@ -245,9 +245,7 @@ export default function Messages() {
                     variant="ghost"
                     size="sm"
                     className="text-xs text-muted-foreground"
-                    onClick={() =>
-                      setTemplates((prev) => ({ ...prev, [cat.key]: cat.defaultMessage }))
-                    }
+                    onClick={() => handleRestoreDefault(cat.key)}
                   >
                     Restaurar padrão
                   </Button>
