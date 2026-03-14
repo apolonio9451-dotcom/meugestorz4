@@ -569,11 +569,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-72 h-20 rounded-full bg-primary/25 blur-3xl" />
               </div>
-              <img
-                src={brandLogo || defaultBrandLogo}
-                alt="Marca"
-                className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
-              />
+              {brandLoaded && (
+                <img
+                  src={brandLogo || defaultBrandLogo}
+                  alt="Marca"
+                  className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)] animate-fade-in"
+                />
+              )}
             </div>
           </div>
 
