@@ -80,7 +80,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("Meu Gestor");
-  const [brandLogo, setBrandLogo] = useState<string | null>(defaultBrandLogo);
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandLoaded, setBrandLoaded] = useState(false);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
