@@ -271,8 +271,6 @@ Deno.serve(async (req) => {
           console.log(`[auto-send] ❌ ${client.name} (${category}) exception: ${sendErr}`);
         }
       }
-        }
-      }
     }
 
     // --- Support check-up auto-send (runs for ALL companies, independent of auto_send_hour) ---
