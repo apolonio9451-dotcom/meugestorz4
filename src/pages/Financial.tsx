@@ -468,7 +468,6 @@ export default function Financial() {
                     <TableCell className={`text-right font-bold ${serverTotals.profit >= 0 ? "text-success" : "text-destructive"}`}>
                       {fmt(serverTotals.profit)}
                     </TableCell>
-                    <TableCell className="text-right font-bold">{fmt(serverTotals.profitPerDay)}</TableCell>
                   </TableRow>
                 </>
               )}
