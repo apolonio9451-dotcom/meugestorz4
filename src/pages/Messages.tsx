@@ -127,6 +127,8 @@ export default function Messages() {
           { onConflict: "company_id,category" }
         );
       if (error) throw error;
+      // Dispatch event so other pages (Clients) can refresh templates
+      window.dispatchEvent(new CustomEvent("templates-updated"));
       toast({ title: "Salvo!", description: "Mensagem atualizada com sucesso." });
     } catch (err: any) {
       console.error("Erro ao salvar template:", err);
@@ -134,6 +136,21 @@ export default function Messages() {
     } finally {
       setSaving(null);
     }
+  };
+
+  const handleRestoreDefault = async (categoryKey: string) => {
+    if (!companyId) return;
+    const cat = categories.find(c => c.key === categoryKey);
+    if (!cat) return;
+    // Delete custom template from DB so system uses default
+    await supabase
+      .from("message_templates")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("category", categoryKey);
+    setTemplates((prev) => ({ ...prev, [categoryKey]: cat.defaultMessage }));
+    window.dispatchEvent(new CustomEvent("templates-updated"));
+    toast({ title: "Restaurado!", description: "Mensagem restaurada ao padrão." });
   };
 
   const insertVariable = (categoryKey: string, tag: string) => {
