@@ -436,7 +436,6 @@ export default function Financial() {
                 <TableHead className="text-right">Receita/Mês</TableHead>
                 <TableHead className="text-right">Custo/Mês</TableHead>
                 <TableHead className="text-right">Lucro/Mês</TableHead>
-                <TableHead className="text-right">Lucro/Dia</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
