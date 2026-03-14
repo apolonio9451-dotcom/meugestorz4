@@ -34,8 +34,7 @@ const categories = [
     label: "Vence Amanhã",
     color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     description: "Mensagem enviada para clientes cujo plano vence amanhã.",
-    defaultMessage:
-      "Olá, {primeiro_nome}, {saudacao}! ⏳\n\nSeu acesso vence amanhã, {dia_semana} dia {dia}. Evite interrupções no sinal e confira os dados para renovação:\n\n📋 *Plano*: {plano}\n💰 *Valor*: R$ {valor}\n📅 *Vencimento*: {vencimento}\n\n💳 Pagamento Pix\nClique na chave para copiar:\n\n📌 *Chave*: {sua_chave_pix}\n👤 *Nome*: [Seu Nome]\n\n_Após o pagamento, envie o comprovante por aqui para liberação imediata_. 🤝",
+    defaultMessage: defaultMessageTemplates.vence_amanha,
   },
   {
     key: "a_vencer",
