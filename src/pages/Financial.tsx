@@ -195,9 +195,8 @@ export default function Financial() {
         revenue: acc.revenue + sp.revenue,
         cost: acc.cost + sp.cost,
         profit: acc.profit + sp.profit,
-        profitPerDay: acc.profitPerDay + sp.profitPerDay,
       }),
-      { clients: 0, revenue: 0, cost: 0, profit: 0, profitPerDay: 0 }
+      { clients: 0, revenue: 0, cost: 0, profit: 0 }
     );
   }, [serverProfits]);
 
