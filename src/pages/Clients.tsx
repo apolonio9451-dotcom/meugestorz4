@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SupportCardCountdown from "@/components/clients/SupportCardCountdown";
+import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
 
 interface Client {
   id: string;
@@ -266,10 +267,12 @@ export default function Clients() {
     };
 
     window.addEventListener("focus", refreshTemplates);
+    window.addEventListener("templates-updated", refreshTemplates);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("focus", refreshTemplates);
+      window.removeEventListener("templates-updated", refreshTemplates);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [companyId]);
@@ -313,15 +316,9 @@ export default function Clients() {
     forcedCategory?: "vencidos" | "vence_hoje" | "vence_amanha" | "a_vencer"
   ): string => {
     const category = getMessageCategory(days, forcedCategory);
-    const defaultMessages: Record<string, string> = {
-      vence_hoje: "Olá {primeiro_nome}! Seu plano vence hoje. Plano: {plano} Valor: R$ {valor}",
-      vence_amanha: "Olá {primeiro_nome}! Seu plano vence amanhã. Plano: {plano} Valor: R$ {valor}",
-      a_vencer: "Olá {primeiro_nome}! Seu plano vence em {dias} dias. Plano: {plano} Valor: R$ {valor}",
-      vencidos: "Olá {primeiro_nome}! Seu plano está vencido há {dias} dias. Plano: {plano} Valor: R$ {valor}",
-      followup: "Olá {primeiro_nome}! Estamos entrando em contato sobre seu plano. Plano: {plano} Valor: R$ {valor}",
-    };
     const templateSource = templatesOverride || messageTemplates;
-    let msg = templateSource[category] || defaultMessages[category] || defaultMessages.vencidos;
+    // Priority: DB custom message > rich defaults
+    let msg = templateSource[category] || defaultMessageTemplates[category] || `Olá {primeiro_nome}! Plano: {plano} Valor: R$ {valor}`;
     const clientMks = macKeys[client.id] || [];
     const firstName = (client.name || "").split(" ")[0];
     const now = new Date();
@@ -1300,8 +1297,7 @@ export default function Clients() {
                           href={getWhatsAppSendUrl(
                             client.whatsapp,
                             (() => {
-                              const defaultSupportMsg = "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
-                              let msg = messageTemplates["suporte"] || defaultSupportMsg;
+                              let msg = messageTemplates["suporte"] || defaultMessageTemplates.suporte;
                               msg = msg
                                 .replace(/{nome}/g, client.name || "")
                                 .replace(/{plano}/g, sub?.plan_name || "")

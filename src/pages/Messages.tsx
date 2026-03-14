@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Save, Info } from "lucide-react";
+import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
 import AutoSendLogs from "@/components/messages/AutoSendLogs";
 import AutoSendCategoryToggles from "@/components/messages/AutoSendCategoryToggles";
 import TestSendButton from "@/components/messages/TestSendButton";
@@ -26,48 +27,42 @@ const categories = [
     label: "Vence Hoje",
     color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     description: "Mensagem enviada para clientes cujo plano vence hoje.",
-    defaultMessage:
-      "Olá, {primeiro_nome}, {saudacao}! ⏳\n\nSeu acesso vence hoje, {dia_semana} dia {dia}. Seu sinal pode cair a qualquer momento, confira os dados para renovação:\n\n📋 *Plano*: {plano}\n💰 *Valor*: R$ {valor}\n📅 *Vencimento*: {vencimento}\n\n💳 Pagamento Pix\nClique na chave para copiar:\n\n📌 Chave: {sua_chave_pix}\n👤 Nome: [Seu Nome]\n\n_Após o pagamento, envie o comprovante por aqui para liberação imediata._",
+    defaultMessage: defaultMessageTemplates.vence_hoje,
   },
   {
     key: "vence_amanha",
     label: "Vence Amanhã",
     color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     description: "Mensagem enviada para clientes cujo plano vence amanhã.",
-    defaultMessage:
-      "Olá, {primeiro_nome}, {saudacao}! ⏳\n\nSeu acesso vence amanhã, {dia_semana} dia {dia}. Evite interrupções no sinal e confira os dados para renovação:\n\n📋 *Plano*: {plano}\n💰 *Valor*: R$ {valor}\n📅 *Vencimento*: {vencimento}\n\n💳 Pagamento Pix\nClique na chave para copiar:\n\n📌 *Chave*: {sua_chave_pix}\n👤 *Nome*: [Seu Nome]\n\n_Após o pagamento, envie o comprovante por aqui para liberação imediata_. 🤝",
+    defaultMessage: defaultMessageTemplates.vence_amanha,
   },
   {
     key: "a_vencer",
     label: "A Vencer",
     color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30",
     description: "Mensagem enviada para clientes cujo plano vence em 3 dias.",
-    defaultMessage:
-      "*Olá, {primeiro_nome}, {saudacao}*! 👋\n\nPassando  para te manter informado sobre o status do seu acesso. Seu plano vence em {dias} dias! ⏳\n\nPreparamos tudo para que você continue aproveitando sua programação sem interrupções. Confira os detalhes:\n\n📋 Resumo da Assinatura:\n\n*Plano*: {plano}\n*Valor*: R$ {valor}\n*Vencimento*: {vencimento}\n\n🔑 *Dados do Seu Acesso*:\n\n👤 _Usuário: {usuario}_\n🖥️ _MAC: {mac}_\n🌐 _Servidor: {servidor}_\n\nQuer se antecipar e garantir sua renovação? 🚀\n\n📌 *Dados para Pagamento*:\n\n*Banco*: [Seu Banco]\n*Nome*: [Seu Nome]\n*Chave Pix*: {sua_chave_pix}\n\n_Qualquer dúvida ou se precisar de suporte, conte comigo_! 😊",
+    defaultMessage: defaultMessageTemplates.a_vencer,
   },
   {
     key: "vencidos",
     label: "Vencidos",
     color: "bg-destructive/20 text-destructive border-destructive/30",
     description: "Mensagem enviada para clientes com plano já vencido.",
-    defaultMessage:
-      "Olá, *{primeiro_nome}* {saudacao}! 👋\n\nNotamos que o seu plano venceu a *{dias} dias* e o seu acesso pode estar interrompido. 🚫\nNão perca seus conteúdos favoritos! Vamos regularizar isso agora?\n\n📋 *Dados da Assinatura Vencida*:\n\n*Plano*: {plano}\n*Valor*: R$ {valor}\n*Vencimento*: {vencimento}\n\n📌 *Dados para Pagamento*:\n\n📌 *Chave*: {sua_chave_pix}\n👤 *Nome*: [Seu Nome]\n\n_Se já efetuou o pagamento desconsidere esse lembrete_",
+    defaultMessage: defaultMessageTemplates.vencidos,
   },
   {
     key: "followup",
     label: "Follow-up",
     color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50",
     description: "Mensagem de follow-up para clientes em acompanhamento.",
-    defaultMessage:
-      "Olá, {primeiro_nome}! 👋\n\nGostaríamos de expressar nossa gratidão pela confiança depositada em nossos serviços. Completamos hoje {dias} dias de parceria, e é uma satisfação tê-lo como cliente.\n\nNossa prioridade é oferecer uma experiência de excelência e, para isso, sua percepção é fundamental. Poderia nos informar como tem sido sua experiência com nossa plataforma até o momento? Seu feedback é uma ferramenta essencial para o aprimoramento contínuo de nossas operações.\n\n📋 Resumo da Sua Assinatura:\n\nPlano: {plano}\nValor: R$ {valor}\nVencimento: {vencimento}\n\n🔑 Seus Dados:\n\n👤 Usuário: {usuario}\n🖥️ MAC: {mac}\n🌐 Servidor: {servidor}",
+    defaultMessage: defaultMessageTemplates.followup,
   },
   {
     key: "suporte",
     label: "Suporte",
     color: "bg-violet-400/20 text-violet-400 border-violet-400/50",
     description: "Mensagem de check-up de satisfação enviada após suporte técnico.",
-    defaultMessage:
-      "Olá, *{primeiro_nome}*, {saudacao}! 👋\n\nEstamos entrando em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que o serviço esteja funcional. 🤝\natt, suporte 24h!",
+    defaultMessage: defaultMessageTemplates.suporte,
   },
 ];
 
@@ -132,6 +127,8 @@ export default function Messages() {
           { onConflict: "company_id,category" }
         );
       if (error) throw error;
+      // Dispatch event so other pages (Clients) can refresh templates
+      window.dispatchEvent(new CustomEvent("templates-updated"));
       toast({ title: "Salvo!", description: "Mensagem atualizada com sucesso." });
     } catch (err: any) {
       console.error("Erro ao salvar template:", err);
@@ -139,6 +136,21 @@ export default function Messages() {
     } finally {
       setSaving(null);
     }
+  };
+
+  const handleRestoreDefault = async (categoryKey: string) => {
+    if (!companyId) return;
+    const cat = categories.find(c => c.key === categoryKey);
+    if (!cat) return;
+    // Delete custom template from DB so system uses default
+    await supabase
+      .from("message_templates")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("category", categoryKey);
+    setTemplates((prev) => ({ ...prev, [categoryKey]: cat.defaultMessage }));
+    window.dispatchEvent(new CustomEvent("templates-updated"));
+    toast({ title: "Restaurado!", description: "Mensagem restaurada ao padrão." });
   };
 
   const insertVariable = (categoryKey: string, tag: string) => {
@@ -233,9 +245,7 @@ export default function Messages() {
                     variant="ghost"
                     size="sm"
                     className="text-xs text-muted-foreground"
-                    onClick={() =>
-                      setTemplates((prev) => ({ ...prev, [cat.key]: cat.defaultMessage }))
-                    }
+                    onClick={() => handleRestoreDefault(cat.key)}
                   >
                     Restaurar padrão
                   </Button>
