@@ -570,7 +570,7 @@ export default function Clients() {
     }
   };
 
-  const handleRenew = async (clientId: string, months: number) => {
+  const handleRenew = async (clientId: string, months: number, paid: boolean = true) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
     const currentEnd = parseISO(sub.end_date);
@@ -578,17 +578,17 @@ export default function Clients() {
     const newEnd = addMonths(baseDate, months);
     const { error } = await supabase
       .from("client_subscriptions")
-      .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
+      .update({ end_date: format(newEnd, "yyyy-MM-dd"), payment_status: paid ? "paid" : "pending", updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
     else {
       const client = clients.find(c => c.id === clientId);
-      await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)`);
+      await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)${!paid ? " (pgto pendente)" : ""}`);
       toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs();
     }
   };
 
-  const handleRenewSameDate = async (clientId: string) => {
+  const handleRenewSameDate = async (clientId: string, paid: boolean = true) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
     const currentEnd = parseISO(sub.end_date);
@@ -603,12 +603,12 @@ export default function Clients() {
     }
     const { error } = await supabase
       .from("client_subscriptions")
-      .update({ end_date: format(newEnd, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
+      .update({ end_date: format(newEnd, "yyyy-MM-dd"), payment_status: paid ? "paid" : "pending", updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
     else {
       const client = clients.find(c => c.id === clientId);
-      await logActivity("renovação", client?.name || "", clientId, `Renovado para dia ${dayOfMonth}`);
+      await logActivity("renovação", client?.name || "", clientId, `Renovado para dia ${dayOfMonth}${!paid ? " (pgto pendente)" : ""}`);
       toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); fetchActivityLogs();
     }
   };
