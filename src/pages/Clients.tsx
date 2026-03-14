@@ -666,7 +666,7 @@ export default function Clients() {
           case "ativos": return days !== null && days > 0;
           case "vence_hoje": return days !== null && days === 0;
           case "vence_amanha": return days !== null && days === 1;
-          case "a_vencer": return days !== null && days >= 2 && days <= 7;
+          case "a_vencer": return days !== null && days >= 2 && days <= 3;
           case "followup": {
             const activeDays = getClientActiveDays(c.id);
             return activeDays !== null && activeDays >= 15 && (c as any).follow_up_active !== false;
