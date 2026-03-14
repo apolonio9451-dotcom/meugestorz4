@@ -87,12 +87,15 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-    const today = new Date().toISOString().split("T")[0];
 
-    // Current hour in Brasília (UTC-3)
+    // Use Brasília time (UTC-3) for ALL date comparisons
     const nowUtc = new Date();
-    const brasiliaHour = (nowUtc.getUTCHours() - 3 + 24) % 24;
-    const brasiliaMinute = nowUtc.getUTCMinutes();
+    const brasiliaTime = new Date(nowUtc.getTime() - 3 * 60 * 60 * 1000);
+    const today = brasiliaTime.toISOString().split("T")[0];
+    const brasiliaHour = brasiliaTime.getUTCHours();
+    const brasiliaMinute = brasiliaTime.getUTCMinutes();
+
+    console.log(`[auto-send] Brasília: ${today} ${brasiliaHour}:${String(brasiliaMinute).padStart(2, "0")}`);
 
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
@@ -127,6 +130,8 @@ Deno.serve(async (req) => {
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
       let isFirstSend = true;
 
+      console.log(`[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms`);
+
       // Fetch category active settings
       const { data: categorySettings } = await supabase
         .from("auto_send_category_settings")
@@ -137,6 +142,8 @@ Deno.serve(async (req) => {
       categorySettings?.forEach((s: any) => {
         if (!s.is_active) disabledCategories.add(s.category);
       });
+
+      console.log(`[auto-send] Categorias desabilitadas: ${[...disabledCategories].join(", ") || "nenhuma"}`);
 
       // Fetch templates
       const { data: templateRows } = await supabase
@@ -149,7 +156,7 @@ Deno.serve(async (req) => {
         templates[t.category] = t.message;
       });
 
-      // Fetch active clients with subscriptions
+      // Fetch active clients with subscriptions - use limit to avoid hitting 1000 row default
       const { data: clients } = await supabase
         .from("clients")
         .select(`
@@ -160,9 +167,13 @@ Deno.serve(async (req) => {
           )
         `)
         .eq("company_id", companyId)
-        .eq("status", "active");
+        .eq("status", "active")
+        .limit(5000);
 
       if (!clients) continue;
+
+      // Build queue of ALL eligible clients across ALL categories first
+      const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
 
       for (const client of clients) {
         if (client.ultimo_envio_auto === today) continue;
@@ -181,16 +192,25 @@ Deno.serve(async (req) => {
 
         const category = getCategory(diffDays);
         if (!category) continue;
-
-        // Skip if category is disabled
         if (disabledCategories.has(category)) continue;
 
         const template = templates[category];
         if (!template) continue;
 
+        sendQueue.push({ client, category, sub, plan, diffDays });
+      }
+
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Categorias: ${JSON.stringify(
+        sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
+      )}`);
+
+      // Now process the full queue sequentially with delays
+      for (let i = 0; i < sendQueue.length; i++) {
+        const { client, category, sub, plan, diffDays } = sendQueue[i];
+        const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
-        const messageBody = replacePlaceholders(template, {
+        const messageBody = replacePlaceholders(templates[category], {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeek(),
           dia: getDayOfMonth(),
@@ -207,13 +227,12 @@ Deno.serve(async (req) => {
           sua_chave_pix: config.pix_key || "",
         });
 
-        const normalizedPhone = normalizePhone(phone);
+        const normalizedPhone = normalizePhone(client.whatsapp || client.phone || "");
 
-        // Delay between sends for flow optimization
-        if (!isFirstSend) {
+        // Delay between sends (skip first)
+        if (i > 0) {
           await sleep(intervalMs);
         }
-        isFirstSend = false;
 
         try {
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
@@ -232,8 +251,10 @@ Deno.serve(async (req) => {
           if (sendResult.ok) {
             await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
             totalSent++;
+            console.log(`[auto-send] ✅ ${client.name} (${category}) enviado`);
           } else {
             totalErrors++;
+            console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
@@ -247,6 +268,9 @@ Deno.serve(async (req) => {
             message_sent: messageBody,
           });
           totalErrors++;
+          console.log(`[auto-send] ❌ ${client.name} (${category}) exception: ${sendErr}`);
+        }
+      }
         }
       }
     }
