@@ -359,13 +359,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-48 h-14 rounded-full bg-primary/20 blur-2xl" />
             </div>
-            {brandLoaded && (
-              <img
-                src={brandLogo || defaultBrandLogo}
-                alt="Marca"
-                className="relative h-12 max-w-[200px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)] animate-fade-in"
-              />
-            )}
+            <img
+              src={defaultBrandLogo}
+              alt="Meu Gestor"
+              className="relative h-10 max-w-[180px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+            />
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
