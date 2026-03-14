@@ -60,6 +60,10 @@ async function sendMessage(apiUrl: string, apiToken: string, number: string, bod
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function getCategory(daysUntilExpiry: number): string | null {
   if (daysUntilExpiry === 0) return "vence_hoje";
   if (daysUntilExpiry === 1) return "vence_amanha";
