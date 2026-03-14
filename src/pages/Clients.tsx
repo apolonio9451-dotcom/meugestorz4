@@ -123,7 +123,7 @@ export default function Clients() {
     if (!companyId) return;
     const { data } = await supabase
       .from("client_subscriptions")
-      .select("id, client_id, end_date, amount, plan_id")
+      .select("id, client_id, end_date, amount, plan_id, payment_status")
       .eq("company_id", companyId);
     
     if (data) {
