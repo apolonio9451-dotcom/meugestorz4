@@ -91,6 +91,7 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
       if (apiResult.data) {
         setAutoSendHour((apiResult.data as any).auto_send_hour ?? 8);
         setAutoSendMinute((apiResult.data as any).auto_send_minute ?? 0);
+        setSendInterval((apiResult.data as any).send_interval_seconds ?? 60);
       }
 
       setLoading(false);
