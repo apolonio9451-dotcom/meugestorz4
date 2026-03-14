@@ -8,11 +8,7 @@ const corsHeaders = {
 };
 
 function normalizePhone(phone: string): string {
-  let clean = phone.replace(/\D/g, "");
-  if (clean.length >= 10 && clean.length <= 11 && !clean.startsWith("55")) {
-    clean = "55" + clean;
-  }
-  return clean;
+  return phone.replace(/\D/g, "");
 }
 
 function sleep(ms: number): Promise<void> {
