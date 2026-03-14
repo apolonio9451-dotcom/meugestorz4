@@ -28,8 +28,6 @@ export default function Settings() {
   const isOwner = userRole === "Proprietário";
   const isReseller = !!parentCompanyId;
   const { toast } = useToast();
-  const iconInputRef = useRef<HTMLInputElement>(null);
-  const brandLogoInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
