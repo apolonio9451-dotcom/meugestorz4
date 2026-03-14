@@ -481,6 +481,7 @@ Deno.serve(async (req) => {
         const normalizedPhone = normalizePhone(phone);
 
         try {
+          await sleep(((config as any).send_interval_seconds ?? 60) * 1000);
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
           await supabase.from("auto_send_logs").insert({
@@ -491,6 +492,7 @@ Deno.serve(async (req) => {
             status: sendResult.ok ? "success" : "error",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
 
           if (sendResult.ok) {
@@ -515,6 +517,7 @@ Deno.serve(async (req) => {
             status: "error",
             error_message: String(sendErr),
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
           totalErrors++;
         }
