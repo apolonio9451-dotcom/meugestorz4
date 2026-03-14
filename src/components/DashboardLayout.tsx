@@ -309,9 +309,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     };
     fetchSupportWhatsapp();
 
-    return () => {
-      window.removeEventListener("brand-logo-changed", handleLogoChange);
-    };
+    return () => {};
   }, [companyId, user]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
