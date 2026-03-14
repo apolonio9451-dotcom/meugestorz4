@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone, Palette, Lock, Check } from "lucide-react";
+import { Settings as SettingsIcon, Loader2, Save, RotateCcw, Phone, Palette, Lock, Check } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
-import { themePresets, applyThemePreset, clearThemeOverrides, type ThemePreset } from "@/lib/themes";
+import { themePresets, applyThemePreset, clearThemeOverrides } from "@/lib/themes";
 interface CompanySettings {
   id?: string;
   company_id: string;
@@ -28,8 +28,6 @@ export default function Settings() {
   const isOwner = userRole === "Proprietário";
   const isReseller = !!parentCompanyId;
   const { toast } = useToast();
-  const iconInputRef = useRef<HTMLInputElement>(null);
-  const brandLogoInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -181,36 +179,6 @@ export default function Settings() {
 
       <div className="glass-card rounded-xl p-6 space-y-8">
         <h2 className="text-lg font-display font-semibold text-foreground">Marca</h2>
-
-
-        {/* Brand Logo */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold text-foreground">Logo da Marca (nome)</Label>
-          <p className="text-muted-foreground text-xs">Exibido no lugar do nome da marca no menu. Ideal: imagem horizontal/retangular.</p>
-          <div className="flex items-center gap-4">
-            {settings.logo_url ? (
-              <div className="h-16 w-auto max-w-[200px] rounded-lg overflow-hidden bg-secondary/50 border border-border flex items-center justify-center">
-                <img src={settings.logo_url} alt="Logo da Marca" className="h-full w-full object-contain" />
-              </div>
-            ) : (
-              <div className="h-16 w-32 rounded-lg bg-secondary/50 border border-border border-dashed flex items-center justify-center">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Button variant="default" size="sm" onClick={() => brandLogoInputRef.current?.click()} disabled={uploading}>
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
-                Trocar
-              </Button>
-              {settings.logo_url && (
-                <Button variant="destructive" size="sm" onClick={() => handleRemoveImage("brand")}>
-                  <X className="h-4 w-4 mr-1" /> Remover
-                </Button>
-              )}
-            </div>
-            <input ref={brandLogoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, "brand")} />
-          </div>
-        </div>
 
         {/* WhatsApp de Suporte */}
         <div className="space-y-2">

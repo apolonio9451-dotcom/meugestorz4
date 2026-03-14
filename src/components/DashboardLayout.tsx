@@ -80,8 +80,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("Meu Gestor");
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
-  const [brandLoaded, setBrandLoaded] = useState(false);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
@@ -152,20 +150,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (resellerData) {
-          // Reseller: fetch branding from reseller_settings
-          const { data: resellerSettings } = await supabase
-            .from("reseller_settings")
-            .select("service_name, logo_url")
-            .eq("reseller_id", resellerData.id)
-            .maybeSingle();
-
-          if (resellerSettings?.service_name) {
-            setBrandName(resellerSettings.service_name);
-          } else {
-            setBrandName("Meu gestor");
-          }
-          setBrandLogo(resellerSettings?.logo_url || defaultBrandLogo);
-
           // Reseller theme: fetch from company_settings (same as owner)
           const { data: compSettings } = await supabase
             .from("company_settings")
@@ -177,15 +161,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           // Regular user: fetch from company_settings
           const { data } = await supabase
             .from("company_settings")
-            .select("brand_name, logo_url, icon_url, primary_color, secondary_color, background_color")
+            .select("primary_color, secondary_color, background_color")
             .eq("company_id", companyId)
             .maybeSingle();
-          if (data?.brand_name) setBrandName(data.brand_name);
-          setBrandLogo(data?.logo_url || defaultBrandLogo);
           if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
         }
-      } finally {
-        setBrandLoaded(true);
+      } catch (e) {
+        console.error("Error fetching brand:", e);
       }
     };
 
@@ -280,12 +262,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     fetchSubscription();
     fetchAdminInfo();
 
-    // Listen for instant logo changes from Settings page
-    const handleLogoChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.logoUrl) setBrandLogo(detail.logoUrl);
-    };
-    window.addEventListener("brand-logo-changed", handleLogoChange);
 
     // Fetch support whatsapp
     const fetchSupportWhatsapp = async () => {
@@ -333,9 +309,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     };
     fetchSupportWhatsapp();
 
-    return () => {
-      window.removeEventListener("brand-logo-changed", handleLogoChange);
-    };
+    return () => {};
   }, [companyId, user]);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
     const open: Record<string, boolean> = {};
@@ -385,13 +359,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-48 h-14 rounded-full bg-primary/20 blur-2xl" />
             </div>
-            {brandLoaded && (
-              <img
-                src={brandLogo || defaultBrandLogo}
-                alt="Marca"
-                className="relative h-12 max-w-[200px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)] animate-fade-in"
-              />
-            )}
+            <img
+              src={defaultBrandLogo}
+              alt="Meu Gestor"
+              className="relative h-10 max-w-[180px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+            />
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
@@ -558,7 +530,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <TrialBanner />
-        <header className="h-24 glass-header flex items-center justify-between px-4 lg:px-6">
+        <header className="h-16 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-foreground" />
           </button>
@@ -569,13 +541,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-72 h-20 rounded-full bg-primary/25 blur-3xl" />
               </div>
-              {brandLoaded && (
-                <img
-                  src={brandLogo || defaultBrandLogo}
-                  alt="Marca"
-                  className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)] animate-fade-in"
-                />
-              )}
+              <img
+                src={defaultBrandLogo}
+                alt="Meu Gestor"
+                className="relative h-10 sm:h-12 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
+              />
             </div>
           </div>
 
