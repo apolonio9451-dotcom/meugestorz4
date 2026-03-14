@@ -660,6 +660,7 @@ export default function Clients() {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
     if (mainFilter === "log") return [];
     if (mainFilter === "vencidos") return searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; });
+    if (mainFilter === "pendentes") return searchFiltered.filter(c => { const sub = subscriptions[c.id]; return sub && sub.payment_status === "pending"; });
     if (mainFilter === "status") {
       return searchFiltered.filter((c) => {
         const days = getClientDays(c.id);
