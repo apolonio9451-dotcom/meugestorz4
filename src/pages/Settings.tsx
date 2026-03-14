@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Upload, X, Loader2, Save, RotateCcw, Phone, Palette, Lock, Check } from "lucide-react";
+import { Settings as SettingsIcon, Loader2, Save, RotateCcw, Phone, Palette, Lock, Check } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
-import { themePresets, applyThemePreset, clearThemeOverrides, type ThemePreset } from "@/lib/themes";
+import { themePresets, applyThemePreset, clearThemeOverrides } from "@/lib/themes";
 interface CompanySettings {
   id?: string;
   company_id: string;
