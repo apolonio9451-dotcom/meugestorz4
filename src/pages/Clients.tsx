@@ -41,6 +41,7 @@ interface Subscription {
   amount: number;
   plan_id: string;
   plan_name?: string;
+  payment_status?: string;
 }
 
 interface MacKey {
