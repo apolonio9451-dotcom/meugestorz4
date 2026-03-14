@@ -130,6 +130,8 @@ Deno.serve(async (req) => {
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
       let isFirstSend = true;
 
+      console.log(`[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms`);
+
       // Fetch category active settings
       const { data: categorySettings } = await supabase
         .from("auto_send_category_settings")
@@ -140,6 +142,8 @@ Deno.serve(async (req) => {
       categorySettings?.forEach((s: any) => {
         if (!s.is_active) disabledCategories.add(s.category);
       });
+
+      console.log(`[auto-send] Categorias desabilitadas: ${[...disabledCategories].join(", ") || "nenhuma"}`);
 
       // Fetch templates
       const { data: templateRows } = await supabase
@@ -152,7 +156,7 @@ Deno.serve(async (req) => {
         templates[t.category] = t.message;
       });
 
-      // Fetch active clients with subscriptions
+      // Fetch active clients with subscriptions - use limit to avoid hitting 1000 row default
       const { data: clients } = await supabase
         .from("clients")
         .select(`
@@ -163,9 +167,13 @@ Deno.serve(async (req) => {
           )
         `)
         .eq("company_id", companyId)
-        .eq("status", "active");
+        .eq("status", "active")
+        .limit(5000);
 
       if (!clients) continue;
+
+      // Build queue of ALL eligible clients across ALL categories first
+      const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
 
       for (const client of clients) {
         if (client.ultimo_envio_auto === today) continue;
