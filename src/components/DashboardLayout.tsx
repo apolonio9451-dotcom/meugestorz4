@@ -262,12 +262,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     fetchSubscription();
     fetchAdminInfo();
 
-    // Listen for instant logo changes from Settings page
-    const handleLogoChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.logoUrl) setBrandLogo(detail.logoUrl);
-    };
-    window.addEventListener("brand-logo-changed", handleLogoChange);
 
     // Fetch support whatsapp
     const fetchSupportWhatsapp = async () => {
