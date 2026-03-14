@@ -55,8 +55,7 @@ const categories = [
     label: "Follow-up",
     color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50",
     description: "Mensagem de follow-up para clientes em acompanhamento.",
-    defaultMessage:
-      "Olá, {primeiro_nome}! 👋\n\nGostaríamos de expressar nossa gratidão pela confiança depositada em nossos serviços. Completamos hoje {dias} dias de parceria, e é uma satisfação tê-lo como cliente.\n\nNossa prioridade é oferecer uma experiência de excelência e, para isso, sua percepção é fundamental. Poderia nos informar como tem sido sua experiência com nossa plataforma até o momento? Seu feedback é uma ferramenta essencial para o aprimoramento contínuo de nossas operações.\n\n📋 Resumo da Sua Assinatura:\n\nPlano: {plano}\nValor: R$ {valor}\nVencimento: {vencimento}\n\n🔑 Seus Dados:\n\n👤 Usuário: {usuario}\n🖥️ MAC: {mac}\n🌐 Servidor: {servidor}",
+    defaultMessage: defaultMessageTemplates.followup,
   },
   {
     key: "suporte",
