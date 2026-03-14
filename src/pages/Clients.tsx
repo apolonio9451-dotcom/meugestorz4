@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SupportCardCountdown from "@/components/clients/SupportCardCountdown";
+import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
 
 interface Client {
   id: string;
