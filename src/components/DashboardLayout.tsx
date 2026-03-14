@@ -52,8 +52,14 @@ const navItems: NavItem[] = [
       { href: "/dashboard/financial", label: "Financeiro", icon: DollarSign },
     ],
   },
-  { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
-  { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
+  {
+    label: "Marketing",
+    icon: Megaphone,
+    children: [
+      { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
+      { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
+    ],
+  },
   { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
   { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
   {
