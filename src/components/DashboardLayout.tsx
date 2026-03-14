@@ -544,7 +544,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <img
                 src={defaultBrandLogo}
                 alt="Meu Gestor"
-                className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
+                className="relative h-24 sm:h-28 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
               />
             </div>
           </div>
