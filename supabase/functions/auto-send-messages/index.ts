@@ -192,16 +192,25 @@ Deno.serve(async (req) => {
 
         const category = getCategory(diffDays);
         if (!category) continue;
-
-        // Skip if category is disabled
         if (disabledCategories.has(category)) continue;
 
         const template = templates[category];
         if (!template) continue;
 
+        sendQueue.push({ client, category, sub, plan, diffDays });
+      }
+
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Categorias: ${JSON.stringify(
+        sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
+      )}`);
+
+      // Now process the full queue sequentially with delays
+      for (let i = 0; i < sendQueue.length; i++) {
+        const { client, category, sub, plan, diffDays } = sendQueue[i];
+        const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
-        const messageBody = replacePlaceholders(template, {
+        const messageBody = replacePlaceholders(templates[category], {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeek(),
           dia: getDayOfMonth(),
@@ -218,13 +227,12 @@ Deno.serve(async (req) => {
           sua_chave_pix: config.pix_key || "",
         });
 
-        const normalizedPhone = normalizePhone(phone);
+        const normalizedPhone = normalizePhone(client.whatsapp || client.phone || "");
 
-        // Delay between sends for flow optimization
-        if (!isFirstSend) {
+        // Delay between sends (skip first)
+        if (i > 0) {
           await sleep(intervalMs);
         }
-        isFirstSend = false;
 
         try {
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
@@ -243,8 +251,10 @@ Deno.serve(async (req) => {
           if (sendResult.ok) {
             await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
             totalSent++;
+            console.log(`[auto-send] ✅ ${client.name} (${category}) enviado`);
           } else {
             totalErrors++;
+            console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
@@ -258,6 +268,9 @@ Deno.serve(async (req) => {
             message_sent: messageBody,
           });
           totalErrors++;
+          console.log(`[auto-send] ❌ ${client.name} (${category}) exception: ${sendErr}`);
+        }
+      }
         }
       }
     }
