@@ -60,6 +60,10 @@ async function sendMessage(apiUrl: string, apiToken: string, number: string, bod
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function getCategory(daysUntilExpiry: number): string | null {
   if (daysUntilExpiry === 0) return "vence_hoje";
   if (daysUntilExpiry === 1) return "vence_amanha";
@@ -98,7 +102,7 @@ Deno.serve(async (req) => {
     // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -125,6 +129,8 @@ Deno.serve(async (req) => {
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
       const companyId = config.company_id;
+      const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
+      let isFirstSend = true;
 
       // Fetch category active settings
       const { data: categorySettings } = await supabase
@@ -208,6 +214,12 @@ Deno.serve(async (req) => {
 
         const normalizedPhone = normalizePhone(phone);
 
+        // Delay between sends for flow optimization
+        if (!isFirstSend) {
+          await sleep(intervalMs);
+        }
+        isFirstSend = false;
+
         try {
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
@@ -219,6 +231,7 @@ Deno.serve(async (req) => {
             status: sendResult.ok ? "success" : "error",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
 
           if (sendResult.ok) {
@@ -236,6 +249,7 @@ Deno.serve(async (req) => {
             status: "error",
             error_message: String(sendErr),
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
           totalErrors++;
         }
@@ -248,6 +262,7 @@ Deno.serve(async (req) => {
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
       const companyId = config.company_id;
+      const supportIntervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
 
       // Check if suporte category is disabled
       const { data: supportCatSetting } = await supabase
@@ -318,6 +333,7 @@ Deno.serve(async (req) => {
         const normalizedPhone = normalizePhone(phone);
 
         try {
+          await sleep(supportIntervalMs);
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
           await supabase.from("auto_send_logs").insert({
@@ -328,6 +344,7 @@ Deno.serve(async (req) => {
             status: sendResult.ok ? "success" : "error",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
 
           if (sendResult.ok) {
@@ -345,6 +362,7 @@ Deno.serve(async (req) => {
             status: "error",
             error_message: String(sendErr),
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
           totalErrors++;
         }
@@ -463,6 +481,7 @@ Deno.serve(async (req) => {
         const normalizedPhone = normalizePhone(phone);
 
         try {
+          await sleep(((config as any).send_interval_seconds ?? 60) * 1000);
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
           await supabase.from("auto_send_logs").insert({
@@ -473,6 +492,7 @@ Deno.serve(async (req) => {
             status: sendResult.ok ? "success" : "error",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
 
           if (sendResult.ok) {
@@ -497,6 +517,7 @@ Deno.serve(async (req) => {
             status: "error",
             error_message: String(sendErr),
             phone: normalizedPhone,
+            message_sent: messageBody,
           });
           totalErrors++;
         }
