@@ -80,7 +80,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("Meu Gestor");
-  const [brandLogo, setBrandLogo] = useState<string | null>(defaultBrandLogo);
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandLoaded, setBrandLoaded] = useState(false);
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
@@ -142,45 +143,49 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!companyId || !user) return;
     const fetchBrand = async () => {
-      // Check if user is a reseller first
-      const { data: resellerData } = await supabase
-        .from("resellers")
-        .select("id, credit_balance")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (resellerData) {
-        // Reseller: fetch branding from reseller_settings
-        const { data: resellerSettings } = await supabase
-          .from("reseller_settings")
-          .select("service_name, logo_url")
-          .eq("reseller_id", resellerData.id)
+      try {
+        // Check if user is a reseller first
+        const { data: resellerData } = await supabase
+          .from("resellers")
+          .select("id, credit_balance")
+          .eq("user_id", user.id)
           .maybeSingle();
 
-        if (resellerSettings?.service_name) {
-          setBrandName(resellerSettings.service_name);
+        if (resellerData) {
+          // Reseller: fetch branding from reseller_settings
+          const { data: resellerSettings } = await supabase
+            .from("reseller_settings")
+            .select("service_name, logo_url")
+            .eq("reseller_id", resellerData.id)
+            .maybeSingle();
+
+          if (resellerSettings?.service_name) {
+            setBrandName(resellerSettings.service_name);
+          } else {
+            setBrandName("Meu gestor");
+          }
+          setBrandLogo(resellerSettings?.logo_url || defaultBrandLogo);
+
+          // Reseller theme: fetch from company_settings (same as owner)
+          const { data: compSettings } = await supabase
+            .from("company_settings")
+            .select("primary_color, secondary_color, background_color")
+            .eq("company_id", companyId)
+            .maybeSingle();
+          if (compSettings) applyThemeColors(compSettings.primary_color, compSettings.secondary_color, compSettings.background_color);
         } else {
-          setBrandName("Meu gestor");
+          // Regular user: fetch from company_settings
+          const { data } = await supabase
+            .from("company_settings")
+            .select("brand_name, logo_url, icon_url, primary_color, secondary_color, background_color")
+            .eq("company_id", companyId)
+            .maybeSingle();
+          if (data?.brand_name) setBrandName(data.brand_name);
+          setBrandLogo(data?.logo_url || defaultBrandLogo);
+          if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
         }
-        if (resellerSettings?.logo_url) setBrandLogo(resellerSettings.logo_url);
-
-        // Reseller theme: fetch from company_settings (same as owner)
-        const { data: compSettings } = await supabase
-          .from("company_settings")
-          .select("primary_color, secondary_color, background_color")
-          .eq("company_id", companyId)
-          .maybeSingle();
-        if (compSettings) applyThemeColors(compSettings.primary_color, compSettings.secondary_color, compSettings.background_color);
-      } else {
-        // Regular user: fetch from company_settings
-        const { data } = await supabase
-          .from("company_settings")
-          .select("brand_name, logo_url, icon_url, primary_color, secondary_color, background_color")
-          .eq("company_id", companyId)
-          .maybeSingle();
-        if (data?.brand_name) setBrandName(data.brand_name);
-        if (data?.logo_url) setBrandLogo(data.logo_url);
-        if (data) applyThemeColors(data.primary_color, data.secondary_color, data.background_color);
+      } finally {
+        setBrandLoaded(true);
       }
     };
 
@@ -380,11 +385,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-48 h-14 rounded-full bg-primary/20 blur-2xl" />
             </div>
-            <img
-              src={brandLogo || defaultBrandLogo}
-              alt="Marca"
-              className="relative h-12 max-w-[200px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
-            />
+            {brandLoaded && (
+              <img
+                src={brandLogo || defaultBrandLogo}
+                alt="Marca"
+                className="relative h-12 max-w-[200px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)] animate-fade-in"
+              />
+            )}
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
@@ -562,11 +569,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-72 h-20 rounded-full bg-primary/25 blur-3xl" />
               </div>
-              <img
-                src={brandLogo || defaultBrandLogo}
-                alt="Marca"
-                className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
-              />
+              {brandLoaded && (
+                <img
+                  src={brandLogo || defaultBrandLogo}
+                  alt="Marca"
+                  className="relative h-20 sm:h-[5.5rem] object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)] animate-fade-in"
+                />
+              )}
             </div>
           </div>
 
