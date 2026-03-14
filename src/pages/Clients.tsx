@@ -1295,8 +1295,7 @@ export default function Clients() {
                           href={getWhatsAppSendUrl(
                             client.whatsapp,
                             (() => {
-                              const defaultSupportMsg = "Olá, {nome}! 👋\n\nFaço questão de entrar em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que você esteja em boas mãos. 🤝";
-                              let msg = messageTemplates["suporte"] || defaultSupportMsg;
+                              let msg = messageTemplates["suporte"] || defaultMessageTemplates.suporte;
                               msg = msg
                                 .replace(/{nome}/g, client.name || "")
                                 .replace(/{plano}/g, sub?.plan_name || "")
