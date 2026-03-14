@@ -94,7 +94,7 @@ export default function TestSendButton({ companyId }: Props) {
               onChange={(e) => setPhone(e.target.value)}
             />
             <p className="text-[11px] text-muted-foreground">
-              O código +55 será adicionado automaticamente se necessário.
+              Digite o número completo com código do país (ex: 5511999999999).
             </p>
           </div>
           <div className="space-y-2">

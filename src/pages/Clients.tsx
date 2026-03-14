@@ -278,9 +278,7 @@ export default function Clients() {
   }, [companyId]);
 
   const normalizeWhatsappPhone = (rawPhone: string) => {
-    const digits = (rawPhone || "").replace(/\D/g, "");
-    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
-    return digits;
+    return (rawPhone || "").replace(/\D/g, "");
   };
 
   const sanitizeWhatsappMessage = (message: string) =>

@@ -83,7 +83,7 @@ export default function WinBackClientRow({ client, companyId, currentStep, lastS
       .replace(/{servidor}/g, client.server || "—");
 
     const phoneDigits = client.whatsapp.replace(/\D/g, "");
-    const normalizedPhone = phoneDigits.length === 10 || phoneDigits.length === 11 ? `55${phoneDigits}` : phoneDigits;
+    const normalizedPhone = phoneDigits;
     if (!available) {
       toast.warning(`Aguarde mais ${daysLeft} dia(s) para enviar ${step.label}`);
       return;
