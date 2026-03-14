@@ -25,6 +25,7 @@ export type Database = {
           id: string
           instance_name: string
           pix_key: string
+          send_interval_seconds: number
           uazapi_base_url: string
           updated_at: string
           winback_paused: boolean
@@ -39,6 +40,7 @@ export type Database = {
           id?: string
           instance_name?: string
           pix_key?: string
+          send_interval_seconds?: number
           uazapi_base_url?: string
           updated_at?: string
           winback_paused?: boolean
@@ -53,6 +55,7 @@ export type Database = {
           id?: string
           instance_name?: string
           pix_key?: string
+          send_interval_seconds?: number
           uazapi_base_url?: string
           updated_at?: string
           winback_paused?: boolean
@@ -111,6 +114,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          message_sent: string
           phone: string | null
           status: string
         }
@@ -122,6 +126,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          message_sent?: string
           phone?: string | null
           status?: string
         }
@@ -133,6 +138,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          message_sent?: string
           phone?: string | null
           status?: string
         }
