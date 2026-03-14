@@ -1,0 +1,1 @@
+UPDATE public.client_subscriptions SET payment_status = 'pending' WHERE client_id IN ('064f7ea6-7a29-4667-a29a-8e68e5bb1eef', 'dc2faead-78bd-4499-9526-ecbcb8942715');
