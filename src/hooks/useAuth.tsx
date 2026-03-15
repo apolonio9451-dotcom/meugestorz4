@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Do NOT overwrite companyId here — it should stay as the reseller's own company (from membership)
           // reseller.company_id is the PARENT company, not the reseller's own
           setResellerCredits(reseller.credit_balance);
-          setUserRole(reseller.credit_balance > 0 ? "Admin" : "Usuário");
+          // Role is NOT changed here — it comes from membership, not credits
           if (reseller.status !== "trial") {
             setIsTrial(false);
             setTrialExpiresAt(null);
