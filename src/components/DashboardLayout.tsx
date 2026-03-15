@@ -1,4 +1,5 @@
 import { ReactNode, useState, useEffect } from "react";
+import SidebarUserMenu from "@/components/profile/SidebarUserMenu";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import TrialBanner from "@/components/trials/TrialBanner";
 import AnnouncementModal from "@/components/announcements/AnnouncementModal";
