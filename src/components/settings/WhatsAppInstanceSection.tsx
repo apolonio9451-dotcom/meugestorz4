@@ -107,18 +107,22 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
       return;
     }
       const loadToken = async () => {
-      if (isOwner) {
-        const { data } = await supabase
-          .from("api_settings" as any)
-          .select("api_token, instance_name")
-          .eq("company_id", companyId)
-          .maybeSingle();
-        if (data) {
+      const { data } = await supabase
+        .from("api_settings" as any)
+        .select("api_token, instance_name")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (data) {
+        if (isOwner) {
           setTokenInput((data as any).api_token || "");
-          setInstanceName((data as any).instance_name || "");
+        } else {
+          // For non-owners, just set a flag that token exists (don't expose value)
+          setTokenInput((data as any).api_token ? "***" : "");
         }
+        setInstanceName((data as any).instance_name || "");
       }
       fetchStatus();
+    };
     };
     loadToken();
   }, [companyId, fetchStatus]);
