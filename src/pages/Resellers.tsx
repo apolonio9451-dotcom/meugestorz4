@@ -1137,7 +1137,7 @@ export default function Resellers() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                            {isOwner && r.user_id && (
+                            {canChangePlans && r.user_id && (
                               <Select
                                 value={getResellerPlan(r.id)}
                                 onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
