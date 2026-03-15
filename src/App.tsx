@@ -66,6 +66,7 @@ const App = () => (
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </GhostModeProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
