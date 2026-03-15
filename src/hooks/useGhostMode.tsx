@@ -30,6 +30,7 @@ export function GhostModeProvider({ children }: { children: ReactNode }) {
           setGhostUserId(parsed.userId);
           setGhostCompanyId(parsed.companyId);
           setGhostName(parsed.name);
+          setGhostResellerId(parsed.resellerId || null);
         }
       }
     } catch {
