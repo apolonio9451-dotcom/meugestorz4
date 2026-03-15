@@ -791,12 +791,14 @@ export default function Resellers() {
       </div>
 
       {/* KPI Cards - compact on mobile */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
         {[
           { label: "Total", value: manageableResellers.length, icon: Users, color: "text-primary" },
           { label: "Ativos", value: activeCount, icon: CheckCircle2, color: "text-emerald-400" },
           { label: "Teste", value: trialCount, icon: FlaskConical, color: "text-amber-400" },
           { label: "Vencidos", value: overdueCount, icon: AlertTriangle, color: "text-orange-400" },
+          { label: "Clientes Rede", value: totalNetworkClients, icon: Network, color: "text-blue-400" },
+          { label: "Inativos 7d+", value: inactiveCount, icon: Activity, color: "text-red-400" },
         ].map((kpi, i) => (
           <div key={i} className="rounded-lg border border-border bg-card flex flex-col justify-center items-center p-2 sm:p-4">
             <div className="flex items-center gap-1 mb-1 sm:mb-2">
