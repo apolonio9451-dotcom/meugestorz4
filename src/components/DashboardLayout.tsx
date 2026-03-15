@@ -385,6 +385,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
               if (item.adminOnly && !(isOwnerOrAdmin || isResellerUser)) return false;
               if (item.resellerOnly && !isResellerUser) return false;
+              // Completely hide items that are both adminOnly and proOnly for Starter users
+              if (item.proOnly && item.adminOnly && planType !== "pro") return false;
               return true;
             })
             .map((item) => {
