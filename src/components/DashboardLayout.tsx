@@ -534,6 +534,46 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
+      {/* Upgrade Pro Modal */}
+      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Lock className="w-5 h-5 text-primary" />
+              Recurso do Plano Pro
+            </DialogTitle>
+            <DialogDescription>
+              O recurso <strong>"{upgradeFeature}"</strong> está disponível apenas no Plano Pro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Faça upgrade para o Plano Pro e desbloqueie todos os recursos avançados do sistema.
+            </p>
+            {supportWhatsapp ? (
+              <a
+                href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro. Recurso: ${upgradeFeature}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-lg py-3 font-bold text-sm transition-colors bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)]"
+                onClick={() => setUpgradeModalOpen(false)}
+              >
+                <Zap className="w-4 h-4" />
+                Falar com Suporte para Upgrade
+              </a>
+            ) : (
+              <Button
+                className="w-full gap-2 font-bold bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)]"
+                onClick={() => setUpgradeModalOpen(false)}
+              >
+                <Zap className="w-4 h-4" />
+                Fazer Upgrade para Pro
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Ghost Mode Banner */}
