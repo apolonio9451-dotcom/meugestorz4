@@ -19,13 +19,11 @@ import {
   Plus, Brain, Timer, Phone, Calendar, Send,
   MessageSquare, Shield, Pencil, ToggleLeft, Copy, Check,
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
-  Globe, Link2, Eye, EyeOff, Volume2, Info, Search,
-  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone, QrCode,
+  Eye, Volume2, Info, Search,
+  ChevronDown, ChevronUp, Hash, Layers, Download,
   BookOpen, Route, Palette
 } from "lucide-react";
 import { format } from "date-fns";
-import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
-import WhatsAppManager from "@/components/whatsapp/WhatsAppManager";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
 import ChatSimulator from "@/components/chatbot/ChatSimulator";
 import TrainingRulesList from "@/components/chatbot/TrainingRulesList";
@@ -92,9 +90,6 @@ export default function Chatbot() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("simulador");
   const [trainingRulesRefresh, setTrainingRulesRefresh] = useState(0);
-  const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
-  const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
-  const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
@@ -154,13 +149,6 @@ export default function Chatbot() {
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [logsLimit, setLogsLimit] = useState(50);
 
-  // Webhook
-  const [webhookCopied, setWebhookCopied] = useState(false);
-  const [showWebhookUrl, setShowWebhookUrl] = useState(false);
-  const [testingWebhook, setTestingWebhook] = useState(false);
-  const [testPhone, setTestPhone] = useState("");
-  const [testMessage, setTestMessage] = useState("Olá, isso é um teste do chatbot!");
-  const [testResult, setTestResult] = useState<{ status: string; data: any } | null>(null);
 
   // API check
   const [apiConfigured, setApiConfigured] = useState(false);
@@ -520,47 +508,6 @@ export default function Chatbot() {
     );
   };
 
-  const webhookUrl = companyId
-    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot-webhook?company_id=${companyId}`
-    : "";
-
-  const handleCopyWebhook = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setWebhookCopied(true);
-    setTimeout(() => setWebhookCopied(false), 2000);
-    toast({ title: "📋 URL do Webhook copiada!" });
-  };
-
-  const handleTestWebhook = async () => {
-    if (!companyId || !testPhone.trim()) {
-      toast({ title: "Preencha o número de telefone para teste", variant: "destructive" });
-      return;
-    }
-    setTestingWebhook(true);
-    setTestResult(null);
-    try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: { text: testMessage, from: testPhone.replace(/\D/g, "") },
-        }),
-      });
-      const data = await response.json();
-      setTestResult({ status: response.ok ? "success" : "error", data });
-      if (response.ok) {
-        toast({ title: "✅ Teste enviado com sucesso!", description: `Status: ${data.status || data.context}` });
-        fetchLogs();
-      } else {
-        toast({ title: "❌ Erro no teste", description: data.error || JSON.stringify(data), variant: "destructive" });
-      }
-    } catch (err: any) {
-      setTestResult({ status: "error", data: { error: err.message } });
-      toast({ title: "❌ Falha na conexão", description: err.message, variant: "destructive" });
-    } finally {
-      setTestingWebhook(false);
-    }
-  };
 
   const filteredLogs = logs.filter((log) => {
     if (logFilter !== "all" && log.context_type !== logFilter) return false;
@@ -596,26 +543,6 @@ export default function Chatbot() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <audio ref={audioRef} onEnded={() => setPlayingMedia(null)} className="hidden" />
 
-      {/* Connected Banner */}
-      {connectedBanner && (
-        <div className="bg-success/10 border border-success/30 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-success" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-success">✅ WhatsApp Conectado com Sucesso!</p>
-              <p className="text-xs text-muted-foreground">
-                {connectedBanner.profileName && <span>👤 {connectedBanner.profileName}</span>}
-                {connectedBanner.phoneNumber && <span className="ml-2">📞 {connectedBanner.phoneNumber}</span>}
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setConnectedBanner(null)} className="text-muted-foreground hover:text-foreground">
-            ✕
-          </Button>
-        </div>
-      )}
 
       {/* Header */}
       <div className="space-y-3">
@@ -792,15 +719,12 @@ export default function Chatbot() {
 
       {/* ============ MAIN TABS ============ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto gap-1 p-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto gap-1 p-1">
           <TabsTrigger value="interacao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Music className="w-3 h-3 mr-1" />Mídia
           </TabsTrigger>
           <TabsTrigger value="simulador" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Brain className="w-3 h-3 mr-1" />Treinar IA
-          </TabsTrigger>
-          <TabsTrigger value="conexao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <Smartphone className="w-3 h-3 mr-1" />Conexão
           </TabsTrigger>
           <TabsTrigger value="logs" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <MessageCircle className="w-3 h-3 mr-1" />Logs
@@ -903,97 +827,6 @@ export default function Chatbot() {
           {!companyId && (
             <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">Carregando...</div>
           )}
-        </TabsContent>
-
-        {/* ============ ABA: CONEXÃO ============ */}
-        <TabsContent value="conexao" className="space-y-6 mt-4">
-          <div className="glass-card rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
-              <Smartphone className="w-5 h-5 text-primary" />
-              Conexão WhatsApp
-            </h2>
-            <p className="text-muted-foreground text-sm">Gerencie suas instâncias do WhatsApp para envio e recebimento de mensagens.</p>
-            <div className="flex flex-wrap gap-3">
-              <Dialog open={showNewInstanceModal} onOpenChange={setShowNewInstanceModal}>
-                <Button onClick={() => setShowNewInstanceModal(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />Nova Instância (QR Code)
-                </Button>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><QrCode className="w-5 h-5 text-primary" />Nova Instância WhatsApp</DialogTitle>
-                    <DialogDescription>Crie uma nova instância e escaneie o QR Code para conectar.</DialogDescription>
-                  </DialogHeader>
-                  <WhatsAppManager userName="Usuário" companyId={companyId} onConnected={(data) => { setShowNewInstanceModal(false); setConnectedBanner(data); setTimeout(() => setConnectedBanner(null), 15000); }} />
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={showTokenInstanceModal} onOpenChange={setShowTokenInstanceModal}>
-                <Button variant="outline" onClick={() => setShowTokenInstanceModal(true)} className="gap-2">
-                  <Link2 className="w-4 h-4" />Conectar via Token (UAZAPI)
-                </Button>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scrollbar-hide">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Smartphone className="w-5 h-5 text-primary" />Conexão via Token UAZAPI</DialogTitle>
-                    <DialogDescription>Cole o token da sua instância UAZAPI existente.</DialogDescription>
-                  </DialogHeader>
-                  <WhatsAppInstanceSection companyId={companyId} />
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          {/* Webhook */}
-          <div className="glass-card rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">URL do Webhook (UAZAPI)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowWebhookUrl(!showWebhookUrl)}>
-                  {showWebhookUrl ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleCopyWebhook}>
-                  {webhookCopied ? <Check className="w-3.5 h-3.5 mr-1 text-primary" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
-                  {webhookCopied ? "Copiado!" : "Copiar"}
-                </Button>
-              </div>
-            </div>
-            <div className="bg-secondary/50 rounded-lg px-3 py-2 font-mono text-xs text-muted-foreground overflow-x-auto">
-              {showWebhookUrl ? webhookUrl : "••••••••••••••••••••••••••••••••••••••••••••••"}
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
-              <Info className="w-3 h-3" />
-              Configure esta URL no painel da UAZAPI como webhook de mensagens recebidas.
-            </p>
-
-            {/* Teste do Webhook */}
-            <div className="mt-4 pt-4 border-t border-border/50">
-              <p className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3"><Zap className="w-4 h-4 text-primary" />Testar Webhook</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Telefone de teste</Label>
-                  <Input placeholder="5511999999999" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} className="h-8 text-sm mt-1" />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Mensagem de teste</Label>
-                  <Input placeholder="Olá, isso é um teste!" value={testMessage} onChange={(e) => setTestMessage(e.target.value)} className="h-8 text-sm mt-1" />
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={handleTestWebhook} disabled={testingWebhook} className="h-8 w-full" variant="outline">
-                    {testingWebhook ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
-                    {testingWebhook ? "Testando..." : "Enviar Teste"}
-                  </Button>
-                </div>
-              </div>
-              {testResult && (
-                <div className={`mt-3 rounded-lg p-3 text-xs font-mono overflow-x-auto ${testResult.status === "success" ? "bg-primary/10 border border-primary/30 text-primary" : "bg-destructive/10 border border-destructive/30 text-destructive"}`}>
-                  <p className="font-semibold mb-1">{testResult.status === "success" ? "✅ Resposta:" : "❌ Erro:"}</p>
-                  <pre className="whitespace-pre-wrap">{JSON.stringify(testResult.data, null, 2)}</pre>
-                </div>
-              )}
-            </div>
-          </div>
         </TabsContent>
 
         {/* ============ ABA: LOGS ============ */}
