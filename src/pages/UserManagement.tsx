@@ -42,6 +42,12 @@ interface Member {
   company?: { name: string; plan_type: string; credit_balance: number };
 }
 
+/** Admin/Owner are always effectively Pro, regardless of DB value */
+function getEffectivePlan(member: Member): "pro" | "starter" {
+  if (member.role === "admin" || member.role === "owner") return "pro";
+  return (member.company?.plan_type === "pro" ? "pro" : "starter");
+}
+
 const roleLabels: Record<string, string> = {
   owner: "Proprietário",
   admin: "Admin",
