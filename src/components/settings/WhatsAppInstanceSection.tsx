@@ -292,10 +292,12 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
                 <WifiOff className="w-6 h-6 text-warning" />
               </div>
               <p className="text-warning text-sm font-medium">
-                Instância desconectada
+                {tokenError ? "Token inválido ou expirado" : "Instância desconectada"}
               </p>
               <p className="text-muted-foreground text-xs text-center">
-                Clique em "Verificar Status" para gerar o QR Code.
+                {tokenError
+                  ? "O token salvo não é mais válido. Cole um novo token acima e clique em 'Salvar e Configurar Webhook'."
+                  : "Clique em \"Verificar Status\" para gerar o QR Code."}
               </p>
             </div>
           )}
