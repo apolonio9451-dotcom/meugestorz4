@@ -180,9 +180,16 @@ export default function UserManagement() {
 
   const handleTogglePlan = async (member: Member) => {
     if (!member.company) return;
-    const targetCompanyId = member.company_id;
+    const currentPlan = member.company.plan_type;
 
-    // Find the user's own company
+    if (currentPlan === "pro") {
+      // Downgrade: open two-step confirmation
+      setDowngradeTarget(member);
+      setDowngradeStep(1);
+      return;
+    }
+
+    // Upgrade to Pro: direct
     const { data: userMembership } = await supabase
       .from("company_memberships")
       .select("company_id")
@@ -190,18 +197,50 @@ export default function UserManagement() {
       .eq("role", "owner")
       .maybeSingle();
 
-    const cid = userMembership?.company_id || targetCompanyId;
-    const newPlan = member.company.plan_type === "pro" ? "starter" : "pro";
+    const cid = userMembership?.company_id || member.company_id;
 
     const { error } = await supabase
       .from("companies")
-      .update({ plan_type: newPlan })
+      .update({ plan_type: "pro" })
       .eq("id", cid);
 
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Plano alterado para ${newPlan === "pro" ? "Pro" : "Starter"}` });
+      toast({ title: "Plano alterado para Pro" });
+      fetchMembers();
+    }
+  };
+
+  const handleConfirmDowngrade = async () => {
+    if (!downgradeTarget?.company) return;
+    setDowngrading(true);
+
+    const { data: userMembership } = await supabase
+      .from("company_memberships")
+      .select("company_id")
+      .eq("user_id", downgradeTarget.user_id)
+      .eq("role", "owner")
+      .maybeSingle();
+
+    const cid = userMembership?.company_id || downgradeTarget.company_id;
+
+    const { error } = await supabase
+      .from("companies")
+      .update({ plan_type: "starter", credit_balance: 0 })
+      .eq("id", cid);
+
+    setDowngrading(false);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: "Plano alterado para Starter",
+        description: "Créditos removidos e acesso a automações revogado com sucesso.",
+      });
+      setDowngradeStep(0);
+      setDowngradeTarget(null);
       fetchMembers();
     }
   };
