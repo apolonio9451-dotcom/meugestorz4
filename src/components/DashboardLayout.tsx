@@ -83,7 +83,7 @@ const navItems: NavItem[] = [
     children: [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
-      { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone, proOnly: true },
+      { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
       { href: "/dashboard/settings", label: "Configuração de Envio", icon: Settings, proOnly: true },
     ],
   },
