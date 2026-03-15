@@ -69,9 +69,9 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
   if (loading) return null;
 
   return (
-    <div className={`glass-card rounded-xl p-6 space-y-6 relative ${isOwner ? "border-l-[3px] border-[hsl(48,96%,53%)]" : ""}`}>
+    <div className="glass-card rounded-xl p-6 space-y-6 relative">
       {isOwner && (
-        <span className="absolute top-3 right-3 bg-[hsl(48,96%,53%)] text-[hsl(0,0%,0%)] text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide">
+        <span className="absolute top-3 right-3 border border-[hsl(48,96%,53%)] bg-[hsl(0,0%,5%)] text-[hsl(48,96%,53%)] text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">
           Acesso Master
         </span>
       )}
