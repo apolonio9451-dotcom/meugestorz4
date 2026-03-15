@@ -59,7 +59,7 @@ const App = () => (
             <Route path="/dashboard/resellers" element={<DashboardRoute><PlanGate feature="Revendedores"><Resellers /></PlanGate></DashboardRoute>} />
             
             <Route path="/dashboard/trials" element={<DashboardRoute><Trials /></DashboardRoute>} />
-            <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
+            <Route path="/dashboard/messages" element={<DashboardRoute><PlanGate feature="Envios Automáticos"><Messages /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/settings" element={<DashboardRoute><PlanGate feature="Configurações Avançadas"><SettingsPage /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/chatbot" element={<DashboardRoute><PlanGate feature="Chatbot IA"><Chatbot /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/reseller-panel" element={<DashboardRoute><PlanGate feature="Painel de Revenda"><ResellerPanel /></PlanGate></DashboardRoute>} />

@@ -183,6 +183,7 @@ export default function Resellers() {
   const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
   const [ghostLoading, setGhostLoading] = useState<string | null>(null);
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
+  const [resellerPlans, setResellerPlans] = useState<Record<string, "starter" | "pro">>({});
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
@@ -225,6 +226,17 @@ export default function Resellers() {
     }
 
     setResellers(data as Reseller[]);
+
+    const plansMap: Record<string, "starter" | "pro"> = {};
+    const { data: plansData } = await (supabase.rpc as any)("get_reseller_account_plans", {
+      _company_id: companyId,
+    });
+
+    (plansData || []).forEach((entry: any) => {
+      plansMap[entry.reseller_id] = entry.plan_type === "starter" ? "starter" : "pro";
+    });
+
+    setResellerPlans(plansMap);
     setLoading(false);
   };
 
@@ -568,6 +580,32 @@ export default function Resellers() {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
     setGhostLoading(null);
+  };
+
+  const getResellerPlan = (resellerId: string): "starter" | "pro" =>
+    resellerPlans[resellerId] === "starter" ? "starter" : "pro";
+
+  const handleChangeResellerPlan = async (r: Reseller, nextPlan: "starter" | "pro") => {
+    if (!isOwner) {
+      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário pode alterar plano.", variant: "destructive" });
+      return;
+    }
+
+    const currentPlan = getResellerPlan(r.id);
+    if (currentPlan === nextPlan) return;
+
+    const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
+      _reseller_id: r.id,
+      _plan_type: nextPlan,
+    });
+
+    if (error) {
+      toast({ title: "Erro ao alterar plano", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setResellerPlans((prev) => ({ ...prev, [r.id]: nextPlan }));
+    toast({ title: "Plano atualizado", description: `${r.name} agora está no plano ${nextPlan === "pro" ? "Pro" : "Starter"}.` });
   };
 
   const openCredits = (r: Reseller) => {
@@ -943,7 +981,7 @@ export default function Resellers() {
                         <TableCell>
                           <div>
                             <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-sm text-foreground">{r.name}</p>
                               <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
                                 r.credit_balance > 0
@@ -951,6 +989,16 @@ export default function Resellers() {
                                   : "bg-muted text-muted-foreground border-border"
                               }`}>
                                 {r.credit_balance > 0 ? "Admin" : "Usuário"}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] px-1.5 py-0 ${
+                                  getResellerPlan(r.id) === "pro"
+                                    ? "bg-primary/10 text-primary border-primary/30"
+                                    : "bg-muted text-muted-foreground border-border"
+                                }`}
+                              >
+                                {getResellerPlan(r.id) === "pro" ? "Plano Pro" : "Plano Starter"}
                               </Badge>
                             </div>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
@@ -1031,6 +1079,20 @@ export default function Resellers() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
                             {isOwner && r.user_id && (
+                              <Select
+                                value={getResellerPlan(r.id)}
+                                onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
+                              >
+                                <SelectTrigger className="h-7 w-[128px] text-xs">
+                                  <SelectValue placeholder="Alterar Plano" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="starter">Starter</SelectItem>
+                                  <SelectItem value="pro">Pro</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {isOwner && r.user_id && (
                               <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs text-purple-400 hover:bg-purple-500/10" onClick={() => handleGhostLogin(r)} disabled={ghostLoading === r.id} title="Login Fantasma">
                                 <LogIn className="w-3.5 h-3.5" />
                                 <span className="hidden lg:inline">{ghostLoading === r.id ? "..." : "Ghost"}</span>
@@ -1095,7 +1157,7 @@ export default function Resellers() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
                           <Badge variant="outline" className={`text-[9px] px-1.5 py-0 shrink-0 ${
                             r.credit_balance > 0
@@ -1103,6 +1165,16 @@ export default function Resellers() {
                               : "bg-muted text-muted-foreground border-border"
                           }`}>
                             {r.credit_balance > 0 ? "Admin" : "Usuário"}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] px-1.5 py-0 shrink-0 ${
+                              getResellerPlan(r.id) === "pro"
+                                ? "bg-primary/10 text-primary border-primary/30"
+                                : "bg-muted text-muted-foreground border-border"
+                            }`}
+                          >
+                            {getResellerPlan(r.id) === "pro" ? "Pro" : "Starter"}
                           </Badge>
                         </div>
                         {r.email && (
