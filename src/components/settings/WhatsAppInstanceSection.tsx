@@ -273,7 +273,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           onClick={handleSave}
           disabled={saving || !tokenInput.trim()}
@@ -284,6 +284,18 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
             <Save className="h-4 w-4 mr-2" />
           )}
           {saving ? "Salvando..." : "Salvar e Configurar Webhook"}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleCreateInstance}
+          disabled={creating}
+        >
+          {creating ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          {creating ? "Criando..." : "Criar Nova Instância"}
         </Button>
         {hasInstance && (
           <Button variant="outline" onClick={handleCheckStatus} disabled={checking}>
