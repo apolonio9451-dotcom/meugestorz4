@@ -144,7 +144,7 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { effectiveCompanyId: companyId, userRole, user, isTrial, resellerCredits, session } = useAuth();
+  const { effectiveCompanyId: companyId, userRole, user, isTrial, resellerCredits, parentCompanyId, session } = useAuth();
   const { enterGhostMode } = useGhostMode();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -156,6 +156,7 @@ export default function Resellers() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [parentFilter, setParentFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [myResellerId, setMyResellerId] = useState<string | null>(null);
 
   // Dialogs
   const [showCredits, setShowCredits] = useState(false);
