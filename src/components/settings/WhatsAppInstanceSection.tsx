@@ -162,7 +162,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
         Conexão WhatsApp
       </h2>
       <p className="text-muted-foreground text-sm -mt-4">
-        Cole o token da sua instância UAZAPI. O webhook será configurado
+        Cole o token da sua instância. O webhook será configurado
         automaticamente.
       </p>
 
