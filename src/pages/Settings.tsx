@@ -30,7 +30,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  
   const [settings, setSettings] = useState<CompanySettings>({
     company_id: "",
     brand_name: "",
@@ -116,45 +116,6 @@ export default function Settings() {
     setSaving(false);
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "icon" | "brand") => {
-    const file = e.target.files?.[0];
-    if (!file || !companyId) return;
-
-    setUploading(true);
-    const fileExt = file.name.split(".").pop();
-    const filePath = `${companyId}/${type}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("logos")
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-      toast({ title: "Erro ao enviar imagem", description: uploadError.message, variant: "destructive" });
-      setUploading(false);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from("logos").getPublicUrl(filePath);
-    // Add cache-busting param so browser fetches the new image
-    const freshUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-    const field = type === "icon" ? "icon_url" : "logo_url";
-    setSettings((prev) => ({ ...prev, [field]: freshUrl }));
-    // Instantly update the header/sidebar logo
-    if (type === "brand" || type === "icon") {
-      window.dispatchEvent(new CustomEvent("brand-logo-changed", { detail: { logoUrl: freshUrl } }));
-    }
-    setUploading(false);
-    toast({ title: type === "icon" ? "Ícone enviado!" : "Logo da marca enviado!" });
-  };
-
-  const handleRemoveImage = async (type: "icon" | "brand") => {
-    if (!companyId) return;
-    const exts = ["png", "jpg", "jpeg", "webp"];
-    await supabase.storage.from("logos").remove(exts.map((ext) => `${companyId}/${type}.${ext}`));
-    const field = type === "icon" ? "icon_url" : "logo_url";
-    setSettings((prev) => ({ ...prev, [field]: null }));
-    toast({ title: type === "icon" ? "Ícone removido" : "Logo da marca removido" });
-  };
 
 
   if (loading) {

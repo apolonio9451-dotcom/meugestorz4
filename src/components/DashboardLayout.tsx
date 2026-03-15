@@ -263,47 +263,78 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     fetchAdminInfo();
 
 
-    // Fetch support whatsapp
+    // Fetch support whatsapp hierarchically (created_by chain)
     const fetchSupportWhatsapp = async () => {
       if (!user) return;
-      // Check if user is a reseller
-      const { data: resellerData } = await supabase
-        .from("resellers")
-        .select("id, company_id")
+
+      // 1. Check if user was created via trial link → use creator's WhatsApp
+      const { data: membership } = await supabase
+        .from("company_memberships")
+        .select("trial_link_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (resellerData) {
-        // First check if the reseller's parent has a support_whatsapp in reseller_settings
-        const { data: parentReseller } = await supabase
-          .from("resellers")
-          .select("id")
-          .eq("user_id", user.id)
+      if (membership?.trial_link_id) {
+        const { data: trialLink } = await supabase
+          .from("trial_links")
+          .select("created_by")
+          .eq("id", membership.trial_link_id)
           .maybeSingle();
 
-        if (parentReseller) {
-          // Get the company_settings support_whatsapp for the parent company
-          const { data: compSettings } = await supabase
-            .from("company_settings")
-            .select("support_whatsapp")
-            .eq("company_id", resellerData.company_id)
+        if (trialLink?.created_by) {
+          // Get creator's WhatsApp from resellers table
+          const { data: creatorReseller } = await supabase
+            .from("resellers")
+            .select("whatsapp")
+            .eq("user_id", trialLink.created_by)
             .maybeSingle();
-          if (compSettings?.support_whatsapp) {
-            setSupportWhatsapp(compSettings.support_whatsapp);
+          if (creatorReseller?.whatsapp) {
+            setSupportWhatsapp(creatorReseller.whatsapp);
             return;
+          }
+          // Fallback: get from creator's company_settings
+          const { data: creatorCompanyId } = await supabase.rpc("get_user_company_id", { _user_id: trialLink.created_by });
+          if (creatorCompanyId) {
+            const { data: cs } = await supabase
+              .from("company_settings")
+              .select("support_whatsapp")
+              .eq("company_id", creatorCompanyId as string)
+              .maybeSingle();
+            if (cs?.support_whatsapp) {
+              setSupportWhatsapp(cs.support_whatsapp);
+              return;
+            }
           }
         }
       }
 
-      // For non-resellers or fallback: get from own company settings
+      // 2. Reseller: get parent company's support_whatsapp
+      const { data: resellerData } = await supabase
+        .from("resellers")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (resellerData) {
+        const { data: cs } = await supabase
+          .from("company_settings")
+          .select("support_whatsapp")
+          .eq("company_id", resellerData.company_id)
+          .maybeSingle();
+        if (cs?.support_whatsapp) {
+          setSupportWhatsapp(cs.support_whatsapp);
+          return;
+        }
+      }
+
+      // 3. Fallback: own company settings
       if (companyId) {
-        const { data: compSettings } = await supabase
+        const { data: cs } = await supabase
           .from("company_settings")
           .select("support_whatsapp")
           .eq("company_id", companyId)
           .maybeSingle();
-        if (compSettings?.support_whatsapp) {
-          setSupportWhatsapp(compSettings.support_whatsapp);
+        if (cs?.support_whatsapp) {
+          setSupportWhatsapp(cs.support_whatsapp);
         }
       }
     };
