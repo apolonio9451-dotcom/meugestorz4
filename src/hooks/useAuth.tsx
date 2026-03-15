@@ -65,6 +65,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setResellerCredits(resellerData.credit_balance);
       setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
 
+      // Fetch plan_type for reseller's own company
+      const cid = membership?.company_id || resellerData.company_id;
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("plan_type")
+        .eq("id", cid)
+        .maybeSingle();
+      if (companyData) {
+        setPlanType((companyData as any).plan_type === "starter" ? "starter" : "pro");
+      }
+
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
       setTrialExpiresAt(resellerIsTrial ? membership?.trial_expires_at || null : null);
