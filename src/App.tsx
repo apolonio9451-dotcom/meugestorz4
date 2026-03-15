@@ -64,6 +64,7 @@ const App = () => (
             <Route path="/dashboard/chatbot" element={<DashboardRoute><PlanGate feature="Chatbot IA"><Chatbot /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/reseller-panel" element={<DashboardRoute><PlanGate feature="Painel de Revenda"><ResellerPanel /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/profile" element={<DashboardRoute><Profile /></DashboardRoute>} />
+            <Route path="/dashboard/user-management" element={<DashboardRoute><PlanGate feature="Gestão de Revendedores"><UserManagement /></PlanGate></DashboardRoute>} />
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
