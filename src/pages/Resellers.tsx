@@ -58,6 +58,8 @@ import {
   Mail,
   GitBranch,
   Network,
+  LogIn,
+  Activity,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
@@ -172,6 +174,9 @@ export default function Resellers() {
   const [editForm, setEditForm] = useState({ name: "", email: "", whatsapp: "" });
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [clientCounts, setClientCounts] = useState<Record<string, number>>({});
+  const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
+  const [ghostLoading, setGhostLoading] = useState<string | null>(null);
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
@@ -239,10 +244,38 @@ export default function Resellers() {
     if (data) setCompanyCredits(data.credit_balance);
   };
 
+  const fetchClientCounts = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("clients")
+      .select("reseller_id")
+      .eq("company_id", companyId)
+      .not("reseller_id", "is", null);
+    if (!data) return;
+    const counts: Record<string, number> = {};
+    data.forEach(c => { if (c.reseller_id) counts[c.reseller_id] = (counts[c.reseller_id] || 0) + 1; });
+    setClientCounts(counts);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data: recent } = await supabase
+      .from("clients")
+      .select("reseller_id")
+      .eq("company_id", companyId)
+      .not("reseller_id", "is", null)
+      .gte("created_at", sevenDaysAgo.toISOString());
+    if (recent) {
+      const rc: Record<string, number> = {};
+      recent.forEach(c => { if (c.reseller_id) rc[c.reseller_id] = (rc[c.reseller_id] || 0) + 1; });
+      setRecentClientCounts(rc);
+    }
+  };
+
   useEffect(() => {
     fetchResellers();
     fetchPendingLinks();
     fetchCompanyCredits();
+    fetchClientCounts();
   }, [companyId]);
 
   // Fetch passwords only for owners
@@ -461,6 +494,39 @@ export default function Resellers() {
     fetchResellers();
   };
 
+  const handleGhostLogin = async (r: Reseller) => {
+    if (!r.user_id) {
+      toast({ title: "Sem conta", description: "Este revendedor ainda não possui uma conta vinculada.", variant: "destructive" });
+      return;
+    }
+    setGhostLoading(r.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghost-login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ reseller_id: r.id }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) {
+        toast({ title: "Erro", description: result.error, variant: "destructive" });
+      } else if (result.url) {
+        window.open(result.url, "_blank");
+        toast({ title: "Acesso fantasma ativado", description: `Nova aba aberta com o painel de ${result.name}.` });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+    setGhostLoading(null);
+  };
+
   const openCredits = (r: Reseller) => {
     if (r.status !== "active") {
       toast({ title: "Ação bloqueada", description: "Só é possível gerenciar créditos para revendedores com Assinatura Ativa.", variant: "destructive" });
@@ -585,14 +651,23 @@ export default function Resellers() {
   }, [resellers, user?.id, user?.email]);
 
   const filtered = useMemo(() => {
-    return manageableResellers.filter((r) => {
+    let result = manageableResellers.filter((r) => {
       const s = search.toLowerCase();
       const matchesSearch =
         r.name.toLowerCase().includes(s) ||
         r.email?.toLowerCase().includes(s) ||
         r.whatsapp?.includes(search) ||
         r.id.toLowerCase().includes(s);
-      const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+      const matchesStatus = (() => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "top_sellers") return (clientCounts[r.id] || 0) > 0;
+        if (statusFilter === "inactive_7d") return r.status === "active" && !recentClientCounts[r.id];
+        if (statusFilter === "expiring_48h") {
+          const remaining = getDaysRemaining(r);
+          return remaining.days > 0 && remaining.days <= 2;
+        }
+        return r.status === statusFilter;
+      })();
       let matchesParent = true;
       if (parentFilter === "direct") {
         matchesParent = !r.parent_reseller_id;
@@ -601,7 +676,11 @@ export default function Resellers() {
       }
       return matchesSearch && matchesStatus && matchesParent;
     });
-  }, [manageableResellers, search, statusFilter, parentFilter]);
+    if (statusFilter === "top_sellers") {
+      result.sort((a, b) => (clientCounts[b.id] || 0) - (clientCounts[a.id] || 0));
+    }
+    return result;
+  }, [manageableResellers, search, statusFilter, parentFilter, clientCounts, recentClientCounts]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -612,6 +691,8 @@ export default function Resellers() {
   const activeCount = manageableResellers.filter(r => r.status === "active").length;
   const trialCount = manageableResellers.filter(r => r.status === "trial").length;
   const overdueCount = manageableResellers.filter(r => r.status === "overdue").length;
+  const totalNetworkClients = Object.values(clientCounts).reduce((a, b) => a + b, 0);
+  const inactiveCount = manageableResellers.filter(r => r.status === "active" && !recentClientCounts[r.id]).length;
 
   // === RENDER ===
 
@@ -710,12 +791,14 @@ export default function Resellers() {
       </div>
 
       {/* KPI Cards - compact on mobile */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
         {[
           { label: "Total", value: manageableResellers.length, icon: Users, color: "text-primary" },
           { label: "Ativos", value: activeCount, icon: CheckCircle2, color: "text-emerald-400" },
           { label: "Teste", value: trialCount, icon: FlaskConical, color: "text-amber-400" },
           { label: "Vencidos", value: overdueCount, icon: AlertTriangle, color: "text-orange-400" },
+          { label: "Clientes Rede", value: totalNetworkClients, icon: Network, color: "text-blue-400" },
+          { label: "Inativos 7d+", value: inactiveCount, icon: Activity, color: "text-red-400" },
         ].map((kpi, i) => (
           <div key={i} className="rounded-lg border border-border bg-card flex flex-col justify-center items-center p-2 sm:p-4">
             <div className="flex items-center gap-1 mb-1 sm:mb-2">
@@ -755,7 +838,7 @@ export default function Resellers() {
               </Select>
             )}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-44 h-9">
+              <SelectTrigger className="w-full sm:w-48 h-9">
                 <SelectValue placeholder="Filtrar status" />
               </SelectTrigger>
               <SelectContent>
@@ -764,6 +847,9 @@ export default function Resellers() {
                 <SelectItem value="active">Assinatura Ativa</SelectItem>
                 <SelectItem value="expired">Expirado</SelectItem>
                 <SelectItem value="overdue">Vencido</SelectItem>
+                <SelectItem value="top_sellers">🔥 Top Vendedores</SelectItem>
+                <SelectItem value="inactive_7d">💤 Inativos 7d+</SelectItem>
+                <SelectItem value="expiring_48h">⏰ Vencendo em 48h</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -781,11 +867,12 @@ export default function Resellers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Rede</TableHead>
+                    <TableHead>Vínculo</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Performance</TableHead>
                     <TableHead className="text-center">Dias Restantes</TableHead>
                     <TableHead className="text-center">Créditos</TableHead>
-                    <TableHead>Data Cadastro</TableHead>
+                    <TableHead className="text-center">Clientes</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -836,8 +923,13 @@ export default function Resellers() {
                         <TableCell>
                           {parentName ? (
                             <div className="flex items-center gap-1.5">
-                              <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span className="text-[11px] text-muted-foreground">{parentName}</span>
+                              <GitBranch className="w-3 h-3 text-amber-500/60 shrink-0" />
+                              <div>
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/5 text-amber-500/70 border-amber-500/20 mb-0.5">
+                                  Indireto
+                                </Badge>
+                                <p className="text-[10px] text-muted-foreground">{parentName}</p>
+                              </div>
                             </div>
                           ) : (
                             <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-primary/5 text-primary/70 border-primary/20">
@@ -846,6 +938,16 @@ export default function Resellers() {
                           )}
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
+                        <TableCell className="text-center">
+                          {recentClientCounts[r.id] ? (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              +{recentClientCounts[r.id]}
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center">
                           <div>
                             <span className={`font-mono text-sm font-semibold ${
@@ -865,11 +967,19 @@ export default function Resellers() {
                             {r.credit_balance}
                           </span>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(parseISO(r.created_at), "dd/MM/yyyy")}
+                        <TableCell className="text-center">
+                          <span className="font-mono text-sm font-medium text-foreground">
+                            {clientCounts[r.id] || 0}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                            {isOwner && r.user_id && (
+                              <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs text-purple-400 hover:bg-purple-500/10" onClick={() => handleGhostLogin(r)} disabled={ghostLoading === r.id} title="Login Fantasma">
+                                <LogIn className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">{ghostLoading === r.id ? "..." : "Ghost"}</span>
+                              </Button>
+                            )}
                             {(r.status === "trial" || r.status === "expired") && (
                               <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleRenewSubscription(r)}>
                                 <CreditCard className="w-3.5 h-3.5" /> Ativar
