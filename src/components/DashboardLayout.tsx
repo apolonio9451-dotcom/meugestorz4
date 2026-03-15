@@ -378,8 +378,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             .map((item) => {
             // Filter children by proOnly
             const filteredChildren = item.children?.filter((c) => !c.proOnly || planType === "pro");
-            if ("children" in item && item.children) {
-              const childActive = item.children.some((c) => isActive(c.href));
+            if (filteredChildren && filteredChildren.length > 0) {
+              const childActive = filteredChildren.some((c) => isActive(c.href));
               const isOpen = openMenus[item.label];
               return (
                 <div key={item.label}>
