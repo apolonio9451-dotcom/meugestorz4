@@ -505,7 +505,6 @@ export default function Resellers() {
     }
     setGhostLoading(r.id);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghost-login`,
         {
@@ -521,9 +520,10 @@ export default function Resellers() {
       const result = await res.json();
       if (!res.ok) {
         toast({ title: "Erro", description: result.error, variant: "destructive" });
-      } else if (result.url) {
-        window.open(result.url, "_blank");
-        toast({ title: "Acesso fantasma ativado", description: `Nova aba aberta com o painel de ${result.name}.` });
+      } else if (result.company_id) {
+        enterGhostMode(result.user_id, result.company_id, result.name, r.id);
+        toast({ title: "Modo visualização ativado", description: `Visualizando o painel de ${result.name}.` });
+        navigate("/dashboard");
       }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
