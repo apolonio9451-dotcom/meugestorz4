@@ -185,6 +185,11 @@ export default function Resellers() {
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
   const [resellerPlans, setResellerPlans] = useState<Record<string, "starter" | "pro">>({});
 
+  // Downgrade confirmation (two-step)
+  const [downgradeStep, setDowngradeStep] = useState<0 | 1 | 2>(0);
+  const [downgradeTarget, setDowngradeTarget] = useState<Reseller | null>(null);
+  const [downgrading, setDowngrading] = useState(false);
+
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
   const isAdmin = userRole === "Proprietário" || userRole === "Administrador" || userRole === "Admin" || isReseller;
@@ -594,6 +599,14 @@ export default function Resellers() {
     const currentPlan = getResellerPlan(r.id);
     if (currentPlan === nextPlan) return;
 
+    // Downgrade: open two-step confirmation
+    if (nextPlan === "starter") {
+      setDowngradeTarget(r);
+      setDowngradeStep(1);
+      return;
+    }
+
+    // Upgrade to Pro: direct
     const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
       _reseller_id: r.id,
       _plan_type: nextPlan,
@@ -605,7 +618,32 @@ export default function Resellers() {
     }
 
     setResellerPlans((prev) => ({ ...prev, [r.id]: nextPlan }));
-    toast({ title: "Plano atualizado", description: `${r.name} agora está no plano ${nextPlan === "pro" ? "Pro" : "Starter"}.` });
+    toast({ title: "Plano atualizado", description: `${r.name} agora está no plano Pro.` });
+  };
+
+  const handleConfirmDowngrade = async () => {
+    if (!downgradeTarget) return;
+    setDowngrading(true);
+
+    const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
+      _reseller_id: downgradeTarget.id,
+      _plan_type: "starter",
+    });
+
+    setDowngrading(false);
+
+    if (error) {
+      toast({ title: "Erro ao alterar plano", description: error.message, variant: "destructive" });
+    } else {
+      setResellerPlans((prev) => ({ ...prev, [downgradeTarget.id]: "starter" }));
+      toast({
+        title: "Plano alterado para Starter",
+        description: "Acesso a automações revogado com sucesso.",
+      });
+      setDowngradeStep(0);
+      setDowngradeTarget(null);
+      fetchResellers();
+    }
   };
 
   const openCredits = (r: Reseller) => {
@@ -1597,6 +1635,37 @@ export default function Resellers() {
               <Copy className="w-3 h-3" /> Copiar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Downgrade Confirmation Dialog - Two Steps */}
+      <Dialog open={downgradeStep > 0} onOpenChange={(open) => { if (!open) { setDowngradeStep(0); setDowngradeTarget(null); } }}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              {downgradeStep === 1 ? "Confirmar Downgrade" : "Atenção Final"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {downgradeStep === 1
+              ? `Você tem certeza? Mudar "${downgradeTarget?.name || "este revendedor"}" para Starter removerá todos os privilégios de automação e revenda.`
+              : `Esta ação irá revogar o acesso às ferramentas Pro (Bot, API, Repescagem) deste revendedor. Confirmar alteração?`
+            }
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setDowngradeStep(0); setDowngradeTarget(null); }}>
+              Cancelar
+            </Button>
+            {downgradeStep === 1 ? (
+              <Button variant="destructive" onClick={() => setDowngradeStep(2)}>
+                Continuar
+              </Button>
+            ) : (
+              <Button variant="destructive" onClick={handleConfirmDowngrade} disabled={downgrading}>
+                {downgrading ? "Processando..." : "Confirmar Downgrade"}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
