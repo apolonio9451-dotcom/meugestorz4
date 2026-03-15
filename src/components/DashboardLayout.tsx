@@ -11,6 +11,14 @@ import { cn } from "@/lib/utils";
 import defaultBrandLogo from "@/assets/brand-logo.svg";
 import { differenceInDays, parseISO } from "date-fns";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
   LayoutDashboard,
   Users,
   CreditCard,
@@ -34,6 +42,9 @@ import {
   MessageCircle,
   FlaskConical,
   Bot,
+  Star,
+  Zap,
+  Lock,
 } from "lucide-react";
 
 type NavItem = {
