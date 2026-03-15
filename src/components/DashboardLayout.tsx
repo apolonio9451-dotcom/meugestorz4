@@ -77,7 +77,8 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, userRole, resellerCredits, isTrial } = useAuth();
+  const { signOut, user, companyId, userRole, resellerCredits, isTrial, session } = useAuth();
+  const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -85,6 +86,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
+
+  const handleExitGhostMode = async () => {
+    // Call edge function to remove temporary membership
+    try {
+      const stored = localStorage.getItem("ghost_mode");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghost-login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ reseller_id: parsed.resellerId || "", action: "exit" }),
+          }
+        );
+      }
+    } catch (e) {
+      console.error("Error exiting ghost mode:", e);
+    }
+    exitGhostMode();
+    navigate("/dashboard/resellers");
+  };
 
   const applyThemeColors = (primary?: string, secondary?: string, bg?: string) => {
     // Check if colors match a preset — if so, apply full preset for complete coverage
