@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [parentCompanyId, setParentCompanyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [resellerCredits, setResellerCredits] = useState<number | null>(null);
+  const [planType, setPlanType] = useState<"starter" | "pro">("pro");
   const [isTrial, setIsTrial] = useState(false);
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
