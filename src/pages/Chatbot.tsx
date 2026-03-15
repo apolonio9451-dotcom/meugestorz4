@@ -19,8 +19,8 @@ import {
   Plus, Brain, Timer, Phone, Calendar, Send,
   MessageSquare, Shield, Pencil, ToggleLeft, Copy, Check,
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
-  Globe, Link2, Eye, EyeOff, Volume2, Info, Search,
-  ChevronDown, ChevronUp, Hash, Layers, Download, Smartphone, QrCode,
+  Eye, Volume2, Info, Search,
+  ChevronDown, ChevronUp, Hash, Layers, Download,
   BookOpen, Route, Palette
 } from "lucide-react";
 import { format } from "date-fns";
