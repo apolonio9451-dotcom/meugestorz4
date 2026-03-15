@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
 
   try {
     const { phone, category, company_id } = await req.json();
+    console.log("[test-send] Recebido:", { phone, category, company_id });
 
     if (!phone || !category || !company_id) {
       return new Response(
@@ -59,15 +60,22 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Fetch API credentials from api_settings table
-    const { data: apiSettings } = await supabase
+    const { data: apiSettings, error: settingsError } = await supabase
       .from("api_settings")
-      .select("api_url, api_token, pix_key")
+      .select("api_url, api_token, instance_name, pix_key")
       .eq("company_id", company_id)
       .single();
 
+    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token } : "null", "error:", settingsError?.message);
+
     if (!apiSettings?.api_url || !apiSettings?.api_token) {
+      const reason = !apiSettings
+        ? "Nenhuma configuração de instância encontrada para esta empresa."
+        : !apiSettings.api_url
+        ? "URL da API não configurada. Acesse o menu Instância para configurar."
+        : "Token da instância não configurado. Acesse o menu Instância para configurar.";
       return new Response(
-        JSON.stringify({ error: "API de WhatsApp não configurada. Vá em Configurações para cadastrar URL e Token." }),
+        JSON.stringify({ error: reason }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -135,6 +143,7 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
     const endpoint = `${apiUrl}/send/text`;
+    console.log("[test-send] Enviando para:", { endpoint, phone: normalizedPhone, messageLength: messageBody.length });
 
     try {
       const res = await fetch(endpoint, {

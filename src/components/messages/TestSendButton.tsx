@@ -48,7 +48,20 @@ export default function TestSendButton({ companyId }: Props) {
         body: { phone: phone.trim(), category, company_id: companyId },
       });
 
-      if (error) throw error;
+      // Extract detailed error from edge function response
+      if (error) {
+        let detailedMessage = error.message || "Erro desconhecido";
+        try {
+          // FunctionsHttpError contains the response context
+          if (error.context && typeof error.context.json === "function") {
+            const errorBody = await error.context.json();
+            detailedMessage = errorBody?.error || detailedMessage;
+          }
+        } catch {
+          // fallback to generic message
+        }
+        throw new Error(detailedMessage);
+      }
       if (data?.error) throw new Error(data.error);
 
       toast({
@@ -58,6 +71,7 @@ export default function TestSendButton({ companyId }: Props) {
       setOpen(false);
       setPhone("");
     } catch (err: any) {
+      console.error("[TestSend] Erro detalhado:", err);
       toast({
         title: "Erro no envio",
         description: err?.message || "Não foi possível enviar a mensagem de teste.",
