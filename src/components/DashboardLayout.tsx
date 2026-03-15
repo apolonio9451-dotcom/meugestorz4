@@ -561,6 +561,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Ghost Mode Banner */}
+        {isGhostMode && (
+          <div className="bg-orange-500 text-white px-4 py-2.5 flex items-center justify-between z-50 shadow-lg">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Eye className="w-4 h-4" />
+              <span>Você está visualizando o painel de: <strong>{ghostName}</strong></span>
+            </div>
+            <button
+              onClick={handleExitGhostMode}
+              className="flex items-center gap-1.5 rounded-lg bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sair e Voltar para o Master
+            </button>
+          </div>
+        )}
         <TrialBanner />
         <header className="h-24 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
