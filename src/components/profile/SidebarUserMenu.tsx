@@ -33,23 +33,29 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
   const fetchProfile = async () => {
     if (!user) return;
 
-    // Start with Google auth metadata
     const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || "";
     const metaName = user.user_metadata?.full_name || user.user_metadata?.name || "";
 
-    setDisplayName(metaName);
-    setAvatarUrl(googleAvatar);
-
-    // Fetch from profiles table (overrides if set)
+    // Fetch from profiles table
     const { data } = await supabase
       .from("profiles")
       .select("avatar_url, full_name")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (data?.full_name) setDisplayName(data.full_name);
-    if (data?.avatar_url && data.avatar_url.trim() !== "") {
-      setAvatarUrl(data.avatar_url);
+    const profileAvatar = data?.avatar_url?.trim() || "";
+    const profileName = data?.full_name?.trim() || "";
+
+    // Priority: 1) manual upload, 2) Google avatar, 3) initials fallback
+    setAvatarUrl(profileAvatar || googleAvatar);
+    setDisplayName(profileName || metaName);
+
+    // Sync Google avatar to profiles if profile has no avatar yet
+    if (!profileAvatar && googleAvatar) {
+      await supabase.from("profiles").update({ avatar_url: googleAvatar }).eq("id", user.id);
+    }
+    if (!profileName && metaName) {
+      await supabase.from("profiles").update({ full_name: metaName }).eq("id", user.id);
     }
 
     // Check for reseller custom domain/slug
