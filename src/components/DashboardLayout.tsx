@@ -42,7 +42,7 @@ import {
   MessageCircle,
   FlaskConical,
   Bot,
-  Star,
+  
   Zap,
   Lock,
 } from "lucide-react";
