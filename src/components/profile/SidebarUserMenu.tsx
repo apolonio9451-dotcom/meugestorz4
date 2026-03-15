@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Globe, LogOut, ChevronUp } from "lucide-react";
+import { Globe, LogOut, ChevronUp } from "lucide-react";
 import ProfileSettingsModal from "./ProfileSettingsModal";
 import { cn } from "@/lib/utils";
 
@@ -32,13 +32,25 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
 
   const fetchProfile = async () => {
     if (!user) return;
+
+    // Start with Google auth metadata
+    const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || "";
+    const metaName = user.user_metadata?.full_name || user.user_metadata?.name || "";
+
+    setDisplayName(metaName);
+    setAvatarUrl(googleAvatar);
+
+    // Fetch from profiles table (overrides if set)
     const { data } = await supabase
       .from("profiles")
       .select("avatar_url, full_name")
       .eq("id", user.id)
       .maybeSingle();
-    if (data?.avatar_url) setAvatarUrl(data.avatar_url);
-    setDisplayName(data?.full_name || user.user_metadata?.full_name || "");
+
+    if (data?.full_name) setDisplayName(data.full_name);
+    if (data?.avatar_url && data.avatar_url.trim() !== "") {
+      setAvatarUrl(data.avatar_url);
+    }
 
     // Check for reseller custom domain/slug
     if (resellerCredits !== null) {
@@ -119,6 +131,7 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
             <p className="text-xs text-muted-foreground truncate">{email}</p>
           </div>
           <DropdownMenuSeparator />
+          {/* Clicking profile name/avatar area opens modal directly */}
           <DropdownMenuItem
             onClick={() => {
               setProfileModalOpen(true);
@@ -126,8 +139,7 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
             }}
             className="gap-2 cursor-pointer"
           >
-            <Settings className="w-4 h-4" />
-            Minhas Configurações
+            Meu Perfil
           </DropdownMenuItem>
           {resellerSlug && (
             <DropdownMenuItem
