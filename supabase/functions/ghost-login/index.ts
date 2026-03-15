@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { reseller_id } = await req.json();
+    const { reseller_id, action } = await req.json();
     const authHeader = req.headers.get("Authorization")!;
 
     const adminClient = createClient(
@@ -47,6 +47,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // EXIT ghost mode — remove temporary membership
+    if (action === "exit") {
+      const { company_id } = await req.json().catch(() => ({}));
+      if (reseller_id) {
+        // Find the reseller's company via their membership
+        const { data: reseller } = await adminClient
+          .from("resellers")
+          .select("user_id")
+          .eq("id", reseller_id)
+          .single();
+
+        if (reseller?.user_id) {
+          const { data: resellerMembership } = await adminClient
+            .from("company_memberships")
+            .select("company_id")
+            .eq("user_id", reseller.user_id)
+            .single();
+
+          if (resellerMembership) {
+            await adminClient
+              .from("company_memberships")
+              .delete()
+              .eq("user_id", caller.id)
+              .eq("company_id", resellerMembership.company_id)
+              .eq("role", "operator");
+          }
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ENTER ghost mode
     // Get reseller info
     const { data: reseller } = await adminClient
       .from("resellers")
@@ -61,32 +97,46 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get user email from auth
-    const { data: { user: resellerUser } } = await adminClient.auth.admin.getUserById(reseller.user_id);
-    if (!resellerUser?.email) {
-      return new Response(JSON.stringify({ error: "Email do revendedor não encontrado" }), {
+    // Get the reseller's own company_id (from their membership)
+    const { data: resellerMembership } = await adminClient
+      .from("company_memberships")
+      .select("company_id")
+      .eq("user_id", reseller.user_id)
+      .single();
+
+    if (!resellerMembership) {
+      return new Response(JSON.stringify({ error: "Empresa do revendedor não encontrada" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Generate magic link
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "magiclink",
-      email: resellerUser.email,
-    });
+    const targetCompanyId = resellerMembership.company_id;
 
-    if (linkError || !linkData) {
-      return new Response(JSON.stringify({ error: linkError?.message || "Erro ao gerar link" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Add caller as temporary operator in target company (if not already)
+    const { data: existingMembership } = await adminClient
+      .from("company_memberships")
+      .select("id")
+      .eq("user_id", caller.id)
+      .eq("company_id", targetCompanyId)
+      .maybeSingle();
+
+    if (!existingMembership) {
+      await adminClient
+        .from("company_memberships")
+        .insert({
+          user_id: caller.id,
+          company_id: targetCompanyId,
+          role: "operator",
+        });
     }
 
     return new Response(
       JSON.stringify({
-        url: linkData.properties?.action_link,
+        company_id: targetCompanyId,
         name: reseller.name,
+        reseller_id: reseller_id,
+        user_id: reseller.user_id,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
