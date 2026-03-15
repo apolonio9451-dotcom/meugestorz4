@@ -83,51 +83,58 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
         Configure os dados necessários para o envio automático de mensagens.
       </p>
 
-      {/* URL da API — visível apenas para Proprietário */}
-      {isOwner && (
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold text-foreground">URL da API</Label>
-          <div className="flex gap-2">
-            <Input
-              type={showUrl ? "text" : "password"}
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="https://..."
-              className="bg-secondary/50 border-border font-mono"
-            />
-            <Button variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
-              {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      {/* URL e Token da API — visível apenas para Proprietário */}
+      {isOwner ? (
+        <>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground">URL da API</Label>
+            <div className="flex gap-2">
+              <Input
+                type={showUrl ? "text" : "password"}
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="https://..."
+                className="bg-secondary/50 border-border font-mono"
+              />
+              <Button variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
+                {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
+            <div className="flex gap-2">
+              <Input
+                type={showToken ? "text" : "password"}
+                value={apiToken}
+                onChange={(e) => setApiToken(e.target.value)}
+                placeholder="Cole seu token aqui"
+                className="bg-secondary/50 border-border font-mono"
+              />
+              <Button variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
+                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Salvar Configurações
             </Button>
           </div>
+        </>
+      ) : (
+        <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            🔒 Informações de Acesso Master (URL e Token) são visíveis apenas para o Proprietário.
+          </p>
         </div>
-      )}
-
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
-        <div className="flex gap-2">
-          <Input
-            type={showToken ? "text" : "password"}
-            value={apiToken}
-            onChange={(e) => setApiToken(e.target.value)}
-            placeholder="Cole seu token aqui"
-            className="bg-secondary/50 border-border font-mono"
-          />
-          <Button variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
-            {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
-        </div>
-        <p className="text-muted-foreground text-xs">
-          O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
-        </p>
-      </div>
-
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving || (!isOwner && !apiToken.trim())}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-          Salvar Configurações
-        </Button>
-      </div>
+      )
     </div>
   );
 }
