@@ -161,18 +161,18 @@ export default function ResellerPanel() {
       const fetchAdminContact = async () => {
         if (!reseller.company_id) return;
 
-        // Get parent company support_whatsapp
-        const { data: cs } = await supabase
-          .from("company_settings")
-          .select("support_whatsapp, brand_name")
-          .eq("company_id", reseller.company_id)
-          .maybeSingle();
+        // Use RPC to bypass RLS and get parent company support_whatsapp
+        const { data: parentSupport } = await supabase.rpc("get_support_whatsapp", {
+          _company_id: reseller.company_id,
+        });
 
-        if (cs?.support_whatsapp) setAdminWhatsapp(cs.support_whatsapp);
-        if (cs?.brand_name) setAdminName(cs.brand_name);
+        if (parentSupport) {
+          setAdminWhatsapp(parentSupport);
+          setAdminName("Administrador");
+        }
 
-        // If parent company has no support_whatsapp, try to find Master (root company)
-        if (!cs?.support_whatsapp && user) {
+        // If parent company has no support_whatsapp, try to find Master (root company) via trial link
+        if (!parentSupport && user) {
           const { data: membership } = await supabase
             .from("company_memberships")
             .select("trial_link_id")
@@ -187,12 +187,10 @@ export default function ResellerPanel() {
               .maybeSingle();
 
             if (trialLink?.company_id) {
-              const { data: masterCs } = await supabase
-                .from("company_settings")
-                .select("support_whatsapp")
-                .eq("company_id", trialLink.company_id)
-                .maybeSingle();
-              if (masterCs?.support_whatsapp) setAdminWhatsapp(masterCs.support_whatsapp);
+              const { data: masterSupport } = await supabase.rpc("get_support_whatsapp", {
+                _company_id: trialLink.company_id,
+              });
+              if (masterSupport) setAdminWhatsapp(masterSupport);
             }
           }
         }
