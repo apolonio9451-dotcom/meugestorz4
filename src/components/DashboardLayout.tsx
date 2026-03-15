@@ -529,23 +529,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <span className="block text-[10px] text-muted-foreground truncate">{user?.email}</span>
             </div>
           </Link>
-          {adminInfo && (
-            <div className="rounded-lg bg-sidebar-accent/30 border border-sidebar-border/50 px-3 py-2.5 space-y-1.5">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Seu Admin</p>
-              <p className="text-xs font-semibold text-sidebar-foreground truncate">{adminInfo.name}</p>
-              {adminInfo.whatsapp && (
-                <a
-                  href={`https://wa.me/${adminInfo.whatsapp.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[11px] text-primary hover:text-primary/80 transition-colors font-medium"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  Chamar no WhatsApp
-                </a>
-              )}
-            </div>
-          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
