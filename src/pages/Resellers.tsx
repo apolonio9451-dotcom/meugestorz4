@@ -144,7 +144,7 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { effectiveCompanyId: companyId, userRole, user, isTrial, resellerCredits, session } = useAuth();
+  const { effectiveCompanyId: companyId, userRole, user, isTrial, resellerCredits, parentCompanyId, session } = useAuth();
   const { enterGhostMode } = useGhostMode();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -156,6 +156,7 @@ export default function Resellers() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [parentFilter, setParentFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [myResellerId, setMyResellerId] = useState<string | null>(null);
 
   // Dialogs
   const [showCredits, setShowCredits] = useState(false);
@@ -196,13 +197,35 @@ export default function Resellers() {
 
   // === DATA FETCHING ===
 
+  // Fetch current user's reseller ID for cascading queries
+  useEffect(() => {
+    if (!user || isOwner) return;
+    (async () => {
+      const { data } = await supabase
+        .from("resellers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) setMyResellerId(data.id);
+    })();
+  }, [user, isOwner]);
+
   const fetchResellers = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from("resellers")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false });
+
+    let query = supabase.from("resellers").select("*");
+
+    if (isOwner) {
+      // Owner sees all resellers in their company
+      query = query.eq("company_id", companyId);
+    } else if (isReseller && myResellerId) {
+      // Reseller sees only their sub-resellers (vision isolation)
+      query = query.eq("parent_reseller_id", myResellerId);
+    } else {
+      query = query.eq("company_id", companyId);
+    }
+
+    const { data } = await query.order("created_at", { ascending: false });
     if (!data) { setLoading(false); return; }
 
     // Use subscription_expires_at directly as trial expiry source
@@ -232,9 +255,11 @@ export default function Resellers() {
 
     setResellers(data as Reseller[]);
 
+    // Fetch plans - use parent company for resellers, own company for owners
+    const plansCompanyId = isOwner ? companyId : (parentCompanyId || companyId);
     const plansMap: Record<string, "starter" | "pro"> = {};
     const { data: plansData } = await (supabase.rpc as any)("get_reseller_account_plans", {
-      _company_id: companyId,
+      _company_id: plansCompanyId,
     });
 
     (plansData || []).forEach((entry: any) => {
@@ -295,6 +320,7 @@ export default function Resellers() {
   };
 
   useEffect(() => {
+    if (isReseller && !myResellerId) return; // Wait for myResellerId before fetching
     fetchResellers();
     fetchPendingLinks();
     fetchCompanyCredits();
@@ -336,7 +362,7 @@ export default function Resellers() {
         }
       })();
     }
-  }, [companyId]);
+  }, [companyId, myResellerId]);
 
   // Fetch passwords only for owners
   const fetchPassword = async (resellerId: string) => {
@@ -590,9 +616,11 @@ export default function Resellers() {
   const getResellerPlan = (resellerId: string): "starter" | "pro" =>
     resellerPlans[resellerId] === "starter" ? "starter" : "pro";
 
+  const canChangePlans = isOwner || (isReseller && getResellerPlan(myResellerId || "") === "pro");
+
   const handleChangeResellerPlan = async (r: Reseller, nextPlan: "starter" | "pro") => {
-    if (!isOwner) {
-      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário pode alterar plano.", variant: "destructive" });
+    if (!canChangePlans) {
+      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário ou revendedor PRO pai pode alterar plano.", variant: "destructive" });
       return;
     }
 
@@ -1021,22 +1049,15 @@ export default function Resellers() {
                             <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-sm text-foreground">{r.name}</p>
-                              <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
-                                r.credit_balance > 0
-                                  ? "bg-primary/10 text-primary border-primary/30"
-                                  : "bg-muted text-muted-foreground border-border"
-                              }`}>
-                                {r.credit_balance > 0 ? "Admin" : "Usuário"}
-                              </Badge>
                               <Badge
                                 variant="outline"
-                                className={`text-[9px] px-1.5 py-0 ${
+                                className={`text-[9px] px-1.5 py-0 font-bold tracking-wider uppercase ${
                                   getResellerPlan(r.id) === "pro"
-                                    ? "bg-primary/10 text-primary border-primary/30"
+                                    ? "bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
                                     : "bg-muted text-muted-foreground border-border"
                                 }`}
                               >
-                                {getResellerPlan(r.id) === "pro" ? "Plano Pro" : "Plano Starter"}
+                                {getResellerPlan(r.id) === "pro" ? "PRO" : "STARTER"}
                               </Badge>
                             </div>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
@@ -1116,7 +1137,7 @@ export default function Resellers() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                            {isOwner && r.user_id && (
+                            {canChangePlans && r.user_id && (
                               <Select
                                 value={getResellerPlan(r.id)}
                                 onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
@@ -1197,22 +1218,15 @@ export default function Resellers() {
                         <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
-                          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 shrink-0 ${
-                            r.credit_balance > 0
-                              ? "bg-primary/10 text-primary border-primary/30"
-                              : "bg-muted text-muted-foreground border-border"
-                          }`}>
-                            {r.credit_balance > 0 ? "Admin" : "Usuário"}
-                          </Badge>
                           <Badge
                             variant="outline"
-                            className={`text-[9px] px-1.5 py-0 shrink-0 ${
+                            className={`text-[9px] px-1.5 py-0 shrink-0 font-bold tracking-wider uppercase ${
                               getResellerPlan(r.id) === "pro"
-                                ? "bg-primary/10 text-primary border-primary/30"
+                                ? "bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
                                 : "bg-muted text-muted-foreground border-border"
                             }`}
                           >
-                            {getResellerPlan(r.id) === "pro" ? "Pro" : "Starter"}
+                            {getResellerPlan(r.id) === "pro" ? "PRO" : "STARTER"}
                           </Badge>
                         </div>
                         {r.email && (
