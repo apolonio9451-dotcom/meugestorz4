@@ -22,7 +22,7 @@ export default function Settings() {
       </div>
 
       {/* WhatsApp Instance Management */}
-      <WhatsAppInstanceSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} />
+      <WhatsAppInstanceSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={isOwner} />
 
       {/* API Settings */}
       <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={isOwner} />

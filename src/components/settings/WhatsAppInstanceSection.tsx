@@ -295,66 +295,72 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
         Cole o token da sua instância. O webhook será configurado automaticamente.
       </p>
 
-      {/* Token input */}
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
-        <div className="flex gap-2">
-          <Input
-            type={showToken ? "text" : "password"}
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            placeholder="Cole o token da instância aqui"
-            className="bg-secondary/50 border-border font-mono"
-          />
-          <Button variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
-            {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </Button>
+      {/* Token input - only visible for owners */}
+      {isOwner ? (
+        <>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
+            <div className="flex gap-2">
+              <Input
+                type={showToken ? "text" : "password"}
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                placeholder="Cole o token da instância aqui"
+                className="bg-secondary/50 border-border font-mono"
+              />
+              <Button variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
+                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleSave} disabled={saving || !tokenInput.trim()}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              {saving ? "Salvando..." : "Salvar e Configurar Webhook"}
+            </Button>
+
+            {!hasInstance && (
+              <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
+                {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                {creating ? "Criando..." : "Criar Nova Instância"}
+              </Button>
+            )}
+
+            {hasInstance && !connected && (
+              <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={deleting}>
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Remover Instância
+              </Button>
+            )}
+
+            {hasInstance && connected && (
+              <Button variant="destructive" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
+                Desconectar
+              </Button>
+            )}
+
+            {hasInstance && (
+              <Button variant="outline" onClick={handleCheckStatus} disabled={checking}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${checking ? "animate-spin" : ""}`} />
+                Verificar Status
+              </Button>
+            )}
+          </div>
+
+          {hasInstance && (
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+              ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            🔒 Configuração gerenciada pelo sistema. Apenas o Proprietário pode alterar o token da instância.
+          </p>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={handleSave} disabled={saving || !tokenInput.trim()}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-          {saving ? "Salvando..." : "Salvar e Configurar Webhook"}
-        </Button>
-
-        {/* Only show Create if no instance exists */}
-        {!hasInstance && (
-          <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
-            {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-            {creating ? "Criando..." : "Criar Nova Instância"}
-          </Button>
-        )}
-
-        {/* Show warning if instance exists and not connected */}
-        {hasInstance && !connected && (
-          <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={deleting}>
-            {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-            Remover Instância
-          </Button>
-        )}
-
-        {/* Show disconnect when connected */}
-        {hasInstance && connected && (
-          <Button variant="destructive" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
-            {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
-            Desconectar
-          </Button>
-        )}
-
-        {hasInstance && (
-          <Button variant="outline" onClick={handleCheckStatus} disabled={checking}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${checking ? "animate-spin" : ""}`} />
-            Verificar Status
-          </Button>
-        )}
-      </div>
-
-      {/* Warning when instance already exists */}
-      {hasInstance && (
-        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-          ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
-        </p>
       )}
 
       {/* Connection status + QR Code */}
