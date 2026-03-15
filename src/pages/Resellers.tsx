@@ -773,11 +773,24 @@ export default function Resellers() {
               <p className="text-sm text-muted-foreground">
                 Seu saldo está <strong className="text-warning">zerado</strong>. Você não pode gerenciar seus revendedores até recarregar.
               </p>
-              <div className="rounded-lg border border-warning/25 bg-warning/10 px-4 py-3">
-                <p className="text-xs font-medium text-warning">
-                  Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
-                </p>
-              </div>
+              {adminWhatsapp ? (
+                <Button
+                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    const phone = adminWhatsapp.replace(/\D/g, "");
+                    const msg = encodeURIComponent("Olá! Meus créditos no Meu Gestor acabaram e gostaria de adquirir mais para liberar meu gerenciamento.");
+                    window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" /> Comprar Créditos via WhatsApp
+                </Button>
+              ) : (
+                <div className="rounded-lg border border-warning/25 bg-warning/10 px-4 py-3">
+                  <p className="text-xs font-medium text-warning">
+                    Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
