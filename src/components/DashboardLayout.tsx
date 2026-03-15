@@ -366,7 +366,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems
             .filter((item) => {
-              const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Administrador" || userRole === "Admin";
+              const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
               const isResellerUser = resellerCredits !== null;
 
               // "Revendedores" deve continuar visível para revendedores mesmo com 0 créditos;
