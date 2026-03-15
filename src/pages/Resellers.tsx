@@ -282,6 +282,43 @@ export default function Resellers() {
     fetchPendingLinks();
     fetchCompanyCredits();
     fetchClientCounts();
+
+    // Fetch admin support WhatsApp for non-owners
+    if (!isOwner && user) {
+      (async () => {
+        // Check reseller parent company
+        const { data: resellerData } = await supabase
+          .from("resellers")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (resellerData?.company_id) {
+          const { data: support } = await supabase.rpc("get_support_whatsapp", {
+            _company_id: resellerData.company_id,
+          });
+          if (support) { setAdminWhatsapp(support); return; }
+        }
+        // Fallback: trial link creator's company
+        const { data: membership } = await supabase
+          .from("company_memberships")
+          .select("trial_link_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (membership?.trial_link_id) {
+          const { data: tl } = await supabase
+            .from("trial_links")
+            .select("company_id")
+            .eq("id", membership.trial_link_id)
+            .maybeSingle();
+          if (tl?.company_id) {
+            const { data: support } = await supabase.rpc("get_support_whatsapp", {
+              _company_id: tl.company_id,
+            });
+            if (support) setAdminWhatsapp(support);
+          }
+        }
+      })();
+    }
   }, [companyId]);
 
   // Fetch passwords only for owners
