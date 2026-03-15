@@ -73,7 +73,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
-      { href: "/dashboard/settings", label: "Geral", icon: Settings },
+      { href: "/dashboard/settings", label: "Geral", icon: Settings, proOnly: true },
     ],
   },
 ];
