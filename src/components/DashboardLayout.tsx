@@ -64,8 +64,8 @@ const navItems: NavItem[] = [
       { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
     ],
   },
-  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
+  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
+  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true, proOnly: true },
   {
     label: "Configurações",
     icon: Settings,
