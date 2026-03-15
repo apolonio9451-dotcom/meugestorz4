@@ -42,7 +42,7 @@ import {
   MessageCircle,
   FlaskConical,
   Bot,
-  Star,
+  
   Zap,
   Lock,
 } from "lucide-react";
@@ -83,7 +83,7 @@ const navItems: NavItem[] = [
     children: [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
-      { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone, proOnly: true },
+      { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
       { href: "/dashboard/settings", label: "Configuração de Envio", icon: Settings, proOnly: true },
     ],
   },
@@ -448,7 +448,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             >
                               <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                               <span className="flex-1">{child.label}</span>
-                              <Star className="w-3 h-3 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                              <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                             </button>
                           ) : (
                           <Link
@@ -488,7 +488,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
-                  <Star className="w-3.5 h-3.5 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                  <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                 </button>
               );
             }
