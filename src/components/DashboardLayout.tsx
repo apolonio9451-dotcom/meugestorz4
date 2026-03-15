@@ -37,7 +37,7 @@ import {
   Settings,
   KeyRound,
   ShieldCheck,
-  Store,
+  
   Clock,
   MessageCircle,
   FlaskConical,
