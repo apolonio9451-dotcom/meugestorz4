@@ -98,6 +98,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [brandName, setBrandName] = useState("Meu Gestor");
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState("");
 
   const handleExitGhostMode = async () => {
     // Call edge function to remove temporary membership
