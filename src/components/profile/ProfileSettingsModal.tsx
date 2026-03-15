@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Loader2, Save, User, LogOut } from "lucide-react";
+import { Camera, Loader2, Save, User, LogOut, Phone, Palette, Check } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { themePresets, applyThemePreset } from "@/lib/themes";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -30,7 +31,7 @@ export default function ProfileSettingsModal({
   onProfileUpdated,
   onSignOut,
 }: ProfileSettingsModalProps) {
-  const { user, userRole } = useAuth();
+  const { user, userRole, effectiveCompanyId: companyId } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +39,8 @@ export default function ProfileSettingsModal({
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [supportWhatsapp, setSupportWhatsapp] = useState("");
+  const [activeThemeId, setActiveThemeId] = useState("teal");
 
   const email = user?.email || "";
   const initials = fullName
@@ -71,7 +74,29 @@ export default function ProfileSettingsModal({
         if (data?.full_name) setFullName(data.full_name);
         if (data?.avatar_url && data.avatar_url.trim() !== "") setAvatarUrl(data.avatar_url);
       });
-  }, [open, user]);
+
+    // Load company settings (whatsapp + theme)
+    if (companyId) {
+      supabase
+        .from("company_settings")
+        .select("support_whatsapp, primary_color, secondary_color, background_color")
+        .eq("company_id", companyId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setSupportWhatsapp(data.support_whatsapp || "");
+            // Detect active theme
+            const matched = themePresets.find(
+              (p) =>
+                p.colors.primary === data.primary_color &&
+                p.colors.secondary === data.secondary_color &&
+                p.colors.background === data.background_color
+            );
+            if (matched) setActiveThemeId(matched.id);
+          }
+        });
+    }
+  }, [open, user, companyId]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,11 +130,44 @@ export default function ProfileSettingsModal({
     toast({ title: "Foto atualizada!" });
   };
 
+  const handleSelectTheme = (preset: typeof themePresets[0]) => {
+    if (preset.locked) return;
+    setActiveThemeId(preset.id);
+    applyThemePreset(preset);
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
     setSaving(true);
+
+    // Save profile data
     await supabase.auth.updateUser({ data: { full_name: fullName } });
     await supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id);
+
+    // Save company settings (whatsapp + theme)
+    if (companyId) {
+      const selectedTheme = themePresets.find((p) => p.id === activeThemeId) || themePresets[0];
+      const payload = {
+        company_id: companyId,
+        support_whatsapp: supportWhatsapp,
+        primary_color: selectedTheme.colors.primary,
+        secondary_color: selectedTheme.colors.secondary,
+        background_color: selectedTheme.colors.background,
+      };
+
+      const { data: existing } = await supabase
+        .from("company_settings")
+        .select("id")
+        .eq("company_id", companyId)
+        .maybeSingle();
+
+      if (existing?.id) {
+        await supabase.from("company_settings").update(payload).eq("id", existing.id);
+      } else {
+        await supabase.from("company_settings").insert(payload);
+      }
+    }
+
     setSaving(false);
     onProfileUpdated?.();
     toast({ title: "Perfil atualizado!", description: "Seus dados foram salvos com sucesso." });
@@ -117,7 +175,7 @@ export default function ProfileSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto scrollbar-hide">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5 text-primary" />
@@ -164,23 +222,87 @@ export default function ProfileSettingsModal({
             <Label>E-mail</Label>
             <Input value={email} disabled className="opacity-60" />
           </div>
-          <Button onClick={handleSaveProfile} disabled={saving} className="w-full">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            Salvar Dados
-          </Button>
         </div>
+
+        <Separator />
+
+        {/* Network Settings */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Configurações da Rede</p>
+
+          {/* WhatsApp de Suporte */}
+          <div className="space-y-1.5">
+            <Label className="text-sm flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-primary" />
+              WhatsApp de Suporte
+            </Label>
+            <Input
+              value={supportWhatsapp}
+              onChange={(e) => setSupportWhatsapp(e.target.value)}
+              placeholder="5511999999999"
+              className="bg-secondary/50 border-border"
+            />
+          </div>
+
+          {/* Compact Theme Selector */}
+          <div className="space-y-2">
+            <Label className="text-sm flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-primary" />
+              Tema do Sistema
+            </Label>
+            <div className="flex gap-3">
+              {themePresets.map((preset) => {
+                const isActive = activeThemeId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    disabled={preset.locked}
+                    onClick={() => handleSelectTheme(preset)}
+                    className={cn(
+                      "relative flex flex-col items-center gap-1.5 rounded-lg p-2.5 transition-all border-2",
+                      preset.locked
+                        ? "opacity-40 cursor-not-allowed border-border"
+                        : isActive
+                        ? "border-primary shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
+                        : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    {/* Color dots */}
+                    <div className="flex gap-1">
+                      <div className="w-4 h-4 rounded-full border border-foreground/10" style={{ backgroundColor: preset.colors.primary }} />
+                      <div className="w-4 h-4 rounded-full border border-foreground/10" style={{ backgroundColor: preset.colors.secondary }} />
+                      <div className="w-4 h-4 rounded-full border border-foreground/10" style={{ backgroundColor: preset.colors.background }} />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-medium">{preset.name}</span>
+                    {isActive && (
+                      <div className="absolute -top-1 -right-1 bg-primary rounded-full p-0.5">
+                        <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Save */}
+        <Button onClick={handleSaveProfile} disabled={saving} className="w-full">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+          Salvar Dados
+        </Button>
 
         <Separator />
 
         {/* Sign Out + Google notice */}
         <div className="space-y-3">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => {
               onOpenChange(false);
               onSignOut?.();
             }}
-            className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Sair da Conta
