@@ -362,7 +362,7 @@ export default function Resellers() {
         }
       })();
     }
-  }, [companyId]);
+  }, [companyId, myResellerId]);
 
   // Fetch passwords only for owners
   const fetchPassword = async (resellerId: string) => {
