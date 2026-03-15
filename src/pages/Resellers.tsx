@@ -1079,6 +1079,20 @@ export default function Resellers() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
                             {isOwner && r.user_id && (
+                              <Select
+                                value={getResellerPlan(r.id)}
+                                onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
+                              >
+                                <SelectTrigger className="h-7 w-[128px] text-xs">
+                                  <SelectValue placeholder="Alterar Plano" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="starter">Starter</SelectItem>
+                                  <SelectItem value="pro">Pro</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {isOwner && r.user_id && (
                               <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs text-purple-400 hover:bg-purple-500/10" onClick={() => handleGhostLogin(r)} disabled={ghostLoading === r.id} title="Login Fantasma">
                                 <LogIn className="w-3.5 h-3.5" />
                                 <span className="hidden lg:inline">{ghostLoading === r.id ? "..." : "Ghost"}</span>
