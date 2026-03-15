@@ -843,6 +843,7 @@ export type Database = {
           credit_balance: number
           id: string
           name: string
+          plan_type: string
           updated_at: string
         }
         Insert: {
@@ -851,6 +852,7 @@ export type Database = {
           credit_balance?: number
           id?: string
           name: string
+          plan_type?: string
           updated_at?: string
         }
         Update: {
@@ -859,6 +861,7 @@ export type Database = {
           credit_balance?: number
           id?: string
           name?: string
+          plan_type?: string
           updated_at?: string
         }
         Relationships: []

@@ -1,0 +1,1 @@
+ALTER TABLE public.companies ADD COLUMN plan_type text NOT NULL DEFAULT 'pro';
