@@ -14,7 +14,7 @@ import CampaignTemplates from "@/components/winback/CampaignTemplates";
 import WinBackClientRow, { type WinBackClient } from "@/components/winback/WinBackClientRow";
 
 export default function WinBack() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [clients, setClients] = useState<WinBackClient[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);

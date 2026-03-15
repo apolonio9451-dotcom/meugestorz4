@@ -25,7 +25,7 @@ interface ServerStats {
 }
 
 export default function Servers() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [servers, setServers] = useState<ServerItem[]>([]);
   const [serverStats, setServerStats] = useState<Record<string, ServerStats>>({});
   const [dialogOpen, setDialogOpen] = useState(false);

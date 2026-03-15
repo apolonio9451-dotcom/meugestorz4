@@ -28,7 +28,7 @@ interface Client { id: string; name: string; }
 interface Plan { id: string; name: string; price: number; duration_days: number; }
 
 export default function Subscriptions() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);

@@ -21,7 +21,7 @@ interface Plan {
 }
 
 export default function Plans() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
