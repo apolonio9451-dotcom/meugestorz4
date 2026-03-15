@@ -838,7 +838,7 @@ export default function Resellers() {
               </Select>
             )}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-44 h-9">
+              <SelectTrigger className="w-full sm:w-48 h-9">
                 <SelectValue placeholder="Filtrar status" />
               </SelectTrigger>
               <SelectContent>
@@ -847,6 +847,9 @@ export default function Resellers() {
                 <SelectItem value="active">Assinatura Ativa</SelectItem>
                 <SelectItem value="expired">Expirado</SelectItem>
                 <SelectItem value="overdue">Vencido</SelectItem>
+                <SelectItem value="top_sellers">🔥 Top Vendedores</SelectItem>
+                <SelectItem value="inactive_7d">💤 Inativos 7d+</SelectItem>
+                <SelectItem value="expiring_48h">⏰ Vencendo em 48h</SelectItem>
               </SelectContent>
             </Select>
           </div>
