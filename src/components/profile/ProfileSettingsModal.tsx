@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Loader2, Save, User } from "lucide-react";
+import { Camera, Loader2, Save, User, LogOut } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +21,14 @@ interface ProfileSettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProfileUpdated?: () => void;
+  onSignOut?: () => void;
 }
 
 export default function ProfileSettingsModal({
   open,
   onOpenChange,
   onProfileUpdated,
+  onSignOut,
 }: ProfileSettingsModalProps) {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
@@ -145,7 +147,6 @@ export default function ProfileSettingsModal({
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
-          <p className="text-xs text-muted-foreground">Clique na foto para alterar</p>
           <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 font-bold border rounded-full", roleColor)}>
             {userRole || "Usuário"}
           </Badge>
@@ -169,13 +170,28 @@ export default function ProfileSettingsModal({
           </Button>
         </div>
 
-        {/* Google auth notice */}
-        <p className="text-[10px] text-muted-foreground text-center pt-1">
-          Sua conta é autenticada via Google. Para gerenciar sua segurança, acesse sua{" "}
-          <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
-            Conta Google
-          </a>.
-        </p>
+        <Separator />
+
+        {/* Sign Out + Google notice */}
+        <div className="space-y-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+              onSignOut?.();
+            }}
+            className="w-full text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sair da Conta
+          </Button>
+          <p className="text-[10px] text-muted-foreground text-center">
+            Sua conta é autenticada via Google. Para gerenciar sua segurança, acesse sua{" "}
+            <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+              Conta Google
+            </a>.
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );
