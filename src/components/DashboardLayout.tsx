@@ -362,7 +362,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <img
               src={defaultBrandLogo}
               alt="Meu Gestor"
-              className="relative h-36 max-w-[250px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+              className="relative h-9 max-w-[160px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
             />
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
@@ -544,7 +544,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <img
                 src={defaultBrandLogo}
                 alt="Meu Gestor"
-                className="relative h-72 sm:h-80 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
+                className="relative h-16 sm:h-20 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
               />
             </div>
           </div>
