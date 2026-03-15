@@ -494,6 +494,39 @@ export default function Resellers() {
     fetchResellers();
   };
 
+  const handleGhostLogin = async (r: Reseller) => {
+    if (!r.user_id) {
+      toast({ title: "Sem conta", description: "Este revendedor ainda não possui uma conta vinculada.", variant: "destructive" });
+      return;
+    }
+    setGhostLoading(r.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghost-login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ reseller_id: r.id }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) {
+        toast({ title: "Erro", description: result.error, variant: "destructive" });
+      } else if (result.url) {
+        window.open(result.url, "_blank");
+        toast({ title: "Acesso fantasma ativado", description: `Nova aba aberta com o painel de ${result.name}.` });
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+    setGhostLoading(null);
+  };
+
   const openCredits = (r: Reseller) => {
     if (r.status !== "active") {
       toast({ title: "Ação bloqueada", description: "Só é possível gerenciar créditos para revendedores com Assinatura Ativa.", variant: "destructive" });
