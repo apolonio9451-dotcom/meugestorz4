@@ -82,12 +82,25 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
           <span className="block truncate text-sm font-medium">
             {displayName || "Meu Perfil"}
           </span>
-          <Badge
-            variant="outline"
-            className={cn("mt-0.5 text-[9px] px-1.5 py-0 h-4 font-semibold border", roleColor)}
-          >
-            {userRole || "Usuário"}
-          </Badge>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Badge
+              variant="outline"
+              className={cn("text-[9px] px-1.5 py-0 h-4 font-semibold border", roleColor)}
+            >
+              {userRole || "Usuário"}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[9px] px-1.5 py-0 h-4 font-bold border",
+                planType === "pro"
+                  ? "bg-[hsl(48,96%,53%)]/20 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
+                  : "bg-muted text-muted-foreground border-border"
+              )}
+            >
+              {planType === "pro" ? "Pro" : "Starter"}
+            </Badge>
+          </div>
         </div>
       </button>
 
