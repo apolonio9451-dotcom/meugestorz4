@@ -62,6 +62,7 @@ import {
   Network,
   LogIn,
   Activity,
+  MessageCircle,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
