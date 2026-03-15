@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { themePresets, applyThemePreset } from "@/lib/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import defaultBrandLogo from "@/assets/brand-logo.png";
+import defaultBrandLogo from "@/assets/brand-logo.svg";
 import { differenceInDays, parseISO } from "date-fns";
 import {
   LayoutDashboard,
