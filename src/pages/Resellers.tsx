@@ -867,11 +867,12 @@ export default function Resellers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Rede</TableHead>
+                    <TableHead>Vínculo</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Performance</TableHead>
                     <TableHead className="text-center">Dias Restantes</TableHead>
                     <TableHead className="text-center">Créditos</TableHead>
-                    <TableHead>Data Cadastro</TableHead>
+                    <TableHead className="text-center">Clientes</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
