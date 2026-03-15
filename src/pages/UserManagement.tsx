@@ -23,7 +23,14 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Shield, Trash2, Users, Search, Coins, ArrowUpDown, Zap, Star } from "lucide-react";
+import { UserPlus, Shield, Trash2, Users, Search, Coins, Zap, Star } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Member {
   id: string;
