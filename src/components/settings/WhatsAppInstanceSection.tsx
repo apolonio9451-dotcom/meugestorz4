@@ -33,7 +33,7 @@ interface Props {
   isOwner?: boolean;
 }
 
-export default function WhatsAppInstanceSection({ companyId }: Props) {
+export default function WhatsAppInstanceSection({ companyId, isOwner = false }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
