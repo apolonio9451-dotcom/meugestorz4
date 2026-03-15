@@ -337,7 +337,7 @@ export default function UserManagement() {
                     <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                     <TableHead>Cargo</TableHead>
                     <TableHead>Plano</TableHead>
-                    <TableHead className="hidden md:table-cell">Créditos</TableHead>
+                    <TableHead className="hidden md:table-cell" title="Créditos controlam quantos sub-painéis o usuário pode criar">Créditos (Sub-painéis)</TableHead>
                     <TableHead className="w-[120px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -345,9 +345,18 @@ export default function UserManagement() {
                   {filtered.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">
-                        <div>
-                          {m.profile?.full_name || "—"}
-                          <div className="text-xs text-muted-foreground sm:hidden">{m.profile?.email}</div>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            {m.profile?.full_name || "—"}
+                            <div className="text-xs text-muted-foreground sm:hidden">{m.profile?.email}</div>
+                          </div>
+                          {m.company && (
+                            m.company.plan_type === "pro" ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider shrink-0">PRO</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-muted text-muted-foreground border border-border tracking-wider shrink-0">STARTER</span>
+                            )
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
