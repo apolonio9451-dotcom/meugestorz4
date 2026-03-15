@@ -12,7 +12,7 @@ interface SidebarUserMenuProps {
 }
 
 export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUserMenuProps) {
-  const { user, userRole } = useAuth();
+  const { user, userRole, planType } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [displayName, setDisplayName] = useState("");
