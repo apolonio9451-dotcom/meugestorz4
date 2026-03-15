@@ -18,6 +18,7 @@ export function GhostModeProvider({ children }: { children: ReactNode }) {
   const [ghostUserId, setGhostUserId] = useState<string | null>(null);
   const [ghostCompanyId, setGhostCompanyId] = useState<string | null>(null);
   const [ghostName, setGhostName] = useState<string | null>(null);
+  const [ghostResellerId, setGhostResellerId] = useState<string | null>(null);
 
   // Restore from localStorage on mount
   useEffect(() => {
