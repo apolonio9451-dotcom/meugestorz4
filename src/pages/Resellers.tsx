@@ -967,8 +967,10 @@ export default function Resellers() {
                             {r.credit_balance}
                           </span>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(parseISO(r.created_at), "dd/MM/yyyy")}
+                        <TableCell className="text-center">
+                          <span className="font-mono text-sm font-medium text-foreground">
+                            {clientCounts[r.id] || 0}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
