@@ -193,6 +193,13 @@ export default function UserManagement() {
 
   const handleTogglePlan = async (member: Member) => {
     if (!member.company) return;
+
+    // Admin/Owner cannot be downgraded — they're always Pro
+    if (member.role === "admin" || member.role === "owner") {
+      toast({ title: "Admin é sempre Pro", description: "Usuários Admin não podem ser rebaixados para Starter.", variant: "destructive" });
+      return;
+    }
+
     const currentPlan = member.company.plan_type;
 
     if (currentPlan === "pro") {
