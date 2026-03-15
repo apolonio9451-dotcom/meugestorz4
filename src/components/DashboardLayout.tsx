@@ -244,12 +244,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (trialLink?.created_by) {
-          const { data: adminProfile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", trialLink.created_by)
-            .maybeSingle();
-
           // Get support_whatsapp from creator's company_settings (primary source)
           const creatorSupport = await getCompanySupportByUser(trialLink.created_by);
 
