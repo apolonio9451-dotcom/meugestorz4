@@ -58,6 +58,8 @@ import {
   Mail,
   GitBranch,
   Network,
+  LogIn,
+  Activity,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
