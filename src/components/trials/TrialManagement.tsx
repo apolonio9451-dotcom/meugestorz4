@@ -29,7 +29,7 @@ interface TrialMember {
 }
 
 export default function TrialManagement() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [trials, setTrials] = useState<TrialMember[]>([]);
   const [loading, setLoading] = useState(true);
 
