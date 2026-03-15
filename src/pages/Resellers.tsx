@@ -923,8 +923,13 @@ export default function Resellers() {
                         <TableCell>
                           {parentName ? (
                             <div className="flex items-center gap-1.5">
-                              <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span className="text-[11px] text-muted-foreground">{parentName}</span>
+                              <GitBranch className="w-3 h-3 text-amber-500/60 shrink-0" />
+                              <div>
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/5 text-amber-500/70 border-amber-500/20 mb-0.5">
+                                  Indireto
+                                </Badge>
+                                <p className="text-[10px] text-muted-foreground">{parentName}</p>
+                              </div>
                             </div>
                           ) : (
                             <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-primary/5 text-primary/70 border-primary/20">
