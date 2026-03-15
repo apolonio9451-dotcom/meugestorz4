@@ -370,13 +370,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
               const isResellerUser = resellerCredits !== null;
 
-              // "Revendedores" deve continuar visível para revendedores mesmo com 0 créditos;
-              // o bloqueio acontece dentro da própria página com aviso de recarga.
               if (item.adminOnly && !(isOwnerOrAdmin || isResellerUser)) return false;
               if (item.resellerOnly && !isResellerUser) return false;
+              if (item.proOnly && planType !== "pro") return false;
               return true;
             })
             .map((item) => {
+            // Filter children by proOnly
+            const filteredChildren = item.children?.filter((c) => !c.proOnly || planType === "pro");
             if ("children" in item && item.children) {
               const childActive = item.children.some((c) => isActive(c.href));
               const isOpen = openMenus[item.label];
