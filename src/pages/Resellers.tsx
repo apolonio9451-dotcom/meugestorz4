@@ -174,6 +174,9 @@ export default function Resellers() {
   const [editForm, setEditForm] = useState({ name: "", email: "", whatsapp: "" });
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [clientCounts, setClientCounts] = useState<Record<string, number>>({});
+  const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
+  const [ghostLoading, setGhostLoading] = useState<string | null>(null);
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
