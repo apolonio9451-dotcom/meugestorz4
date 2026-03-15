@@ -416,7 +416,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           "bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"
                         )}
                       />
-                      {item.children.map((child, idx) => (
+                      {filteredChildren.map((child, idx) => (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                           {/* Horizontal branch line */}
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
