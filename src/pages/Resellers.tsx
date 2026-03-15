@@ -981,7 +981,7 @@ export default function Resellers() {
                         <TableCell>
                           <div>
                             <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-sm text-foreground">{r.name}</p>
                               <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${
                                 r.credit_balance > 0
@@ -989,6 +989,16 @@ export default function Resellers() {
                                   : "bg-muted text-muted-foreground border-border"
                               }`}>
                                 {r.credit_balance > 0 ? "Admin" : "Usuário"}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] px-1.5 py-0 ${
+                                  getResellerPlan(r.id) === "pro"
+                                    ? "bg-primary/10 text-primary border-primary/30"
+                                    : "bg-muted text-muted-foreground border-border"
+                                }`}
+                              >
+                                {getResellerPlan(r.id) === "pro" ? "Plano Pro" : "Plano Starter"}
                               </Badge>
                             </div>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
