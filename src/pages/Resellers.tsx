@@ -1637,6 +1637,37 @@ export default function Resellers() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Downgrade Confirmation Dialog - Two Steps */}
+      <Dialog open={downgradeStep > 0} onOpenChange={(open) => { if (!open) { setDowngradeStep(0); setDowngradeTarget(null); } }}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              {downgradeStep === 1 ? "Confirmar Downgrade" : "Atenção Final"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {downgradeStep === 1
+              ? `Você tem certeza? Mudar "${downgradeTarget?.name || "este revendedor"}" para Starter removerá todos os privilégios de automação e revenda.`
+              : `Esta ação irá revogar o acesso às ferramentas Pro (Bot, API, Repescagem) deste revendedor. Confirmar alteração?`
+            }
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setDowngradeStep(0); setDowngradeTarget(null); }}>
+              Cancelar
+            </Button>
+            {downgradeStep === 1 ? (
+              <Button variant="destructive" onClick={() => setDowngradeStep(2)}>
+                Continuar
+              </Button>
+            ) : (
+              <Button variant="destructive" onClick={handleConfirmDowngrade} disabled={downgrading}>
+                {downgrading ? "Processando..." : "Confirmar Downgrade"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
