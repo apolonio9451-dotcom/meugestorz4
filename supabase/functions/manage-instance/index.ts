@@ -17,7 +17,6 @@ Deno.serve(async (req: Request) => {
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  // Auth check
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -49,16 +48,12 @@ Deno.serve(async (req: Request) => {
     if (!company_id) {
       return new Response(
         JSON.stringify({ error: "company_id is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // ==================== STATUS ====================
     if (action === "status") {
-      // Get token from DB
       const { data: apiSettings } = await supabaseAdmin
         .from("api_settings")
         .select("api_token, instance_name")
@@ -68,20 +63,11 @@ Deno.serve(async (req: Request) => {
       const tkn = apiSettings?.api_token;
       if (!tkn) {
         return new Response(
-          JSON.stringify({
-            success: true,
-            has_instance: false,
-            connected: false,
-            qrcode: null,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ success: true, has_instance: false, connected: false, qrcode: null }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Call UAZAPI /instance/status
       const resp = await fetch(`${UAZAPI_BASE_URL}/instance/status`, {
         headers: { token: tkn },
       });
@@ -91,60 +77,43 @@ Deno.serve(async (req: Request) => {
         console.error(`UAZAPI status failed: ${resp.status} - ${errText}`);
         return new Response(
           JSON.stringify({
-            success: true,
-            has_instance: true,
-            connected: false,
-            qrcode: null,
+            success: true, has_instance: true, connected: false, qrcode: null,
             error_detail: `Status check failed: ${resp.status}`,
           }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const data = await resp.json();
       const instance = data.instance || {};
       const status = data.status || {};
-
-      const connected =
-        status.connected === true || instance.status === "connected";
+      const connected = status.connected === true || instance.status === "connected";
       const qrcode = instance.qrcode || null;
 
       return new Response(
         JSON.stringify({
-          success: true,
-          has_instance: true,
-          connected,
+          success: true, has_instance: true, connected,
           qrcode: qrcode || null,
           instance_name: instance.name || apiSettings.instance_name || "",
           profile_name: instance.profileName || "",
           profile_pic: instance.profilePicUrl || "",
           owner: instance.owner || "",
         }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ==================== SAVE (save token + auto webhook) ====================
+    // ==================== SAVE ====================
     if (action === "save") {
       if (!instance_token) {
         return new Response(
           JSON.stringify({ error: "instance_token is required" }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const instanceName = body.instance_name || "";
 
-      // Save to api_settings
       const { data: existing } = await supabaseAdmin
         .from("api_settings")
         .select("id")
@@ -160,10 +129,7 @@ Deno.serve(async (req: Request) => {
       };
 
       if (existing) {
-        await supabaseAdmin
-          .from("api_settings")
-          .update(payload)
-          .eq("id", existing.id);
+        await supabaseAdmin.from("api_settings").update(payload).eq("id", existing.id);
       } else {
         await supabaseAdmin.from("api_settings").insert(payload);
       }
@@ -178,18 +144,15 @@ Deno.serve(async (req: Request) => {
           headers: { "Content-Type": "application/json", token: instance_token },
           body: JSON.stringify({ url: webhookUrl, enabled: true }),
         });
-
         if (!whResp.ok) {
           console.error("Webhook setup failed:", await whResp.text());
         } else {
-          const whData = await whResp.json();
-          console.log("Webhook configured:", JSON.stringify(whData));
+          console.log("Webhook configured:", JSON.stringify(await whResp.json()));
         }
       } catch (whErr) {
         console.error("Webhook setup error:", whErr);
       }
 
-      // Get instance status
       let connected = false;
       let qrcode = null;
       let profileName = "";
@@ -197,10 +160,9 @@ Deno.serve(async (req: Request) => {
       let owner = "";
 
       try {
-        const statusResp = await fetch(
-          `${UAZAPI_BASE_URL}/instance/status`,
-          { headers: { token: instance_token } }
-        );
+        const statusResp = await fetch(`${UAZAPI_BASE_URL}/instance/status`, {
+          headers: { token: instance_token },
+        });
         if (statusResp.ok) {
           const statusData = await statusResp.json();
           const inst = statusData.instance || {};
@@ -217,18 +179,11 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({
-          success: true,
-          connected,
-          qrcode,
-          profile_name: profileName,
-          profile_pic: profilePic,
-          owner,
+          success: true, connected, qrcode,
+          profile_name: profileName, profile_pic: profilePic, owner,
           webhook_url: webhookUrl,
         }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -253,30 +208,40 @@ Deno.serve(async (req: Request) => {
 
       return new Response(
         JSON.stringify({ success: true, message: "Disconnected" }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ==================== DELETE (remove token from DB) ====================
+    if (action === "delete") {
+      const { data: apiSettings } = await supabaseAdmin
+        .from("api_settings")
+        .select("id")
+        .eq("company_id", company_id)
+        .maybeSingle();
+
+      if (apiSettings) {
+        await supabaseAdmin
+          .from("api_settings")
+          .update({ api_token: "", instance_name: "" })
+          .eq("id", apiSettings.id);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Instance deleted" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({
-        error: "Invalid action. Use: status, save, disconnect",
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: "Invalid action. Use: status, save, disconnect, delete" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
     console.error("manage-instance error:", err);
     return new Response(
       JSON.stringify({ error: err?.message || "Internal error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

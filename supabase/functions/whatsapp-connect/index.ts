@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,12 +10,32 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { userName, webhookUrl } = await req.json();
+    const { userName, webhookUrl, company_id } = await req.json();
     const API_KEY = "10c3ab83-17ba-4921-ae88-c096ed1d0144";
     const SUPABASE_FUNCTIONS_URL = "https://xukeukdwhelyttifzveb.supabase.co/functions/v1";
     const UAZAPI_URL = "https://ipazua.uazapi.com";
 
-    // 1. Criar instância com nome do usuário e webhook
+    // Backend protection: check if company already has an instance
+    if (company_id) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+      const { data: existing } = await supabaseAdmin
+        .from("api_settings")
+        .select("api_token")
+        .eq("company_id", company_id)
+        .maybeSingle();
+
+      if (existing?.api_token && existing.api_token.trim() !== "") {
+        return new Response(
+          JSON.stringify({ error: "Você já possui uma instância ativa. Remova a anterior antes de criar uma nova." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // 1. Criar instância
     const createRes = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-instance-external`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,10 +87,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
-        instanceId,
-        token,
-        qrCode,
+        success: true, instanceId, token, qrCode,
         status: qrCode ? "connecting" : "waiting_qr",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
