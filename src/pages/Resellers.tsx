@@ -197,13 +197,35 @@ export default function Resellers() {
 
   // === DATA FETCHING ===
 
+  // Fetch current user's reseller ID for cascading queries
+  useEffect(() => {
+    if (!user || isOwner) return;
+    (async () => {
+      const { data } = await supabase
+        .from("resellers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) setMyResellerId(data.id);
+    })();
+  }, [user, isOwner]);
+
   const fetchResellers = async () => {
     if (!companyId) return;
-    const { data } = await supabase
-      .from("resellers")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false });
+
+    let query = supabase.from("resellers").select("*");
+
+    if (isOwner) {
+      // Owner sees all resellers in their company
+      query = query.eq("company_id", companyId);
+    } else if (isReseller && myResellerId) {
+      // Reseller sees only their sub-resellers (vision isolation)
+      query = query.eq("parent_reseller_id", myResellerId);
+    } else {
+      query = query.eq("company_id", companyId);
+    }
+
+    const { data } = await query.order("created_at", { ascending: false });
     if (!data) { setLoading(false); return; }
 
     // Use subscription_expires_at directly as trial expiry source
@@ -233,9 +255,11 @@ export default function Resellers() {
 
     setResellers(data as Reseller[]);
 
+    // Fetch plans - use parent company for resellers, own company for owners
+    const plansCompanyId = isOwner ? companyId : (parentCompanyId || companyId);
     const plansMap: Record<string, "starter" | "pro"> = {};
     const { data: plansData } = await (supabase.rpc as any)("get_reseller_account_plans", {
-      _company_id: companyId,
+      _company_id: plansCompanyId,
     });
 
     (plansData || []).forEach((entry: any) => {
