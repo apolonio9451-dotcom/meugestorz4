@@ -49,9 +49,7 @@ Deno.serve(async (req) => {
 
     // EXIT ghost mode — remove temporary membership
     if (action === "exit") {
-      const { company_id } = await req.json().catch(() => ({}));
       if (reseller_id) {
-        // Find the reseller's company via their membership
         const { data: reseller } = await adminClient
           .from("resellers")
           .select("user_id")
