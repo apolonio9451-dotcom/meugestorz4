@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
 
     const normalizedPhone = normalizePhone(phone);
     const endpoint = `${apiUrl}/send/text`;
+    console.log("[test-send] Enviando para:", { endpoint, phone: normalizedPhone, messageLength: messageBody.length });
 
     try {
       const res = await fetch(endpoint, {
