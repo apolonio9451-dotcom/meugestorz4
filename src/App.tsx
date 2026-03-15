@@ -20,7 +20,7 @@ import Marketing from "@/pages/Marketing";
 import Resellers from "@/pages/Resellers";
 import SettingsPage from "@/pages/Settings";
 import Messages from "@/pages/Messages";
-import UserManagement from "@/pages/UserManagement";
+
 
 import NotFound from "@/pages/NotFound";
 import TrialAccess from "@/pages/TrialAccess";
@@ -64,7 +64,7 @@ const App = () => (
             <Route path="/dashboard/chatbot" element={<DashboardRoute><PlanGate feature="Chatbot IA"><Chatbot /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/reseller-panel" element={<DashboardRoute><PlanGate feature="Painel de Revenda"><ResellerPanel /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/profile" element={<DashboardRoute><Profile /></DashboardRoute>} />
-            <Route path="/dashboard/user-management" element={<DashboardRoute><PlanGate feature="Gestão de Revendedores"><UserManagement /></PlanGate></DashboardRoute>} />
+            
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
