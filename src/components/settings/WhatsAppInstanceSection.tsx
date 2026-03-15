@@ -35,6 +35,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
   const [profilePic, setProfilePic] = useState("");
   const [owner, setOwner] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [tokenError, setTokenError] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const fetchStatus = useCallback(
