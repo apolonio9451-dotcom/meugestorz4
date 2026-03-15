@@ -363,13 +363,14 @@ export default function UserManagement() {
                             {m.profile?.full_name || "—"}
                             <div className="text-xs text-muted-foreground sm:hidden">{m.profile?.email}</div>
                           </div>
-                          {m.company && (
-                            m.company.plan_type === "pro" ? (
+                          {(() => {
+                            const ep = getEffectivePlan(m);
+                            return ep === "pro" ? (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider shrink-0">PRO</span>
                             ) : (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-muted text-muted-foreground border border-border tracking-wider shrink-0">STARTER</span>
-                            )
-                          )}
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
@@ -383,24 +384,35 @@ export default function UserManagement() {
                       </TableCell>
                       <TableCell>
                         {m.company ? (
-                          <button
-                            onClick={() => handleTogglePlan(m)}
-                            className="group flex items-center gap-1"
-                            title="Clique para alternar plano"
-                          >
-                            {m.company.plan_type === "pro" ? (
-                              <Badge className="bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/30 hover:bg-[hsl(48,96%,53%)]/25 cursor-pointer gap-1">
-                                <Zap className="w-3 h-3" />
-                                Pro
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-muted-foreground hover:bg-muted/50 cursor-pointer gap-1">
-                                <Star className="w-3 h-3" />
-                                Starter
-                              </Badge>
-                            )}
-                            <ArrowUpDown className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
+                          (m.role === "admin" || m.role === "owner") ? (
+                            <Badge className="bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/30 gap-1 cursor-default">
+                              <Zap className="w-3 h-3" />
+                              Pro (fixo)
+                            </Badge>
+                          ) : (
+                            <Select
+                              value={getEffectivePlan(m)}
+                              onValueChange={(value) => {
+                                if (value === "starter" && m.company?.plan_type === "pro") {
+                                  handleTogglePlan(m);
+                                } else if (value === "pro" && m.company?.plan_type !== "pro") {
+                                  handleTogglePlan(m);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8 w-[120px] text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pro">
+                                  <span className="flex items-center gap-1.5"><Zap className="w-3 h-3" /> Pro</span>
+                                </SelectItem>
+                                <SelectItem value="starter">
+                                  <span className="flex items-center gap-1.5"><Star className="w-3 h-3" /> Starter</span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
