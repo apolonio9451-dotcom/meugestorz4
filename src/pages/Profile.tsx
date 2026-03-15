@@ -27,7 +27,7 @@ function getGravatarUrl(email: string, size = 200): string {
 }
 
 export default function Profile() {
-  const { user, userRole } = useAuth();
+  const { user, userRole, planType } = useAuth();
   const { toast } = useToast();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
