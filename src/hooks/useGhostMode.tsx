@@ -50,6 +50,7 @@ export function GhostModeProvider({ children }: { children: ReactNode }) {
     setGhostUserId(null);
     setGhostCompanyId(null);
     setGhostName(null);
+    setGhostResellerId(null);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
