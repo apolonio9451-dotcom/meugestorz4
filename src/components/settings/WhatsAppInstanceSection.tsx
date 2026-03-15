@@ -106,15 +106,17 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
       setLoading(false);
       return;
     }
-    const loadToken = async () => {
-      const { data } = await supabase
-        .from("api_settings" as any)
-        .select("api_token, instance_name")
-        .eq("company_id", companyId)
-        .maybeSingle();
-      if (data) {
-        setTokenInput((data as any).api_token || "");
-        setInstanceName((data as any).instance_name || "");
+      const loadToken = async () => {
+      if (isOwner) {
+        const { data } = await supabase
+          .from("api_settings" as any)
+          .select("api_token, instance_name")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        if (data) {
+          setTokenInput((data as any).api_token || "");
+          setInstanceName((data as any).instance_name || "");
+        }
       }
       fetchStatus();
     };
