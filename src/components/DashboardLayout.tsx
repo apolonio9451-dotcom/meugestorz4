@@ -84,7 +84,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("Meu Gestor");
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
-  const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
 
   const handleExitGhostMode = async () => {
@@ -245,12 +244,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (trialLink?.created_by) {
-          const { data: adminProfile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", trialLink.created_by)
-            .maybeSingle();
-
           // Get support_whatsapp from creator's company_settings (primary source)
           const creatorSupport = await getCompanySupportByUser(trialLink.created_by);
 
@@ -280,12 +273,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           const finalWhatsapp = creatorSupport || fallbackWhatsapp || masterWhatsapp;
 
-          if (adminProfile) {
-            setAdminInfo({
-              name: adminProfile.full_name || "Admin",
-              whatsapp: finalWhatsapp,
-            });
-          }
           if (finalWhatsapp) setSupportWhatsapp(finalWhatsapp);
           return;
         }
@@ -299,31 +286,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (resellerData?.company_id) {
-        // Get parent company support_whatsapp via RPC (bypasses RLS)
         const parentSupport = await getCompanySupportById(resellerData.company_id);
-
-        // Get parent company owner name
-        const { data: ownerMembership } = await supabase
-          .from("company_memberships")
-          .select("user_id")
-          .eq("company_id", resellerData.company_id)
-          .eq("role", "owner")
-          .maybeSingle();
-
-        let ownerName = "Admin";
-        if (ownerMembership?.user_id) {
-          const { data: ownerProfile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", ownerMembership.user_id)
-            .maybeSingle();
-          if (ownerProfile?.full_name) ownerName = ownerProfile.full_name;
-        }
-
-        setAdminInfo({
-          name: ownerName,
-          whatsapp: parentSupport,
-        });
         if (parentSupport) setSupportWhatsapp(parentSupport);
         return;
       }
@@ -529,23 +492,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <span className="block text-[10px] text-muted-foreground truncate">{user?.email}</span>
             </div>
           </Link>
-          {adminInfo && (
-            <div className="rounded-lg bg-sidebar-accent/30 border border-sidebar-border/50 px-3 py-2.5 space-y-1.5">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Seu Admin</p>
-              <p className="text-xs font-semibold text-sidebar-foreground truncate">{adminInfo.name}</p>
-              {adminInfo.whatsapp && (
-                <a
-                  href={`https://wa.me/${adminInfo.whatsapp.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[11px] text-primary hover:text-primary/80 transition-colors font-medium"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  Chamar no WhatsApp
-                </a>
-              )}
-            </div>
-          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
