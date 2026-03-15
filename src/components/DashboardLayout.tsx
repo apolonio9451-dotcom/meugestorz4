@@ -76,7 +76,7 @@ const navItems: NavItem[] = [
     ],
   },
   { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true, proOnly: true },
+  { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: ShieldCheck, adminOnly: true, proOnly: true },
   
   {
     label: "Configurações",
