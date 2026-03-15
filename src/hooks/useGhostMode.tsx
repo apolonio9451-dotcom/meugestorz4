@@ -38,11 +38,12 @@ export function GhostModeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const enterGhostMode = useCallback((userId: string, companyId: string, name: string) => {
+  const enterGhostMode = useCallback((userId: string, companyId: string, name: string, resellerId: string) => {
     setGhostUserId(userId);
     setGhostCompanyId(companyId);
     setGhostName(name);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId, companyId, name }));
+    setGhostResellerId(resellerId);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId, companyId, name, resellerId }));
   }, []);
 
   const exitGhostMode = useCallback(() => {
