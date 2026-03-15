@@ -20,7 +20,7 @@ import Marketing from "@/pages/Marketing";
 import Resellers from "@/pages/Resellers";
 import SettingsPage from "@/pages/Settings";
 import Messages from "@/pages/Messages";
-import UserManagement from "@/pages/UserManagement";
+
 
 import NotFound from "@/pages/NotFound";
 import TrialAccess from "@/pages/TrialAccess";
