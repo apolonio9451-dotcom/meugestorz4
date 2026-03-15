@@ -12,6 +12,7 @@ interface AuthContextType {
   parentCompanyId: string | null;
   userRole: string | null;
   resellerCredits: number | null;
+  planType: "starter" | "pro";
   isTrial: boolean;
   trialExpiresAt: string | null;
   loading: boolean;
