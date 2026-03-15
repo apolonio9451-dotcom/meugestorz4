@@ -24,7 +24,7 @@ function getResellerRole(r: { can_resell: boolean; can_create_subreseller: boole
 }
 
 const roleLabels: Record<ResellerRole, string> = {
-  admin: "Administrador",
+  admin: "Admin",
   user: "Usuário",
 };
 import { differenceInHours, parseISO } from "date-fns";
