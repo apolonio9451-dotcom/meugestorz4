@@ -134,7 +134,7 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             🔒 Informações de Acesso Master (URL e Token) são visíveis apenas para o Proprietário.
           </p>
         </div>
-      )
+      )}
     </div>
   );
 }

@@ -183,6 +183,7 @@ export default function Resellers() {
   const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
   const [ghostLoading, setGhostLoading] = useState<string | null>(null);
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
+  const [resellerPlans, setResellerPlans] = useState<Record<string, "starter" | "pro">>({});
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;

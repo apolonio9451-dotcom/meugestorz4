@@ -42,13 +42,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchCompanyData = async (userId: string) => {
+    setCompanyId(null);
+    setParentCompanyId(null);
+    setUserRole(null);
+    setResellerCredits(null);
+    setPlanType("starter");
+    setIsTrial(false);
+    setTrialExpiresAt(null);
+
     // 1) Base membership (fallback)
     const { data: membership } = await supabase
       .from("company_memberships")
       .select("company_id, role, is_trial, trial_expires_at")
       .eq("user_id", userId)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // 2) Reseller row is the source of truth for reseller users
     const { data: resellerData } = await supabase
@@ -60,21 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (resellerData) {
       // Reseller uses their OWN company (from membership) for data isolation
       // Parent company is stored separately for shared features (announcements)
-      setCompanyId(membership?.company_id || resellerData.company_id);
+      const resellerCompanyId = membership?.company_id || resellerData.company_id;
+      setCompanyId(resellerCompanyId);
       setParentCompanyId(resellerData.company_id);
       setResellerCredits(resellerData.credit_balance);
       setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
 
-      // Fetch plan_type for reseller's own company
-      const cid = membership?.company_id || resellerData.company_id;
       const { data: companyData } = await supabase
         .from("companies")
         .select("plan_type")
-        .eq("id", cid)
+        .eq("id", resellerCompanyId)
         .maybeSingle();
-      if (companyData) {
-        setPlanType((companyData as any).plan_type === "starter" ? "starter" : "pro");
-      }
+
+      setPlanType((companyData as any)?.plan_type === "starter" ? "starter" : "pro");
 
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
@@ -84,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (membership) {
       setCompanyId(membership.company_id);
+      setParentCompanyId(null);
+      setResellerCredits(null);
       setIsTrial(membership.is_trial || false);
       setTrialExpiresAt(membership.trial_expires_at || null);
       setUserRole(roleLabels[membership.role] || membership.role);
@@ -94,41 +102,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("plan_type")
         .eq("id", membership.company_id)
         .maybeSingle();
-      if (companyData) {
-        setPlanType((companyData as any).plan_type === "starter" ? "starter" : "pro");
-      }
+      setPlanType((companyData as any)?.plan_type === "starter" ? "starter" : "pro");
     }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchCompanyData(session.user.id), 0);
-        } else {
-          setCompanyId(null);
-          setParentCompanyId(null);
-          setUserRole(null);
-          setIsTrial(false);
-          setTrialExpiresAt(null);
-          // If token refresh failed (user deleted), redirect to auth
-          if (event === 'TOKEN_REFRESHED' && !session) {
-            window.location.href = '/auth';
-          }
-        }
+    const syncAuthState = async (nextSession: Session | null, event?: string) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        setLoading(true);
+        await fetchCompanyData(nextSession.user.id);
         setLoading(false);
+        return;
       }
-    );
+
+      setCompanyId(null);
+      setParentCompanyId(null);
+      setUserRole(null);
+      setResellerCredits(null);
+      setPlanType("starter");
+      setIsTrial(false);
+      setTrialExpiresAt(null);
+      setLoading(false);
+
+      // If token refresh failed (user deleted), redirect to auth
+      if (event === "TOKEN_REFRESHED" && !nextSession) {
+        window.location.href = "/auth";
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      void syncAuthState(nextSession, event);
+    });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchCompanyData(session.user.id);
-      }
-      setLoading(false);
+      void syncAuthState(session);
     });
 
     return () => subscription.unsubscribe();
