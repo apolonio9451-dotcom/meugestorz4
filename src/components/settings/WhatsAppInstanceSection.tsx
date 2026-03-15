@@ -121,8 +121,6 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
         }
         setInstanceName((data as any).instance_name || "");
       }
-      fetchStatus();
-    };
     };
     loadToken();
   }, [companyId, fetchStatus]);
