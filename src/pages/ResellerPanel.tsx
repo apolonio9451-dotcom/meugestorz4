@@ -690,19 +690,16 @@ export default function ResellerPanel() {
             <p className="text-sm text-muted-foreground">
               Você precisa ter pelo menos <strong className="text-foreground">1 crédito</strong> disponível para gerar um link de teste.
             </p>
-            <p className="text-sm text-muted-foreground">
-              Entre em contato com seu administrador para adquirir créditos.
-            </p>
             {adminWhatsapp ? (
               <Button
-                className="w-full gap-2"
+                className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
                   const phone = adminWhatsapp.replace(/\D/g, "");
-                  const msg = encodeURIComponent("Olá! Preciso comprar créditos para minha revenda.");
+                  const msg = encodeURIComponent("Olá! Meus créditos no Meu Gestor acabaram e gostaria de adquirir mais para liberar meu gerenciamento.");
                   window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
                 }}
               >
-                <MessageCircle className="w-4 h-4" /> Chamar no WhatsApp
+                <MessageCircle className="w-4 h-4" /> Comprar Créditos via WhatsApp
               </Button>
             ) : (
               <p className="text-xs text-muted-foreground italic">
