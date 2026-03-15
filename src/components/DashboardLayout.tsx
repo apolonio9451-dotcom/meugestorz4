@@ -385,14 +385,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
               if (item.adminOnly && !(isOwnerOrAdmin || isResellerUser)) return false;
               if (item.resellerOnly && !isResellerUser) return false;
-              if (item.proOnly && planType !== "pro") return false;
               return true;
             })
             .map((item) => {
-            // Filter children by proOnly
-            const filteredChildren = item.children?.filter((c) => !c.proOnly || planType === "pro");
-            if (filteredChildren && filteredChildren.length > 0) {
-              const childActive = filteredChildren.some((c) => isActive(c.href));
+            const isStarterLocked = item.proOnly && planType !== "pro";
+            // Show all children, but mark proOnly ones
+            const allChildren = item.children;
+            if (allChildren && allChildren.length > 0) {
+              const childActive = allChildren.some((c) => isActive(c.href) && (!c.proOnly || planType === "pro"));
               const isOpen = openMenus[item.label];
               return (
                 <div key={item.label}>
@@ -429,10 +429,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           "bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"
                         )}
                       />
-                      {filteredChildren.map((child, idx) => (
+                      {allChildren.map((child, idx) => {
+                        const childLocked = child.proOnly && planType !== "pro";
+                        return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                           {/* Horizontal branch line */}
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
+                          {childLocked ? (
+                            <button
+                              onClick={() => {
+                                setUpgradeFeature(child.label);
+                                setUpgradeModalOpen(true);
+                                setSidebarOpen(false);
+                              }}
+                              className="flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 w-full text-left text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
+                            >
+                              <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
+                              <span className="flex-1">{child.label}</span>
+                              <Star className="w-3 h-3 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                            </button>
+                          ) : (
                           <Link
                             to={child.href}
                             onClick={() => setSidebarOpen(false)}
@@ -446,11 +462,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                             {child.label}
                           </Link>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
+              );
+            }
+
+            // Top-level items
+            if (isStarterLocked) {
+              return (
+                <button
+                  key={item.href || item.label}
+                  onClick={() => {
+                    setUpgradeFeature(item.label);
+                    setUpgradeModalOpen(true);
+                    setSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium transition-all duration-200 text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <Star className="w-3.5 h-3.5 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                </button>
               );
             }
 
