@@ -14,6 +14,7 @@ import {
   Save,
   Eye,
   EyeOff,
+  Plus,
 } from "lucide-react";
 
 interface Props {
@@ -35,6 +36,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
   const [owner, setOwner] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [tokenError, setTokenError] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const fetchStatus = useCallback(
     async (silent = false) => {
@@ -162,6 +164,69 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
     }
   };
 
+  const handleCreateInstance = async () => {
+    if (!companyId) return;
+    setCreating(true);
+    try {
+      const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot-webhook?company_id=${companyId}`;
+      
+      const { data, error } = await supabase.functions.invoke("whatsapp-connect", {
+        body: { userName: instanceName || "Minha Instância", webhookUrl },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const newToken = data.token;
+      if (!newToken) throw new Error("Token não retornado");
+
+      // Save token via manage-instance
+      const saveResp = await supabase.functions.invoke("manage-instance", {
+        body: {
+          action: "save",
+          company_id: companyId,
+          instance_token: newToken,
+          instance_name: instanceName || "Minha Instância",
+        },
+      });
+
+      setTokenInput(newToken);
+      setHasInstance(true);
+      setTokenError(false);
+
+      if (data.qrCode) {
+        const qr = data.qrCode;
+        setQrCode(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
+        setAutoRefresh(true);
+        setConnected(false);
+      } else if (data.status === "connected") {
+        setConnected(true);
+        setQrCode(null);
+      } else {
+        // Start polling for QR
+        setAutoRefresh(true);
+        setConnected(false);
+        setTimeout(() => fetchStatus(), 3000);
+      }
+
+      toast({
+        title: "Instância criada com sucesso!",
+        description: data.qrCode
+          ? "Escaneie o QR Code para conectar."
+          : "Aguardando QR Code...",
+      });
+    } catch (err: any) {
+      console.error("Erro ao criar instância:", err);
+      toast({
+        title: "Erro ao criar instância",
+        description: err?.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleCheckStatus = async () => {
     setChecking(true);
     await fetchStatus();
@@ -208,7 +273,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           onClick={handleSave}
           disabled={saving || !tokenInput.trim()}
@@ -219,6 +284,18 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
             <Save className="h-4 w-4 mr-2" />
           )}
           {saving ? "Salvando..." : "Salvar e Configurar Webhook"}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleCreateInstance}
+          disabled={creating}
+        >
+          {creating ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          {creating ? "Criando..." : "Criar Nova Instância"}
         </Button>
         {hasInstance && (
           <Button variant="outline" onClick={handleCheckStatus} disabled={checking}>
