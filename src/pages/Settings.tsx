@@ -30,7 +30,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  
   const [settings, setSettings] = useState<CompanySettings>({
     company_id: "",
     brand_name: "",
