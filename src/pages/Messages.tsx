@@ -170,8 +170,48 @@ export default function Messages() {
     setTemplates((prev) => ({ ...prev, [categoryKey]: (prev[categoryKey] || "") + tag }));
   };
 
+  const handleSavePixKey = async () => {
+    if (!companyId) return;
+    setSavingPix(true);
+    try {
+      const { data: existing } = await supabase
+        .from("api_settings" as any)
+        .select("id")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (existing) {
+        await supabase.from("api_settings" as any).update({ pix_key: pixKey.trim() }).eq("id", (existing as any).id);
+      } else {
+        await supabase.from("api_settings" as any).insert({ company_id: companyId, pix_key: pixKey.trim() });
+      }
+      toast({ title: "Chave Pix salva!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" });
+    } finally {
+      setSavingPix(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Compact Pix Key field */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-muted/30 border border-border/50 rounded-lg px-4 py-3">
+        <Label className="text-sm font-semibold text-foreground whitespace-nowrap">Sua Chave Pix</Label>
+        <Input
+          value={pixKey}
+          onChange={(e) => setPixKey(e.target.value)}
+          placeholder="email@exemplo.com ou CPF/CNPJ"
+          className="bg-secondary/50 border-border max-w-[300px]"
+        />
+        <Button size="sm" onClick={handleSavePixKey} disabled={savingPix} className="shrink-0">
+          {savingPix ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+          Salvar
+        </Button>
+        <p className="text-muted-foreground text-[11px] sm:ml-auto">
+          Usada na variável <code className="bg-muted px-1 rounded text-[10px]">{'{sua_chave_pix}'}</code>
+        </p>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Mensagens de Cobrança</h1>
