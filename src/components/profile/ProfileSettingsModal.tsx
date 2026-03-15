@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, KeyRound, Loader2, Save, User, Phone } from "lucide-react";
+import { Camera, KeyRound, Loader2, Save, User } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface ProfileSettingsModalProps {
   open: boolean;
@@ -26,12 +28,11 @@ export default function ProfileSettingsModal({
   onOpenChange,
   onProfileUpdated,
 }: ProfileSettingsModalProps) {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,20 +51,39 @@ export default function ProfileSettingsModal({
         .slice(0, 2)
     : email.slice(0, 2).toUpperCase();
 
+  const roleColor = (() => {
+    switch (userRole) {
+      case "Proprietário":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/40";
+      case "Admin":
+        return "bg-cyan-500/20 text-cyan-400 border-cyan-500/40";
+      default:
+        return "bg-muted text-muted-foreground border-border";
+    }
+  })();
+
   useEffect(() => {
     if (!open || !user) return;
-    setFullName(user.user_metadata?.full_name || "");
-    setWhatsapp(user.user_metadata?.whatsapp || "");
 
-    // Fetch avatar from profiles table
+    // Get Google avatar from user metadata if available
+    const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || "";
+    const metaName = user.user_metadata?.full_name || user.user_metadata?.name || "";
+
+    setFullName(metaName);
+    setAvatarUrl(googleAvatar);
+
+    // Fetch from profiles table (overrides Google defaults if set)
     supabase
       .from("profiles")
       .select("avatar_url, full_name")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
         if (data?.full_name) setFullName(data.full_name);
+        // Use profile avatar if it exists and is not empty, otherwise keep Google avatar
+        if (data?.avatar_url && data.avatar_url.trim() !== "") {
+          setAvatarUrl(data.avatar_url);
+        }
       });
   }, [open, user]);
 
@@ -84,7 +104,6 @@ export default function ProfileSettingsModal({
     const ext = file.name.split(".").pop();
     const filePath = `${user.id}/avatar.${ext}`;
 
-    // Remove old avatar if exists
     await supabase.storage.from("avatars").remove([filePath]);
 
     const { error: uploadError } = await supabase.storage
@@ -111,35 +130,18 @@ export default function ProfileSettingsModal({
     if (!user) return;
     setSaving(true);
 
-    // Update auth metadata
     await supabase.auth.updateUser({
-      data: { full_name: fullName, whatsapp },
+      data: { full_name: fullName },
     });
 
-    // Update profiles table
     await supabase
       .from("profiles")
       .update({ full_name: fullName })
       .eq("id", user.id);
 
-    // Update reseller whatsapp if user is a reseller
-    const { data: reseller } = await supabase
-      .from("resellers")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (reseller) {
-      await supabase.from("resellers").update({ whatsapp }).eq("id", reseller.id);
-      await supabase
-        .from("reseller_settings")
-        .update({ support_whatsapp: whatsapp })
-        .eq("reseller_id", reseller.id);
-    }
-
     setSaving(false);
     onProfileUpdated?.();
-    toast({ title: "Perfil atualizado!" });
+    toast({ title: "Perfil atualizado!", description: "Seus dados foram salvos com sucesso." });
   };
 
   const handlePasswordReset = async () => {
@@ -163,7 +165,7 @@ export default function ProfileSettingsModal({
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Senha atualizada!" });
+      toast({ title: "Senha atualizada!", description: "Sua senha foi alterada com sucesso." });
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -175,11 +177,11 @@ export default function ProfileSettingsModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5 text-primary" />
-            Minhas Configurações
+            Meu Perfil
           </DialogTitle>
         </DialogHeader>
 
-        {/* Avatar Section */}
+        {/* Avatar + Badge Section */}
         <div className="flex flex-col items-center gap-3 py-2">
           <div className="relative group">
             <Avatar className="h-24 w-24 border-2 border-primary/30 shadow-lg">
@@ -208,6 +210,12 @@ export default function ProfileSettingsModal({
             />
           </div>
           <p className="text-xs text-muted-foreground">Clique na foto para alterar</p>
+          <Badge
+            variant="outline"
+            className={cn("text-[10px] px-2 py-0.5 font-bold border rounded-full", roleColor)}
+          >
+            {userRole || "Usuário"}
+          </Badge>
         </div>
 
         <Separator />
@@ -230,20 +238,6 @@ export default function ProfileSettingsModal({
             <p className="text-[10px] text-muted-foreground">
               O e-mail não pode ser alterado por segurança.
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="profile-whatsapp">WhatsApp</Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="profile-whatsapp"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="5511999999999"
-                className="pl-9"
-              />
-            </div>
           </div>
 
           <Button onClick={handleSaveProfile} disabled={saving} className="w-full">
