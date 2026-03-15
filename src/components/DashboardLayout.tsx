@@ -448,7 +448,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             >
                               <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                               <span className="flex-1">{child.label}</span>
-                              <Star className="w-3 h-3 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                              <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                             </button>
                           ) : (
                           <Link
