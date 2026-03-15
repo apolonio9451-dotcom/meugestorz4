@@ -92,6 +92,8 @@ export default function Messages() {
   const [saving, setSaving] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("vence_hoje");
+  const [pixKey, setPixKey] = useState("");
+  const [savingPix, setSavingPix] = useState(false);
 
   useEffect(() => {
     if (!user) return;
