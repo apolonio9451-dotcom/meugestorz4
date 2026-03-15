@@ -691,6 +691,8 @@ export default function Resellers() {
   const activeCount = manageableResellers.filter(r => r.status === "active").length;
   const trialCount = manageableResellers.filter(r => r.status === "trial").length;
   const overdueCount = manageableResellers.filter(r => r.status === "overdue").length;
+  const totalNetworkClients = Object.values(clientCounts).reduce((a, b) => a + b, 0);
+  const inactiveCount = manageableResellers.filter(r => r.status === "active" && !recentClientCounts[r.id]).length;
 
   // === RENDER ===
 
