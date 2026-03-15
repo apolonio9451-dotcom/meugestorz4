@@ -151,13 +151,6 @@ export default function Chatbot() {
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [logsLimit, setLogsLimit] = useState(50);
 
-  // Webhook
-  const [webhookCopied, setWebhookCopied] = useState(false);
-  const [showWebhookUrl, setShowWebhookUrl] = useState(false);
-  const [testingWebhook, setTestingWebhook] = useState(false);
-  const [testPhone, setTestPhone] = useState("");
-  const [testMessage, setTestMessage] = useState("Olá, isso é um teste do chatbot!");
-  const [testResult, setTestResult] = useState<{ status: string; data: any } | null>(null);
 
   // API check
   const [apiConfigured, setApiConfigured] = useState(false);
