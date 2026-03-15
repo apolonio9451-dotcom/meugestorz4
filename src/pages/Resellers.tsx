@@ -143,7 +143,9 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { companyId, userRole, user, isTrial, resellerCredits } = useAuth();
+  const { companyId, userRole, user, isTrial, resellerCredits, session } = useAuth();
+  const { enterGhostMode } = useGhostMode();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
