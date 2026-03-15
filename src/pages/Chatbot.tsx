@@ -24,8 +24,6 @@ import {
   BookOpen, Route, Palette
 } from "lucide-react";
 import { format } from "date-fns";
-import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
-import WhatsAppManager from "@/components/whatsapp/WhatsAppManager";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
 import ChatSimulator from "@/components/chatbot/ChatSimulator";
 import TrainingRulesList from "@/components/chatbot/TrainingRulesList";
