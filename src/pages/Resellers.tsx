@@ -62,6 +62,7 @@ import {
   Network,
   LogIn,
   Activity,
+  MessageCircle,
 } from "lucide-react";
 import { differenceInDays, differenceInHours, parseISO, format, addDays } from "date-fns";
 
@@ -181,6 +182,7 @@ export default function Resellers() {
   const [clientCounts, setClientCounts] = useState<Record<string, number>>({});
   const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
   const [ghostLoading, setGhostLoading] = useState<string | null>(null);
+  const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
@@ -280,6 +282,43 @@ export default function Resellers() {
     fetchPendingLinks();
     fetchCompanyCredits();
     fetchClientCounts();
+
+    // Fetch admin support WhatsApp for non-owners
+    if (!isOwner && user) {
+      (async () => {
+        // Check reseller parent company
+        const { data: resellerData } = await supabase
+          .from("resellers")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (resellerData?.company_id) {
+          const { data: support } = await supabase.rpc("get_support_whatsapp", {
+            _company_id: resellerData.company_id,
+          });
+          if (support) { setAdminWhatsapp(support); return; }
+        }
+        // Fallback: trial link creator's company
+        const { data: membership } = await supabase
+          .from("company_memberships")
+          .select("trial_link_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (membership?.trial_link_id) {
+          const { data: tl } = await supabase
+            .from("trial_links")
+            .select("company_id")
+            .eq("id", membership.trial_link_id)
+            .maybeSingle();
+          if (tl?.company_id) {
+            const { data: support } = await supabase.rpc("get_support_whatsapp", {
+              _company_id: tl.company_id,
+            });
+            if (support) setAdminWhatsapp(support);
+          }
+        }
+      })();
+    }
   }, [companyId]);
 
   // Fetch passwords only for owners
@@ -734,11 +773,24 @@ export default function Resellers() {
               <p className="text-sm text-muted-foreground">
                 Seu saldo está <strong className="text-warning">zerado</strong>. Você não pode gerenciar seus revendedores até recarregar.
               </p>
-              <div className="rounded-lg border border-warning/25 bg-warning/10 px-4 py-3">
-                <p className="text-xs font-medium text-warning">
-                  Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
-                </p>
-              </div>
+              {adminWhatsapp ? (
+                <Button
+                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    const phone = adminWhatsapp.replace(/\D/g, "");
+                    const msg = encodeURIComponent("Olá! Meus créditos no Meu Gestor acabaram e gostaria de adquirir mais para liberar meu gerenciamento.");
+                    window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" /> Comprar Créditos via WhatsApp
+                </Button>
+              ) : (
+                <div className="rounded-lg border border-warning/25 bg-warning/10 px-4 py-3">
+                  <p className="text-xs font-medium text-warning">
+                    Entre em contato com seu administrador para adquirir mais créditos e liberar o gerenciamento.
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
