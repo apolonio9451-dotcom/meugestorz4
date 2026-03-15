@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, KeyRound, Loader2, ShieldCheck, MessageCircle, UserCog } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function md5(str: string): string {
   // Simple hash for Gravatar — we use a basic approach
