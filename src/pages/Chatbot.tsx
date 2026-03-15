@@ -92,9 +92,6 @@ export default function Chatbot() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("simulador");
   const [trainingRulesRefresh, setTrainingRulesRefresh] = useState(0);
-  const [showNewInstanceModal, setShowNewInstanceModal] = useState(false);
-  const [showTokenInstanceModal, setShowTokenInstanceModal] = useState(false);
-  const [connectedBanner, setConnectedBanner] = useState<{ profileName?: string; phoneNumber?: string } | null>(null);
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
