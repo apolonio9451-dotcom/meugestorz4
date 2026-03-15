@@ -292,31 +292,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (resellerData?.company_id) {
-        // Get parent company support_whatsapp via RPC (bypasses RLS)
         const parentSupport = await getCompanySupportById(resellerData.company_id);
-
-        // Get parent company owner name
-        const { data: ownerMembership } = await supabase
-          .from("company_memberships")
-          .select("user_id")
-          .eq("company_id", resellerData.company_id)
-          .eq("role", "owner")
-          .maybeSingle();
-
-        let ownerName = "Admin";
-        if (ownerMembership?.user_id) {
-          const { data: ownerProfile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", ownerMembership.user_id)
-            .maybeSingle();
-          if (ownerProfile?.full_name) ownerName = ownerProfile.full_name;
-        }
-
-        setAdminInfo({
-          name: ownerName,
-          whatsapp: parentSupport,
-        });
         if (parentSupport) setSupportWhatsapp(parentSupport);
         return;
       }
