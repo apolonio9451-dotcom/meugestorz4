@@ -74,10 +74,9 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
   const roleColor = (() => {
     switch (userRole) {
       case "Proprietário":
-        return "bg-primary/15 text-primary border-primary/30";
-      case "Administrador":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/40";
       case "Admin":
-        return "bg-blue-500/15 text-blue-400 border-blue-500/30";
+        return "bg-cyan-500/20 text-cyan-400 border-cyan-500/40";
       default:
         return "bg-muted text-muted-foreground border-border";
     }

@@ -24,8 +24,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const roleLabels: Record<string, string> = {
   owner: "Proprietário",
-  admin: "Administrador",
-  operator: "Operador",
+  admin: "Admin",
+  operator: "Usuário",
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
