@@ -974,6 +974,12 @@ export default function Resellers() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                            {isOwner && r.user_id && (
+                              <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs text-purple-400 hover:bg-purple-500/10" onClick={() => handleGhostLogin(r)} disabled={ghostLoading === r.id} title="Login Fantasma">
+                                <LogIn className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">{ghostLoading === r.id ? "..." : "Ghost"}</span>
+                              </Button>
+                            )}
                             {(r.status === "trial" || r.status === "expired") && (
                               <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => handleRenewSubscription(r)}>
                                 <CreditCard className="w-3.5 h-3.5" /> Ativar
