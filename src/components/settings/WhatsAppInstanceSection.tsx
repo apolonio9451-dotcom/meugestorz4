@@ -297,10 +297,12 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
         Conexão WhatsApp
       </h2>
       <p className="text-muted-foreground text-sm -mt-4">
-        Cole o token da sua instância. O webhook será configurado automaticamente.
+        {isOwner
+          ? "Cole o token da sua instância. O webhook será configurado automaticamente."
+          : "Gerencie a conexão da sua instância WhatsApp."}
       </p>
 
-      {/* Token input - only visible for owners */}
+      {/* Token input - visible for owners, masked for Pro admins */}
       {isOwner ? (
         <>
           <div className="space-y-2">
@@ -361,11 +363,61 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
           )}
         </>
       ) : (
-        <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
-          <p className="text-sm text-muted-foreground">
-            🔒 Configuração gerenciada pelo sistema. Apenas o Proprietário pode alterar o token da instância.
-          </p>
-        </div>
+        <>
+          {/* Pro Admin view: can manage instance but token is masked */}
+          {tokenInput && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value="••••••••••••••••••••"
+                  readOnly
+                  className="bg-secondary/50 border-border font-mono cursor-not-allowed opacity-70"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                🔒 O token está protegido. Apenas o Proprietário pode visualizar ou alterar.
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {!hasInstance && (
+              <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
+                {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                {creating ? "Criando..." : "Criar Nova Instância"}
+              </Button>
+            )}
+
+            {hasInstance && !connected && (
+              <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={deleting}>
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Remover Instância
+              </Button>
+            )}
+
+            {hasInstance && connected && (
+              <Button variant="destructive" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+                {disconnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
+                Desconectar
+              </Button>
+            )}
+
+            {hasInstance && (
+              <Button variant="outline" onClick={handleCheckStatus} disabled={checking}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${checking ? "animate-spin" : ""}`} />
+                Verificar Status
+              </Button>
+            )}
+          </div>
+
+          {hasInstance && (
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+              ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
+            </p>
+          )}
+        </>
       )}
 
       {/* Connection status + QR Code */}
