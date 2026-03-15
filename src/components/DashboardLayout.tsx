@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, userRole, resellerCredits, isTrial, session } = useAuth();
+  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, isTrial, session } = useAuth();
   const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
