@@ -84,7 +84,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState("Meu Gestor");
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
-  const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
 
   const handleExitGhostMode = async () => {
