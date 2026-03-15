@@ -320,6 +320,7 @@ export default function Resellers() {
   };
 
   useEffect(() => {
+    if (isReseller && !myResellerId) return; // Wait for myResellerId before fetching
     fetchResellers();
     fetchPendingLinks();
     fetchCompanyCredits();
