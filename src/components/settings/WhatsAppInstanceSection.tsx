@@ -30,6 +30,7 @@ import {
 
 interface Props {
   companyId: string | null;
+  isOwner?: boolean;
 }
 
 export default function WhatsAppInstanceSection({ companyId }: Props) {
