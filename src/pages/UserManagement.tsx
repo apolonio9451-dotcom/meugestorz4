@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -20,16 +21,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Shield, Trash2, Users, Search } from "lucide-react";
+import { UserPlus, Shield, Trash2, Users, Search, Coins, ArrowUpDown, Zap, Star } from "lucide-react";
 
 interface Member {
   id: string;
   user_id: string;
+  company_id: string;
   role: "owner" | "admin" | "operator";
   created_at: string;
   profile?: { full_name: string; email: string };
+  company?: { name: string; plan_type: string; credit_balance: number };
 }
 
 const roleLabels: Record<string, string> = {
@@ -56,12 +59,18 @@ export default function UserManagement() {
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Credit dialog
+  const [creditOpen, setCreditOpen] = useState(false);
+  const [creditTarget, setCreditTarget] = useState<Member | null>(null);
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditType, setCreditType] = useState<"add" | "remove">("add");
+
   const fetchMembers = async () => {
     if (!companyId) return;
     setLoading(true);
     const { data } = await supabase
       .from("company_memberships")
-      .select("id, user_id, role, created_at")
+      .select("id, user_id, company_id, role, created_at")
       .eq("company_id", companyId);
 
     if (data) {
@@ -72,7 +81,35 @@ export default function UserManagement() {
           .select("full_name, email")
           .eq("id", m.user_id)
           .maybeSingle();
-        enriched.push({ ...m, profile: profile ?? undefined });
+
+        // Fetch the user's OWN company (via their membership)
+        const { data: userMembership } = await supabase
+          .from("company_memberships")
+          .select("company_id")
+          .eq("user_id", m.user_id)
+          .eq("role", "owner")
+          .maybeSingle();
+
+        let company: Member["company"] = undefined;
+        const targetCompanyId = userMembership?.company_id || m.company_id;
+        const { data: companyData } = await supabase
+          .from("companies")
+          .select("name, plan_type, credit_balance")
+          .eq("id", targetCompanyId)
+          .maybeSingle();
+        if (companyData) {
+          company = {
+            name: companyData.name,
+            plan_type: companyData.plan_type || "pro",
+            credit_balance: companyData.credit_balance || 0,
+          };
+        }
+
+        enriched.push({
+          ...m,
+          profile: profile ?? undefined,
+          company,
+        });
       }
       setMembers(enriched);
     }
@@ -136,6 +173,77 @@ export default function UserManagement() {
     }
   };
 
+  const handleTogglePlan = async (member: Member) => {
+    if (!member.company) return;
+    const targetCompanyId = member.company_id;
+
+    // Find the user's own company
+    const { data: userMembership } = await supabase
+      .from("company_memberships")
+      .select("company_id")
+      .eq("user_id", member.user_id)
+      .eq("role", "owner")
+      .maybeSingle();
+
+    const cid = userMembership?.company_id || targetCompanyId;
+    const newPlan = member.company.plan_type === "pro" ? "starter" : "pro";
+
+    const { error } = await supabase
+      .from("companies")
+      .update({ plan_type: newPlan })
+      .eq("id", cid);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `Plano alterado para ${newPlan === "pro" ? "Pro" : "Starter"}` });
+      fetchMembers();
+    }
+  };
+
+  const handleCreditSubmit = async () => {
+    if (!creditTarget || !creditAmount) return;
+    const amount = parseInt(creditAmount);
+    if (isNaN(amount) || amount <= 0) return;
+
+    const { data: userMembership } = await supabase
+      .from("company_memberships")
+      .select("company_id")
+      .eq("user_id", creditTarget.user_id)
+      .eq("role", "owner")
+      .maybeSingle();
+
+    const cid = userMembership?.company_id || creditTarget.company_id;
+    const currentBalance = creditTarget.company?.credit_balance || 0;
+    const newBalance = creditType === "add"
+      ? currentBalance + amount
+      : Math.max(0, currentBalance - amount);
+
+    const { error } = await supabase
+      .from("companies")
+      .update({ credit_balance: newBalance })
+      .eq("id", cid);
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: creditType === "add" ? "Créditos adicionados" : "Créditos removidos",
+        description: `Novo saldo: ${newBalance} créditos`,
+      });
+      setCreditOpen(false);
+      setCreditAmount("");
+      fetchMembers();
+    }
+  };
+
+  const openCreditDialog = (member: Member, type: "add" | "remove") => {
+    setCreditTarget(member);
+    setCreditType(type);
+    setCreditAmount("");
+    setCreditOpen(true);
+  };
+
   const filtered = members.filter((m) => {
     const name = m.profile?.full_name?.toLowerCase() ?? "";
     const email = m.profile?.email?.toLowerCase() ?? "";
@@ -151,7 +259,7 @@ export default function UserManagement() {
             <Users className="w-5 h-5 text-primary" />
             Gestão de Revendedores
           </h1>
-          <p className="text-sm text-muted-foreground">Adicione, remova e gerencie cargos dos membros da sua equipe.</p>
+          <p className="text-sm text-muted-foreground">Gerencie planos, créditos e acessos dos membros.</p>
         </div>
         <Button onClick={() => setAddOpen(true)} className="gap-2">
           <UserPlus className="w-4 h-4" />
@@ -177,49 +285,102 @@ export default function UserManagement() {
           ) : filtered.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">Nenhum usuário encontrado.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="hidden sm:table-cell">E-mail</TableHead>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead className="w-[80px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        {m.profile?.full_name || "—"}
-                        <div className="text-xs text-muted-foreground sm:hidden">{m.profile?.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                      {m.profile?.email || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={roleBadgeColors[m.role]}>
-                        <Shield className="w-3 h-3 mr-1" />
-                        {roleLabels[m.role]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {m.role !== "owner" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDelete(m)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead className="hidden sm:table-cell">E-mail</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Plano</TableHead>
+                    <TableHead className="hidden md:table-cell">Créditos</TableHead>
+                    <TableHead className="w-[120px]">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          {m.profile?.full_name || "—"}
+                          <div className="text-xs text-muted-foreground sm:hidden">{m.profile?.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                        {m.profile?.email || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={roleBadgeColors[m.role]}>
+                          <Shield className="w-3 h-3 mr-1" />
+                          {roleLabels[m.role]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {m.company ? (
+                          <button
+                            onClick={() => handleTogglePlan(m)}
+                            className="group flex items-center gap-1"
+                            title="Clique para alternar plano"
+                          >
+                            {m.company.plan_type === "pro" ? (
+                              <Badge className="bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/30 hover:bg-[hsl(48,96%,53%)]/25 cursor-pointer gap-1">
+                                <Zap className="w-3 h-3" />
+                                Pro
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground hover:bg-muted/50 cursor-pointer gap-1">
+                                <Star className="w-3 h-3" />
+                                Starter
+                              </Badge>
+                            )}
+                            <ArrowUpDown className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {m.company ? (
+                          <div className="flex items-center gap-1.5">
+                            <Coins className="w-3.5 h-3.5 text-primary" />
+                            <span className="font-mono text-sm font-semibold">{m.company.credit_balance}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {m.company && m.company.plan_type === "pro" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-emerald-500 hover:bg-emerald-500/10"
+                                onClick={() => openCreditDialog(m, "add")}
+                                title="Adicionar créditos"
+                              >
+                                <Coins className="w-3.5 h-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          {m.role !== "owner" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDelete(m)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -251,6 +412,61 @@ export default function UserManagement() {
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
             <Button onClick={handleAddUser} disabled={saving || !newEmail || !newName || !newPassword}>
               {saving ? "Salvando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit Dialog */}
+      <Dialog open={creditOpen} onOpenChange={setCreditOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-primary" />
+              {creditType === "add" ? "Adicionar" : "Remover"} Créditos
+            </DialogTitle>
+            <DialogDescription>
+              {creditTarget?.profile?.full_name} — Saldo atual: <strong>{creditTarget?.company?.credit_balance || 0}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                variant={creditType === "add" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCreditType("add")}
+                className="flex-1"
+              >
+                Adicionar
+              </Button>
+              <Button
+                variant={creditType === "remove" ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => setCreditType("remove")}
+                className="flex-1"
+              >
+                Remover
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label>Quantidade</Label>
+              <Input
+                type="number"
+                min="1"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+                placeholder="Ex: 10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreditOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleCreditSubmit}
+              disabled={!creditAmount || parseInt(creditAmount) <= 0}
+              variant={creditType === "remove" ? "destructive" : "default"}
+            >
+              {creditType === "add" ? "Adicionar" : "Remover"}
             </Button>
           </DialogFooter>
         </DialogContent>
