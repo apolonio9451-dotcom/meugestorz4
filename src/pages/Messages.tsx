@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Save, Info, Loader2 } from "lucide-react";
 import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
-import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
 import AutoSendLogs from "@/components/messages/AutoSendLogs";
 import AutoSendCategoryToggles from "@/components/messages/AutoSendCategoryToggles";
 import TestSendButton from "@/components/messages/TestSendButton";
