@@ -226,6 +226,17 @@ export default function Resellers() {
     }
 
     setResellers(data as Reseller[]);
+
+    const plansMap: Record<string, "starter" | "pro"> = {};
+    const { data: plansData } = await (supabase.rpc as any)("get_reseller_account_plans", {
+      _company_id: companyId,
+    });
+
+    (plansData || []).forEach((entry: any) => {
+      plansMap[entry.reseller_id] = entry.plan_type === "starter" ? "starter" : "pro";
+    });
+
+    setResellerPlans(plansMap);
     setLoading(false);
   };
 
