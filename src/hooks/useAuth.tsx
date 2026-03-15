@@ -181,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setParentCompanyId(null);
     setUserRole(null);
     setResellerCredits(null);
+    setPlanType("pro");
     setIsTrial(false);
     setTrialExpiresAt(null);
   };
