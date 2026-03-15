@@ -792,15 +792,12 @@ export default function Chatbot() {
 
       {/* ============ MAIN TABS ============ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto gap-1 p-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto gap-1 p-1">
           <TabsTrigger value="interacao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Music className="w-3 h-3 mr-1" />Mídia
           </TabsTrigger>
           <TabsTrigger value="simulador" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <Brain className="w-3 h-3 mr-1" />Treinar IA
-          </TabsTrigger>
-          <TabsTrigger value="conexao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
-            <Smartphone className="w-3 h-3 mr-1" />Conexão
           </TabsTrigger>
           <TabsTrigger value="logs" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
             <MessageCircle className="w-3 h-3 mr-1" />Logs
