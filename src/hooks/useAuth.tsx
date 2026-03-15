@@ -7,6 +7,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
+  /** Returns ghostCompanyId when in ghost mode, otherwise companyId */
+  effectiveCompanyId: string | null;
   parentCompanyId: string | null;
   userRole: string | null;
   resellerCredits: number | null;
