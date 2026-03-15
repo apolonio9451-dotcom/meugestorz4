@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { GhostModeProvider } from "@/hooks/useGhostMode";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import PlanGate from "@/components/PlanGate";
 import DashboardLayout from "@/components/DashboardLayout";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -53,15 +54,15 @@ const App = () => (
             <Route path="/dashboard/plans" element={<DashboardRoute><Plans /></DashboardRoute>} />
             <Route path="/dashboard/financial" element={<DashboardRoute><Financial /></DashboardRoute>} />
             <Route path="/dashboard/subscriptions" element={<DashboardRoute><Subscriptions /></DashboardRoute>} />
-            <Route path="/dashboard/winback" element={<DashboardRoute><WinBack /></DashboardRoute>} />
+            <Route path="/dashboard/winback" element={<DashboardRoute><PlanGate feature="Repescagem"><WinBack /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
-            <Route path="/dashboard/resellers" element={<DashboardRoute><Resellers /></DashboardRoute>} />
+            <Route path="/dashboard/resellers" element={<DashboardRoute><PlanGate feature="Revendedores"><Resellers /></PlanGate></DashboardRoute>} />
             
             <Route path="/dashboard/trials" element={<DashboardRoute><Trials /></DashboardRoute>} />
             <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />
-            <Route path="/dashboard/settings" element={<DashboardRoute><SettingsPage /></DashboardRoute>} />
-            <Route path="/dashboard/chatbot" element={<DashboardRoute><Chatbot /></DashboardRoute>} />
-            <Route path="/dashboard/reseller-panel" element={<DashboardRoute><ResellerPanel /></DashboardRoute>} />
+            <Route path="/dashboard/settings" element={<DashboardRoute><PlanGate feature="Configurações Avançadas"><SettingsPage /></PlanGate></DashboardRoute>} />
+            <Route path="/dashboard/chatbot" element={<DashboardRoute><PlanGate feature="Chatbot IA"><Chatbot /></PlanGate></DashboardRoute>} />
+            <Route path="/dashboard/reseller-panel" element={<DashboardRoute><PlanGate feature="Painel de Revenda"><ResellerPanel /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/profile" element={<DashboardRoute><Profile /></DashboardRoute>} />
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />

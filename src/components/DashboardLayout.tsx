@@ -40,9 +40,10 @@ type NavItem = {
   href?: string;
   label: string;
   icon: any;
-  children?: { href: string; label: string; icon: any }[];
+  children?: { href: string; label: string; icon: any; proOnly?: boolean }[];
   adminOnly?: boolean;
   resellerOnly?: boolean;
+  proOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -60,11 +61,11 @@ const navItems: NavItem[] = [
     icon: Megaphone,
     children: [
       { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
-      { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
+      { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw, proOnly: true },
     ],
   },
-  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true },
+  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
+  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true, proOnly: true },
   {
     label: "Configurações",
     icon: Settings,
@@ -72,13 +73,13 @@ const navItems: NavItem[] = [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
-      { href: "/dashboard/settings", label: "Geral", icon: Settings },
+      { href: "/dashboard/settings", label: "Geral", icon: Settings, proOnly: true },
     ],
   },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, isTrial, session } = useAuth();
+  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, isTrial, session } = useAuth();
   const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
@@ -369,15 +370,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
               const isResellerUser = resellerCredits !== null;
 
-              // "Revendedores" deve continuar visível para revendedores mesmo com 0 créditos;
-              // o bloqueio acontece dentro da própria página com aviso de recarga.
               if (item.adminOnly && !(isOwnerOrAdmin || isResellerUser)) return false;
               if (item.resellerOnly && !isResellerUser) return false;
+              if (item.proOnly && planType !== "pro") return false;
               return true;
             })
             .map((item) => {
-            if ("children" in item && item.children) {
-              const childActive = item.children.some((c) => isActive(c.href));
+            // Filter children by proOnly
+            const filteredChildren = item.children?.filter((c) => !c.proOnly || planType === "pro");
+            if (filteredChildren && filteredChildren.length > 0) {
+              const childActive = filteredChildren.some((c) => isActive(c.href));
               const isOpen = openMenus[item.label];
               return (
                 <div key={item.label}>
@@ -414,7 +416,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           "bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"
                         )}
                       />
-                      {item.children.map((child, idx) => (
+                      {filteredChildren.map((child, idx) => (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                           {/* Horizontal branch line */}
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />

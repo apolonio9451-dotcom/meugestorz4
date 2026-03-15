@@ -12,6 +12,7 @@ interface AuthContextType {
   parentCompanyId: string | null;
   userRole: string | null;
   resellerCredits: number | null;
+  planType: "starter" | "pro";
   isTrial: boolean;
   trialExpiresAt: string | null;
   loading: boolean;
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [parentCompanyId, setParentCompanyId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [resellerCredits, setResellerCredits] = useState<number | null>(null);
+  const [planType, setPlanType] = useState<"starter" | "pro">("pro");
   const [isTrial, setIsTrial] = useState(false);
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setResellerCredits(resellerData.credit_balance);
       setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
 
+      // Fetch plan_type for reseller's own company
+      const cid = membership?.company_id || resellerData.company_id;
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("plan_type")
+        .eq("id", cid)
+        .maybeSingle();
+      if (companyData) {
+        setPlanType((companyData as any).plan_type === "starter" ? "starter" : "pro");
+      }
+
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
       setTrialExpiresAt(resellerIsTrial ? membership?.trial_expires_at || null : null);
@@ -74,6 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsTrial(membership.is_trial || false);
       setTrialExpiresAt(membership.trial_expires_at || null);
       setUserRole(roleLabels[membership.role] || membership.role);
+
+      // Fetch plan_type from companies
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("plan_type")
+        .eq("id", membership.company_id)
+        .maybeSingle();
+      if (companyData) {
+        setPlanType((companyData as any).plan_type === "starter" ? "starter" : "pro");
+      }
     }
   };
 
@@ -169,12 +192,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setParentCompanyId(null);
     setUserRole(null);
     setResellerCredits(null);
+    setPlanType("pro");
     setIsTrial(false);
     setTrialExpiresAt(null);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
