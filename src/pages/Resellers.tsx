@@ -939,6 +939,16 @@ export default function Resellers() {
                         </TableCell>
                         <TableCell>{getStatusBadge(r.status)}</TableCell>
                         <TableCell className="text-center">
+                          {recentClientCounts[r.id] ? (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              +{recentClientCounts[r.id]}
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div>
                             <span className={`font-mono text-sm font-semibold ${
                               remaining.days <= 3 && remaining.days > 0 ? "text-orange-400" :
