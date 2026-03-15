@@ -25,7 +25,7 @@ interface Announcement {
 }
 
 export default function AnnouncementManager() {
-  const { companyId, user } = useAuth();
+  const { effectiveCompanyId: companyId, user } = useAuth();
   const { toast } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);

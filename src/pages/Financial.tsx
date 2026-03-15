@@ -28,7 +28,7 @@ interface ServerData {
 }
 
 export default function Financial() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [subs, setSubs] = useState<Sub[]>([]);
   const [servers, setServers] = useState<ServerData[]>([]);
   const [totalClients, setTotalClients] = useState(0);

@@ -68,7 +68,7 @@ interface TrialLink {
 }
 
 export default function ResellerPanel() {
-  const { user, companyId } = useAuth();
+  const { user, effectiveCompanyId: companyId } = useAuth();
   const { toast } = useToast();
   const [reseller, setReseller] = useState<any>(null);
   const [clients, setClients] = useState<ResellerClient[]>([]);

@@ -5,6 +5,7 @@ import AnnouncementModal from "@/components/announcements/AnnouncementModal";
 import { supabase } from "@/integrations/supabase/client";
 import { themePresets, applyThemePreset } from "@/lib/themes";
 import { useAuth } from "@/hooks/useAuth";
+import { useGhostMode } from "@/hooks/useGhostMode";
 import { cn } from "@/lib/utils";
 import defaultBrandLogo from "@/assets/brand-logo.svg";
 import { differenceInDays, parseISO } from "date-fns";
@@ -16,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  Eye,
   
   Server,
   DollarSign,
@@ -75,7 +77,8 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, userRole, resellerCredits, isTrial } = useAuth();
+  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, isTrial, session } = useAuth();
+  const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -83,6 +86,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
+
+  const handleExitGhostMode = async () => {
+    // Call edge function to remove temporary membership
+    try {
+      const stored = localStorage.getItem("ghost_mode");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghost-login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ reseller_id: parsed.resellerId || "", action: "exit" }),
+          }
+        );
+      }
+    } catch (e) {
+      console.error("Error exiting ghost mode:", e);
+    }
+    exitGhostMode();
+    navigate("/dashboard/resellers");
+  };
 
   const applyThemeColors = (primary?: string, secondary?: string, bg?: string) => {
     // Check if colors match a preset — if so, apply full preset for complete coverage
@@ -560,6 +589,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Ghost Mode Banner */}
+        {isGhostMode && (
+          <div className="bg-orange-500 text-white px-4 py-2.5 flex items-center justify-between z-50 shadow-lg">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Eye className="w-4 h-4" />
+              <span>Você está visualizando o painel de: <strong>{ghostName}</strong></span>
+            </div>
+            <button
+              onClick={handleExitGhostMode}
+              className="flex items-center gap-1.5 rounded-lg bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sair e Voltar para o Master
+            </button>
+          </div>
+        )}
         <TrialBanner />
         <header className="h-24 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>

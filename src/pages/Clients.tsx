@@ -61,7 +61,7 @@ interface Credential {
 }
 
 export default function Clients() {
-  const { companyId, user } = useAuth();
+  const { effectiveCompanyId: companyId, user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});

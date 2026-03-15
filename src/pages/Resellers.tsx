@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGhostMode } from "@/hooks/useGhostMode";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,7 +143,9 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { companyId, userRole, user, isTrial, resellerCredits } = useAuth();
+  const { effectiveCompanyId: companyId, userRole, user, isTrial, resellerCredits, session } = useAuth();
+  const { enterGhostMode } = useGhostMode();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [resellers, setResellers] = useState<Reseller[]>([]);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
@@ -501,7 +505,6 @@ export default function Resellers() {
     }
     setGhostLoading(r.id);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghost-login`,
         {
@@ -517,9 +520,10 @@ export default function Resellers() {
       const result = await res.json();
       if (!res.ok) {
         toast({ title: "Erro", description: result.error, variant: "destructive" });
-      } else if (result.url) {
-        window.open(result.url, "_blank");
-        toast({ title: "Acesso fantasma ativado", description: `Nova aba aberta com o painel de ${result.name}.` });
+      } else if (result.company_id) {
+        enterGhostMode(result.user_id, result.company_id, result.name, r.id);
+        toast({ title: "Modo visualização ativado", description: `Visualizando o painel de ${result.name}.` });
+        navigate("/dashboard");
       }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });

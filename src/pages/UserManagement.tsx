@@ -45,7 +45,7 @@ const roleBadgeColors: Record<string, string> = {
 };
 
 export default function UserManagement() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);

@@ -19,7 +19,7 @@ interface Announcement {
 }
 
 export default function AnnouncementModal() {
-  const { user, companyId, parentCompanyId } = useAuth();
+  const { user, effectiveCompanyId: companyId, parentCompanyId } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [open, setOpen] = useState(false);

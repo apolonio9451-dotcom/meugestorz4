@@ -45,7 +45,7 @@ interface ServerStat {
 }
 
 export default function Dashboard() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [stats, setStats] = useState<Stats>({
     todayRevenue: 0, todayPayments: 0,
     monthRevenue: 0, monthPayments: 0,

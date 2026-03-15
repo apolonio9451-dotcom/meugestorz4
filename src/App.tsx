@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { GhostModeProvider } from "@/hooks/useGhostMode";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/DashboardLayout";
 import Auth from "@/pages/Auth";
@@ -42,6 +43,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <GhostModeProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
@@ -64,6 +66,7 @@ const App = () => (
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </GhostModeProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

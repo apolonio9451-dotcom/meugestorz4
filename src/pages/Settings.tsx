@@ -24,7 +24,7 @@ interface CompanySettings {
 }
 
 export default function Settings() {
-  const { companyId, parentCompanyId, userRole } = useAuth();
+  const { effectiveCompanyId: companyId, parentCompanyId, userRole } = useAuth();
   const isOwner = userRole === "Proprietário";
   const isReseller = !!parentCompanyId;
   const { toast } = useToast();

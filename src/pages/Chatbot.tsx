@@ -87,7 +87,7 @@ const CONTEXT_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default function Chatbot() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("simulador");

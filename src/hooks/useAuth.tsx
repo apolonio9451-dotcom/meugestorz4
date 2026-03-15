@@ -1,11 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useGhostMode } from "@/hooks/useGhostMode";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   companyId: string | null;
+  /** Returns ghostCompanyId when in ghost mode, otherwise companyId */
+  effectiveCompanyId: string | null;
   parentCompanyId: string | null;
   userRole: string | null;
   resellerCredits: number | null;
@@ -171,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, parentCompanyId, userRole, resellerCredits, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -180,5 +183,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");
+  
+  // Override effectiveCompanyId when ghost mode is active
+  let ghostCtx: { ghostCompanyId: string | null; isGhostMode: boolean } | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { ghostCompanyId, isGhostMode } = useGhostMode();
+    ghostCtx = { ghostCompanyId, isGhostMode };
+  } catch {
+    // GhostModeProvider not available
+  }
+
+  if (ghostCtx?.isGhostMode && ghostCtx.ghostCompanyId) {
+    return {
+      ...context,
+      effectiveCompanyId: ghostCtx.ghostCompanyId,
+    };
+  }
+
   return context;
 }
