@@ -1,17 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 
 interface GhostModeContextType {
-  /** The user_id we're viewing as (reseller's user_id) */
   ghostUserId: string | null;
-  /** The company_id of the ghost user */
   ghostCompanyId: string | null;
-  /** Display name of the ghost user */
   ghostName: string | null;
-  /** Whether ghost mode is active */
+  ghostResellerId: string | null;
   isGhostMode: boolean;
-  /** Enter ghost mode */
-  enterGhostMode: (userId: string, companyId: string, name: string) => void;
-  /** Exit ghost mode */
+  enterGhostMode: (userId: string, companyId: string, name: string, resellerId: string) => void;
   exitGhostMode: () => void;
 }
 
