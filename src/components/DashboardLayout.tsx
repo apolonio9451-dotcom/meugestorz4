@@ -37,7 +37,7 @@ import {
   Settings,
   KeyRound,
   ShieldCheck,
-  Store,
+  
   Clock,
   MessageCircle,
   FlaskConical,
@@ -76,7 +76,7 @@ const navItems: NavItem[] = [
     ],
   },
   { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
-  { href: "/dashboard/resellers", label: "Revendedores", icon: Store, adminOnly: true, proOnly: true },
+  { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: ShieldCheck, adminOnly: true, proOnly: true },
   
   {
     label: "Configurações",
@@ -85,7 +85,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
-      { href: "/dashboard/settings", label: "Configuração de Envio", icon: Settings, proOnly: true },
+      { href: "/dashboard/settings", label: "Instância", icon: Zap, proOnly: true },
     ],
   },
 ];
