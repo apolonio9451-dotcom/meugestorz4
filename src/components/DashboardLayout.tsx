@@ -279,12 +279,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           const finalWhatsapp = creatorSupport || fallbackWhatsapp || masterWhatsapp;
 
-          if (adminProfile) {
-            setAdminInfo({
-              name: adminProfile.full_name || "Admin",
-              whatsapp: finalWhatsapp,
-            });
-          }
           if (finalWhatsapp) setSupportWhatsapp(finalWhatsapp);
           return;
         }
