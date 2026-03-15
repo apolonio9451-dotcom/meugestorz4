@@ -337,7 +337,7 @@ export default function UserManagement() {
                     <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                     <TableHead>Cargo</TableHead>
                     <TableHead>Plano</TableHead>
-                    <TableHead className="hidden md:table-cell">Créditos</TableHead>
+                    <TableHead className="hidden md:table-cell" title="Créditos controlam quantos sub-painéis o usuário pode criar">Créditos (Sub-painéis)</TableHead>
                     <TableHead className="w-[120px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
