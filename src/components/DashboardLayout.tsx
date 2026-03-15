@@ -11,6 +11,14 @@ import { cn } from "@/lib/utils";
 import defaultBrandLogo from "@/assets/brand-logo.svg";
 import { differenceInDays, parseISO } from "date-fns";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
   LayoutDashboard,
   Users,
   CreditCard,
@@ -34,6 +42,9 @@ import {
   MessageCircle,
   FlaskConical,
   Bot,
+  Star,
+  Zap,
+  Lock,
 } from "lucide-react";
 
 type NavItem = {
@@ -87,6 +98,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [brandName, setBrandName] = useState("Meu Gestor");
   const [subscriptionDaysLeft, setSubscriptionDaysLeft] = useState<number | null>(null);
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState("");
 
   const handleExitGhostMode = async () => {
     // Call edge function to remove temporary membership
@@ -372,14 +385,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
               if (item.adminOnly && !(isOwnerOrAdmin || isResellerUser)) return false;
               if (item.resellerOnly && !isResellerUser) return false;
-              if (item.proOnly && planType !== "pro") return false;
               return true;
             })
             .map((item) => {
-            // Filter children by proOnly
-            const filteredChildren = item.children?.filter((c) => !c.proOnly || planType === "pro");
-            if (filteredChildren && filteredChildren.length > 0) {
-              const childActive = filteredChildren.some((c) => isActive(c.href));
+            const isStarterLocked = item.proOnly && planType !== "pro";
+            // Show all children, but mark proOnly ones
+            const allChildren = item.children;
+            if (allChildren && allChildren.length > 0) {
+              const childActive = allChildren.some((c) => isActive(c.href) && (!c.proOnly || planType === "pro"));
               const isOpen = openMenus[item.label];
               return (
                 <div key={item.label}>
@@ -416,10 +429,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           "bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"
                         )}
                       />
-                      {filteredChildren.map((child, idx) => (
+                      {allChildren.map((child, idx) => {
+                        const childLocked = child.proOnly && planType !== "pro";
+                        return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                           {/* Horizontal branch line */}
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
+                          {childLocked ? (
+                            <button
+                              onClick={() => {
+                                setUpgradeFeature(child.label);
+                                setUpgradeModalOpen(true);
+                                setSidebarOpen(false);
+                              }}
+                              className="flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 w-full text-left text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
+                            >
+                              <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
+                              <span className="flex-1">{child.label}</span>
+                              <Star className="w-3 h-3 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                            </button>
+                          ) : (
                           <Link
                             to={child.href}
                             onClick={() => setSidebarOpen(false)}
@@ -433,11 +462,32 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                             {child.label}
                           </Link>
+                          )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
+              );
+            }
+
+            // Top-level items
+            if (isStarterLocked) {
+              return (
+                <button
+                  key={item.href || item.label}
+                  onClick={() => {
+                    setUpgradeFeature(item.label);
+                    setUpgradeModalOpen(true);
+                    setSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium transition-all duration-200 text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <Star className="w-3.5 h-3.5 text-[hsl(48,96%,53%)] fill-[hsl(48,96%,53%)]" />
+                </button>
               );
             }
 
@@ -483,6 +533,46 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           />
         </div>
       </aside>
+
+      {/* Upgrade Pro Modal */}
+      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Lock className="w-5 h-5 text-primary" />
+              Recurso do Plano Pro
+            </DialogTitle>
+            <DialogDescription>
+              O recurso <strong>"{upgradeFeature}"</strong> está disponível apenas no Plano Pro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Faça upgrade para o Plano Pro e desbloqueie todos os recursos avançados do sistema.
+            </p>
+            {supportWhatsapp ? (
+              <a
+                href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro. Recurso: ${upgradeFeature}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-lg py-3 font-bold text-sm transition-colors bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)]"
+                onClick={() => setUpgradeModalOpen(false)}
+              >
+                <Zap className="w-4 h-4" />
+                Falar com Suporte para Upgrade
+              </a>
+            ) : (
+              <Button
+                className="w-full gap-2 font-bold bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)]"
+                onClick={() => setUpgradeModalOpen(false)}
+              >
+                <Zap className="w-4 h-4" />
+                Fazer Upgrade para Pro
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">

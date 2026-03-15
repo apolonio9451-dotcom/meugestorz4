@@ -1,15 +1,26 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Lock, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Lock, Zap, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PlanGateProps {
   children: React.ReactNode;
-  /** Features that require Pro */
   feature?: string;
 }
 
 export default function PlanGate({ children, feature }: PlanGateProps) {
-  const { planType } = useAuth();
+  const { planType, companyId } = useAuth();
+  const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (planType === "pro" || !companyId) return;
+    const fetch = async () => {
+      const { data } = await supabase.rpc("get_support_whatsapp", { _company_id: companyId });
+      if (data) setSupportWhatsapp(data);
+    };
+    fetch();
+  }, [planType, companyId]);
 
   if (planType === "pro") return <>{children}</>;
 
@@ -34,10 +45,22 @@ export default function PlanGate({ children, feature }: PlanGateProps) {
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <Button className="gap-2 bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] font-bold">
-          <Zap className="w-4 h-4" />
-          Fazer Upgrade para Pro
-        </Button>
+        {supportWhatsapp ? (
+          <a
+            href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro.${feature ? ` Recurso: ${feature}` : ""}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-bold text-sm bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] transition-colors"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Falar com Suporte para Upgrade
+          </a>
+        ) : (
+          <Button className="gap-2 bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] font-bold">
+            <Zap className="w-4 h-4" />
+            Fazer Upgrade para Pro
+          </Button>
+        )}
       </div>
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full">
