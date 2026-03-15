@@ -76,6 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsTrial(membership.is_trial || false);
       setTrialExpiresAt(membership.trial_expires_at || null);
       setUserRole(roleLabels[membership.role] || membership.role);
+
+      // Fetch plan_type from companies
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("plan_type")
+        .eq("id", membership.company_id)
+        .maybeSingle();
+      if (companyData) {
+        setPlanType((companyData as any).plan_type === "starter" ? "starter" : "pro");
+      }
     }
   };
 
