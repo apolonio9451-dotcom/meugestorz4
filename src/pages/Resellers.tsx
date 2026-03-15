@@ -616,9 +616,11 @@ export default function Resellers() {
   const getResellerPlan = (resellerId: string): "starter" | "pro" =>
     resellerPlans[resellerId] === "starter" ? "starter" : "pro";
 
+  const canChangePlans = isOwner || (isReseller && getResellerPlan(myResellerId || "") === "pro");
+
   const handleChangeResellerPlan = async (r: Reseller, nextPlan: "starter" | "pro") => {
-    if (!isOwner) {
-      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário pode alterar plano.", variant: "destructive" });
+    if (!canChangePlans) {
+      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário ou revendedor PRO pai pode alterar plano.", variant: "destructive" });
       return;
     }
 
