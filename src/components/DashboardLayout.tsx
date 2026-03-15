@@ -40,9 +40,10 @@ type NavItem = {
   href?: string;
   label: string;
   icon: any;
-  children?: { href: string; label: string; icon: any }[];
+  children?: { href: string; label: string; icon: any; proOnly?: boolean }[];
   adminOnly?: boolean;
   resellerOnly?: boolean;
+  proOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
