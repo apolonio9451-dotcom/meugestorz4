@@ -8,13 +8,15 @@ import { Save, Loader2, Eye, EyeOff, Wifi } from "lucide-react";
 
 interface Props {
   companyId: string | null;
+  isOwner?: boolean;
 }
 
-export default function ApiSettingsSection({ companyId }: Props) {
+export default function ApiSettingsSection({ companyId, isOwner = false }: Props) {
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [showToken, setShowToken] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [existingId, setExistingId] = useState<string | null>(null);
@@ -34,7 +36,6 @@ export default function ApiSettingsSection({ companyId }: Props) {
       if (data) {
         setApiUrl((data as any).api_url || "");
         setApiToken((data as any).api_token || "");
-        setPixKey((data as any).pix_key || "");
         setPixKey((data as any).pix_key || "");
         setExistingId((data as any).id);
       }
@@ -57,7 +58,7 @@ export default function ApiSettingsSection({ companyId }: Props) {
         if (data) setExistingId((data as any).id);
       }
       if (error) throw error;
-      toast({ title: "Configurações da API salvas!" });
+      toast({ title: "Configurações salvas!" });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" });
     } finally {
@@ -71,21 +72,30 @@ export default function ApiSettingsSection({ companyId }: Props) {
     <div className="glass-card rounded-xl p-6 space-y-6">
       <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
         <Wifi className="h-5 w-5 text-primary" />
-        API de WhatsApp (UAZAPI)
+        Configuração de Envio
       </h2>
       <p className="text-muted-foreground text-sm -mt-4">
-        Configure a URL e o token da sua instância para envio automático de mensagens.
+        Configure os dados necessários para o envio automático de mensagens.
       </p>
 
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold text-foreground">URL da API</Label>
-        <Input
-          value={apiUrl}
-          onChange={(e) => setApiUrl(e.target.value)}
-          placeholder="https://ipazua.uazapi.com"
-          className="bg-secondary/50 border-border"
-        />
-      </div>
+      {/* URL da API — visível apenas para Proprietário */}
+      {isOwner && (
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold text-foreground">URL da API</Label>
+          <div className="flex gap-2">
+            <Input
+              type={showUrl ? "text" : "password"}
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              placeholder="https://..."
+              className="bg-secondary/50 border-border font-mono"
+            />
+            <Button variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
+              {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
@@ -120,9 +130,9 @@ export default function ApiSettingsSection({ companyId }: Props) {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving || !apiUrl.trim() || !apiToken.trim()}>
+        <Button onClick={handleSave} disabled={saving || (!isOwner && !apiToken.trim())}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-          Salvar Configurações da API
+          Salvar Configurações
         </Button>
       </div>
     </div>

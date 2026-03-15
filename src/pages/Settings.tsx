@@ -25,7 +25,7 @@ export default function Settings() {
       <WhatsAppInstanceSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} />
 
       {/* API Settings */}
-      <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} />
+      <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={isOwner} />
 
       {isOwner && <AnnouncementManager />}
     </div>
