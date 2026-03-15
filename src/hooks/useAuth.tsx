@@ -72,7 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompanyId(resellerCompanyId);
       setParentCompanyId(resellerData.company_id);
       setResellerCredits(resellerData.credit_balance);
-      setUserRole(resellerData.credit_balance > 0 ? "Admin" : "Usuário");
+
+      // Role comes from actual membership, not from credits
+      const membershipRole = membership?.role;
+      const resolvedRole = roleLabels[membershipRole || "operator"] || "Usuário";
+      setUserRole(resolvedRole);
 
       const { data: companyData } = await supabase
         .from("companies")
@@ -80,7 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("id", resellerCompanyId)
         .maybeSingle();
 
-      setPlanType((companyData as any)?.plan_type === "starter" ? "starter" : "pro");
+      // Admins are always Pro regardless of company plan_type
+      const isAdminOrOwner = membershipRole === "admin" || membershipRole === "owner";
+      const dbPlan = (companyData as any)?.plan_type;
+      setPlanType(isAdminOrOwner || dbPlan === "pro" ? "pro" : "starter");
 
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
