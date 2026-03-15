@@ -121,18 +121,6 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold text-foreground">Chave Pix</Label>
-        <Input
-          value={pixKey}
-          onChange={(e) => setPixKey(e.target.value)}
-          placeholder="sua-chave-pix@email.com ou CPF/CNPJ"
-          className="bg-secondary/50 border-border"
-        />
-        <p className="text-muted-foreground text-xs">
-          Esta chave será usada na variável <code className="bg-muted px-1 rounded">{'{sua_chave_pix}'}</code> nos templates de mensagem.
-        </p>
-      </div>
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving || (!isOwner && !apiToken.trim())}>
