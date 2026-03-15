@@ -106,6 +106,15 @@ export default function Messages() {
       if (!membership) return;
       setCompanyId(membership.company_id);
 
+      // Fetch pix key
+      const { data: settings } = await supabase
+        .from("api_settings" as any)
+        .select("pix_key")
+        .eq("company_id", membership.company_id)
+        .maybeSingle();
+      if (settings) setPixKey((settings as any).pix_key || "");
+
+
       const { data } = await supabase
         .from("message_templates")
         .select("category, message")
