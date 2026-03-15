@@ -34,6 +34,7 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
   const [profilePic, setProfilePic] = useState("");
   const [owner, setOwner] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [tokenError, setTokenError] = useState(false);
 
   const fetchStatus = useCallback(
     async (silent = false) => {
@@ -50,6 +51,20 @@ export default function WhatsAppInstanceSection({ companyId }: Props) {
           setProfileName(resp.data.profile_name || "");
           setProfilePic(resp.data.profile_pic || "");
           setOwner(resp.data.owner || "");
+
+          // Detect invalid token
+          if (resp.data.error_detail && resp.data.has_instance && !resp.data.connected && !resp.data.qrcode) {
+            setTokenError(true);
+            if (!silent) {
+              toast({
+                title: "Token inválido ou expirado",
+                description: "Cole um novo token e clique em 'Salvar e Configurar Webhook'.",
+                variant: "destructive",
+              });
+            }
+          } else {
+            setTokenError(false);
+          }
 
           if (resp.data.qrcode) {
             const qr = resp.data.qrcode;
