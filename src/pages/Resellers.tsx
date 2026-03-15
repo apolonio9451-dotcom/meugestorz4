@@ -244,10 +244,38 @@ export default function Resellers() {
     if (data) setCompanyCredits(data.credit_balance);
   };
 
+  const fetchClientCounts = async () => {
+    if (!companyId) return;
+    const { data } = await supabase
+      .from("clients")
+      .select("reseller_id")
+      .eq("company_id", companyId)
+      .not("reseller_id", "is", null);
+    if (!data) return;
+    const counts: Record<string, number> = {};
+    data.forEach(c => { if (c.reseller_id) counts[c.reseller_id] = (counts[c.reseller_id] || 0) + 1; });
+    setClientCounts(counts);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data: recent } = await supabase
+      .from("clients")
+      .select("reseller_id")
+      .eq("company_id", companyId)
+      .not("reseller_id", "is", null)
+      .gte("created_at", sevenDaysAgo.toISOString());
+    if (recent) {
+      const rc: Record<string, number> = {};
+      recent.forEach(c => { if (c.reseller_id) rc[c.reseller_id] = (rc[c.reseller_id] || 0) + 1; });
+      setRecentClientCounts(rc);
+    }
+  };
+
   useEffect(() => {
     fetchResellers();
     fetchPendingLinks();
     fetchCompanyCredits();
+    fetchClientCounts();
   }, [companyId]);
 
   // Fetch passwords only for owners
