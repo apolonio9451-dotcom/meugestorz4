@@ -65,6 +65,11 @@ export default function UserManagement() {
   const [creditAmount, setCreditAmount] = useState("");
   const [creditType, setCreditType] = useState<"add" | "remove">("add");
 
+  // Downgrade confirmation
+  const [downgradeStep, setDowngradeStep] = useState<0 | 1 | 2>(0);
+  const [downgradeTarget, setDowngradeTarget] = useState<Member | null>(null);
+  const [downgrading, setDowngrading] = useState(false);
+
   const fetchMembers = async () => {
     if (!companyId) return;
     setLoading(true);
