@@ -156,18 +156,49 @@ export default function ResellerPanel() {
       fetchClients();
       fetchTransactions();
       fetchTrialLinks();
-      // Fetch admin contact info
-      if (reseller.company_id) {
-        supabase
+
+      // Fetch admin contact info from parent company
+      const fetchAdminContact = async () => {
+        if (!reseller.company_id) return;
+
+        // Get parent company support_whatsapp
+        const { data: cs } = await supabase
           .from("company_settings")
           .select("support_whatsapp, brand_name")
           .eq("company_id", reseller.company_id)
-          .maybeSingle()
-          .then(({ data }) => {
-            if (data?.support_whatsapp) setAdminWhatsapp(data.support_whatsapp);
-            if (data?.brand_name) setAdminName(data.brand_name);
-          });
-      }
+          .maybeSingle();
+
+        if (cs?.support_whatsapp) setAdminWhatsapp(cs.support_whatsapp);
+        if (cs?.brand_name) setAdminName(cs.brand_name);
+
+        // If parent company has no support_whatsapp, try to find Master (root company)
+        if (!cs?.support_whatsapp && user) {
+          const { data: membership } = await supabase
+            .from("company_memberships")
+            .select("trial_link_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (membership?.trial_link_id) {
+            const { data: trialLink } = await supabase
+              .from("trial_links")
+              .select("company_id")
+              .eq("id", membership.trial_link_id)
+              .maybeSingle();
+
+            if (trialLink?.company_id) {
+              const { data: masterCs } = await supabase
+                .from("company_settings")
+                .select("support_whatsapp")
+                .eq("company_id", trialLink.company_id)
+                .maybeSingle();
+              if (masterCs?.support_whatsapp) setAdminWhatsapp(masterCs.support_whatsapp);
+            }
+          }
+        }
+      };
+      fetchAdminContact();
+
       // Fetch reseller's own support whatsapp
       supabase
         .from("reseller_settings")
