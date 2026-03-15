@@ -34,13 +34,13 @@ interface Member {
 
 const roleLabels: Record<string, string> = {
   owner: "Proprietário",
-  admin: "Administrador",
-  operator: "Operador",
+  admin: "Admin",
+  operator: "Usuário",
 };
 
 const roleBadgeColors: Record<string, string> = {
-  owner: "bg-primary/15 text-primary border-primary/30",
-  admin: "bg-amber-500/15 text-amber-600 border-amber-500/30",
+  owner: "bg-blue-500/20 text-blue-400 border-blue-500/40",
+  admin: "bg-cyan-500/20 text-cyan-400 border-cyan-500/40",
   operator: "bg-muted text-muted-foreground border-border",
 };
 

@@ -60,7 +60,7 @@ interface ResellerCardProps {
 }
 
 const roleBadgeColors: Record<ResellerRole, string> = {
-  admin: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  admin: "bg-cyan-500/20 text-cyan-400 border-cyan-500/40",
   user: "bg-muted text-muted-foreground border-border",
 };
 
