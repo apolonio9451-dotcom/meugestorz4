@@ -218,16 +218,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const fetchAdminInfo = async () => {
       if (!user) return;
 
-      // Helper: get support_whatsapp from a user's company_settings
-      const getCompanySupport = async (userId: string): Promise<string | null> => {
+      // Helper: get support_whatsapp via SECURITY DEFINER RPC (bypasses RLS)
+      const getCompanySupportById = async (cId: string): Promise<string | null> => {
+        const { data } = await supabase.rpc("get_support_whatsapp", { _company_id: cId });
+        return data || null;
+      };
+
+      const getCompanySupportByUser = async (userId: string): Promise<string | null> => {
         const { data: cid } = await supabase.rpc("get_user_company_id", { _user_id: userId });
         if (!cid) return null;
-        const { data: cs } = await supabase
-          .from("company_settings")
-          .select("support_whatsapp")
-          .eq("company_id", cid as string)
-          .maybeSingle();
-        return cs?.support_whatsapp || null;
+        return getCompanySupportById(cid as string);
       };
 
       // 1. Check if user was created via a trial link → use creator info
@@ -252,7 +252,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             .maybeSingle();
 
           // Get support_whatsapp from creator's company_settings (primary source)
-          const creatorSupport = await getCompanySupport(trialLink.created_by);
+          const creatorSupport = await getCompanySupportByUser(trialLink.created_by);
 
           // Fallback: try reseller_settings if creator is a reseller
           let fallbackWhatsapp: string | null = null;
@@ -272,15 +272,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             }
           }
 
-          // Ultimate fallback: parent company (trialLink.company_id) company_settings
+          // Ultimate fallback: parent company (trialLink.company_id)
           let masterWhatsapp: string | null = null;
           if (!creatorSupport && !fallbackWhatsapp && trialLink.company_id) {
-            const { data: cs } = await supabase
-              .from("company_settings")
-              .select("support_whatsapp")
-              .eq("company_id", trialLink.company_id)
-              .maybeSingle();
-            masterWhatsapp = cs?.support_whatsapp || null;
+            masterWhatsapp = await getCompanySupportById(trialLink.company_id);
           }
 
           const finalWhatsapp = creatorSupport || fallbackWhatsapp || masterWhatsapp;
@@ -296,7 +291,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }
       }
 
-      // 2. Reseller: get parent company owner's support
+      // 2. Reseller: get parent company owner's support via RPC
       const { data: resellerData } = await supabase
         .from("resellers")
         .select("company_id")
@@ -304,12 +299,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (resellerData?.company_id) {
-        // Get parent company support_whatsapp
-        const { data: cs } = await supabase
-          .from("company_settings")
-          .select("support_whatsapp, brand_name")
-          .eq("company_id", resellerData.company_id)
-          .maybeSingle();
+        // Get parent company support_whatsapp via RPC (bypasses RLS)
+        const parentSupport = await getCompanySupportById(resellerData.company_id);
 
         // Get parent company owner name
         const { data: ownerMembership } = await supabase
@@ -319,7 +310,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           .eq("role", "owner")
           .maybeSingle();
 
-        let ownerName = cs?.brand_name || "Admin";
+        let ownerName = "Admin";
         if (ownerMembership?.user_id) {
           const { data: ownerProfile } = await supabase
             .from("profiles")
@@ -331,21 +322,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         setAdminInfo({
           name: ownerName,
-          whatsapp: cs?.support_whatsapp || null,
+          whatsapp: parentSupport,
         });
-        if (cs?.support_whatsapp) setSupportWhatsapp(cs.support_whatsapp);
+        if (parentSupport) setSupportWhatsapp(parentSupport);
         return;
       }
 
-      // 3. Fallback: own company settings
+      // 3. Fallback: own company settings via RPC
       if (companyId) {
-        const { data: cs } = await supabase
-          .from("company_settings")
-          .select("support_whatsapp")
-          .eq("company_id", companyId)
-          .maybeSingle();
-        if (cs?.support_whatsapp) {
-          setSupportWhatsapp(cs.support_whatsapp);
+        const ownSupport = await getCompanySupportById(companyId);
+        if (ownSupport) {
+          setSupportWhatsapp(ownSupport);
         }
       }
     };

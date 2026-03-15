@@ -1621,6 +1621,7 @@ export type Database = {
       get_reseller_company_id: { Args: { _user_id: string }; Returns: string }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_reseller_password: { Args: { _reseller_id: string }; Returns: string }
+      get_support_whatsapp: { Args: { _company_id: string }; Returns: string }
       get_trial_link_by_token: {
         Args: { _token: string }
         Returns: {
