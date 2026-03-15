@@ -651,14 +651,23 @@ export default function Resellers() {
   }, [resellers, user?.id, user?.email]);
 
   const filtered = useMemo(() => {
-    return manageableResellers.filter((r) => {
+    let result = manageableResellers.filter((r) => {
       const s = search.toLowerCase();
       const matchesSearch =
         r.name.toLowerCase().includes(s) ||
         r.email?.toLowerCase().includes(s) ||
         r.whatsapp?.includes(search) ||
         r.id.toLowerCase().includes(s);
-      const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+      const matchesStatus = (() => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "top_sellers") return (clientCounts[r.id] || 0) > 0;
+        if (statusFilter === "inactive_7d") return r.status === "active" && !recentClientCounts[r.id];
+        if (statusFilter === "expiring_48h") {
+          const remaining = getDaysRemaining(r);
+          return remaining.days > 0 && remaining.days <= 2;
+        }
+        return r.status === statusFilter;
+      })();
       let matchesParent = true;
       if (parentFilter === "direct") {
         matchesParent = !r.parent_reseller_id;
@@ -667,7 +676,11 @@ export default function Resellers() {
       }
       return matchesSearch && matchesStatus && matchesParent;
     });
-  }, [manageableResellers, search, statusFilter, parentFilter]);
+    if (statusFilter === "top_sellers") {
+      result.sort((a, b) => (clientCounts[b.id] || 0) - (clientCounts[a.id] || 0));
+    }
+    return result;
+  }, [manageableResellers, search, statusFilter, parentFilter, clientCounts, recentClientCounts]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
