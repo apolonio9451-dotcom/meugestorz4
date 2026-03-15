@@ -1624,6 +1624,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_reseller_account_plans: {
+        Args: { _company_id: string }
+        Returns: {
+          plan_type: string
+          reseller_id: string
+        }[]
+      }
       get_reseller_company_id: { Args: { _user_id: string }; Returns: string }
       get_reseller_id: { Args: { _user_id: string }; Returns: string }
       get_reseller_password: { Args: { _reseller_id: string }; Returns: string }
@@ -1654,6 +1661,10 @@ export type Database = {
       }
       is_company_member: {
         Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      set_reseller_account_plan: {
+        Args: { _plan_type: string; _reseller_id: string }
         Returns: boolean
       }
     }
