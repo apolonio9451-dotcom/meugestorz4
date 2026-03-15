@@ -143,7 +143,7 @@ const ITEMS_PER_PAGE = 10;
 // === COMPONENT ===
 
 export default function Resellers() {
-  const { companyId, userRole, user, isTrial, resellerCredits, session } = useAuth();
+  const { effectiveCompanyId: companyId, userRole, user, isTrial, resellerCredits, session } = useAuth();
   const { enterGhostMode } = useGhostMode();
   const navigate = useNavigate();
   const { toast } = useToast();

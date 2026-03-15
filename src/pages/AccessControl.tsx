@@ -51,7 +51,7 @@ const roleColors: Record<string, string> = {
 };
 
 export default function AccessControl() {
-  const { companyId } = useAuth();
+  const { effectiveCompanyId: companyId } = useAuth();
   const { toast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
