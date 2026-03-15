@@ -60,6 +60,7 @@ export function GhostModeProvider({ children }: { children: ReactNode }) {
         ghostUserId,
         ghostCompanyId,
         ghostName,
+        ghostResellerId,
         isGhostMode: !!ghostUserId,
         enterGhostMode,
         exitGhostMode,
