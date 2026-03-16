@@ -490,7 +490,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
-                  <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
+                  <Lock className="w-3.5 h-3.5 text-[hsl(48,96%,53%)]" />
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                 </button>
               );
             }
