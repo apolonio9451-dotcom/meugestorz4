@@ -84,10 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("id", resellerCompanyId)
         .maybeSingle();
 
-      // Admins are always Pro regardless of company plan_type
-      const isAdminOrOwner = membershipRole === "admin" || membershipRole === "owner";
+      // Reseller account plan must follow its own company plan in real-time
       const dbPlan = (companyData as any)?.plan_type;
-      setPlanType(isAdminOrOwner || dbPlan === "pro" ? "pro" : "starter");
+      setPlanType(dbPlan === "starter" ? "starter" : "pro");
 
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
@@ -151,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Realtime: update reseller context instantly when credits/status change
+  // Realtime: refresh auth context instantly when reseller status/credits change
   useEffect(() => {
     if (!user) return;
 
@@ -166,14 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          const reseller = payload.new as { company_id: string; credit_balance: number; status: string };
+          const reseller = payload.new as { credit_balance: number };
           setResellerCredits(reseller.credit_balance);
-          if (reseller.status !== "trial") {
-            setIsTrial(false);
-            setTrialExpiresAt(null);
-          } else {
-            setIsTrial(true);
-          }
+          void fetchCompanyData(user.id);
         }
       )
       .subscribe();
@@ -183,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
-  // Realtime: update plan_type instantly when admin changes it
+  // Realtime: refresh plan/permissions instantly when company plan changes
   useEffect(() => {
     if (!user || !companyId) return;
 
@@ -197,19 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           table: "companies",
           filter: `id=eq.${companyId}`,
         },
-        (payload) => {
-          const company = payload.new as { plan_type: string };
-          // Owners/admins stay pro regardless
-          void (async () => {
-            const { data: membership } = await supabase
-              .from("company_memberships")
-              .select("role")
-              .eq("user_id", user.id)
-              .limit(1)
-              .maybeSingle();
-            const isAdminOrOwner = membership?.role === "admin" || membership?.role === "owner";
-            setPlanType(isAdminOrOwner || company.plan_type === "pro" ? "pro" : "starter");
-          })();
+        () => {
+          void fetchCompanyData(user.id);
         }
       )
       .subscribe();
@@ -218,6 +201,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user, companyId]);
+
+  // Safety revalidation: keep permissions up to date if any realtime packet is missed
+  useEffect(() => {
+    if (!user) return;
+
+    const refresh = () => {
+      void fetchCompanyData(user.id);
+    };
+
+    const interval = window.setInterval(refresh, 30000);
+    const onFocus = () => refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [user]);
 
   const signUp = async (email: string, password: string, fullName: string, companyName: string) => {
     const { data, error } = await supabase.auth.signUp({
@@ -242,7 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setParentCompanyId(null);
     setUserRole(null);
     setResellerCredits(null);
-    setPlanType("pro");
+    setPlanType("starter");
     setIsTrial(false);
     setTrialExpiresAt(null);
   };
