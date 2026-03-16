@@ -10,7 +10,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { RefreshCw, CheckCircle2, XCircle, Clock, Loader2, Activity } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Clock, Loader2, Activity, Zap } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 
 interface LogEntry {
   id: string;
@@ -49,6 +51,33 @@ export default function AutoSendLogs({ companyId }: Props) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+  const [restarting, setRestarting] = useState(false);
+
+  const handleRestart = async () => {
+    if (!companyId || restarting) return;
+    setRestarting(true);
+    try {
+      const { data, error } = await supabaseClient.functions.invoke("auto-send-messages", {
+        body: { manual: true },
+      });
+      if (error) throw error;
+      const sent = data?.sent ?? 0;
+      const errors = data?.errors ?? 0;
+      toast({
+        title: "Envios retomados",
+        description: `${sent + errors} mensagens pendentes processadas (${sent} enviadas, ${errors} erros).`,
+      });
+      fetchLogs();
+    } catch (err: any) {
+      toast({
+        title: "Erro ao reiniciar",
+        description: err?.message || "Não foi possível disparar os envios.",
+        variant: "destructive",
+      });
+    } finally {
+      setRestarting(false);
+    }
+  };
 
   const fetchLogs = async () => {
     if (!companyId) return;
@@ -123,10 +152,25 @@ export default function AutoSendLogs({ companyId }: Props) {
               <Activity className="w-4 h-4 text-primary" />
               Monitor de Envios
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleRestart}
+                disabled={restarting}
+                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white border-0"
+              >
+                {restarting ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Zap className="w-4 h-4 mr-1" />
+                )}
+                {restarting ? "Processando…" : "Reiniciar Envios"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            </div>
           </div>
 
           {/* Progress Summary */}
