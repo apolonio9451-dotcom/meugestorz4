@@ -1,41 +1,12 @@
-import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, TrendingUp, CalendarDays, Users, Target, MessageCircle, UserPlus, FileText, Server, UserCheck, UserX } from "lucide-react";
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-
-interface Stats {
-  todayRevenue: number;
-  todayPayments: number;
-  monthRevenue: number;
-  monthPayments: number;
-  forecast30d: number;
-  forecastInvoices: number;
-  activeClients: number;
-  totalClients: number;
-  leadsNew: number;
-  leadsContact: number;
-  leadsConverted: number;
-  openInvoices: number;
-  totalInvoices: number;
-}
-
-interface RecentPayment {
-  client: string;
-  amount: number;
-  date: string;
-  method: string;
-}
-
-interface UpcomingInvoice {
-  client: string;
-  ref: string;
-  amount: number;
-  dueDate: string;
-}
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface ServerStat {
   name: string;
@@ -44,107 +15,100 @@ interface ServerStat {
   expired: number;
 }
 
+async function fetchDashboardData(companyId: string) {
+  const today = new Date().toISOString().split("T")[0];
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+  const next7 = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+  const next30 = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+
+  const [clientsRes, subsRes] = await Promise.all([
+    supabase.from("clients").select("id, status, name, server").eq("company_id", companyId),
+    supabase.from("client_subscriptions").select("id, payment_status, amount, start_date, end_date, client_id").eq("company_id", companyId),
+  ]);
+
+  const clients = clientsRes.data || [];
+  const subs = subsRes.data || [];
+
+  const paidSubs = subs.filter((s) => s.payment_status === "paid");
+  const todayPaid = paidSubs.filter((s) => s.start_date === today);
+  const monthPaid = paidSubs.filter((s) => s.start_date >= monthStart);
+
+  const pendingSubs = subs.filter((s) => s.payment_status === "pending" || s.payment_status === "overdue");
+  const upcoming7 = pendingSubs.filter((s) => s.end_date >= today && s.end_date <= next7);
+  const upcoming30 = pendingSubs.filter((s) => s.end_date >= today && s.end_date <= next30);
+
+  const clientMap = new Map(clients.map((c) => [c.id, c.name]));
+
+  const latestSub: Record<string, string> = {};
+  subs.forEach(s => {
+    if (!latestSub[s.client_id] || s.end_date > latestSub[s.client_id]) {
+      latestSub[s.client_id] = s.end_date;
+    }
+  });
+
+  const srvMap: Record<string, ServerStat> = {};
+  clients.filter(c => c.status !== "excluded" && c.server).forEach(c => {
+    const srv = c.server!;
+    if (!srvMap[srv]) srvMap[srv] = { name: srv, total: 0, active: 0, expired: 0 };
+    srvMap[srv].total++;
+    const endDate = latestSub[c.id];
+    if (endDate) {
+      const days = differenceInCalendarDays(parseISO(endDate), new Date());
+      if (days >= 0) srvMap[srv].active++;
+      else srvMap[srv].expired++;
+    }
+  });
+
+  return {
+    stats: {
+      todayRevenue: todayPaid.reduce((sum, s) => sum + Number(s.amount), 0),
+      todayPayments: todayPaid.length,
+      monthRevenue: monthPaid.reduce((sum, s) => sum + Number(s.amount), 0),
+      monthPayments: monthPaid.length,
+      forecast30d: upcoming30.reduce((sum, s) => sum + Number(s.amount), 0),
+      forecastInvoices: upcoming30.length,
+      activeClients: clients.filter((c) => c.status === "active").length,
+      totalClients: clients.length,
+      leadsNew: 0,
+      leadsContact: 0,
+      leadsConverted: 0,
+      openInvoices: pendingSubs.length,
+      totalInvoices: subs.length,
+    },
+    recentPayments: monthPaid.slice(0, 5).map((s) => ({
+      client: clientMap.get(s.client_id) || "—",
+      amount: Number(s.amount),
+      date: s.start_date,
+      method: "—",
+    })),
+    upcomingInvoices: upcoming7.slice(0, 5).map((s) => ({
+      client: clientMap.get(s.client_id) || "—",
+      ref: s.id.slice(0, 8),
+      amount: Number(s.amount),
+      dueDate: s.end_date,
+    })),
+    serverStats: Object.values(srvMap).sort((a, b) => b.total - a.total),
+  };
+}
+
 export default function Dashboard() {
   const { effectiveCompanyId: companyId } = useAuth();
-  const [stats, setStats] = useState<Stats>({
-    todayRevenue: 0, todayPayments: 0,
-    monthRevenue: 0, monthPayments: 0,
-    forecast30d: 0, forecastInvoices: 0,
-    activeClients: 0, totalClients: 0,
-    leadsNew: 0, leadsContact: 0, leadsConverted: 0,
-    openInvoices: 0, totalInvoices: 0,
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["dashboard-stats", companyId],
+    queryFn: () => fetchDashboardData(companyId!),
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5,
   });
-  const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([]);
-  const [upcomingInvoices, setUpcomingInvoices] = useState<UpcomingInvoice[]>([]);
-  const [serverStats, setServerStats] = useState<ServerStat[]>([]);
 
-  useEffect(() => {
-    if (!companyId) return;
-
-    const fetchStats = async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
-      const next7 = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
-      const next30 = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
-
-      const [clientsRes, subsRes] = await Promise.all([
-        supabase.from("clients").select("id, status, name, server").eq("company_id", companyId),
-        supabase.from("client_subscriptions").select("id, payment_status, amount, start_date, end_date, client_id").eq("company_id", companyId),
-      ]);
-
-      const clients = clientsRes.data || [];
-      const subs = subsRes.data || [];
-
-      const paidSubs = subs.filter((s) => s.payment_status === "paid");
-      const todayPaid = paidSubs.filter((s) => s.start_date === today);
-      const monthPaid = paidSubs.filter((s) => s.start_date >= monthStart);
-
-      const pendingSubs = subs.filter((s) => s.payment_status === "pending" || s.payment_status === "overdue");
-      const upcoming7 = pendingSubs.filter((s) => s.end_date >= today && s.end_date <= next7);
-      const upcoming30 = pendingSubs.filter((s) => s.end_date >= today && s.end_date <= next30);
-
-      const clientMap = new Map(clients.map((c) => [c.id, c.name]));
-
-      // Build latest sub map for server stats
-      const latestSub: Record<string, string> = {};
-      subs.forEach(s => {
-        if (!latestSub[s.client_id] || s.end_date > latestSub[s.client_id]) {
-          latestSub[s.client_id] = s.end_date;
-        }
-      });
-
-      // Server stats
-      const srvMap: Record<string, ServerStat> = {};
-      clients.filter(c => c.status !== "excluded" && c.server).forEach(c => {
-        const srv = c.server!;
-        if (!srvMap[srv]) srvMap[srv] = { name: srv, total: 0, active: 0, expired: 0 };
-        srvMap[srv].total++;
-        const endDate = latestSub[c.id];
-        if (endDate) {
-          const days = differenceInCalendarDays(parseISO(endDate), new Date());
-          if (days >= 0) srvMap[srv].active++;
-          else srvMap[srv].expired++;
-        }
-      });
-      setServerStats(Object.values(srvMap).sort((a, b) => b.total - a.total));
-
-      setStats({
-        todayRevenue: todayPaid.reduce((sum, s) => sum + Number(s.amount), 0),
-        todayPayments: todayPaid.length,
-        monthRevenue: monthPaid.reduce((sum, s) => sum + Number(s.amount), 0),
-        monthPayments: monthPaid.length,
-        forecast30d: upcoming30.reduce((sum, s) => sum + Number(s.amount), 0),
-        forecastInvoices: upcoming30.length,
-        activeClients: clients.filter((c) => c.status === "active").length,
-        totalClients: clients.length,
-        leadsNew: 0,
-        leadsContact: 0,
-        leadsConverted: 0,
-        openInvoices: pendingSubs.length,
-        totalInvoices: subs.length,
-      });
-
-      setRecentPayments(
-        monthPaid.slice(0, 5).map((s) => ({
-          client: clientMap.get(s.client_id) || "—",
-          amount: Number(s.amount),
-          date: s.start_date,
-          method: "—",
-        }))
-      );
-
-      setUpcomingInvoices(
-        upcoming7.slice(0, 5).map((s) => ({
-          client: clientMap.get(s.client_id) || "—",
-          ref: s.id.slice(0, 8),
-          amount: Number(s.amount),
-          dueDate: s.end_date,
-        }))
-      );
-    };
-
-    fetchStats();
-  }, [companyId]);
+  const stats = data?.stats ?? {
+    todayRevenue: 0, todayPayments: 0, monthRevenue: 0, monthPayments: 0,
+    forecast30d: 0, forecastInvoices: 0, activeClients: 0, totalClients: 0,
+    leadsNew: 0, leadsContact: 0, leadsConverted: 0, openInvoices: 0, totalInvoices: 0,
+  };
+  const recentPayments = data?.recentPayments ?? [];
+  const upcomingInvoices = data?.upcomingInvoices ?? [];
+  const serverStats = data?.serverStats ?? [];
 
   const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
@@ -181,8 +145,6 @@ export default function Dashboard() {
     </div>
   );
 
-  const COLORS = ["hsl(var(--primary))", "hsl(160, 65%, 45%)", "hsl(38, 92%, 50%)", "hsl(200, 70%, 50%)", "hsl(280, 60%, 50%)"];
-
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload as ServerStat;
@@ -196,8 +158,22 @@ export default function Dashboard() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-page-enter">
+        <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-32 mt-2" /></div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">Visão geral do seu negócio</p>
@@ -206,7 +182,6 @@ export default function Dashboard() {
       {renderCards(topCards)}
       {renderCards(bottomCards)}
 
-      {/* Server stats chart */}
       {serverStats.length > 0 && (
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center gap-2 pb-1">
@@ -214,7 +189,6 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-semibold">Clientes por Servidor</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-3">
-            {/* Summary pills */}
             <div className="flex items-center gap-2 mb-3 px-2">
               <div className="flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-[10px]">
                 <Users className="w-3 h-3 text-muted-foreground" />
@@ -241,7 +215,6 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            {/* Legend */}
             <div className="flex items-center justify-center gap-4 mt-1 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Ativos</span>
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-destructive inline-block" /> Vencidos</span>
