@@ -32,14 +32,30 @@ const roleLabels: Record<string, string> = {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [parentCompanyId, setParentCompanyId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [resellerCredits, setResellerCredits] = useState<number | null>(null);
-  const [planType, setPlanType] = useState<"starter" | "pro">("pro");
-  const [isTrial, setIsTrial] = useState(false);
-  const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from localStorage cache to prevent flash
+  const cached = (() => {
+    try {
+      const raw = localStorage.getItem("auth_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+
+  const [companyId, setCompanyId] = useState<string | null>(cached?.companyId ?? null);
+  const [parentCompanyId, setParentCompanyId] = useState<string | null>(cached?.parentCompanyId ?? null);
+  const [userRole, setUserRole] = useState<string | null>(cached?.userRole ?? null);
+  const [resellerCredits, setResellerCredits] = useState<number | null>(cached?.resellerCredits ?? null);
+  const [planType, setPlanType] = useState<"starter" | "pro">(cached?.planType === "starter" ? "starter" : "pro");
+  const [isTrial, setIsTrial] = useState(cached?.isTrial ?? false);
+  const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(cached?.trialExpiresAt ?? null);
+  const [loading, setLoading] = useState(!cached);
+
+  const persistCache = (data: Record<string, any>) => {
+    try { localStorage.setItem("auth_cache", JSON.stringify(data)); } catch {}
+  };
+
+  const clearCache = () => {
+    try { localStorage.removeItem("auth_cache"); } catch {}
+  };
 
   const fetchCompanyData = async (userId: string) => {
     setCompanyId(null);
@@ -90,7 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
-      setTrialExpiresAt(resellerIsTrial ? membership?.trial_expires_at || null : null);
+      const trialExp = resellerIsTrial ? membership?.trial_expires_at || null : null;
+      setTrialExpiresAt(trialExp);
+      const resolvedPlan = dbPlan === "starter" ? "starter" : "pro";
+      persistCache({ companyId: resellerCompanyId, parentCompanyId: resellerData.company_id, userRole: resolvedRole, resellerCredits: resellerData.credit_balance, planType: resolvedPlan, isTrial: resellerIsTrial, trialExpiresAt: trialExp });
       return;
     }
 
@@ -100,15 +119,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setResellerCredits(null);
       setIsTrial(membership.is_trial || false);
       setTrialExpiresAt(membership.trial_expires_at || null);
-      setUserRole(roleLabels[membership.role] || membership.role);
+      const role = roleLabels[membership.role] || membership.role;
+      setUserRole(role);
 
-      // Fetch plan_type from companies
       const { data: companyData } = await supabase
         .from("companies")
         .select("plan_type")
         .eq("id", membership.company_id)
         .maybeSingle();
-      setPlanType((companyData as any)?.plan_type === "starter" ? "starter" : "pro");
+      const plan = (companyData as any)?.plan_type === "starter" ? "starter" : "pro";
+      setPlanType(plan);
+      persistCache({ companyId: membership.company_id, parentCompanyId: null, userRole: role, resellerCredits: null, planType: plan, isTrial: membership.is_trial || false, trialExpiresAt: membership.trial_expires_at || null });
     }
   };
 
@@ -131,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPlanType("starter");
       setIsTrial(false);
       setTrialExpiresAt(null);
+      clearCache();
       setLoading(false);
 
       // If token refresh failed (user deleted), redirect to auth
@@ -252,6 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPlanType("starter");
     setIsTrial(false);
     setTrialExpiresAt(null);
+    clearCache();
   };
 
   return (
