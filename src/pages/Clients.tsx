@@ -767,7 +767,7 @@ export default function Clients() {
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <Label className="text-sm">Nome *</Label>
-                    <Input name="name" required placeholder="Nome completo" defaultValue={editing?.name || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                    <Input name="name" required autoFocus placeholder="Nome completo" defaultValue={editing?.name || ""} className="h-10 text-[16px] md:text-sm border-primary/20 focus:border-primary/50" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
@@ -960,6 +960,7 @@ export default function Clients() {
                         onChange={(e) => setFormAmount(e.target.value)}
                         placeholder="30.00"
                         type="number"
+                        inputMode="decimal"
                         step="0.01"
                         className="h-10 text-sm border-primary/30 focus:ring-primary/40"
                       />
