@@ -167,10 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         (payload) => {
           const reseller = payload.new as { company_id: string; credit_balance: number; status: string };
-          // Do NOT overwrite companyId here — it should stay as the reseller's own company (from membership)
-          // reseller.company_id is the PARENT company, not the reseller's own
           setResellerCredits(reseller.credit_balance);
-          // Role is NOT changed here — it comes from membership, not credits
           if (reseller.status !== "trial") {
             setIsTrial(false);
             setTrialExpiresAt(null);
@@ -185,6 +182,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Realtime: update plan_type instantly when admin changes it
+  useEffect(() => {
+    if (!user || !companyId) return;
+
+    const channel = supabase
+      .channel("company-plan-sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "companies",
+          filter: `id=eq.${companyId}`,
+        },
+        (payload) => {
+          const company = payload.new as { plan_type: string };
+          // Owners/admins stay pro regardless
+          void (async () => {
+            const { data: membership } = await supabase
+              .from("company_memberships")
+              .select("role")
+              .eq("user_id", user.id)
+              .limit(1)
+              .maybeSingle();
+            const isAdminOrOwner = membership?.role === "admin" || membership?.role === "owner";
+            setPlanType(isAdminOrOwner || company.plan_type === "pro" ? "pro" : "starter");
+          })();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, companyId]);
 
   const signUp = async (email: string, password: string, fullName: string, companyName: string) => {
     const { data, error } = await supabase.auth.signUp({
