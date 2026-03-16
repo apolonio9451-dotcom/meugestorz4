@@ -178,20 +178,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
-        setLoading(true);
+        const shouldShowBlockingLoader = !hydratedRef.current;
+        if (shouldShowBlockingLoader) setLoading(true);
+
         await fetchCompanyData(nextSession.user.id);
-        setLoading(false);
+
+        hydratedRef.current = true;
+        if (shouldShowBlockingLoader) setLoading(false);
         return;
       }
 
-      setCompanyId(null);
-      setParentCompanyId(null);
-      setUserRole(null);
-      setResellerCredits(null);
-      setPlanType("starter");
-      setIsTrial(false);
-      setTrialExpiresAt(null);
-      clearCache();
+      hydratedRef.current = false;
+      resetCompanyState(true);
       setLoading(false);
 
       // If token refresh failed (user deleted), redirect to auth
