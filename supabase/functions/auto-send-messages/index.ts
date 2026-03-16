@@ -22,13 +22,23 @@ function getGreeting(): string {
   return "Boa noite";
 }
 
-function getDayOfWeek(): string {
+function getDayOfWeekFor(date: Date): string {
   const dias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-  return dias[getBrasiliaDate().getUTCDay()];
+  return dias[date.getUTCDay()];
 }
 
-function getDayOfMonth(): string {
-  return String(getBrasiliaDate().getUTCDate());
+function getDayOfMonthFor(date: Date): string {
+  return String(date.getUTCDate());
+}
+
+/** Returns the reference date for template variables based on category.
+ *  For "vence_amanha", {dia_semana} and {dia} must refer to TOMORROW. */
+function getTemplateDateForCategory(category: string): Date {
+  const brasilia = getBrasiliaDate();
+  if (category === "vence_amanha") {
+    brasilia.setUTCDate(brasilia.getUTCDate() + 1);
+  }
+  return brasilia;
 }
 
 function replacePlaceholders(template: string, vars: Record<string, string>): string {
@@ -235,10 +245,11 @@ Deno.serve(async (req) => {
         const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
+        const refDate = getTemplateDateForCategory(category);
         const messageBody = replacePlaceholders(templates[category], {
           saudacao: getGreeting(),
-          dia_semana: getDayOfWeek(),
-          dia: getDayOfMonth(),
+          dia_semana: getDayOfWeekFor(refDate),
+          dia: getDayOfMonthFor(refDate),
           primeiro_nome: (client.name || "").split(" ")[0],
           nome: client.name || "",
           plano: plan?.name || "",
@@ -358,8 +369,11 @@ Deno.serve(async (req) => {
         const plan = sub?.subscription_plans;
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
+        const refDateSupport = getTemplateDateForCategory("suporte");
         const messageBody = replacePlaceholders(supportTemplate, {
           saudacao: getGreeting(),
+          dia_semana: getDayOfWeekFor(refDateSupport),
+          dia: getDayOfMonthFor(refDateSupport),
           primeiro_nome: (client.name || "").split(" ")[0],
           nome: client.name || "",
           plano: plan?.name || "",
@@ -479,8 +493,11 @@ Deno.serve(async (req) => {
 
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
+        const refDateFollowup = getTemplateDateForCategory("followup");
         const messageBody = replacePlaceholders(followupTemplate, {
           saudacao: getGreeting(),
+          dia_semana: getDayOfWeekFor(refDateFollowup),
+          dia: getDayOfMonthFor(refDateFollowup),
           primeiro_nome: (client.name || "").split(" ")[0],
           nome: client.name || "",
           plano: plan?.name || "",
