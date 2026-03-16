@@ -31,9 +31,11 @@ function getDayOfMonthFor(date: Date): string {
   return String(date.getUTCDate());
 }
 
-/** Returns the reference date for template variables based on category.
- *  For "vence_amanha", {dia_semana} and {dia} must refer to TOMORROW. */
-function getTemplateDateForCategory(category: string): Date {
+/** Returns the reference date for {dia_semana} and {dia} template variables.
+ *  Uses the client's ACTUAL expiry date from the database when available,
+ *  falling back to category-based calculation otherwise. */
+function getTemplateDateForCategory(category: string, clientEndDate?: Date): Date {
+  if (clientEndDate) return clientEndDate;
   const brasilia = getBrasiliaDate();
   if (category === "vence_amanha") {
     brasilia.setUTCDate(brasilia.getUTCDate() + 1);
