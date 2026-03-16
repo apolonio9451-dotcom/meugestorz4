@@ -112,6 +112,24 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent iOS auto-zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  @media (min-width: 768px) {
+    input, textarea, select {
+      font-size: inherit !important;
+    }
+  }
+
+  /* Remove 300ms tap delay */
+  button, a, [role="button"], input, textarea, select, label {
+    touch-action: manipulation;
   }
 
   h1, h2, h3, h4, h5, h6 {
