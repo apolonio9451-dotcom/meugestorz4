@@ -84,10 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("id", resellerCompanyId)
         .maybeSingle();
 
-      // Admins are always Pro regardless of company plan_type
-      const isAdminOrOwner = membershipRole === "admin" || membershipRole === "owner";
+      // Reseller account plan must follow its own company plan in real-time
       const dbPlan = (companyData as any)?.plan_type;
-      setPlanType(isAdminOrOwner || dbPlan === "pro" ? "pro" : "starter");
+      setPlanType(dbPlan === "starter" ? "starter" : "pro");
 
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
