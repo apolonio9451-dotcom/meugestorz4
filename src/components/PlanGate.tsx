@@ -9,12 +9,13 @@ interface PlanGateProps {
 }
 
 export default function PlanGate({ children }: PlanGateProps) {
-  const { planType, companyId } = useAuth();
+  const { planType, companyId, userRole } = useAuth();
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
+  const isOwner = userRole === "Proprietário";
 
   useEffect(() => {
-    if (planType === "pro" || !companyId || hasRedirected.current) return;
+    if (planType === "pro" || isOwner || !companyId || hasRedirected.current) return;
 
     hasRedirected.current = true;
     toast({
@@ -24,9 +25,9 @@ export default function PlanGate({ children }: PlanGateProps) {
       variant: "destructive",
     });
     navigate("/dashboard", { replace: true });
-  }, [planType, companyId, navigate]);
+  }, [planType, isOwner, companyId, navigate]);
 
-  if (planType !== "pro") return null;
+  if (planType !== "pro" && !isOwner) return null;
 
   return <>{children}</>;
 }

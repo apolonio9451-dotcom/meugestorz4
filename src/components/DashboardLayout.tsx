@@ -434,6 +434,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       />
                       {allChildren.map((child, idx) => {
                         const childLocked = child.proOnly && planType !== "pro";
+
+                        // Instância deve sumir totalmente para Starter
+                        if (child.href === "/dashboard/settings" && childLocked) {
+                          return null;
+                        }
+
                         return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                           {/* Horizontal branch line */}
