@@ -477,7 +477,7 @@ export default function Clients() {
     setDuplicateWarning(null);
     setDuplicateConfirmed(false);
     setPendingSubmitEvent(null);
-    setDialogOpen(true);
+    setDialogOpenSynced(true);
   };
 
   const [duplicateConfirmed, setDuplicateConfirmed] = useState(false);
