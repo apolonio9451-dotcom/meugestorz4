@@ -106,7 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const resellerIsTrial = resellerData.status === "trial";
       setIsTrial(resellerIsTrial);
-      setTrialExpiresAt(resellerIsTrial ? membership?.trial_expires_at || null : null);
+      const trialExp = resellerIsTrial ? membership?.trial_expires_at || null : null;
+      setTrialExpiresAt(trialExp);
+      const resolvedPlan = dbPlan === "starter" ? "starter" : "pro";
+      persistCache({ companyId: resellerCompanyId, parentCompanyId: resellerData.company_id, userRole: resolvedRole, resellerCredits: resellerData.credit_balance, planType: resolvedPlan, isTrial: resellerIsTrial, trialExpiresAt: trialExp });
       return;
     }
 
@@ -116,15 +119,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setResellerCredits(null);
       setIsTrial(membership.is_trial || false);
       setTrialExpiresAt(membership.trial_expires_at || null);
-      setUserRole(roleLabels[membership.role] || membership.role);
+      const role = roleLabels[membership.role] || membership.role;
+      setUserRole(role);
 
-      // Fetch plan_type from companies
       const { data: companyData } = await supabase
         .from("companies")
         .select("plan_type")
         .eq("id", membership.company_id)
         .maybeSingle();
-      setPlanType((companyData as any)?.plan_type === "starter" ? "starter" : "pro");
+      const plan = (companyData as any)?.plan_type === "starter" ? "starter" : "pro";
+      setPlanType(plan);
+      persistCache({ companyId: membership.company_id, parentCompanyId: null, userRole: role, resellerCredits: null, planType: plan, isTrial: membership.is_trial || false, trialExpiresAt: membership.trial_expires_at || null });
     }
   };
 
