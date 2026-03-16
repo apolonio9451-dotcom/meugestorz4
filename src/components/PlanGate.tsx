@@ -13,15 +13,10 @@ export default function PlanGate({ children }: PlanGateProps) {
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
   const isOwner = userRole === "Proprietário";
-
-  // While auth is loading, render nothing — avoids flash of paywall
-  if (loading) return null;
-
-  // Owner and pro users always pass through immediately
   const hasAccess = planType === "pro" || isOwner;
 
   useEffect(() => {
-    if (hasAccess || !companyId || hasRedirected.current) return;
+    if (loading || hasAccess || !companyId || hasRedirected.current) return;
 
     hasRedirected.current = true;
     toast({
@@ -31,7 +26,10 @@ export default function PlanGate({ children }: PlanGateProps) {
       variant: "destructive",
     });
     navigate("/dashboard", { replace: true });
-  }, [hasAccess, companyId, navigate]);
+  }, [loading, hasAccess, companyId, navigate]);
+
+  // While auth is loading, render nothing — avoids flash of paywall
+  if (loading) return null;
 
   if (!hasAccess) return null;
 
