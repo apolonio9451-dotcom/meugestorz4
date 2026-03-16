@@ -775,6 +775,8 @@ export default function Clients() {
                       <Input 
                         name="whatsapp" 
                         required 
+                        type="tel"
+                        inputMode="numeric"
                         placeholder="5521999990000" 
                         defaultValue={editing?.whatsapp || ""} 
                         className={cn("h-10 text-sm border-primary/20 focus:border-primary/50", duplicateWarning && "border-destructive")}
