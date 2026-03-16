@@ -586,7 +586,7 @@ export default function Clients() {
 
     clearFormDraft();
     setLoading(false);
-    setDialogOpen(false);
+    setDialogOpenSynced(false);
     setEditing(null);
     setFormMacKeys([]);
     setFormCredentials([{ username: "", password: "", label: "" }]);
