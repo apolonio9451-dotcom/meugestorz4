@@ -960,6 +960,7 @@ export default function Clients() {
                         onChange={(e) => setFormAmount(e.target.value)}
                         placeholder="30.00"
                         type="number"
+                        inputMode="decimal"
                         step="0.01"
                         className="h-10 text-sm border-primary/30 focus:ring-primary/40"
                       />
