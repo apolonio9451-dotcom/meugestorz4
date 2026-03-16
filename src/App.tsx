@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,26 +9,35 @@ import { GhostModeProvider } from "@/hooks/useGhostMode";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PlanGate from "@/components/PlanGate";
 import DashboardLayout from "@/components/DashboardLayout";
-import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
-import Clients from "@/pages/Clients";
-import Plans from "@/pages/Plans";
-import Subscriptions from "@/pages/Subscriptions";
-import Servers from "@/pages/Servers";
-import Financial from "@/pages/Financial";
-import WinBack from "@/pages/WinBack";
-import Marketing from "@/pages/Marketing";
-import Resellers from "@/pages/Resellers";
-import SettingsPage from "@/pages/Settings";
-import Messages from "@/pages/Messages";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// Lazy-loaded pages — only downloaded when the route is visited
+const Auth = lazy(() => import("@/pages/Auth"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Clients = lazy(() => import("@/pages/Clients"));
+const Plans = lazy(() => import("@/pages/Plans"));
+const Subscriptions = lazy(() => import("@/pages/Subscriptions"));
+const Servers = lazy(() => import("@/pages/Servers"));
+const Financial = lazy(() => import("@/pages/Financial"));
+const WinBack = lazy(() => import("@/pages/WinBack"));
+const Marketing = lazy(() => import("@/pages/Marketing"));
+const Resellers = lazy(() => import("@/pages/Resellers"));
+const SettingsPage = lazy(() => import("@/pages/Settings"));
+const Messages = lazy(() => import("@/pages/Messages"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const TrialAccess = lazy(() => import("@/pages/TrialAccess"));
+const Trials = lazy(() => import("@/pages/Trials"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const ResellerPanel = lazy(() => import("@/pages/ResellerPanel"));
+const Chatbot = lazy(() => import("@/pages/Chatbot"));
 
-import NotFound from "@/pages/NotFound";
-import TrialAccess from "@/pages/TrialAccess";
-import Trials from "@/pages/Trials";
-import Profile from "@/pages/Profile";
-import ResellerPanel from "@/pages/ResellerPanel";
-import Chatbot from "@/pages/Chatbot";
+const PageLoader = () => (
+  <div className="flex flex-col gap-4 p-6">
+    <Skeleton className="h-8 w-48" />
+    <Skeleton className="h-4 w-32" />
+    <Skeleton className="h-64 w-full rounded-xl" />
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
