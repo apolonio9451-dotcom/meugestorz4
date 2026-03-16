@@ -439,7 +439,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           {/* Horizontal branch line */}
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
                           {childLocked ? (
-                            <button
+                             <button
                               onClick={() => {
                                 setUpgradeFeature(child.label);
                                 setUpgradeModalOpen(true);
@@ -449,7 +449,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             >
                               <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                               <span className="flex-1">{child.label}</span>
-                              <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
+                              <Lock className="w-3 h-3 text-[hsl(48,96%,53%)]" />
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                             </button>
                           ) : (
                           <Link
