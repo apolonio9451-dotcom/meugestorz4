@@ -32,14 +32,22 @@ const roleLabels: Record<string, string> = {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [parentCompanyId, setParentCompanyId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [resellerCredits, setResellerCredits] = useState<number | null>(null);
-  const [planType, setPlanType] = useState<"starter" | "pro">("pro");
-  const [isTrial, setIsTrial] = useState(false);
-  const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from localStorage cache to prevent flash
+  const cached = (() => {
+    try {
+      const raw = localStorage.getItem("auth_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+
+  const [companyId, setCompanyId] = useState<string | null>(cached?.companyId ?? null);
+  const [parentCompanyId, setParentCompanyId] = useState<string | null>(cached?.parentCompanyId ?? null);
+  const [userRole, setUserRole] = useState<string | null>(cached?.userRole ?? null);
+  const [resellerCredits, setResellerCredits] = useState<number | null>(cached?.resellerCredits ?? null);
+  const [planType, setPlanType] = useState<"starter" | "pro">(cached?.planType === "starter" ? "starter" : "pro");
+  const [isTrial, setIsTrial] = useState(cached?.isTrial ?? false);
+  const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(cached?.trialExpiresAt ?? null);
+  const [loading, setLoading] = useState(!cached);
 
   const fetchCompanyData = async (userId: string) => {
     setCompanyId(null);
