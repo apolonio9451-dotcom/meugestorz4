@@ -274,6 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPlanType("starter");
     setIsTrial(false);
     setTrialExpiresAt(null);
+    clearCache();
   };
 
   return (
