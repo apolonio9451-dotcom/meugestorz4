@@ -49,6 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(cached?.trialExpiresAt ?? null);
   const [loading, setLoading] = useState(!cached);
 
+  const persistCache = (data: Record<string, any>) => {
+    try { localStorage.setItem("auth_cache", JSON.stringify(data)); } catch {}
+  };
+
+  const clearCache = () => {
+    try { localStorage.removeItem("auth_cache"); } catch {}
+  };
+
   const fetchCompanyData = async (userId: string) => {
     setCompanyId(null);
     setParentCompanyId(null);
