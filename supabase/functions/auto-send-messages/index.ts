@@ -495,7 +495,8 @@ Deno.serve(async (req) => {
 
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
-        const refDateFollowup = getTemplateDateForCategory("followup");
+        const followupEndDate = sub ? new Date(sub.end_date + "T00:00:00") : undefined;
+        const refDateFollowup = getTemplateDateForCategory("followup", followupEndDate);
         const messageBody = replacePlaceholders(followupTemplate, {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeekFor(refDateFollowup),
