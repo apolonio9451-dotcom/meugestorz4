@@ -152,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPlanType("starter");
       setIsTrial(false);
       setTrialExpiresAt(null);
+      clearCache();
       setLoading(false);
 
       // If token refresh failed (user deleted), redirect to auth
