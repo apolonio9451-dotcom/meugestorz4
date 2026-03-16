@@ -29,7 +29,15 @@ import Profile from "@/pages/Profile";
 import ResellerPanel from "@/pages/ResellerPanel";
 import Chatbot from "@/pages/Chatbot";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
 
 const DashboardRoute = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
