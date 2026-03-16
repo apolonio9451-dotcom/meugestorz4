@@ -558,6 +558,7 @@ export default function Clients() {
     const isNew = !editing;
     const selectedPlan = plans.find(p => p.id === formPlanId);
 
+    clearFormDraft();
     setLoading(false);
     setDialogOpen(false);
     setEditing(null);
