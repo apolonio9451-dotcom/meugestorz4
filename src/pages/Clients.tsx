@@ -255,6 +255,30 @@ export default function Clients() {
 
   useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchPixKey(); }, [companyId]);
 
+  // Sync dialog state to URL params and localStorage flag
+  const REGISTERING_KEY = `meugestor-is-registering-${companyId}`;
+
+  const setDialogOpenSynced = useCallback((open: boolean) => {
+    setDialogOpen(open);
+    if (open) {
+      setSearchParams(prev => { prev.set("novo", "true"); return prev; }, { replace: true });
+      try { localStorage.setItem(REGISTERING_KEY, "true"); } catch {}
+    } else {
+      setSearchParams(prev => { prev.delete("novo"); return prev; }, { replace: true });
+      try { localStorage.removeItem(REGISTERING_KEY); } catch {}
+    }
+  }, [setSearchParams, REGISTERING_KEY]);
+
+  // Auto-restore modal on mount if URL has ?novo=true or localStorage flag is set
+  useEffect(() => {
+    const shouldReopen = searchParams.get("novo") === "true" || 
+      (() => { try { return localStorage.getItem(REGISTERING_KEY) === "true"; } catch { return false; } })();
+    if (shouldReopen && !dialogOpen && !editing) {
+      openDialog(); // This will restore draft from localStorage
+    }
+  }, [companyId]); // Only on mount / companyId change
+
+
   useEffect(() => {
     if (!companyId) return;
 
