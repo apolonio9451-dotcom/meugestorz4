@@ -51,6 +51,33 @@ export default function AutoSendLogs({ companyId }: Props) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+  const [restarting, setRestarting] = useState(false);
+
+  const handleRestart = async () => {
+    if (!companyId || restarting) return;
+    setRestarting(true);
+    try {
+      const { data, error } = await supabaseClient.functions.invoke("auto-send-messages", {
+        body: { manual: true },
+      });
+      if (error) throw error;
+      const sent = data?.totalSent ?? 0;
+      const errors = data?.totalErrors ?? 0;
+      toast({
+        title: "Envios retomados",
+        description: `${sent + errors} mensagens pendentes processadas (${sent} enviadas, ${errors} erros).`,
+      });
+      fetchLogs();
+    } catch (err: any) {
+      toast({
+        title: "Erro ao reiniciar",
+        description: err?.message || "Não foi possível disparar os envios.",
+        variant: "destructive",
+      });
+    } finally {
+      setRestarting(false);
+    }
+  };
 
   const fetchLogs = async () => {
     if (!companyId) return;
