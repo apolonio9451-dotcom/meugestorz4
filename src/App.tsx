@@ -63,6 +63,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GhostModeProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </GhostModeProvider>
         </AuthProvider>
       </BrowserRouter>
