@@ -9,13 +9,14 @@ interface PlanGateProps {
 }
 
 export default function PlanGate({ children }: PlanGateProps) {
-  const { planType, companyId, userRole } = useAuth();
+  const { planType, companyId, userRole, loading } = useAuth();
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
   const isOwner = userRole === "Proprietário";
+  const hasAccess = planType === "pro" || isOwner;
 
   useEffect(() => {
-    if (planType === "pro" || isOwner || !companyId || hasRedirected.current) return;
+    if (loading || hasAccess || !companyId || hasRedirected.current) return;
 
     hasRedirected.current = true;
     toast({
@@ -25,9 +26,12 @@ export default function PlanGate({ children }: PlanGateProps) {
       variant: "destructive",
     });
     navigate("/dashboard", { replace: true });
-  }, [planType, isOwner, companyId, navigate]);
+  }, [loading, hasAccess, companyId, navigate]);
 
-  if (planType !== "pro" && !isOwner) return null;
+  // While auth is loading, render nothing — avoids flash of paywall
+  if (loading) return null;
+
+  if (!hasAccess) return null;
 
   return <>{children}</>;
 }
