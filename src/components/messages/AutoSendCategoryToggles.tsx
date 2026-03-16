@@ -56,6 +56,8 @@ const autoSendCategories = [
 
 interface Props {
   companyId: string | null;
+  planType?: string;
+  onUpgradeClick?: () => void;
 }
 
 export default function AutoSendCategoryToggles({ companyId }: Props) {
