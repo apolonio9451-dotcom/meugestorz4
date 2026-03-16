@@ -60,7 +60,8 @@ interface Props {
   onUpgradeClick?: () => void;
 }
 
-export default function AutoSendCategoryToggles({ companyId }: Props) {
+export default function AutoSendCategoryToggles({ companyId, planType, onUpgradeClick }: Props) {
+  const isStarter = planType !== "pro";
   const [activeCategories, setActiveCategories] = useState<Record<string, boolean>>({});
   const [autoSendHour, setAutoSendHour] = useState(8);
   const [autoSendMinute, setAutoSendMinute] = useState(0);
