@@ -185,3 +185,24 @@
     border-bottom: 1px solid hsl(var(--glass-border) / 0.25);
   }
 }
+
+/* Page transition animation */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Touch feedback for interactive elements */
+button, [role="button"], a[href] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}

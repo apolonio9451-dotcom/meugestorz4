@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
 
@@ -29,32 +31,89 @@ interface Plan { id: string; name: string; price: number; duration_days: number;
 
 export default function Subscriptions() {
   const { effectiveCompanyId: companyId } = useAuth();
-  const [subs, setSubs] = useState<Subscription[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
 
-  const fetchAll = async () => {
-    if (!companyId) return;
-    const [subsRes, clientsRes, plansRes] = await Promise.all([
-      supabase.from("client_subscriptions").select("*, clients(name), subscription_plans(name)").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("clients").select("id, name").eq("company_id", companyId).eq("status", "active"),
-      supabase.from("subscription_plans").select("id, name, price, duration_days").eq("company_id", companyId).eq("is_active", true),
-    ]);
-    setSubs(subsRes.data || []);
-    setClients(clientsRes.data || []);
-    setPlans(plansRes.data || []);
-  };
+  const { data: subs = [], isLoading: subsLoading } = useQuery({
+    queryKey: ["subscriptions", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("client_subscriptions")
+        .select("*, clients(name), subscription_plans(name)")
+        .eq("company_id", companyId!)
+        .order("created_at", { ascending: false });
+      return (data || []) as Subscription[];
+    },
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5,
+  });
 
-  useEffect(() => { fetchAll(); }, [companyId]);
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients-list", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, name")
+        .eq("company_id", companyId!)
+        .eq("status", "active");
+      return (data || []) as Client[];
+    },
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: plans = [] } = useQuery({
+    queryKey: ["plans-list", companyId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("subscription_plans")
+        .select("id, name, price, duration_days")
+        .eq("company_id", companyId!)
+        .eq("is_active", true);
+      return (data || []) as Plan[];
+    },
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async ({ payload, isEdit, editId }: { payload: any; isEdit: boolean; editId?: string }) => {
+      if (isEdit && editId) {
+        const { error } = await supabase.from("client_subscriptions").update(payload).eq("id", editId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("client_subscriptions").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onMutate: async ({ payload, isEdit, editId }) => {
+      // Optimistic update
+      await queryClient.cancelQueries({ queryKey: ["subscriptions", companyId] });
+      const prev = queryClient.getQueryData<Subscription[]>(["subscriptions", companyId]);
+      if (isEdit && editId && prev) {
+        queryClient.setQueryData(["subscriptions", companyId], prev.map(s =>
+          s.id === editId ? { ...s, ...payload } : s
+        ));
+      }
+      return { prev };
+    },
+    onError: (err: any, _vars, ctx) => {
+      toast.error(err.message || "Erro ao salvar");
+      if (ctx?.prev) queryClient.setQueryData(["subscriptions", companyId], ctx.prev);
+    },
+    onSuccess: (_d, vars) => {
+      toast.success(vars.isEdit ? "Assinatura atualizada!" : "Assinatura criada!");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", companyId] });
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!companyId) return;
-    setLoading(true);
     const form = new FormData(e.currentTarget);
     const planId = form.get("plan_id") as string;
     const plan = plans.find((p) => p.id === planId);
@@ -72,17 +131,9 @@ export default function Subscriptions() {
       company_id: companyId,
     };
 
-    if (editing) {
-      const { error } = await supabase.from("client_subscriptions").update(payload).eq("id", editing.id);
-      if (error) toast.error(error.message); else toast.success("Assinatura atualizada!");
-    } else {
-      const { error } = await supabase.from("client_subscriptions").insert(payload);
-      if (error) toast.error(error.message); else toast.success("Assinatura criada!");
-    }
-    setLoading(false);
+    mutation.mutate({ payload, isEdit: !!editing, editId: editing?.id });
     setDialogOpen(false);
     setEditing(null);
-    fetchAll();
   };
 
   const statusBadge = (status: string) => {
@@ -97,7 +148,7 @@ export default function Subscriptions() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Assinaturas</h1>
@@ -146,8 +197,8 @@ export default function Subscriptions() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Salvando..." : "Salvar"}
+              <Button type="submit" className="w-full" disabled={mutation.isPending}>
+                {mutation.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </form>
           </DialogContent>
@@ -156,6 +207,11 @@ export default function Subscriptions() {
 
       <Card>
         <CardContent className="p-0">
+          {subsLoading ? (
+            <div className="p-6 space-y-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -190,6 +246,7 @@ export default function Subscriptions() {
               )}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
     </div>
