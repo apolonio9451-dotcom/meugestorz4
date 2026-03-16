@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Bell, Info, Clock } from "lucide-react";
+import { Bell, Info, Clock, Lock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -56,9 +57,12 @@ const autoSendCategories = [
 
 interface Props {
   companyId: string | null;
+  planType?: string;
+  onUpgradeClick?: () => void;
 }
 
-export default function AutoSendCategoryToggles({ companyId }: Props) {
+export default function AutoSendCategoryToggles({ companyId, planType, onUpgradeClick }: Props) {
+  const isStarter = planType !== "pro";
   const [activeCategories, setActiveCategories] = useState<Record<string, boolean>>({});
   const [autoSendHour, setAutoSendHour] = useState(8);
   const [autoSendMinute, setAutoSendMinute] = useState(0);
@@ -190,80 +194,92 @@ export default function AutoSendCategoryToggles({ companyId }: Props) {
           </div>
         </TooltipProvider>
 
-        <div className="border-t border-border/50 pt-4 space-y-4">
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" />
-              Horário de Disparo Automático
-            </Label>
-            <Input
-              type="time"
-              value={`${String(autoSendHour).padStart(2, "0")}:${String(autoSendMinute).padStart(2, "0")}`}
-              onChange={(e) => handleTimeChange(e.target.value)}
-              className="bg-secondary/50 border-border w-40"
-            />
-            <p className="text-muted-foreground text-xs">
-              Horário exato (HH:mm) em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-              🛡️ Intervalo entre Envios (segundos)
-            </Label>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-11 w-11 min-w-[44px] text-lg font-bold"
-                onClick={async () => {
-                  const val = Math.max(10, sendInterval - 10);
-                  setSendInterval(val);
-                  const { error } = await supabase
-                    .from("api_settings")
-                    .update({ send_interval_seconds: val })
-                    .eq("company_id", companyId);
-                  if (error) {
-                    toast({ title: "Erro", description: "Não foi possível salvar o intervalo.", variant: "destructive" });
-                  } else {
-                    toast({ title: "Intervalo atualizado", description: `${val}s entre cada envio.` });
-                  }
-                }}
-                disabled={sendInterval <= 10}
-              >
-                −
-              </Button>
-              <div className="flex items-center justify-center bg-secondary/50 border border-border rounded-md h-11 min-w-[80px] px-3">
-                <span className="text-[16px] font-bold text-foreground">{sendInterval}</span>
-                <span className="text-xs text-muted-foreground ml-1">seg</span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-11 w-11 min-w-[44px] text-lg font-bold"
-                onClick={async () => {
-                  const val = Math.min(300, sendInterval + 10);
-                  setSendInterval(val);
-                  const { error } = await supabase
-                    .from("api_settings")
-                    .update({ send_interval_seconds: val })
-                    .eq("company_id", companyId);
-                  if (error) {
-                    toast({ title: "Erro", description: "Não foi possível salvar o intervalo.", variant: "destructive" });
-                  } else {
-                    toast({ title: "Intervalo atualizado", description: `${val}s entre cada envio.` });
-                  }
-                }}
-                disabled={sendInterval >= 300}
-              >
-                +
-              </Button>
+        <div className="border-t border-border/50 pt-4 space-y-4 relative">
+          {isStarter && (
+            <div
+              className="absolute inset-0 z-10 rounded-lg bg-background/60 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-pointer"
+              onClick={onUpgradeClick}
+            >
+              <Lock className="w-6 h-6 text-[hsl(48,96%,53%)] mb-2" />
+              <span className="text-sm font-bold text-[hsl(48,96%,53%)]">Recurso PRO</span>
+              <span className="text-xs text-muted-foreground mt-1">Clique para desbloquear</span>
             </div>
-            <p className="text-muted-foreground text-xs">
-              Tempo entre cada envio. Mínimo: 10s, recomendado: 60s. Ajuste em passos de 10s.
-            </p>
+          )}
+          <div className={cn(isStarter && "opacity-40 pointer-events-none select-none")}>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Horário de Disparo Automático
+              </Label>
+              <Input
+                type="time"
+                value={`${String(autoSendHour).padStart(2, "0")}:${String(autoSendMinute).padStart(2, "0")}`}
+                onChange={(e) => handleTimeChange(e.target.value)}
+                className="bg-secondary/50 border-border w-40"
+              />
+              <p className="text-muted-foreground text-xs">
+                Horário exato (HH:mm) em que as mensagens automáticas serão enviadas diariamente (horário de Brasília).
+              </p>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                🛡️ Intervalo entre Envios (segundos)
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 min-w-[44px] text-lg font-bold"
+                  onClick={async () => {
+                    const val = Math.max(10, sendInterval - 10);
+                    setSendInterval(val);
+                    const { error } = await supabase
+                      .from("api_settings")
+                      .update({ send_interval_seconds: val })
+                      .eq("company_id", companyId);
+                    if (error) {
+                      toast({ title: "Erro", description: "Não foi possível salvar o intervalo.", variant: "destructive" });
+                    } else {
+                      toast({ title: "Intervalo atualizado", description: `${val}s entre cada envio.` });
+                    }
+                  }}
+                  disabled={sendInterval <= 10}
+                >
+                  −
+                </Button>
+                <div className="flex items-center justify-center bg-secondary/50 border border-border rounded-md h-11 min-w-[80px] px-3">
+                  <span className="text-[16px] font-bold text-foreground">{sendInterval}</span>
+                  <span className="text-xs text-muted-foreground ml-1">seg</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 min-w-[44px] text-lg font-bold"
+                  onClick={async () => {
+                    const val = Math.min(300, sendInterval + 10);
+                    setSendInterval(val);
+                    const { error } = await supabase
+                      .from("api_settings")
+                      .update({ send_interval_seconds: val })
+                      .eq("company_id", companyId);
+                    if (error) {
+                      toast({ title: "Erro", description: "Não foi possível salvar o intervalo.", variant: "destructive" });
+                    } else {
+                      toast({ title: "Intervalo atualizado", description: `${val}s entre cada envio.` });
+                    }
+                  }}
+                  disabled={sendInterval >= 300}
+                >
+                  +
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Tempo entre cada envio. Mínimo: 10s, recomendado: 60s. Ajuste em passos de 10s.
+              </p>
+            </div>
           </div>
         </div>
       </CardContent>
