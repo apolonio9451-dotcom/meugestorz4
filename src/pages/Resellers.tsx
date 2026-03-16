@@ -944,7 +944,7 @@ export default function Resellers() {
               </>
             )}
           </div>
-          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 flex-1 sm:flex-none">
+          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 flex-1 sm:flex-none hidden sm:inline-flex">
             <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
           </Button>
         </div>
