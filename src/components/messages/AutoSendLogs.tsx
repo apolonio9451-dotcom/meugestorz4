@@ -10,7 +10,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { RefreshCw, CheckCircle2, XCircle, Clock, Loader2, Activity } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Clock, Loader2, Activity, Zap } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 
 interface LogEntry {
   id: string;
