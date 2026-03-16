@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ interface Credential {
 
 export default function Clients() {
   const { effectiveCompanyId: companyId, user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<Client[]>([]);
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});
@@ -252,6 +254,30 @@ export default function Clients() {
   };
 
   useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchPixKey(); }, [companyId]);
+
+  // Sync dialog state to URL params and localStorage flag
+  const REGISTERING_KEY = `meugestor-is-registering-${companyId}`;
+
+  const setDialogOpenSynced = useCallback((open: boolean) => {
+    setDialogOpen(open);
+    if (open) {
+      setSearchParams(prev => { prev.set("novo", "true"); return prev; }, { replace: true });
+      try { localStorage.setItem(REGISTERING_KEY, "true"); } catch {}
+    } else {
+      setSearchParams(prev => { prev.delete("novo"); return prev; }, { replace: true });
+      try { localStorage.removeItem(REGISTERING_KEY); } catch {}
+    }
+  }, [setSearchParams, REGISTERING_KEY]);
+
+  // Auto-restore modal on mount if URL has ?novo=true or localStorage flag is set
+  useEffect(() => {
+    const shouldReopen = searchParams.get("novo") === "true" || 
+      (() => { try { return localStorage.getItem(REGISTERING_KEY) === "true"; } catch { return false; } })();
+    if (shouldReopen && !dialogOpen && !editing) {
+      openDialog(); // This will restore draft from localStorage
+    }
+  }, [companyId]); // Only on mount / companyId change
+
 
   useEffect(() => {
     if (!companyId) return;
@@ -451,7 +477,7 @@ export default function Clients() {
     setDuplicateWarning(null);
     setDuplicateConfirmed(false);
     setPendingSubmitEvent(null);
-    setDialogOpen(true);
+    setDialogOpenSynced(true);
   };
 
   const [duplicateConfirmed, setDuplicateConfirmed] = useState(false);
@@ -560,7 +586,7 @@ export default function Clients() {
 
     clearFormDraft();
     setLoading(false);
-    setDialogOpen(false);
+    setDialogOpenSynced(false);
     setEditing(null);
     setFormMacKeys([]);
     setFormCredentials([{ username: "", password: "", label: "" }]);
@@ -814,7 +840,7 @@ export default function Clients() {
 
   return (
     <div className="space-y-3 sm:space-y-6 animate-page-enter">
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { if (!editing) clearFormDraft(); setEditing(null); setFormMacKeys([]); setFormCredentials([{ username: "", password: "", label: "" }]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpenSynced(o); if (!o) { if (!editing) clearFormDraft(); setEditing(null); setFormMacKeys([]); setFormCredentials([{ username: "", password: "", label: "" }]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
