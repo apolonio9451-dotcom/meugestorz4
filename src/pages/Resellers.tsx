@@ -1708,6 +1708,19 @@ export default function Resellers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Button - Mobile Only */}
+      <Button
+        onClick={handleGenerateTrial}
+        disabled={trialGenerating}
+        className="md:hidden fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg shadow-primary/30 p-0"
+      >
+        {trialGenerating ? (
+          <span className="text-xs">...</span>
+        ) : (
+          <Plus className="w-6 h-6" />
+        )}
+      </Button>
     </div>
   );
 }
