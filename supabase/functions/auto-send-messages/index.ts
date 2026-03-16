@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
         const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
-        const refDate = getTemplateDateForCategory(category);
+        const refDate = getTemplateDateForCategory(category, endDate);
         const messageBody = replacePlaceholders(templates[category], {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeekFor(refDate),
