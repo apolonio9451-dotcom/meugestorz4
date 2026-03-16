@@ -22,13 +22,23 @@ function getGreeting(): string {
   return "Boa noite";
 }
 
-function getDayOfWeek(): string {
+function getDayOfWeekFor(date: Date): string {
   const dias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-  return dias[getBrasiliaDate().getUTCDay()];
+  return dias[date.getUTCDay()];
 }
 
-function getDayOfMonth(): string {
-  return String(getBrasiliaDate().getUTCDate());
+function getDayOfMonthFor(date: Date): string {
+  return String(date.getUTCDate());
+}
+
+/** Returns the reference date for template variables based on category.
+ *  For "vence_amanha", {dia_semana} and {dia} must refer to TOMORROW. */
+function getTemplateDateForCategory(category: string): Date {
+  const brasilia = getBrasiliaDate();
+  if (category === "vence_amanha") {
+    brasilia.setUTCDate(brasilia.getUTCDate() + 1);
+  }
+  return brasilia;
 }
 
 function replacePlaceholders(template: string, vars: Record<string, string>): string {
