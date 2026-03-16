@@ -152,21 +152,21 @@ export default function AutoSendLogs({ companyId }: Props) {
               <Activity className="w-4 h-4 text-primary" />
               Monitor de Envios
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <Button
                 size="sm"
                 onClick={handleRestart}
                 disabled={restarting}
-                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white border-0"
+                className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white border-0 h-9 min-w-[140px]"
               >
                 {restarting ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                 ) : (
-                  <Zap className="w-4 h-4 mr-1" />
+                  <Zap className="w-4 h-4 mr-1.5" />
                 )}
                 {restarting ? "Processando…" : "Reiniciar Envios"}
               </Button>
-              <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={loading}>
+              <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={loading} className="h-9">
                 <RefreshCw className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`} />
                 Atualizar
               </Button>

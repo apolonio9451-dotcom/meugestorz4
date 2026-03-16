@@ -944,7 +944,7 @@ export default function Resellers() {
               </>
             )}
           </div>
-          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 flex-1 sm:flex-none">
+          <Button variant="secondary" onClick={handleGenerateTrial} disabled={trialGenerating} className="gap-2 flex-1 sm:flex-none hidden sm:inline-flex">
             <FlaskConical className="w-4 h-4" /> {trialGenerating ? "Gerando..." : "Gerar Teste"}
           </Button>
         </div>
@@ -1292,39 +1292,65 @@ export default function Resellers() {
                       </div>
                     </div>
 
+                    {/* Plan Selector - prominent on mobile */}
+                    {canChangePlans && r.user_id && (
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">Plano:</span>
+                        <Select
+                          value={getResellerPlan(r.id)}
+                          onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
+                        >
+                          <SelectTrigger className="h-8 flex-1 text-xs text-[16px]">
+                            <SelectValue placeholder="Plano" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="starter">Starter</SelectItem>
+                            <SelectItem value="pro">Pro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     {/* Actions */}
-                    <div className="flex items-center gap-1.5 pt-2 border-t border-border/50">
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
                       {(r.status === "trial" || r.status === "expired") && (
-                        <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => handleRenewSubscription(r)}>
-                          <CreditCard className="w-3.5 h-3.5" /> Ativar
+                        <Button size="sm" className="gap-1.5 h-10 text-xs flex-1 min-w-[100px]" onClick={() => handleRenewSubscription(r)}>
+                          <CreditCard className="w-4 h-4" /> Ativar
                         </Button>
                       )}
                       {r.status === "overdue" && (
-                        <Button size="sm" variant="outline" className="gap-1 h-8 text-xs flex-1 border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
-                          <CalendarClock className="w-3.5 h-3.5" /> Renovar
+                        <Button size="sm" variant="outline" className="gap-1.5 h-10 text-xs flex-1 min-w-[100px] border-orange-500/30 text-orange-400 hover:bg-orange-500/10" onClick={() => handleRenewSubscription(r)}>
+                          <CalendarClock className="w-4 h-4" /> Renovar
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="gap-1.5 h-8 text-xs px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary" onClick={() => openCredits(r)}>
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-10 text-xs px-3 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary flex-1 min-w-[90px]" onClick={() => openCredits(r)}>
                           <CirclePlus className="w-4 h-4" />
-                          <span className="text-[10px] font-semibold">Créditos</span>
+                          <span className="text-[11px] font-semibold">Créditos</span>
                         </Button>
                       )}
                       {r.status === "active" && (
-                        <Button size="sm" variant="ghost" className="gap-1.5 h-8 text-xs px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400" onClick={() => handleRenewSubscription(r)}>
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-10 text-xs px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 flex-1 min-w-[90px]" onClick={() => handleRenewSubscription(r)}>
                           <CalendarClock className="w-4 h-4" />
-                          <span className="text-[10px] font-semibold">Renovar</span>
+                          <span className="text-[11px] font-semibold">Renovar</span>
                         </Button>
                       )}
-                      <div className="flex-1" />
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openEdit(r)}>
-                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                      {isOwner && r.user_id && (
+                        <Button size="sm" variant="ghost" className="gap-1.5 h-10 text-xs px-3 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 flex-1 min-w-[80px]" onClick={() => handleGhostLogin(r)} disabled={ghostLoading === r.id}>
+                          <LogIn className="w-4 h-4" />
+                          <span className="text-[11px] font-semibold">{ghostLoading === r.id ? "..." : "Ghost"}</span>
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button size="sm" variant="ghost" className="h-10 w-10 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openEdit(r)}>
+                        <Pencil className="w-4 h-4 text-muted-foreground" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openHistory(r)}>
-                        <History className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Button size="sm" variant="ghost" className="h-10 w-10 p-0 rounded-lg bg-muted/60 hover:bg-muted" onClick={() => openHistory(r)}>
+                        <History className="w-4 h-4 text-muted-foreground" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg bg-destructive/10 hover:bg-destructive/20" onClick={() => openDelete(r)}>
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      <Button size="sm" variant="ghost" className="h-10 w-10 p-0 rounded-lg bg-destructive/10 hover:bg-destructive/20" onClick={() => openDelete(r)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
@@ -1682,6 +1708,19 @@ export default function Resellers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Button - Mobile Only */}
+      <Button
+        onClick={handleGenerateTrial}
+        disabled={trialGenerating}
+        className="md:hidden fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg shadow-primary/30 p-0"
+      >
+        {trialGenerating ? (
+          <span className="text-xs">...</span>
+        ) : (
+          <Plus className="w-6 h-6" />
+        )}
+      </Button>
     </div>
   );
 }
