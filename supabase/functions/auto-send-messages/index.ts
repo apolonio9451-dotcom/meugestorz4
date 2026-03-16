@@ -369,8 +369,11 @@ Deno.serve(async (req) => {
         const plan = sub?.subscription_plans;
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
+        const refDateSupport = getTemplateDateForCategory("suporte");
         const messageBody = replacePlaceholders(supportTemplate, {
           saudacao: getGreeting(),
+          dia_semana: getDayOfWeekFor(refDateSupport),
+          dia: getDayOfMonthFor(refDateSupport),
           primeiro_nome: (client.name || "").split(" ")[0],
           nome: client.name || "",
           plano: plan?.name || "",
