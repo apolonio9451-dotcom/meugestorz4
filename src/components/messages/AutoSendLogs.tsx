@@ -131,22 +131,38 @@ export default function AutoSendLogs({ companyId }: Props) {
 
           {/* Progress Summary */}
           {todayLogs.length > 0 && (
-            <div className="flex items-center gap-4 mt-2 p-3 rounded-lg bg-muted/30 border border-border/30">
-              <div className="flex items-center gap-1.5 text-xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-green-400 font-medium">{todaySuccess}</span>
-                <span className="text-muted-foreground">Enviados</span>
-              </div>
-              {todayErrors > 0 && (
+            <div className="space-y-2 mt-2">
+              {/* Live processing indicator */}
+              {todayLogs.length > 0 && (() => {
+                const lastLog = todayLogs[0];
+                const lastLogTime = new Date(lastLog.created_at).getTime();
+                const isRecentlyActive = Date.now() - lastLogTime < 5 * 60 * 1000; // 5 min
+                return isRecentlyActive ? (
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/10 border border-primary/20 animate-pulse">
+                    <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    <span className="text-xs font-medium text-primary">
+                      Processando: {todayLogs.length} mensagens enviadas — fila em andamento…
+                    </span>
+                  </div>
+                ) : null;
+              })()}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 border border-border/30">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <XCircle className="w-3.5 h-3.5 text-destructive" />
-                  <span className="text-destructive font-medium">{todayErrors}</span>
-                  <span className="text-muted-foreground">Erros</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-green-400 font-medium">{todaySuccess}</span>
+                  <span className="text-muted-foreground">Enviados</span>
                 </div>
-              )}
-              <div className="flex items-center gap-1.5 text-xs ml-auto">
-                <span className="text-muted-foreground">Total Hoje:</span>
-                <span className="font-medium text-foreground">{todayLogs.length}</span>
+                {todayErrors > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <XCircle className="w-3.5 h-3.5 text-destructive" />
+                    <span className="text-destructive font-medium">{todayErrors}</span>
+                    <span className="text-muted-foreground">Erros</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 text-xs ml-auto">
+                  <span className="text-muted-foreground">Total Hoje:</span>
+                  <span className="font-medium text-foreground">{todayLogs.length}</span>
+                </div>
               </div>
             </div>
           )}

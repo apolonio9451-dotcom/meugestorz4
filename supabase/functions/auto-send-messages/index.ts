@@ -78,17 +78,21 @@ const defaultTemplates: Record<string, string> = {
     "Olá, *{primeiro_nome}* {saudacao}! 👋\n\nNotamos que o seu plano venceu a *{dias} dias* e o seu acesso pode estar interrompido. 🚫\nNão perca seus conteúdos favoritos! Vamos regularizar isso agora?\n\n📋 *Dados da Assinatura Vencida*:\n\n*Plano*: {plano}\n*Valor*: R$ {valor}\n*Vencimento*: {vencimento}\n\n📌 *Dados para Pagamento*:\n\n📌 *Chave*: {sua_chave_pix}\n👤 *Nome*: [Seu Nome]\n\n_Se já efetuou o pagamento desconsidere esse lembrete_",
 };
 
+// Max execution time safety: 50 seconds
+const MAX_EXEC_MS = 50_000;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const execStart = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Use Brasília time (UTC-3) for ALL date comparisons
     const nowUtc = new Date();
     const brasiliaTime = new Date(nowUtc.getTime() - 3 * 60 * 60 * 1000);
     const today = brasiliaTime.toISOString().split("T")[0];
@@ -97,7 +101,6 @@ Deno.serve(async (req) => {
 
     console.log(`[auto-send] Brasília: ${today} ${brasiliaHour}:${String(brasiliaMinute).padStart(2, "0")}`);
 
-    // Get all companies that have API configured
     const { data: apiConfigs } = await supabase
       .from("api_settings")
       .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds");
@@ -109,26 +112,37 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter only companies whose auto_send_hour matches current Brasília hour
+    // BATCH PROCESSING: Instead of processing ALL at once (causes timeout),
+    // process a limited batch per cron invocation.
+    // The cron fires every minute, so we process what fits in ~50 seconds.
+    // Companies whose hour has ALREADY passed today but still have pending clients
+    // will continue to be processed in subsequent cron ticks.
+
     const eligibleConfigs = apiConfigs.filter((c: any) => {
       const configuredHour = c.auto_send_hour ?? 8;
       const configuredMinute = c.auto_send_minute ?? 0;
-      return configuredHour === brasiliaHour && configuredMinute === brasiliaMinute;
+      // Process if we're at or past the configured time today
+      // This allows the queue to drain over multiple cron invocations
+      if (brasiliaHour > configuredHour) return true;
+      if (brasiliaHour === configuredHour && brasiliaMinute >= configuredMinute) return true;
+      return false;
     });
-
-    // Note: Don't return early here - support 48h check must always run below
 
     let totalSent = 0;
     let totalErrors = 0;
 
     for (const config of eligibleConfigs) {
       if (!config.api_url || !config.api_token) continue;
+      // Safety: stop if we're running too long
+      if (Date.now() - execStart > MAX_EXEC_MS) {
+        console.log(`[auto-send] ⏱️ Tempo limite atingido, continuando no próximo ciclo`);
+        break;
+      }
 
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
       const companyId = config.company_id;
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
-      let isFirstSend = true;
 
       console.log(`[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms`);
 
@@ -156,7 +170,7 @@ Deno.serve(async (req) => {
         templates[t.category] = t.message;
       });
 
-      // Fetch active clients with subscriptions - use limit to avoid hitting 1000 row default
+      // Fetch active clients with subscriptions that HAVEN'T been sent today
       const { data: clients } = await supabase
         .from("clients")
         .select(`
@@ -168,16 +182,15 @@ Deno.serve(async (req) => {
         `)
         .eq("company_id", companyId)
         .eq("status", "active")
+        .or(`ultimo_envio_auto.is.null,ultimo_envio_auto.neq.${today}`)
         .limit(5000);
 
       if (!clients) continue;
 
-      // Build queue of ALL eligible clients across ALL categories first
+      // Build queue
       const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
 
       for (const client of clients) {
-        if (client.ultimo_envio_auto === today) continue;
-
         const phone = client.whatsapp || client.phone || "";
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
@@ -204,9 +217,21 @@ Deno.serve(async (req) => {
         sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
       )}`);
 
-      // Now process the full queue sequentially with delays
-      for (let i = 0; i < sendQueue.length; i++) {
-        const { client, category, sub, plan, diffDays } = sendQueue[i];
+      // Calculate how many we can process this tick
+      // If interval is 60s, we can do ~1 per tick. If 10s, ~5 per tick.
+      const maxBatchSize = Math.max(1, Math.floor(MAX_EXEC_MS / Math.max(intervalMs, 1000)));
+      const batchToProcess = sendQueue.slice(0, maxBatchSize);
+
+      console.log(`[auto-send] Processando lote: ${batchToProcess.length} de ${sendQueue.length} (max batch: ${maxBatchSize})`);
+
+      for (let i = 0; i < batchToProcess.length; i++) {
+        // Safety: stop if we're running too long
+        if (Date.now() - execStart > MAX_EXEC_MS) {
+          console.log(`[auto-send] ⏱️ Tempo limite no lote, ${sendQueue.length - i} restantes para próximo ciclo`);
+          break;
+        }
+
+        const { client, category, sub, plan, diffDays } = batchToProcess[i];
         const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
@@ -255,8 +280,10 @@ Deno.serve(async (req) => {
           } else {
             totalErrors++;
             console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
+            // DON'T stop - continue to next client
           }
         } catch (sendErr) {
+          // Log the error but DON'T stop the queue
           await supabase.from("auto_send_logs").insert({
             company_id: companyId,
             client_id: client.id,
@@ -269,19 +296,20 @@ Deno.serve(async (req) => {
           });
           totalErrors++;
           console.log(`[auto-send] ❌ ${client.name} (${category}) exception: ${sendErr}`);
+          // Continue to next - never stop the queue
         }
       }
     }
 
     // --- Support check-up auto-send (runs for ALL companies, independent of auto_send_hour) ---
     for (const config of apiConfigs) {
+      if (Date.now() - execStart > MAX_EXEC_MS) break;
       if (!config.api_url || !config.api_token) continue;
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
       const companyId = config.company_id;
       const supportIntervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
 
-      // Check if suporte category is disabled
       const { data: supportCatSetting } = await supabase
         .from("auto_send_category_settings")
         .select("is_active")
@@ -290,7 +318,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (supportCatSetting && !supportCatSetting.is_active) continue;
 
-      // Fetch support template
       const { data: supportTemplateRows } = await supabase
         .from("message_templates")
         .select("message")
@@ -301,7 +328,6 @@ Deno.serve(async (req) => {
       const supportTemplate = supportTemplateRows?.[0]?.message ||
         "Olá, *{primeiro_nome}*, {saudacao}! 👋\n\nEstamos entrando em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que o serviço esteja funcional. 🤝\natt, suporte 24h!";
 
-      // Fetch clients with support_started_at set and >= 48h ago
       const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
       const { data: supportClients } = await supabase
@@ -321,7 +347,7 @@ Deno.serve(async (req) => {
       if (!supportClients) continue;
 
       for (const client of supportClients) {
-        // Don't re-send if already sent today
+        if (Date.now() - execStart > MAX_EXEC_MS) break;
         if (client.ultimo_envio_auto === today) continue;
 
         const phone = client.whatsapp || client.phone || "";
@@ -386,6 +412,127 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Follow-up auto-send ---
+    for (const config of eligibleConfigs) {
+      if (Date.now() - execStart > MAX_EXEC_MS) break;
+      if (!config.api_url || !config.api_token) continue;
+
+      const apiUrl = config.api_url.replace(/\/$/, "");
+      const apiToken = config.api_token;
+      const companyId = config.company_id;
+
+      // Check if followup category is disabled
+      const { data: followupCatSetting } = await supabase
+        .from("auto_send_category_settings")
+        .select("is_active")
+        .eq("company_id", companyId)
+        .eq("category", "followup")
+        .maybeSingle();
+      if (followupCatSetting && !followupCatSetting.is_active) continue;
+
+      const { data: followupTemplateRows } = await supabase
+        .from("message_templates")
+        .select("message")
+        .eq("company_id", companyId)
+        .eq("category", "followup")
+        .limit(1);
+
+      const followupTemplate = followupTemplateRows?.[0]?.message ||
+        "Olá {primeiro_nome}, {saudacao}! 👋\n\nPassando para saber se está tudo bem com o seu serviço. Como está sua experiência? 😊";
+
+      const { data: followupClients } = await supabase
+        .from("clients")
+        .select(`
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, follow_up_active,
+          client_subscriptions (
+            end_date, amount, custom_price,
+            subscription_plans ( name, price )
+          )
+        `)
+        .eq("company_id", companyId)
+        .eq("status", "active")
+        .eq("follow_up_active", true)
+        .or(`ultimo_envio_auto.is.null,ultimo_envio_auto.neq.${today}`);
+
+      if (!followupClients) continue;
+
+      for (const client of followupClients) {
+        if (Date.now() - execStart > MAX_EXEC_MS) break;
+
+        const phone = client.whatsapp || client.phone || "";
+        if (!phone || phone.replace(/\D/g, "").length < 8) continue;
+
+        const subs = (client as any).client_subscriptions;
+        const sub = subs?.[0];
+        const plan = sub?.subscription_plans;
+
+        // Only follow-up clients whose subscription is active and not near expiry
+        if (sub) {
+          const endDate = new Date(sub.end_date + "T00:00:00");
+          const todayDate = new Date(today + "T00:00:00");
+          const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+          // Skip if already in a billing category
+          if (getCategory(diffDays) !== null) continue;
+          // Only follow up clients with 7+ days left
+          if (diffDays < 7) continue;
+        }
+
+        const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
+
+        const messageBody = replacePlaceholders(followupTemplate, {
+          saudacao: getGreeting(),
+          primeiro_nome: (client.name || "").split(" ")[0],
+          nome: client.name || "",
+          plano: plan?.name || "",
+          valor: Number(valor).toFixed(2),
+          vencimento: sub ? new Date(sub.end_date + "T00:00:00").toLocaleDateString("pt-BR") : "",
+          dias: "",
+          mac: "",
+          usuario: client.iptv_user || "",
+          senha: client.iptv_password || "",
+          servidor: client.server || "",
+          sua_chave_pix: config.pix_key || "",
+        });
+
+        const normalizedPhone = normalizePhone(phone);
+
+        try {
+          await sleep(((config as any).send_interval_seconds ?? 60) * 1000);
+          const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
+
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category: "followup",
+            status: sendResult.ok ? "success" : "error",
+            error_message: sendResult.error || null,
+            phone: normalizedPhone,
+            message_sent: messageBody,
+          });
+
+          if (sendResult.ok) {
+            await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
+            totalSent++;
+          } else {
+            totalErrors++;
+          }
+        } catch (sendErr) {
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category: "followup",
+            status: "error",
+            error_message: String(sendErr),
+            phone: normalizedPhone,
+            message_sent: messageBody,
+          });
+          totalErrors++;
+        }
+      }
+    }
+
     // --- WinBack campaign auto-send ---
     const CAMPAIGN_STEPS = [
       { key: "winback_day1", day: 1, minGapDays: 0 },
@@ -404,14 +551,14 @@ Deno.serve(async (req) => {
     };
 
     for (const config of eligibleConfigs) {
+      if (Date.now() - execStart > MAX_EXEC_MS) break;
       if (!config.api_url || !config.api_token) continue;
-      if (config.winback_paused) continue; // Skip if paused
+      if (config.winback_paused) continue;
 
       const apiUrl = config.api_url.replace(/\/$/, "");
       const apiToken = config.api_token;
       const companyId = config.company_id;
 
-      // Fetch winback templates
       const { data: wbTemplateRows } = await supabase
         .from("message_templates")
         .select("category, message")
@@ -423,7 +570,6 @@ Deno.serve(async (req) => {
         wbTemplates[t.category] = t.message;
       });
 
-      // Fetch winback-eligible clients (inactive or expired 45+ days)
       const { data: wbClients } = await supabase
         .from("clients")
         .select(`
@@ -438,7 +584,6 @@ Deno.serve(async (req) => {
 
       if (!wbClients) continue;
 
-      // Fetch campaign progress
       const { data: progressRows } = await supabase
         .from("winback_campaign_progress")
         .select("client_id, current_step, last_sent_at")
@@ -450,6 +595,8 @@ Deno.serve(async (req) => {
       });
 
       for (const client of wbClients) {
+        if (Date.now() - execStart > MAX_EXEC_MS) break;
+
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
 
@@ -459,14 +606,13 @@ Deno.serve(async (req) => {
         const todayDate = new Date(today + "T00:00:00");
         const daysExpired = Math.round((todayDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
 
-        if (daysExpired < 45) continue; // Only 45+ days expired
+        if (daysExpired < 45) continue;
 
         const prog = progressMap[client.id] || { step: 0, lastSentAt: null };
-        if (prog.step >= CAMPAIGN_STEPS.length) continue; // Campaign finished
+        if (prog.step >= CAMPAIGN_STEPS.length) continue;
 
         const currentStepDef = CAMPAIGN_STEPS[prog.step];
 
-        // Check minimum gap
         if (prog.step > 0 && prog.lastSentAt) {
           const daysSinceLast = Math.floor((Date.now() - new Date(prog.lastSentAt).getTime()) / (1000 * 60 * 60 * 24));
           if (daysSinceLast < currentStepDef.minGapDays) continue;
@@ -544,7 +690,6 @@ Deno.serve(async (req) => {
     // --- Log errors for companies WITHOUT API configured ---
     const configuredCompanyIds = (apiConfigs || []).map((c: any) => c.company_id);
     
-    // Find all companies that have active clients with subscriptions but no API
     const { data: allCompanies } = await supabase
       .from("companies")
       .select("id, name");
@@ -555,7 +700,6 @@ Deno.serve(async (req) => {
       );
 
       for (const company of unconfiguredCompanies) {
-        // Check if this company has any clients that would need messages today
         const { data: pendingClients } = await supabase
           .from("clients")
           .select(`
@@ -568,7 +712,6 @@ Deno.serve(async (req) => {
 
         if (!pendingClients || pendingClients.length === 0) continue;
 
-        // Check if any client has a subscription expiring within the relevant window
         const hasEligible = pendingClients.some((client: any) => {
           const subs = client.client_subscriptions;
           if (!subs || subs.length === 0) return false;
@@ -579,7 +722,6 @@ Deno.serve(async (req) => {
         });
 
         if (hasEligible) {
-          // Log one error per company without API
           await supabase.from("auto_send_logs").insert({
             company_id: company.id,
             client_name: `[${company.name}]`,
@@ -594,7 +736,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ sent: totalSent, errors: totalErrors }),
+      JSON.stringify({ sent: totalSent, errors: totalErrors, elapsed_ms: Date.now() - execStart }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
