@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useGhostMode } from "@/hooks/useGhostMode";
@@ -57,7 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { localStorage.removeItem("auth_cache"); } catch {}
   };
 
-  const fetchCompanyData = async (userId: string) => {
+  const fetchSeqRef = useRef(0);
+  const hydratedRef = useRef(false);
+
+  const resetCompanyState = (shouldClearCache = true) => {
     setCompanyId(null);
     setParentCompanyId(null);
     setUserRole(null);
@@ -65,34 +68,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPlanType("starter");
     setIsTrial(false);
     setTrialExpiresAt(null);
+    if (shouldClearCache) clearCache();
+  };
 
-    // 1) Base membership (fallback)
-    const { data: membership } = await supabase
-      .from("company_memberships")
-      .select("company_id, role, is_trial, trial_expires_at")
-      .eq("user_id", userId)
-      .limit(1)
-      .maybeSingle();
+  const applyCompanyState = (next: {
+    companyId: string | null;
+    parentCompanyId: string | null;
+    userRole: string | null;
+    resellerCredits: number | null;
+    planType: "starter" | "pro";
+    isTrial: boolean;
+    trialExpiresAt: string | null;
+  }) => {
+    setCompanyId(next.companyId);
+    setParentCompanyId(next.parentCompanyId);
+    setUserRole(next.userRole);
+    setResellerCredits(next.resellerCredits);
+    setPlanType(next.planType);
+    setIsTrial(next.isTrial);
+    setTrialExpiresAt(next.trialExpiresAt);
+    persistCache(next);
+  };
 
-    // 2) Reseller row is the source of truth for reseller users
-    const { data: resellerData } = await supabase
-      .from("resellers")
-      .select("id, company_id, credit_balance, status")
-      .eq("user_id", userId)
-      .maybeSingle();
+  const fetchCompanyData = async (userId: string) => {
+    const requestId = ++fetchSeqRef.current;
+
+    const [membershipRes, resellerRes] = await Promise.all([
+      supabase
+        .from("company_memberships")
+        .select("company_id, role, is_trial, trial_expires_at")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("resellers")
+        .select("id, company_id, credit_balance, status")
+        .eq("user_id", userId)
+        .maybeSingle(),
+    ]);
+
+    if (requestId !== fetchSeqRef.current) return;
+
+    const membership = membershipRes.data;
+    const resellerData = resellerRes.data;
 
     if (resellerData) {
-      // Reseller uses their OWN company (from membership) for data isolation
-      // Parent company is stored separately for shared features (announcements)
       const resellerCompanyId = membership?.company_id || resellerData.company_id;
-      setCompanyId(resellerCompanyId);
-      setParentCompanyId(resellerData.company_id);
-      setResellerCredits(resellerData.credit_balance);
-
-      // Role comes from actual membership, not from credits
       const membershipRole = membership?.role;
       const resolvedRole = roleLabels[membershipRole || "operator"] || "Usuário";
-      setUserRole(resolvedRole);
 
       const { data: companyData } = await supabase
         .from("companies")
@@ -100,36 +123,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq("id", resellerCompanyId)
         .maybeSingle();
 
-      // Reseller account plan must follow its own company plan in real-time
-      const dbPlan = (companyData as any)?.plan_type;
-      setPlanType(dbPlan === "starter" ? "starter" : "pro");
+      if (requestId !== fetchSeqRef.current) return;
 
+      const dbPlan = (companyData as any)?.plan_type;
+      const resolvedPlan: "starter" | "pro" = dbPlan === "starter" ? "starter" : "pro";
       const resellerIsTrial = resellerData.status === "trial";
-      setIsTrial(resellerIsTrial);
       const trialExp = resellerIsTrial ? membership?.trial_expires_at || null : null;
-      setTrialExpiresAt(trialExp);
-      const resolvedPlan = dbPlan === "starter" ? "starter" : "pro";
-      persistCache({ companyId: resellerCompanyId, parentCompanyId: resellerData.company_id, userRole: resolvedRole, resellerCredits: resellerData.credit_balance, planType: resolvedPlan, isTrial: resellerIsTrial, trialExpiresAt: trialExp });
+
+      applyCompanyState({
+        companyId: resellerCompanyId,
+        parentCompanyId: resellerData.company_id,
+        userRole: resolvedRole,
+        resellerCredits: resellerData.credit_balance,
+        planType: resolvedPlan,
+        isTrial: resellerIsTrial,
+        trialExpiresAt: trialExp,
+      });
       return;
     }
 
     if (membership) {
-      setCompanyId(membership.company_id);
-      setParentCompanyId(null);
-      setResellerCredits(null);
-      setIsTrial(membership.is_trial || false);
-      setTrialExpiresAt(membership.trial_expires_at || null);
       const role = roleLabels[membership.role] || membership.role;
-      setUserRole(role);
-
       const { data: companyData } = await supabase
         .from("companies")
         .select("plan_type")
         .eq("id", membership.company_id)
         .maybeSingle();
-      const plan = (companyData as any)?.plan_type === "starter" ? "starter" : "pro";
-      setPlanType(plan);
-      persistCache({ companyId: membership.company_id, parentCompanyId: null, userRole: role, resellerCredits: null, planType: plan, isTrial: membership.is_trial || false, trialExpiresAt: membership.trial_expires_at || null });
+
+      if (requestId !== fetchSeqRef.current) return;
+
+      const plan: "starter" | "pro" = (companyData as any)?.plan_type === "starter" ? "starter" : "pro";
+
+      applyCompanyState({
+        companyId: membership.company_id,
+        parentCompanyId: null,
+        userRole: role,
+        resellerCredits: null,
+        planType: plan,
+        isTrial: membership.is_trial || false,
+        trialExpiresAt: membership.trial_expires_at || null,
+      });
+      return;
+    }
+
+    // Only clear when backend confirms user has no membership context
+    if (!membershipRes.error && !resellerRes.error) {
+      resetCompanyState(true);
     }
   };
 
@@ -139,20 +178,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
-        setLoading(true);
+        const shouldShowBlockingLoader = !hydratedRef.current;
+        if (shouldShowBlockingLoader) setLoading(true);
+
         await fetchCompanyData(nextSession.user.id);
-        setLoading(false);
+
+        hydratedRef.current = true;
+        if (shouldShowBlockingLoader) setLoading(false);
         return;
       }
 
-      setCompanyId(null);
-      setParentCompanyId(null);
-      setUserRole(null);
-      setResellerCredits(null);
-      setPlanType("starter");
-      setIsTrial(false);
-      setTrialExpiresAt(null);
-      clearCache();
+      hydratedRef.current = false;
+      resetCompanyState(true);
       setLoading(false);
 
       // If token refresh failed (user deleted), redirect to auth
@@ -267,14 +304,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setCompanyId(null);
-    setParentCompanyId(null);
-    setUserRole(null);
-    setResellerCredits(null);
-    setPlanType("starter");
-    setIsTrial(false);
-    setTrialExpiresAt(null);
-    clearCache();
+    hydratedRef.current = false;
+    resetCompanyState(true);
   };
 
   return (
