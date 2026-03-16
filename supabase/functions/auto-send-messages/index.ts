@@ -31,9 +31,11 @@ function getDayOfMonthFor(date: Date): string {
   return String(date.getUTCDate());
 }
 
-/** Returns the reference date for template variables based on category.
- *  For "vence_amanha", {dia_semana} and {dia} must refer to TOMORROW. */
-function getTemplateDateForCategory(category: string): Date {
+/** Returns the reference date for {dia_semana} and {dia} template variables.
+ *  Uses the client's ACTUAL expiry date from the database when available,
+ *  falling back to category-based calculation otherwise. */
+function getTemplateDateForCategory(category: string, clientEndDate?: Date): Date {
+  if (clientEndDate) return clientEndDate;
   const brasilia = getBrasiliaDate();
   if (category === "vence_amanha") {
     brasilia.setUTCDate(brasilia.getUTCDate() + 1);
@@ -245,7 +247,7 @@ Deno.serve(async (req) => {
         const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
-        const refDate = getTemplateDateForCategory(category);
+        const refDate = getTemplateDateForCategory(category, endDate);
         const messageBody = replacePlaceholders(templates[category], {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeekFor(refDate),
@@ -369,7 +371,7 @@ Deno.serve(async (req) => {
         const plan = sub?.subscription_plans;
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
-        const refDateSupport = getTemplateDateForCategory("suporte");
+        const refDateSupport = getTemplateDateForCategory("suporte", sub ? new Date(sub.end_date + "T00:00:00") : undefined);
         const messageBody = replacePlaceholders(supportTemplate, {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeekFor(refDateSupport),
@@ -493,7 +495,8 @@ Deno.serve(async (req) => {
 
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
-        const refDateFollowup = getTemplateDateForCategory("followup");
+        const followupEndDate = sub ? new Date(sub.end_date + "T00:00:00") : undefined;
+        const refDateFollowup = getTemplateDateForCategory("followup", followupEndDate);
         const messageBody = replacePlaceholders(followupTemplate, {
           saudacao: getGreeting(),
           dia_semana: getDayOfWeekFor(refDateFollowup),
