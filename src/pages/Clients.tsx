@@ -343,6 +343,49 @@ export default function Clients() {
     return msg;
   };
 
+  const FORM_STORAGE_KEY = `meugestor-client-form-${companyId}`;
+
+  const saveFormDraft = (data: Record<string, any>) => {
+    try { localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(data)); } catch {}
+  };
+
+  const loadFormDraft = (): Record<string, any> | null => {
+    try {
+      const raw = localStorage.getItem(FORM_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  };
+
+  const clearFormDraft = () => {
+    try { localStorage.removeItem(FORM_STORAGE_KEY); } catch {}
+  };
+
+  // Auto-save form fields on change (only for new clients)
+  const autoSaveForm = () => {
+    if (editing) return; // don't auto-save when editing existing
+    const formEl = document.getElementById("client-form") as HTMLFormElement | null;
+    if (!formEl) return;
+    const fd = new FormData(formEl);
+    const draft: Record<string, any> = {};
+    fd.forEach((v, k) => { draft[k] = v; });
+    draft._formCredentials = formCredentials;
+    draft._formMacKeys = formMacKeys;
+    draft._formPlanId = formPlanId;
+    draft._formAmount = formAmount;
+    draft._formEndDate = formEndDate ? formEndDate.toISOString() : null;
+    draft._formBirthDate = formBirthDate ? formBirthDate.toISOString() : null;
+    draft._formReferredBy = formReferredBy;
+    draft._formFollowUpActive = formFollowUpActive;
+    saveFormDraft(draft);
+  };
+
+  // Debounced auto-save
+  useEffect(() => {
+    if (!dialogOpen || editing) return;
+    const timer = setTimeout(autoSaveForm, 500);
+    return () => clearTimeout(timer);
+  }, [dialogOpen, editing, formCredentials, formMacKeys, formPlanId, formAmount, formEndDate, formBirthDate, formReferredBy, formFollowUpActive]);
+
   const openDialog = (client?: Client) => {
     if (client) {
       setEditing(client);
@@ -351,12 +394,10 @@ export default function Clients() {
       setFormBirthDate(client.cpf ? (() => { try { return parse(client.cpf, "dd/MM/yyyy", new Date()); } catch { return undefined; } })() : undefined);
       setFormReferredBy(client.referred_by || "");
       setReferralSearch(client.referred_by || "");
-      // Load credentials from DB
       supabase.from("client_credentials").select("id, username, password, label").eq("client_id", client.id).then(({ data }) => {
         if (data && data.length > 0) {
           setFormCredentials(data.map(c => ({ id: c.id, username: c.username, password: c.password, label: c.label || "" })));
         } else {
-          // Fallback: use legacy iptv_user/iptv_password
           setFormCredentials([{ username: client.iptv_user || "", password: client.iptv_password || "", label: "" }]);
         }
       });
@@ -371,16 +412,41 @@ export default function Clients() {
         setFormEndDate(undefined);
       }
     } else {
+      // Restore draft if available
+      const draft = loadFormDraft();
+      if (draft) {
+        setFormCredentials(draft._formCredentials || [{ username: "", password: "", label: "" }]);
+        setFormMacKeys(draft._formMacKeys || []);
+        setFormPlanId(draft._formPlanId || "");
+        setFormAmount(draft._formAmount || "");
+        setFormEndDate(draft._formEndDate ? new Date(draft._formEndDate) : undefined);
+        setFormBirthDate(draft._formBirthDate ? new Date(draft._formBirthDate) : undefined);
+        setFormReferredBy(draft._formReferredBy || "");
+        setReferralSearch(draft._formReferredBy || "");
+        setFormFollowUpActive(draft._formFollowUpActive || false);
+        // Restore native inputs after mount
+        setTimeout(() => {
+          const formEl = document.getElementById("client-form") as HTMLFormElement | null;
+          if (formEl) {
+            const fields = ["name", "whatsapp", "email", "cpf", "notes"];
+            fields.forEach(f => {
+              const input = formEl.querySelector(`[name="${f}"]`) as HTMLInputElement | null;
+              if (input && draft[f]) input.value = draft[f];
+            });
+          }
+        }, 100);
+      } else {
+        setFormMacKeys([]);
+        setFormCredentials([{ username: "", password: "", label: "" }]);
+        setFormBirthDate(undefined);
+        setFormReferredBy("");
+        setReferralSearch("");
+        setFormFollowUpActive(false);
+        setFormPlanId("");
+        setFormAmount("");
+        setFormEndDate(undefined);
+      }
       setEditing(null);
-      setFormMacKeys([]);
-      setFormCredentials([{ username: "", password: "", label: "" }]);
-      setFormBirthDate(undefined);
-      setFormReferredBy("");
-      setReferralSearch("");
-      setFormFollowUpActive(false);
-      setFormPlanId("");
-      setFormAmount("");
-      setFormEndDate(undefined);
     }
     setDuplicateWarning(null);
     setDuplicateConfirmed(false);
