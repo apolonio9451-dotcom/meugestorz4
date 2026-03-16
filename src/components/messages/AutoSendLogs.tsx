@@ -61,8 +61,8 @@ export default function AutoSendLogs({ companyId }: Props) {
         body: { manual: true },
       });
       if (error) throw error;
-      const sent = data?.totalSent ?? 0;
-      const errors = data?.totalErrors ?? 0;
+      const sent = data?.sent ?? 0;
+      const errors = data?.errors ?? 0;
       toast({
         title: "Envios retomados",
         description: `${sent + errors} mensagens pendentes processadas (${sent} enviadas, ${errors} erros).`,
