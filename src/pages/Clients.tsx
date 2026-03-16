@@ -775,6 +775,8 @@ export default function Clients() {
                       <Input 
                         name="whatsapp" 
                         required 
+                        type="tel"
+                        inputMode="numeric"
                         placeholder="5521999990000" 
                         defaultValue={editing?.whatsapp || ""} 
                         className={cn("h-10 text-sm border-primary/20 focus:border-primary/50", duplicateWarning && "border-destructive")}
@@ -795,7 +797,7 @@ export default function Clients() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-sm">CPF</Label>
-                      <Input name="cpf" placeholder="000.000.000-00" defaultValue={editing?.cpf || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
+                      <Input name="cpf" inputMode="numeric" placeholder="000.000.000-00" defaultValue={editing?.cpf || ""} className="h-10 text-sm border-primary/20 focus:border-primary/50" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-sm">Nascimento</Label>
