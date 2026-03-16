@@ -828,7 +828,7 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle className="text-base">{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
-            <form id="client-form" onSubmit={handleSubmit} className="space-y-5 overflow-y-auto max-h-[calc(98vh-80px)] scrollbar-hide">
+            <form id="client-form" onSubmit={handleSubmit} onChange={() => { if (!editing) setTimeout(autoSaveForm, 300); }} className="space-y-5 overflow-y-auto max-h-[calc(98vh-80px)] scrollbar-hide">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dados Pessoais</p>
                 <div className="space-y-3">
