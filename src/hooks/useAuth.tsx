@@ -129,6 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         await fetchCompanyData(nextSession.user.id);
         setLoading(false);
+        // Persist cache after state updates settle
+        queueMicrotask(() => {
+          try {
+            const cache = { companyId, parentCompanyId, userRole, resellerCredits, planType, isTrial, trialExpiresAt };
+            localStorage.setItem("auth_cache", JSON.stringify(cache));
+          } catch {}
+        });
         return;
       }
 
