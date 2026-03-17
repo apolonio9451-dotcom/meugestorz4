@@ -1249,22 +1249,42 @@ export default function Clients() {
           ) : (
             <ScrollArea className="h-[60vh]">
               <div className="space-y-2 pr-2">
-                {activityLogs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/30 bg-card">
-                    <History className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        <span className="text-primary">{log.client_name}</span>
-                        {" — "}
-                        <span className="text-muted-foreground">{log.action}</span>
-                      </p>
-                      {log.details && <p className="text-xs text-muted-foreground mt-0.5">{log.details}</p>}
-                      <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        {format(parseISO(log.created_at), "dd/MM/yyyy HH:mm")}
-                      </p>
+                {activityLogs.map((log) => {
+                  const isRenewal = log.action === "renovação";
+                  return (
+                    <div
+                      key={log.id}
+                      className={`flex items-start gap-3 p-3 rounded-lg border bg-card ${
+                        isRenewal
+                          ? "border-l-[3px] border-l-emerald-500 border-t-border/30 border-r-border/30 border-b-border/30 bg-emerald-500/5 shadow-[0_0_12px_-4px_rgb(16_185_129/0.2)]"
+                          : "border-border/30"
+                      }`}
+                    >
+                      {isRenewal ? (
+                        <RefreshCw className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                      ) : (
+                        <History className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          <span className="text-primary">{log.client_name}</span>
+                          {" — "}
+                          <span className={isRenewal ? "font-bold text-emerald-400" : "text-muted-foreground"}>
+                            {log.action}
+                          </span>
+                        </p>
+                        {log.details && (
+                          <p className={`text-xs mt-0.5 ${isRenewal ? "text-emerald-400/70" : "text-muted-foreground"}`}>
+                            {log.details}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">
+                          {format(parseISO(log.created_at), "dd/MM/yyyy HH:mm")}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           )}
