@@ -466,12 +466,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           <Link
                             to={child.href}
                             onClick={() => setSidebarOpen(false)}
-                            className={cn(
-                              "flex items-center gap-2.5 pl-6 pr-3 py-2 rounded-lg text-xs font-medium transition-all duration-200",
-                              isActive(child.href)
-                                ? "bg-primary/15 text-primary border border-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.1)]"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground hover:pl-7"
-                            )}
+                             className={cn(
+                               "flex items-center gap-2.5 pl-4 lg:pl-6 pr-3 py-3 lg:py-2 rounded-xl lg:rounded-lg text-sm lg:text-xs font-normal lg:font-medium transition-all duration-200 min-h-[44px] lg:min-h-0",
+                               isActive(child.href)
+                                 ? "bg-primary/15 text-primary border border-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.1)]"
+                                 : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground hover:pl-5 lg:hover:pl-7"
+                             )}
                           >
                             <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                             {child.label}
