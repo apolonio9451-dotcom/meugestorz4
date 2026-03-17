@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import AnimatedPage from "@/components/AnimatedPage";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -160,7 +161,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-page-enter">
+      <AnimatedPage><div className="space-y-6">
         <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-32 mt-2" /></div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
@@ -168,12 +169,12 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-      </div>
+      </div></AnimatedPage>
     );
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
+    <AnimatedPage><div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">Visão geral do seu negócio</p>
@@ -298,6 +299,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div></AnimatedPage>
   );
 }
