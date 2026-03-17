@@ -1766,6 +1766,6 @@ export default function Clients() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </div></AnimatedPage>
   );
 }
