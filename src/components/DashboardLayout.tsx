@@ -549,51 +549,54 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Upgrade Pro Modal */}
-      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-center">
-              Desbloqueie o Poder Total da Automação 🚀
-            </DialogTitle>
-            <DialogDescription className="text-center text-sm">
-              O recurso <strong>"{upgradeFeature}"</strong> é exclusivo do <span className="text-[hsl(48,96%,53%)] font-bold">Plano PRO</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <div className="rounded-xl border border-[hsl(48,96%,53%)]/20 bg-[hsl(48,96%,53%)]/5 p-4 space-y-2.5">
-              {[
-                "Conexão direta via API (Instância)",
-                "Disparos automáticos diários (Vence hoje/amanhã/vencidos)",
-                "Follow-up e Suporte automatizados",
-                "Gestão de rede completa",
-              ].map((benefit) => (
-                <div key={benefit} className="flex items-start gap-2.5 text-sm">
-                  <span className="text-green-400 mt-0.5 shrink-0">✅</span>
-                  <span className="text-foreground">{benefit}</span>
-                </div>
-              ))}
+      {shouldShowUpgradeUI && (
+        <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+          <DialogContent data-upgrade-ui className="sm:max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-center">
+                Desbloqueie o Poder Total da Automação 🚀
+              </DialogTitle>
+              <DialogDescription className="text-center text-sm">
+                O recurso <strong>"{upgradeFeature}"</strong> é exclusivo do <span data-upgrade-ui className="text-[hsl(48,96%,53%)] font-bold">Plano PRO</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 pt-2">
+              <div data-upgrade-ui className="rounded-xl border border-[hsl(48,96%,53%)]/20 bg-[hsl(48,96%,53%)]/5 p-4 space-y-2.5">
+                {[
+                  "Conexão direta via API (Instância)",
+                  "Disparos automáticos diários (Vence hoje/amanhã/vencidos)",
+                  "Follow-up e Suporte automatizados",
+                  "Gestão de rede completa",
+                ].map((benefit) => (
+                  <div key={benefit} className="flex items-start gap-2.5 text-sm">
+                    <span className="text-green-400 mt-0.5 shrink-0">✅</span>
+                    <span className="text-foreground">{benefit}</span>
+                  </div>
+                ))}
+              </div>
+              {supportWhatsapp ? (
+                <a
+                  data-upgrade-ui
+                  href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro. Recurso: ${upgradeFeature}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full rounded-xl py-3.5 font-bold text-sm transition-all bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
+                  onClick={() => setUpgradeModalOpen(false)}
+                >
+                  <Zap className="w-4 h-4" />
+                  Quero ser PRO agora
+                </a>
+              ) : (
+                <Button
+                  data-upgrade-ui
+                  className="w-full gap-2 font-bold rounded-xl py-3.5 h-auto bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
+                  onClick={() => setUpgradeModalOpen(false)}
+                >
+                  <Zap className="w-4 h-4" />
+                  Quero ser PRO agora
+                </Button>
+              )}
             </div>
-            {supportWhatsapp ? (
-              <a
-                href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro. Recurso: ${upgradeFeature}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full rounded-xl py-3.5 font-bold text-sm transition-all bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
-                onClick={() => setUpgradeModalOpen(false)}
-              >
-                <Zap className="w-4 h-4" />
-                Quero ser PRO agora
-              </a>
-            ) : (
-              <Button
-                className="w-full gap-2 font-bold rounded-xl py-3.5 h-auto bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
-                onClick={() => setUpgradeModalOpen(false)}
-              >
-                <Zap className="w-4 h-4" />
-                Quero ser PRO agora
-              </Button>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
 
