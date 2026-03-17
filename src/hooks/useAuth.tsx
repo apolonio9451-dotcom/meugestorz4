@@ -311,7 +311,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
+  const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
+  const effectivePlanType: "starter" | "pro" = isOwnerOrAdmin ? "pro" : planType;
+
+    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
