@@ -410,7 +410,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <button
                     onClick={() => toggleMenu(item.label)}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium transition-all duration-200",
+                      "flex items-center gap-3 px-3 py-3.5 lg:py-2.5 w-full rounded-xl lg:rounded-lg text-base lg:text-sm font-medium transition-all duration-200",
                       childActive
                         ? "text-primary"
                         : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
