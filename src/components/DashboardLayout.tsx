@@ -1,6 +1,9 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, Suspense } from "react";
 import SidebarUserMenu from "@/components/profile/SidebarUserMenu";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import AnimatedPage from "@/components/AnimatedPage";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 import TrialBanner from "@/components/trials/TrialBanner";
 import AnnouncementModal from "@/components/announcements/AnnouncementModal";
 import { supabase } from "@/integrations/supabase/client";
