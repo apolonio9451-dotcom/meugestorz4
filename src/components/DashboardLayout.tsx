@@ -671,9 +671,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </button>
             </div>
           )}
-          <div className="animate-fade-in">
-            {children}
-          </div>
+          <AnimatePresence mode="wait">
+            <AnimatedPage key={location.pathname}>
+              <Suspense fallback={<DashboardSkeleton />}>
+                {children}
+              </Suspense>
+            </AnimatedPage>
+          </AnimatePresence>
         </main>
       </div>
     </div>
