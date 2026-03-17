@@ -13,6 +13,8 @@ interface AuthContextType {
   userRole: string | null;
   resellerCredits: number | null;
   planType: "starter" | "pro";
+  /** Always "pro" for owner/admin — use this for UI gating */
+  effectivePlanType: "starter" | "pro";
   isTrial: boolean;
   trialExpiresAt: string | null;
   loading: boolean;
