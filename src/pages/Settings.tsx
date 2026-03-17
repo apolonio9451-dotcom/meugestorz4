@@ -5,10 +5,10 @@ import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
 import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
 
 export default function Settings() {
-  const { effectiveCompanyId: companyId, parentCompanyId, userRole, planType, loading } = useAuth();
+  const { effectiveCompanyId: companyId, parentCompanyId, userRole, effectivePlanType, loading } = useAuth();
   const isOwner = userRole === "Proprietário";
   const isReseller = !!parentCompanyId;
-  const hasInstanceAccess = loading ? true : (isOwner || planType === "pro");
+  const hasInstanceAccess = loading ? true : (isOwner || effectivePlanType === "pro");
 
   return (
     <div className="space-y-6">
