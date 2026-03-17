@@ -14,9 +14,10 @@ export default function PlanGate({ children }: PlanGateProps) {
   const navigate = useNavigate();
   const hasRedirected = useRef(false);
   const hasAccess = effectivePlanType === "pro";
+  const canEvaluateAccess = !loading && Boolean(companyId);
 
   useEffect(() => {
-    if (loading || hasAccess || !companyId || hasRedirected.current) return;
+    if (!canEvaluateAccess || hasAccess || hasRedirected.current) return;
 
     hasRedirected.current = true;
     toast({
@@ -26,16 +27,10 @@ export default function PlanGate({ children }: PlanGateProps) {
       variant: "destructive",
     });
     navigate("/dashboard", { replace: true });
-  }, [loading, hasAccess, companyId, navigate]);
+  }, [canEvaluateAccess, hasAccess, navigate]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-4 p-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
+  if (!canEvaluateAccess) {
+    return <DashboardSkeleton />;
   }
 
   if (!hasAccess) return null;
