@@ -433,7 +433,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         )}
                       />
                       {allChildren.map((child, idx) => {
-                        const childLocked = child.proOnly && planType !== "pro";
+                        const childLocked = child.proOnly && effectivePlanType !== "pro";
 
                         return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
