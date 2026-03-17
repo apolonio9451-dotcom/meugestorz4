@@ -318,10 +318,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     document.body.classList.toggle("auth-unresolved", loading);
     document.body.classList.toggle("role-master", isPrivilegedUser);
+    document.body.classList.toggle("is-master-user", isPrivilegedUser);
 
     return () => {
-      document.body.classList.remove("auth-unresolved");
-      document.body.classList.remove("role-master");
+      document.body.classList.remove("auth-unresolved", "role-master", "is-master-user");
     };
   }, [loading, isOwnerOrAdmin, effectivePlanType]);
 
