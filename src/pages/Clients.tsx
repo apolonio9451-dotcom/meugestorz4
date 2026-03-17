@@ -1165,6 +1165,12 @@ export default function Clients() {
           </DialogContent>
       </Dialog>
 
+      {/* Live Send Status Bar */}
+      <LiveSendStatusBar
+        companyId={companyId}
+        expectedToday={filterCounts.vencidos + filterCounts.vence_hoje + filterCounts.a_vencer}
+      />
+
       <div className="grid grid-cols-6 gap-2">
         {mainBlocks.map((block) => {
           const Icon = block.icon;
