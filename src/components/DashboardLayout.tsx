@@ -94,7 +94,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, session } = useAuth();
+  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, session, loading } = useAuth();
   const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
@@ -104,6 +104,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState("");
+
+  const shouldShowUpgradeUI = !loading && effectivePlanType !== "pro";
 
   const handleExitGhostMode = async () => {
     // Call edge function to remove temporary membership
