@@ -147,10 +147,12 @@
   }
 }
 
-/* Global image optimization */
-img {
+/* Global image optimization - lazy load non-critical images */
+img:not([data-priority]) {
   content-visibility: auto;
-  loading: lazy;
+}
+img[loading="lazy"] {
+  content-visibility: auto;
 }
 
 @layer components {
