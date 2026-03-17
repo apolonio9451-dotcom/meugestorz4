@@ -310,8 +310,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetCompanyState(true);
   };
 
-  const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
+  const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin" || userRole === "master";
   const effectivePlanType: "starter" | "pro" = isOwnerOrAdmin ? "pro" : planType;
+
+  useEffect(() => {
+    const isPrivilegedUser = isOwnerOrAdmin || effectivePlanType === "pro";
+
+    document.body.classList.toggle("auth-unresolved", loading);
+    document.body.classList.toggle("role-master", isPrivilegedUser);
+
+    return () => {
+      document.body.classList.remove("auth-unresolved");
+      document.body.classList.remove("role-master");
+    };
+  }, [loading, isOwnerOrAdmin, effectivePlanType]);
 
   return (
     <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
