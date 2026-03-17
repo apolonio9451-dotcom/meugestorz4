@@ -13,6 +13,8 @@ interface AuthContextType {
   userRole: string | null;
   resellerCredits: number | null;
   planType: "starter" | "pro";
+  /** Always "pro" for owner/admin — use this for UI gating */
+  effectivePlanType: "starter" | "pro";
   isTrial: boolean;
   trialExpiresAt: string | null;
   loading: boolean;
@@ -269,7 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void fetchCompanyData(user.id);
     };
 
-    const interval = window.setInterval(refresh, 30000);
+    const interval = window.setInterval(refresh, 120000); // 2 min instead of 30s
     const onFocus = () => refresh();
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -308,8 +310,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetCompanyState(true);
   };
 
+  const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
+  const effectivePlanType: "starter" | "pro" = isOwnerOrAdmin ? "pro" : planType;
+
   return (
-    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

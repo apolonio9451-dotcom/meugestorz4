@@ -86,7 +86,7 @@ const variables = [
 ];
 
 export default function Messages() {
-  const { user, planType, companyId: authCompanyId } = useAuth();
+  const { user, effectivePlanType: planType, companyId: authCompanyId } = useAuth();
   const [templates, setTemplates] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);

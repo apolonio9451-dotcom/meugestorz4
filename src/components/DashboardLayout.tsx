@@ -91,7 +91,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, isTrial, session } = useAuth();
+  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, session } = useAuth();
   const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
@@ -387,15 +387,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               if (item.adminOnly && !(isOwnerOrAdmin || isResellerUser)) return false;
               if (item.resellerOnly && !isResellerUser) return false;
               // Completely hide items that are both adminOnly and proOnly for Starter users
-              if (item.proOnly && item.adminOnly && planType !== "pro") return false;
+              if (item.proOnly && item.adminOnly && effectivePlanType !== "pro") return false;
               return true;
             })
             .map((item) => {
-            const isStarterLocked = item.proOnly && planType !== "pro";
+            const isStarterLocked = item.proOnly && effectivePlanType !== "pro";
             // Show all children, but mark proOnly ones
             const allChildren = item.children;
             if (allChildren && allChildren.length > 0) {
-              const childActive = allChildren.some((c) => isActive(c.href) && (!c.proOnly || planType === "pro"));
+              const childActive = allChildren.some((c) => isActive(c.href) && (!c.proOnly || effectivePlanType === "pro"));
               const isOpen = openMenus[item.label];
               return (
                 <div key={item.label}>
@@ -433,7 +433,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         )}
                       />
                       {allChildren.map((child, idx) => {
-                        const childLocked = child.proOnly && planType !== "pro";
+                        const childLocked = child.proOnly && effectivePlanType !== "pro";
 
                         return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
