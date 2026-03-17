@@ -416,7 +416,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                     )}
                   >
-                    <item.icon className={cn("w-5 h-5 transition-colors duration-200", childActive && "text-primary")} />
+                    <item.icon className={cn("w-5 h-5 lg:w-5 lg:h-5 transition-colors duration-200", childActive && "text-primary")} />
                     {item.label}
                     <ChevronDown
                       className={cn(
