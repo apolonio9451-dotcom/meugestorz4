@@ -271,7 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void fetchCompanyData(user.id);
     };
 
-    const interval = window.setInterval(refresh, 30000);
+    const interval = window.setInterval(refresh, 120000); // 2 min instead of 30s
     const onFocus = () => refresh();
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
