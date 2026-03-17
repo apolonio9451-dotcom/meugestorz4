@@ -147,6 +147,12 @@
   }
 }
 
+/* Global image optimization */
+img {
+  content-visibility: auto;
+  loading: lazy;
+}
+
 @layer components {
   .glass-card {
     background: linear-gradient(
