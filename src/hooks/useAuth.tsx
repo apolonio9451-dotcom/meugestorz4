@@ -310,10 +310,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetCompanyState(true);
   };
 
-  return (
   const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
   const effectivePlanType: "starter" | "pro" = isOwnerOrAdmin ? "pro" : planType;
 
+  return (
     <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
