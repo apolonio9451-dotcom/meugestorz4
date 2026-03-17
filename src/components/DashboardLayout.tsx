@@ -386,7 +386,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 lg:space-y-0.5 overflow-y-auto">
           {navItems
             .filter((item) => {
               const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
