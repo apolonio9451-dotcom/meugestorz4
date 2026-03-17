@@ -597,10 +597,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </Button>
               )}
             </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      {/* Main content */}
+      {/* Main content */
       <div className="flex-1 flex flex-col min-w-0">
         {/* Ghost Mode Banner */}
         {isGhostMode && (
