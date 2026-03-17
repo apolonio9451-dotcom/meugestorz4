@@ -717,25 +717,27 @@ export default function Clients() {
 
   const getDaysRemaining = (endDate: string) => differenceInCalendarDays(parseISO(endDate), new Date());
 
-  // Separate excluded clients
-  const activeClients = clients.filter(c => c.status !== "excluded");
-  const excludedClients = clients.filter(c => c.status === "excluded");
+  // Separate excluded clients — memoized to prevent re-computation on every render
+  const activeClients = useMemo(() => clients.filter(c => c.status !== "excluded"), [clients]);
+  const excludedClients = useMemo(() => clients.filter(c => c.status === "excluded"), [clients]);
 
-  const searchFiltered = activeClients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search) || 
-    (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(search.toLowerCase()))
-  );
+  const searchLower = useMemo(() => search.toLowerCase(), [search]);
 
-  const searchFilteredExcluded = excludedClients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.whatsapp || "").includes(search)
-  );
+  const searchFiltered = useMemo(() => activeClients.filter(
+    (c) => c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search) || 
+    (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(searchLower))
+  ), [activeClients, searchLower, search, macKeys]);
 
-  const getClientDays = (clientId: string) => {
+  const searchFilteredExcluded = useMemo(() => excludedClients.filter(
+    (c) => c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search)
+  ), [excludedClients, searchLower, search]);
+
+  const getClientDays = useCallback((clientId: string) => {
     const sub = subscriptions[clientId];
     return sub ? getDaysRemaining(sub.end_date) : null;
-  };
+  }, [subscriptions]);
 
-  const getClientActiveDays = (clientId: string) => {
+  const getClientActiveDays = useCallback((clientId: string) => {
     const sub = subscriptions[clientId];
     if (!sub) return null;
     const days = getDaysRemaining(sub.end_date);
@@ -743,9 +745,9 @@ export default function Clients() {
     const client = clients.find(c => c.id === clientId);
     if (!client) return null;
     return differenceInCalendarDays(new Date(), parseISO(client.created_at));
-  };
+  }, [subscriptions, clients]);
 
-  const filtered = (() => {
+  const filtered = useMemo(() => {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
     if (mainFilter === "log") return [];
     if (mainFilter === "vencidos") return searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; });
@@ -771,9 +773,9 @@ export default function Clients() {
       });
     }
     return searchFiltered; // "todos"
-  })();
+  }, [mainFilter, statusSubFilter, searchFiltered, searchFilteredExcluded, subscriptions, getClientDays, getClientActiveDays]);
 
-  const filterCounts = {
+  const filterCounts = useMemo(() => ({
     todos: activeClients.length,
     vencidos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; }).length,
     pendentes: searchFiltered.filter(c => { const sub = subscriptions[c.id]; return sub && sub.payment_status === "pending"; }).length,
@@ -784,7 +786,33 @@ export default function Clients() {
     a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d === 3; }).length,
     followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15 && (c as any).follow_up_active !== false; }).length,
     suporte: searchFiltered.filter(c => !!(c as any).support_started_at).length,
-  };
+  }), [activeClients, excludedClients, searchFiltered, subscriptions, getClientDays, getClientActiveDays]);
+
+  // Progressive loading: show first BATCH_SIZE items, load more on scroll
+  const BATCH_SIZE = 30;
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Reset visible count when filter changes
+  useEffect(() => { setVisibleCount(BATCH_SIZE); }, [mainFilter, statusSubFilter, search]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && visibleCount < filtered.length) {
+          setVisibleCount(prev => Math.min(prev + BATCH_SIZE, filtered.length));
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, filtered.length]);
+
+  const visibleFiltered = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
 
   const mainBlocks = [
     { key: "todos" as const, label: "Todos", icon: LayoutGrid, count: filterCounts.todos },
