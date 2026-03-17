@@ -250,6 +250,6 @@ export default function Subscriptions() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div></AnimatedPage>
   );
 }
