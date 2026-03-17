@@ -374,8 +374,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="w-48 h-14 rounded-full bg-primary/20 blur-2xl" />
             </div>
             <img
+              data-priority
               src={defaultBrandLogo}
-              alt="Meu Gestor"
+              alt="Meu Gestor – Logo"
               className="relative h-9 max-w-[160px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
             />
           </div>
@@ -632,8 +633,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="w-72 h-20 rounded-full bg-primary/25 blur-3xl" />
               </div>
               <img
+                data-priority
                 src={defaultBrandLogo}
-                alt="Meu Gestor"
+                alt="Meu Gestor – Logo"
                 className="relative h-16 sm:h-20 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
               />
             </div>
