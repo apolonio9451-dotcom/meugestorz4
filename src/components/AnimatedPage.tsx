@@ -9,7 +9,7 @@ const pageVariants = {
 
 const pageTransition = {
   duration: 0.25,
-  ease: [0.22, 1, 0.36, 1],
+  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
 };
 
 export default function AnimatedPage({ children }: { children: ReactNode }) {

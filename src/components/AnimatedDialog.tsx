@@ -19,7 +19,7 @@ const contentVariants = {
   visible: { opacity: 1, scale: 1, y: 0 },
 };
 
-const spring = { type: "spring", damping: 28, stiffness: 350 };
+const spring = { type: "spring" as const, damping: 28, stiffness: 350 };
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
