@@ -70,7 +70,7 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
           setProfileModalOpen(true);
           onCloseSidebar?.();
         }}
-        className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200 group focus:outline-none"
+        className="flex items-center gap-3 px-3 py-3.5 lg:py-2.5 w-full rounded-xl lg:rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200 group focus:outline-none bg-sidebar-accent/15 lg:bg-transparent border border-sidebar-border/30 lg:border-0 min-h-[52px] lg:min-h-0"
       >
         <Avatar className="h-9 w-9 border border-primary/20 shadow-md">
           <AvatarImage src={avatarUrl} alt={displayName} />
