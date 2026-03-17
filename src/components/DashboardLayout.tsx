@@ -520,7 +520,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 )}
               >
                 <item.icon className={cn(
-                  "w-5 h-5 transition-all duration-200",
+                  "w-6 h-6 lg:w-5 lg:h-5 transition-all duration-200",
                   isActive(item.href!) ? "text-primary" : "group-hover:scale-110"
                 )} />
                 <span className="flex-1">{item.label}</span>
