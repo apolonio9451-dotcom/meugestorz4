@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Sub {
   amount: number;
@@ -27,34 +29,39 @@ interface ServerData {
   cost_per_credit: number;
 }
 
+async function fetchFinancialData(companyId: string) {
+  const [subsRes, serversRes, clientsRes] = await Promise.all([
+    supabase
+      .from("client_subscriptions")
+      .select("amount, payment_status, start_date, end_date, clients(name, server), subscription_plans(name)")
+      .eq("company_id", companyId),
+    supabase.from("servers").select("name, url, cost_per_credit").eq("company_id", companyId),
+    supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active"),
+  ]);
+  return {
+    subs: (subsRes.data || []) as Sub[],
+    servers: (serversRes.data || []) as ServerData[],
+    totalClients: clientsRes.count || 0,
+  };
+}
+
 export default function Financial() {
   const { effectiveCompanyId: companyId } = useAuth();
-  const [subs, setSubs] = useState<Sub[]>([]);
-  const [servers, setServers] = useState<ServerData[]>([]);
-  const [totalClients, setTotalClients] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   // Date range filter - default: current month
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
 
-  useEffect(() => {
-    if (!companyId) return;
-    setLoading(true);
-    Promise.all([
-      supabase
-        .from("client_subscriptions")
-        .select("amount, payment_status, start_date, end_date, clients(name, server), subscription_plans(name)")
-        .eq("company_id", companyId),
-      supabase.from("servers").select("name, url, cost_per_credit").eq("company_id", companyId),
-      supabase.from("clients").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active"),
-    ]).then(([subsRes, serversRes, clientsRes]) => {
-      setSubs(subsRes.data || []);
-      setServers(serversRes.data || []);
-      setTotalClients(clientsRes.count || 0);
-      setLoading(false);
-    });
-  }, [companyId]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["financial-data", companyId],
+    queryFn: () => fetchFinancialData(companyId!),
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const subs = data?.subs || [];
+  const servers = data?.servers || [];
+  const totalClients = data?.totalClients || 0;
 
   const today = new Date().toISOString().split("T")[0];
   const fromStr = format(dateFrom, "yyyy-MM-dd");
