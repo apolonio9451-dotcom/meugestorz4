@@ -315,7 +315,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }
       }
     };
-    fetchAdminInfo();
+    // Run all fetches in parallel for faster load
+    Promise.all([fetchBrand(), fetchSubscription(), fetchAdminInfo()]);
 
     return () => {};
   }, [companyId, user]);
