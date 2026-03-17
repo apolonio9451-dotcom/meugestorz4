@@ -868,7 +868,7 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-3 sm:space-y-6 animate-page-enter">
+    <AnimatedPage><div className="space-y-3 sm:space-y-6">
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpenSynced(o); if (!o) { if (!editing) clearFormDraft(); setEditing(null); setFormMacKeys([]); setFormCredentials([{ username: "", password: "", label: "" }]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
