@@ -217,6 +217,14 @@ button:active:not(:disabled), [role="button"]:active:not(:disabled) {
 
 /* Hide upgrade lock/badge UI while auth is unresolved or user is privileged */
 body.auth-unresolved [data-upgrade-ui],
-body.role-master [data-upgrade-ui] {
+body.auth-unresolved .pro-lock-overlay,
+body.auth-unresolved .badge-pro,
+body.role-master [data-upgrade-ui],
+body.role-master .pro-lock-overlay,
+body.role-master .badge-pro,
+body.is-master-user [data-upgrade-ui],
+body.is-master-user .pro-lock-overlay,
+body.is-master-user .badge-pro {
   display: none !important;
+  visibility: hidden !important;
 }

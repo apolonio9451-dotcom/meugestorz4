@@ -32,6 +32,21 @@
           }
         }
       } catch(e) {}
+
+      // Pre-hydrate master role from auth cache to block PRO paywalls before React loads
+      try {
+        var authCache = localStorage.getItem("auth_cache");
+        if (authCache) {
+          var auth = JSON.parse(authCache);
+          var role = auth.userRole;
+          var plan = auth.planType;
+          if (role === "Proprietário" || role === "Admin" || plan === "pro") {
+            document.body.classList.add("is-master-user", "role-master");
+          }
+        } else {
+          document.body.classList.add("auth-unresolved");
+        }
+      } catch(e) {}
     </script>
   </head>
 
