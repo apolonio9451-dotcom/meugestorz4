@@ -391,7 +391,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               return true;
             })
             .map((item) => {
-            const isStarterLocked = item.proOnly && planType !== "pro";
+            const isStarterLocked = item.proOnly && effectivePlanType !== "pro";
             // Show all children, but mark proOnly ones
             const allChildren = item.children;
             if (allChildren && allChildren.length > 0) {
