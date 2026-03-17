@@ -1272,7 +1272,7 @@ export default function Clients() {
         <p className="text-center text-muted-foreground py-12">Nenhum cliente encontrado</p>
       ) : (
         <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((client) => {
+          {visibleFiltered.map((client) => {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
             const clientMacKeys = macKeys[client.id] || [];
