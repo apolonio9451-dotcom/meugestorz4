@@ -70,11 +70,6 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
 
   return (
     <div className="glass-card rounded-xl p-6 space-y-6 relative">
-      {isOwner && (
-        <span className="absolute top-3 right-3 border border-[hsl(48,96%,53%)] bg-[hsl(0,0%,5%)] text-[hsl(48,96%,53%)] text-[10px] font-bold px-3 py-1 rounded-full tracking-wide">
-          Acesso Master
-        </span>
-      )}
       <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
         <Wifi className="h-5 w-5 text-primary" />
         Configuração de Envio
