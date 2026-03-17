@@ -513,9 +513,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 to={item.href!}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group",
+                  "flex items-center gap-3 px-3 py-3.5 lg:py-2.5 rounded-xl lg:rounded-lg text-base lg:text-sm font-medium transition-all duration-200 group min-h-[48px] lg:min-h-0",
                   isActive(item.href!)
-                    ? "bg-primary/15 text-primary border border-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.1)]"
+                    ? "bg-primary/15 text-primary border border-primary/20 shadow-[0_0_16px_hsl(var(--primary)/0.15)] border-l-[3px] lg:border-l border-l-primary"
                     : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                 )}
               >
