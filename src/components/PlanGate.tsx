@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 
 interface PlanGateProps {
   children: React.ReactNode;
