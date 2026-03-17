@@ -426,20 +426,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     />
                   </button>
 
-                  <div
-                    className={cn(
-                      "overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                      isOpen ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0"
-                    )}
-                  >
-                    <div className="relative ml-[1.65rem] mt-1 space-y-0.5 pb-1">
-                      {/* Vertical connecting line */}
-                      <div
-                        className={cn(
-                          "absolute left-0 top-0 bottom-2 w-px transition-all duration-500",
-                          "bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"
-                        )}
-                      />
+                   <div
+                     className={cn(
+                       "overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                       isOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
+                     )}
+                   >
+                     <div className="relative ml-2 lg:ml-[1.65rem] mt-1 space-y-0.5 pb-1 rounded-xl lg:rounded-none bg-sidebar-accent/20 lg:bg-transparent p-2 lg:p-0 border-l-2 lg:border-l-0 border-primary/30">
+                       {/* Vertical connecting line – desktop only */}
+                       <div
+                         className={cn(
+                           "absolute left-0 top-0 bottom-2 w-px transition-all duration-500 hidden lg:block",
+                           "bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"
+                         )}
+                       />
                       {allChildren.map((child, idx) => {
                         const childLocked = shouldShowUpgradeUI && child.proOnly;
 
