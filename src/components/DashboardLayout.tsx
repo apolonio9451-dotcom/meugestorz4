@@ -397,7 +397,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               return true;
             })
             .map((item) => {
-            const isStarterLocked = item.proOnly && effectivePlanType !== "pro";
+            const isStarterLocked = shouldShowUpgradeUI && item.proOnly;
             // Show all children, but mark proOnly ones
             const allChildren = item.children;
             if (allChildren && allChildren.length > 0) {
@@ -439,7 +439,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         )}
                       />
                       {allChildren.map((child, idx) => {
-                        const childLocked = child.proOnly && effectivePlanType !== "pro";
+                        const childLocked = shouldShowUpgradeUI && child.proOnly;
 
                         return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
@@ -447,6 +447,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
                           {childLocked ? (
                              <button
+                              data-upgrade-ui
                               onClick={() => {
                                 setUpgradeFeature(child.label);
                                 setUpgradeModalOpen(true);
@@ -456,8 +457,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             >
                               <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                               <span className="flex-1">{child.label}</span>
-                              <Lock className="w-3 h-3 text-[hsl(48,96%,53%)]" />
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
+                              <Lock data-upgrade-ui className="w-3 h-3 text-[hsl(48,96%,53%)]" />
+                              <span data-upgrade-ui className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                             </button>
                           ) : (
                           <Link
@@ -488,6 +489,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               return (
                 <button
                   key={item.href || item.label}
+                  data-upgrade-ui
                   onClick={() => {
                     setUpgradeFeature(item.label);
                     setUpgradeModalOpen(true);
@@ -497,8 +499,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
-                  <Lock className="w-3.5 h-3.5 text-[hsl(48,96%,53%)]" />
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
+                  <Lock data-upgrade-ui className="w-3.5 h-3.5 text-[hsl(48,96%,53%)]" />
+                  <span data-upgrade-ui className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                 </button>
               );
             }
