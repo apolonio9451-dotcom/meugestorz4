@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [planType, setPlanType] = useState<"starter" | "pro">(cached?.planType === "starter" ? "starter" : "pro");
   const [isTrial, setIsTrial] = useState(cached?.isTrial ?? false);
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(cached?.trialExpiresAt ?? null);
-  const [loading, setLoading] = useState(!cached);
+  const [loading, setLoading] = useState(true);
 
   const persistCache = (data: Record<string, any>) => {
     try { localStorage.setItem("auth_cache", JSON.stringify(data)); } catch {}
