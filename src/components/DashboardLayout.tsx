@@ -94,7 +94,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, session } = useAuth();
+  const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, session, loading } = useAuth();
   const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
   const location = useLocation();
   const navigate = useNavigate();
@@ -104,6 +104,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [supportWhatsapp, setSupportWhatsapp] = useState<string | null>(null);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState("");
+
+  const shouldShowUpgradeUI = !loading && effectivePlanType !== "pro";
 
   const handleExitGhostMode = async () => {
     // Call edge function to remove temporary membership
@@ -395,7 +397,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               return true;
             })
             .map((item) => {
-            const isStarterLocked = item.proOnly && effectivePlanType !== "pro";
+            const isStarterLocked = shouldShowUpgradeUI && item.proOnly;
             // Show all children, but mark proOnly ones
             const allChildren = item.children;
             if (allChildren && allChildren.length > 0) {
@@ -437,7 +439,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         )}
                       />
                       {allChildren.map((child, idx) => {
-                        const childLocked = child.proOnly && effectivePlanType !== "pro";
+                        const childLocked = shouldShowUpgradeUI && child.proOnly;
 
                         return (
                         <div key={child.href} className="relative animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
@@ -445,6 +447,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                           <div className="absolute left-0 top-1/2 w-3.5 h-px bg-primary/25 transition-all duration-200" />
                           {childLocked ? (
                              <button
+                              data-upgrade-ui
                               onClick={() => {
                                 setUpgradeFeature(child.label);
                                 setUpgradeModalOpen(true);
@@ -454,8 +457,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             >
                               <child.icon className="w-3.5 h-3.5 transition-transform duration-200" />
                               <span className="flex-1">{child.label}</span>
-                              <Lock className="w-3 h-3 text-[hsl(48,96%,53%)]" />
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
+                              <Lock data-upgrade-ui className="w-3 h-3 text-[hsl(48,96%,53%)]" />
+                              <span data-upgrade-ui className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                             </button>
                           ) : (
                           <Link
@@ -486,6 +489,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               return (
                 <button
                   key={item.href || item.label}
+                  data-upgrade-ui
                   onClick={() => {
                     setUpgradeFeature(item.label);
                     setUpgradeModalOpen(true);
@@ -495,8 +499,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
-                  <Lock className="w-3.5 h-3.5 text-[hsl(48,96%,53%)]" />
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
+                  <Lock data-upgrade-ui className="w-3.5 h-3.5 text-[hsl(48,96%,53%)]" />
+                  <span data-upgrade-ui className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase leading-none bg-[hsl(48,96%,53%)] text-black tracking-wider">PRO</span>
                 </button>
               );
             }
@@ -545,53 +549,57 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Upgrade Pro Modal */}
-      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-center">
-              Desbloqueie o Poder Total da Automação 🚀
-            </DialogTitle>
-            <DialogDescription className="text-center text-sm">
-              O recurso <strong>"{upgradeFeature}"</strong> é exclusivo do <span className="text-[hsl(48,96%,53%)] font-bold">Plano PRO</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <div className="rounded-xl border border-[hsl(48,96%,53%)]/20 bg-[hsl(48,96%,53%)]/5 p-4 space-y-2.5">
-              {[
-                "Conexão direta via API (Instância)",
-                "Disparos automáticos diários (Vence hoje/amanhã/vencidos)",
-                "Follow-up e Suporte automatizados",
-                "Gestão de rede completa",
-              ].map((benefit) => (
-                <div key={benefit} className="flex items-start gap-2.5 text-sm">
-                  <span className="text-green-400 mt-0.5 shrink-0">✅</span>
-                  <span className="text-foreground">{benefit}</span>
-                </div>
-              ))}
+      {shouldShowUpgradeUI && (
+        <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+          <DialogContent data-upgrade-ui className="sm:max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-center">
+                Desbloqueie o Poder Total da Automação 🚀
+              </DialogTitle>
+              <DialogDescription className="text-center text-sm">
+                O recurso <strong>"{upgradeFeature}"</strong> é exclusivo do <span data-upgrade-ui className="text-[hsl(48,96%,53%)] font-bold">Plano PRO</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 pt-2">
+              <div data-upgrade-ui className="rounded-xl border border-[hsl(48,96%,53%)]/20 bg-[hsl(48,96%,53%)]/5 p-4 space-y-2.5">
+                {[
+                  "Conexão direta via API (Instância)",
+                  "Disparos automáticos diários (Vence hoje/amanhã/vencidos)",
+                  "Follow-up e Suporte automatizados",
+                  "Gestão de rede completa",
+                ].map((benefit) => (
+                  <div key={benefit} className="flex items-start gap-2.5 text-sm">
+                    <span className="text-green-400 mt-0.5 shrink-0">✅</span>
+                    <span className="text-foreground">{benefit}</span>
+                  </div>
+                ))}
+              </div>
+              {supportWhatsapp ? (
+                <a
+                  data-upgrade-ui
+                  href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro. Recurso: ${upgradeFeature}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full rounded-xl py-3.5 font-bold text-sm transition-all bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
+                  onClick={() => setUpgradeModalOpen(false)}
+                >
+                  <Zap className="w-4 h-4" />
+                  Quero ser PRO agora
+                </a>
+              ) : (
+                <Button
+                  data-upgrade-ui
+                  className="w-full gap-2 font-bold rounded-xl py-3.5 h-auto bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
+                  onClick={() => setUpgradeModalOpen(false)}
+                >
+                  <Zap className="w-4 h-4" />
+                  Quero ser PRO agora
+                </Button>
+              )}
             </div>
-            {supportWhatsapp ? (
-              <a
-                href={`https://wa.me/${supportWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá! Gostaria de fazer upgrade para o Plano Pro. Recurso: ${upgradeFeature}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full rounded-xl py-3.5 font-bold text-sm transition-all bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
-                onClick={() => setUpgradeModalOpen(false)}
-              >
-                <Zap className="w-4 h-4" />
-                Quero ser PRO agora
-              </a>
-            ) : (
-              <Button
-                className="w-full gap-2 font-bold rounded-xl py-3.5 h-auto bg-[hsl(48,96%,53%)] text-black hover:bg-[hsl(48,96%,45%)] hover:scale-[1.02] shadow-[0_0_20px_hsl(48,96%,53%,0.3)]"
-                onClick={() => setUpgradeModalOpen(false)}
-              >
-                <Zap className="w-4 h-4" />
-                Quero ser PRO agora
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">

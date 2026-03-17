@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [planType, setPlanType] = useState<"starter" | "pro">(cached?.planType === "starter" ? "starter" : "pro");
   const [isTrial, setIsTrial] = useState(cached?.isTrial ?? false);
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(cached?.trialExpiresAt ?? null);
-  const [loading, setLoading] = useState(!cached);
+  const [loading, setLoading] = useState(true);
 
   const persistCache = (data: Record<string, any>) => {
     try { localStorage.setItem("auth_cache", JSON.stringify(data)); } catch {}
@@ -310,8 +310,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetCompanyState(true);
   };
 
-  const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin";
+  const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin" || userRole === "master";
   const effectivePlanType: "starter" | "pro" = isOwnerOrAdmin ? "pro" : planType;
+
+  useEffect(() => {
+    const isPrivilegedUser = isOwnerOrAdmin || effectivePlanType === "pro";
+
+    document.body.classList.toggle("auth-unresolved", loading);
+    document.body.classList.toggle("role-master", isPrivilegedUser);
+
+    return () => {
+      document.body.classList.remove("auth-unresolved");
+      document.body.classList.remove("role-master");
+    };
+  }, [loading, isOwnerOrAdmin, effectivePlanType]);
 
   return (
     <AuthContext.Provider value={{ session, user, companyId, effectiveCompanyId: companyId, parentCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, trialExpiresAt, loading, signUp, signIn, signOut }}>
