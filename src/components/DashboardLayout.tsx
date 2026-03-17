@@ -395,7 +395,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             // Show all children, but mark proOnly ones
             const allChildren = item.children;
             if (allChildren && allChildren.length > 0) {
-              const childActive = allChildren.some((c) => isActive(c.href) && (!c.proOnly || planType === "pro"));
+              const childActive = allChildren.some((c) => isActive(c.href) && (!c.proOnly || effectivePlanType === "pro"));
               const isOpen = openMenus[item.label];
               return (
                 <div key={item.label}>
