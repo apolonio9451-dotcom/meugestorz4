@@ -86,7 +86,7 @@ const variables = [
 ];
 
 export default function Messages() {
-  const { user, effectivePlanType: planType, companyId: authCompanyId } = useAuth();
+  const { user, effectivePlanType: planType, companyId: authCompanyId, loading } = useAuth();
   const [templates, setTemplates] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -94,6 +94,8 @@ export default function Messages() {
   const [pixKey, setPixKey] = useState("");
   const [savingPix, setSavingPix] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  const shouldShowUpgradeUI = !loading && planType !== "pro";
 
   useEffect(() => {
     if (!user) return;
