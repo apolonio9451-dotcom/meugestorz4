@@ -1571,6 +1571,12 @@ export default function Clients() {
               </div>
             );
           })}
+          {/* Infinite scroll sentinel */}
+          {visibleCount < filtered.length && (
+            <div ref={sentinelRef} className="col-span-full flex justify-center py-4">
+              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          )}
         </div>
       )}
 
