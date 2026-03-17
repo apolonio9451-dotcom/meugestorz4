@@ -497,7 +497,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     setUpgradeModalOpen(true);
                     setSidebarOpen(false);
                   }}
-                  className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium transition-all duration-200 text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
+                  className="flex items-center gap-3 px-3 py-3.5 lg:py-2.5 w-full rounded-xl lg:rounded-lg text-base lg:text-sm font-medium transition-all duration-200 text-sidebar-foreground/60 hover:bg-sidebar-accent/30 min-h-[48px] lg:min-h-0"
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
