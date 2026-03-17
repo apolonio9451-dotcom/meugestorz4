@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SupportCardCountdown from "@/components/clients/SupportCardCountdown";
+import LiveSendStatusBar from "@/components/clients/LiveSendStatusBar";
 import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
 
 interface Client {
@@ -1163,6 +1164,12 @@ export default function Clients() {
             </form>
           </DialogContent>
       </Dialog>
+
+      {/* Live Send Status Bar */}
+      <LiveSendStatusBar
+        companyId={companyId}
+        expectedToday={filterCounts.vencidos + filterCounts.vence_hoje + filterCounts.a_vencer}
+      />
 
       <div className="grid grid-cols-6 gap-2">
         {mainBlocks.map((block) => {
