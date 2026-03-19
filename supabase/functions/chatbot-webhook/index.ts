@@ -679,7 +679,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const phone = normalizePhone(senderPhone);
-    const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
+    const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, companyApiUrl, companyApiToken, {
       companyId: companyIdParam,
       phone,
       message: messageText.slice(0, 4000),
