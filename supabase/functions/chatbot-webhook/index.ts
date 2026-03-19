@@ -492,6 +492,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const phone = normalizePhone(senderPhone);
+    await recordMassBroadcastIncoming(supabase, {
+      companyId: companyIdParam,
+      phone,
+      message: messageText.slice(0, 4000),
+      messageType: messageType || "text",
+    });
     console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
     decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
 

@@ -33,6 +33,13 @@ type RecipientRow = {
   next_action_at: string;
 };
 
+type ConversationRow = {
+  id: string;
+  conversation_status: string;
+  has_reply: boolean;
+  contact_name: string;
+};
+
 function normalizePhone(phone: string): string {
   return String(phone || "").replace(/\D/g, "");
 }
@@ -74,6 +81,95 @@ async function sendText(apiUrl: string, apiToken: string, number: string, text: 
 
 async function insertLog(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
   await supabase.from("mass_broadcast_logs").insert(payload);
+}
+
+async function ensureConversation(
+  supabase: ReturnType<typeof createClient>,
+  payload: {
+    companyId: string;
+    campaignId: string;
+    recipientId: string | null;
+    phone: string;
+    timestamp: string;
+  },
+) {
+  const normalizedPhone = normalizePhone(payload.phone);
+  const { data: existing } = await supabase
+    .from("mass_broadcast_conversations")
+    .select("id, conversation_status, has_reply, contact_name")
+    .eq("campaign_id", payload.campaignId)
+    .eq("normalized_phone", normalizedPhone)
+    .maybeSingle<ConversationRow>();
+
+  if (existing?.id) {
+    await supabase
+      .from("mass_broadcast_conversations")
+      .update({
+        recipient_id: payload.recipientId,
+        phone: payload.phone,
+        normalized_phone: normalizedPhone,
+        contact_name: existing.contact_name || payload.phone,
+        conversation_status: existing.has_reply ? "awaiting_human" : existing.conversation_status || "bot_active",
+        has_reply: existing.has_reply,
+        last_message_at: payload.timestamp,
+        last_outgoing_at: payload.timestamp,
+      })
+      .eq("id", existing.id);
+
+    return existing.id;
+  }
+
+  const { data: created } = await supabase
+    .from("mass_broadcast_conversations")
+    .insert({
+      company_id: payload.companyId,
+      campaign_id: payload.campaignId,
+      recipient_id: payload.recipientId,
+      phone: payload.phone,
+      normalized_phone: normalizedPhone,
+      contact_name: payload.phone,
+      conversation_status: "bot_active",
+      has_reply: false,
+      last_message_at: payload.timestamp,
+      last_outgoing_at: payload.timestamp,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  return created?.id ?? null;
+}
+
+async function insertConversationMessage(
+  supabase: ReturnType<typeof createClient>,
+  payload: {
+    companyId: string;
+    campaignId: string;
+    conversationId: string | null;
+    recipientId: string | null;
+    phone: string;
+    message: string;
+    messageType?: string;
+    deliveryStatus?: string;
+    createdAt: string;
+  },
+) {
+  if (!payload.conversationId) return;
+
+  await supabase.from("mass_broadcast_conversation_messages").insert({
+    company_id: payload.companyId,
+    campaign_id: payload.campaignId,
+    conversation_id: payload.conversationId,
+    recipient_id: payload.recipientId,
+    phone: payload.phone,
+    normalized_phone: normalizePhone(payload.phone),
+    direction: "outbound",
+    sender_type: "bot",
+    source: "mass_broadcast",
+    message_type: payload.messageType ?? "text",
+    message: payload.message,
+    delivery_status: payload.deliveryStatus ?? "sent",
+    created_at: payload.createdAt,
+  });
 }
 
 async function updateCampaignCounters(
@@ -192,6 +288,7 @@ Deno.serve(async (req) => {
 
         try {
           if (recipient.current_step === "greeting") {
+            const greetingSentAt = new Date().toISOString();
             const greetings = nonEmptyList(campaign.greeting_templates, DEFAULT_GREETINGS);
             const greeting = pickRandom(greetings);
             await sendText(settings.api_url, settings.api_token, phone, greeting);
@@ -204,12 +301,30 @@ Deno.serve(async (req) => {
               .update({
                 status: "processing",
                 current_step: "offer",
-                sent_greeting_at: new Date().toISOString(),
-                last_attempt_at: new Date().toISOString(),
+                sent_greeting_at: greetingSentAt,
+                last_attempt_at: greetingSentAt,
                 next_action_at: nextActionAt,
                 error_message: null,
               })
               .eq("id", recipient.id);
+
+            const conversationId = await ensureConversation(supabase, {
+              companyId: recipient.company_id,
+              campaignId: campaign.id,
+              recipientId: recipient.id,
+              phone,
+              timestamp: greetingSentAt,
+            });
+
+            await insertConversationMessage(supabase, {
+              companyId: recipient.company_id,
+              campaignId: campaign.id,
+              conversationId,
+              recipientId: recipient.id,
+              phone,
+              message: greeting,
+              createdAt: greetingSentAt,
+            });
 
             await insertLog(supabase, {
               campaign_id: campaign.id,
@@ -229,6 +344,7 @@ Deno.serve(async (req) => {
           const offerMessage = String(recipient.offer_template || "").trim();
           if (!offerMessage) throw new Error("Template da oferta vazio.");
 
+          const offerSentAt = new Date().toISOString();
           await sendText(settings.api_url, settings.api_token, phone, offerMessage);
 
           await supabase
@@ -236,11 +352,29 @@ Deno.serve(async (req) => {
             .update({
               status: "sent",
               current_step: "done",
-              sent_offer_at: new Date().toISOString(),
-              last_attempt_at: new Date().toISOString(),
+              sent_offer_at: offerSentAt,
+              last_attempt_at: offerSentAt,
               error_message: null,
             })
             .eq("id", recipient.id);
+
+          const conversationId = await ensureConversation(supabase, {
+            companyId: recipient.company_id,
+            campaignId: campaign.id,
+            recipientId: recipient.id,
+            phone,
+            timestamp: offerSentAt,
+          });
+
+          await insertConversationMessage(supabase, {
+            companyId: recipient.company_id,
+            campaignId: campaign.id,
+            conversationId,
+            recipientId: recipient.id,
+            phone,
+            message: offerMessage,
+            createdAt: offerSentAt,
+          });
 
           await insertLog(supabase, {
             campaign_id: campaign.id,
