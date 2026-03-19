@@ -45,7 +45,7 @@ import {
   MessageCircle,
   FlaskConical,
   Bot,
-  
+  Rocket,
   Zap,
   Lock,
   AlertTriangle,
