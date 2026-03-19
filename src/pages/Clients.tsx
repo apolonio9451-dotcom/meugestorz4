@@ -13,7 +13,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -95,6 +95,7 @@ export default function Clients() {
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
   const [pixKey, setPixKey] = useState("");
+  const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
   const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
@@ -245,17 +246,23 @@ export default function Clients() {
     });
   };
 
-  const fetchPixKey = async () => {
+  const fetchApiSettings = async () => {
     if (!companyId) return;
     const { data } = await supabase
-      .from("api_settings")
-      .select("pix_key")
+      .from("api_settings" as any)
+      .select("pix_key, overdue_charge_pause_days")
       .eq("company_id", companyId)
       .maybeSingle();
-    if (data) setPixKey(data.pix_key || "");
+    if (data) {
+      setPixKey((data as any).pix_key || "");
+      setOverdueChargePauseDays(Math.max(0, Number((data as any).overdue_charge_pause_days ?? 10)));
+    } else {
+      setPixKey("");
+      setOverdueChargePauseDays(10);
+    }
   };
 
-  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchPixKey(); }, [companyId]);
+  useEffect(() => { fetchClients(); fetchSubscriptions(); fetchMacKeys(); fetchPlans(); fetchServers(); fetchMessageTemplates(); fetchActivityLogs(); fetchApiSettings(); }, [companyId]);
 
   // Sync dialog state to URL params and localStorage flag
   const REGISTERING_KEY = `meugestor-is-registering-${companyId}`;
@@ -749,6 +756,12 @@ export default function Clients() {
     return differenceInCalendarDays(new Date(), parseISO(client.created_at));
   }, [subscriptions, clients]);
 
+  const isAutoChargePaused = useCallback((days: number | null) => {
+    if (days === null || days >= 0) return false;
+    if (overdueChargePauseDays === 0) return false;
+    return Math.abs(days) > overdueChargePauseDays;
+  }, [overdueChargePauseDays]);
+
   const filtered = useMemo(() => {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
     if (mainFilter === "log") return [];
@@ -834,14 +847,16 @@ export default function Clients() {
     { key: "suporte" as const, label: "Suporte", count: filterCounts.suporte, color: "bg-violet-400/20 text-violet-400 border-violet-400/50" },
   ];
 
-  const getBarColor = (days: number) => {
+  const getBarColor = (days: number, paused: boolean = false) => {
+    if (paused) return "bg-muted-foreground/50";
     if (days < 0) return "bg-destructive/60";
     if (days === 0) return "bg-orange-500";
     if (days <= 7) return "bg-yellow-500";
     return "bg-emerald-500";
   };
 
-  const getBarTrackColor = (days: number) => {
+  const getBarTrackColor = (days: number, paused: boolean = false) => {
+    if (paused) return "bg-muted/60";
     if (days < 0) return "bg-destructive/20";
     if (days === 0) return "bg-orange-500/20";
     if (days <= 7) return "bg-yellow-500/20";
@@ -853,14 +868,16 @@ export default function Clients() {
     return Math.min(100, (days / max) * 100);
   };
 
-  const getDaysLabel = (days: number) => {
+  const getDaysLabel = (days: number, paused: boolean = false) => {
+    if (paused) return "Cobrança automática pausada";
     if (days < 0) return "Vencido";
     if (days === 0) return "Vence hoje";
     if (days === 1) return "1 dia restante";
     return `${days} dias restantes`;
   };
 
-  const getExpiryBadge = (days: number) => {
+  const getExpiryBadge = (days: number, paused: boolean = false) => {
+    if (paused) return <Badge className="bg-muted/70 text-muted-foreground border-border/60 text-[10px] font-bold uppercase">Vencido · Pausado</Badge>;
     if (days < 0) return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] font-bold uppercase">Vencido</Badge>;
     if (days === 0) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
     if (days === 1) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
@@ -1303,17 +1320,20 @@ export default function Clients() {
           {visibleFiltered.map((client) => {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
+            const isPausedByOverdueLimit = isAutoChargePaused(days);
             const clientMacKeys = macKeys[client.id] || [];
 
             const neonColor = days === null
               ? "border-muted-foreground/20 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.15)] hover:shadow-[0_0_20px_-3px_hsl(var(--muted-foreground)/0.3)]"
-              : days < 0
-                ? "border-destructive/30 shadow-[0_0_12px_-3px_hsl(var(--destructive)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--destructive)/0.5)]"
-                : days === 0
-                  ? "border-orange-500/30 shadow-[0_0_12px_-3px_rgb(249_115_22/0.3)] hover:shadow-[0_0_20px_-3px_rgb(249_115_22/0.5)]"
-                  : days <= 7
-                    ? "border-yellow-500/30 shadow-[0_0_12px_-3px_rgb(234_179_8/0.3)] hover:shadow-[0_0_20px_-3px_rgb(234_179_8/0.5)]"
-                    : "border-emerald-500/30 shadow-[0_0_12px_-3px_rgb(16_185_129/0.3)] hover:shadow-[0_0_20px_-3px_rgb(16_185_129/0.5)]";
+              : isPausedByOverdueLimit
+                ? "border-border/60 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.12)] hover:shadow-[0_0_18px_-3px_hsl(var(--muted-foreground)/0.18)]"
+                : days < 0
+                  ? "border-destructive/30 shadow-[0_0_12px_-3px_hsl(var(--destructive)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--destructive)/0.5)]"
+                  : days === 0
+                    ? "border-orange-500/30 shadow-[0_0_12px_-3px_rgb(249_115_22/0.3)] hover:shadow-[0_0_20px_-3px_rgb(249_115_22/0.5)]"
+                    : days <= 7
+                      ? "border-yellow-500/30 shadow-[0_0_12px_-3px_rgb(234_179_8/0.3)] hover:shadow-[0_0_20px_-3px_rgb(234_179_8/0.5)]"
+                      : "border-emerald-500/30 shadow-[0_0_12px_-3px_rgb(16_185_129/0.3)] hover:shadow-[0_0_20px_-3px_rgb(16_185_129/0.5)]";
 
             return (
               <div
@@ -1326,7 +1346,7 @@ export default function Clients() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-display font-bold text-foreground text-sm leading-tight truncate">{client.name}</h3>
-                        {days !== null && getExpiryBadge(days)}
+                        {days !== null && getExpiryBadge(days, isPausedByOverdueLimit)}
                       </div>
                       {client.iptv_user && (
                         <p className="text-[10px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
@@ -1405,6 +1425,11 @@ export default function Clients() {
                         <Handshake className="w-2.5 h-2.5" /> {client.referred_by}
                       </span>
                     )}
+                    {isPausedByOverdueLimit && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60 font-medium">
+                        <BellOff className="w-2.5 h-2.5" /> Cobrança pausada
+                      </span>
+                    )}
                   </div>
 
                   {/* App names */}
@@ -1422,12 +1447,12 @@ export default function Clients() {
                 {/* Progress bar + date */}
                 {days !== null && sub && (
                   <div className="px-3.5 pb-2 sm:px-4">
-                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days))}>
-                      <div className={`h-full rounded-full transition-all ${getBarColor(days)}`} style={{ width: `${getBarPercent(days)}%` }} />
+                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isPausedByOverdueLimit))}>
+                      <div className={`h-full rounded-full transition-all ${getBarColor(days, isPausedByOverdueLimit)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-[10px] font-medium", days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
-                        {getDaysLabel(days)}
+                      <span className={cn("text-[10px] font-medium", isPausedByOverdueLimit ? "text-muted-foreground" : days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
+                        {getDaysLabel(days, isPausedByOverdueLimit)}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">
                         {format(parseISO(sub.end_date), "dd/MM/yyyy")}

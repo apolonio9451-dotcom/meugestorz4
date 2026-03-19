@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_days");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -155,8 +155,9 @@ Deno.serve(async (req) => {
       const apiToken = config.api_token;
       const companyId = config.company_id;
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
+      const overdueChargePauseDays = Math.max(0, Number((config as any).overdue_charge_pause_days ?? 10));
 
-      console.log(`[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms`);
+      console.log(`[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa-vencidos>${overdueChargePauseDays}d`);
 
       // Fetch category active settings
       const { data: categorySettings } = await supabase
@@ -201,6 +202,7 @@ Deno.serve(async (req) => {
 
       // Build queue
       const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
+      let pausedOverdueClients = 0;
 
       for (const client of clients) {
         const phone = client.whatsapp || client.phone || "";
@@ -219,13 +221,18 @@ Deno.serve(async (req) => {
         if (!category) continue;
         if (disabledCategories.has(category)) continue;
 
+        if (category === "vencidos" && overdueChargePauseDays > 0 && Math.abs(diffDays) > overdueChargePauseDays) {
+          pausedOverdueClients++;
+          continue;
+        }
+
         const template = templates[category];
         if (!template) continue;
 
         sendQueue.push({ client, category, sub, plan, diffDays });
       }
 
-      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Categorias: ${JSON.stringify(
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados por limite: ${pausedOverdueClients}. Categorias: ${JSON.stringify(
         sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
       )}`);
 
