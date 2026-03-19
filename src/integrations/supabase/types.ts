@@ -1036,7 +1036,9 @@ export type Database = {
           message_delay_min_seconds: number
           name: string
           offer_templates: string[]
+          offer_timeout_minutes: number
           processed_recipients: number
+          seller_instructions: string
           started_at: string | null
           status: string
           success_count: number
@@ -1055,7 +1057,9 @@ export type Database = {
           message_delay_min_seconds?: number
           name?: string
           offer_templates?: string[]
+          offer_timeout_minutes?: number
           processed_recipients?: number
+          seller_instructions?: string
           started_at?: string | null
           status?: string
           success_count?: number
@@ -1074,7 +1078,9 @@ export type Database = {
           message_delay_min_seconds?: number
           name?: string
           offer_templates?: string[]
+          offer_timeout_minutes?: number
           processed_recipients?: number
+          seller_instructions?: string
           started_at?: string | null
           status?: string
           success_count?: number
