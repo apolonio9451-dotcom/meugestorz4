@@ -1012,7 +1012,7 @@ export default function MassBroadcast() {
                             </div>
                           ) : recipients ? (
                             <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
+                              <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
                                 <span>Status</span>
                                 <span>Modelo</span>
@@ -1021,12 +1021,21 @@ export default function MassBroadcast() {
                               {recipients.map((r) => {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
+                                const statusText = r.status === "sent" || r.status === "success" ? "Enviado" : r.status === "failed" ? "Erro" : r.status === "processing" ? "Processando" : "Pendente";
                                 return (
-                                  <div key={r.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors">
-                                    <span className="text-sm font-mono text-foreground truncate">{r.phone}</span>
-                                    <SiComp className={`h-4 w-4 ${si.cls}`} />
-                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px]">
-                                      {r.offer_template?.substring(0, 20)}...
+                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                    <div className="min-w-0">
+                                      <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
+                                      {r.error_message && (
+                                        <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <SiComp className={`h-4 w-4 ${si.cls}`} />
+                                      <span className={`text-[10px] font-medium ${si.cls}`}>{statusText}</span>
+                                    </div>
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
+                                      {r.offer_template?.substring(0, 25)}...
                                     </Badge>
                                     <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
                                       <ExternalLink className="h-3.5 w-3.5" />
