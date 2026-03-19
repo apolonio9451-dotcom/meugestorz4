@@ -323,8 +323,73 @@ function parseAiCommands(text: string): AiCommandResult {
   return { cleanText, commands };
 }
 
+async function callAISeller(
+  sellerInstructions: string,
+  clientMessage: string,
+  offerText: string,
+  conversationHistory: string,
+): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return offerText;
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um vendedor via WhatsApp. ${sellerInstructions || "Seja simpático e natural."}\n\nRegras:\n- O cliente acabou de responder à sua saudação.\n- Responda de forma breve e natural (2-4 linhas), reconhecendo a resposta do cliente.\n- Em seguida, apresente a oferta de forma fluida e convincente.\n- NÃO use emojis excessivos. Seja humano e direto.\n- Se o cliente fez uma pergunta, responda brevemente antes da oferta.\n- Responda APENAS com a mensagem final. Nada mais.\n\nHistórico:\n${conversationHistory}\n\nOferta para incluir:\n${offerText}`,
+          },
+          { role: "user", content: `O cliente respondeu: "${clientMessage}"\n\nGere a resposta do vendedor incluindo a oferta.` },
+        ],
+      }),
+    });
+    if (!resp.ok) return offerText;
+    const data = await resp.json();
+    return data?.choices?.[0]?.message?.content?.trim() || offerText;
+  } catch {
+    return offerText;
+  }
+}
+
+async function callAIFollowUp(
+  sellerInstructions: string,
+  clientMessage: string,
+  conversationHistory: string,
+): Promise<string | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return null;
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um vendedor via WhatsApp. ${sellerInstructions || "Seja simpático e natural."}\n\nRegras:\n- O cliente está fazendo perguntas após receber sua oferta.\n- Responda de forma breve e útil (2-3 linhas).\n- Seja persuasivo mas natural.\n- Se for uma dúvida sobre preço/funcionamento, responda e reforce a oferta.\n- NÃO repita a oferta inteira.\n- Responda APENAS com a mensagem. Nada mais.\n\nHistórico:\n${conversationHistory}`,
+          },
+          { role: "user", content: clientMessage },
+        ],
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data?.choices?.[0]?.message?.content?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 async function recordMassBroadcastIncoming(
   supabase: ReturnType<typeof createClient>,
+  apiUrl: string | null,
+  apiToken: string | null,
   payload: {
     companyId: string;
     phone: string;
@@ -347,7 +412,8 @@ async function recordMassBroadcastIncoming(
   if (!conversation) return null;
 
   const nowIso = new Date().toISOString();
-  const nextStatus = (conversation as any).conversation_status === "human_takeover" ? "human_takeover" : "awaiting_human";
+  const isHumanTakeover = (conversation as any).conversation_status === "human_takeover";
+  const nextStatus = isHumanTakeover ? "human_takeover" : "awaiting_human";
 
   await supabase.from("mass_broadcast_conversation_messages").insert({
     company_id: payload.companyId,
@@ -367,13 +433,113 @@ async function recordMassBroadcastIncoming(
 
   await supabase
     .from("mass_broadcast_conversations")
-    .update({
-      conversation_status: nextStatus,
-      has_reply: true,
-      last_message_at: nowIso,
-      last_incoming_at: nowIso,
-    })
+    .update({ conversation_status: nextStatus, has_reply: true, last_message_at: nowIso, last_incoming_at: nowIso })
     .eq("id", (conversation as any).id);
+
+  // ═══ AI SELLER LOGIC ═══
+  // If not human takeover and we have API credentials, check if recipient is in awaiting_reply or conversing
+  if (!isHumanTakeover && apiUrl && apiToken && payload.messageType === "text" && payload.message.trim()) {
+    try {
+      const { data: recipient } = await supabase
+        .from("mass_broadcast_recipients")
+        .select("id, current_step, offer_template, campaign_id")
+        .eq("campaign_id", (conversation as any).campaign_id)
+        .eq("normalized_phone", normalizedPhone)
+        .in("current_step", ["awaiting_reply", "conversing"])
+        .maybeSingle();
+
+      if (recipient) {
+        const { data: campaign } = await supabase
+          .from("mass_broadcast_campaigns")
+          .select("seller_instructions, offer_templates")
+          .eq("id", (conversation as any).campaign_id)
+          .single();
+
+        const sellerInstructions = (campaign as any)?.seller_instructions || "";
+
+        // Build conversation history
+        const { data: history } = await supabase
+          .from("mass_broadcast_conversation_messages")
+          .select("direction, message, sender_type")
+          .eq("conversation_id", (conversation as any).id)
+          .order("created_at", { ascending: true })
+          .limit(20);
+
+        const historyText = (history || [])
+          .map((m: any) => `${m.direction === "outbound" ? "Vendedor" : "Cliente"}: ${m.message}`)
+          .join("\n");
+
+        if ((recipient as any).current_step === "awaiting_reply") {
+          // Client replied to greeting → AI generates response + offer
+          const offerText = (recipient as any).offer_template || "";
+          const aiResponse = await callAISeller(sellerInstructions, payload.message, offerText, historyText);
+
+          await sendText(apiUrl, apiToken, normalizedPhone, aiResponse);
+
+          const sentAt = new Date().toISOString();
+          await supabase.from("mass_broadcast_conversation_messages").insert({
+            company_id: payload.companyId,
+            campaign_id: (conversation as any).campaign_id,
+            conversation_id: (conversation as any).id,
+            recipient_id: (conversation as any).recipient_id,
+            phone: normalizedPhone, normalized_phone: normalizedPhone,
+            direction: "outbound", sender_type: "bot", source: "ai_seller",
+            message_type: "text", message: aiResponse,
+            delivery_status: "sent", created_at: sentAt,
+          });
+
+          // Move to "conversing" step, set next_action_at far in the future (AI handles replies)
+          const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min timeout for follow-ups
+          await supabase.from("mass_broadcast_recipients")
+            .update({ current_step: "conversing", sent_offer_at: sentAt, last_attempt_at: sentAt, next_action_at: nextAction, error_message: null })
+            .eq("id", (recipient as any).id);
+
+          await supabase.from("mass_broadcast_conversations")
+            .update({ conversation_status: "bot_active", last_outgoing_at: sentAt, last_message_at: sentAt })
+            .eq("id", (conversation as any).id);
+
+          await supabase.from("mass_broadcast_logs").insert({
+            campaign_id: (conversation as any).campaign_id,
+            recipient_id: (recipient as any).id,
+            company_id: payload.companyId, phone: normalizedPhone,
+            step: "ai_offer_reply", status: "success",
+            message: aiResponse, error_message: null,
+          });
+        } else if ((recipient as any).current_step === "conversing") {
+          // Follow-up question → AI responds
+          const aiReply = await callAIFollowUp(sellerInstructions, payload.message, historyText);
+
+          if (aiReply) {
+            await sendText(apiUrl, apiToken, normalizedPhone, aiReply);
+
+            const sentAt = new Date().toISOString();
+            await supabase.from("mass_broadcast_conversation_messages").insert({
+              company_id: payload.companyId,
+              campaign_id: (conversation as any).campaign_id,
+              conversation_id: (conversation as any).id,
+              recipient_id: (conversation as any).recipient_id,
+              phone: normalizedPhone, normalized_phone: normalizedPhone,
+              direction: "outbound", sender_type: "bot", source: "ai_seller",
+              message_type: "text", message: aiReply,
+              delivery_status: "sent", created_at: sentAt,
+            });
+
+            await supabase.from("mass_broadcast_conversations")
+              .update({ conversation_status: "bot_active", last_outgoing_at: sentAt, last_message_at: sentAt })
+              .eq("id", (conversation as any).id);
+
+            // Extend timeout
+            const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+            await supabase.from("mass_broadcast_recipients")
+              .update({ last_attempt_at: sentAt, next_action_at: nextAction })
+              .eq("id", (recipient as any).id);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("AI seller error:", e);
+    }
+  }
 
   return {
     ...(conversation as any),
@@ -458,9 +624,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Fetch API settings for AI seller
+    let companyApiUrl: string | null = null;
+    let companyApiToken: string | null = null;
+    if (companyIdParam) {
+      const { data: apiSettings } = await supabase
+        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+      companyApiUrl = (apiSettings as any)?.api_url || null;
+      companyApiToken = (apiSettings as any)?.api_token || null;
+    }
+
     // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
+      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, companyApiUrl, companyApiToken, {
         companyId: companyIdParam,
         phone: senderPhone,
         message: `[${messageType.toUpperCase()}]`,
@@ -503,7 +679,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const phone = normalizePhone(senderPhone);
-    const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
+    const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, companyApiUrl, companyApiToken, {
       companyId: companyIdParam,
       phone,
       message: messageText.slice(0, 4000),

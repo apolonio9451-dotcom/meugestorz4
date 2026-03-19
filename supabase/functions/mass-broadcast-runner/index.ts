@@ -19,6 +19,8 @@ type CampaignRow = {
   processed_recipients: number;
   success_count: number;
   failure_count: number;
+  seller_instructions: string | null;
+  offer_timeout_minutes: number | null;
 };
 
 type RecipientRow = {
@@ -66,13 +68,9 @@ function randomDelaySeconds(min: number, max: number) {
 async function sendText(apiUrl: string, apiToken: string, number: string, text: string) {
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}/send/text`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      token: apiToken,
-    },
+    headers: { "Content-Type": "application/json", token: apiToken },
     body: JSON.stringify({ number, text, linkPreview: true }),
   });
-
   if (!response.ok) {
     const body = await response.text();
     throw new Error(body || `Falha HTTP ${response.status}`);
@@ -85,13 +83,7 @@ async function insertLog(supabase: ReturnType<typeof createClient>, payload: Rec
 
 async function ensureConversation(
   supabase: ReturnType<typeof createClient>,
-  payload: {
-    companyId: string;
-    campaignId: string;
-    recipientId: string | null;
-    phone: string;
-    timestamp: string;
-  },
+  payload: { companyId: string; campaignId: string; recipientId: string | null; phone: string; timestamp: string },
 ) {
   const normalizedPhone = normalizePhone(payload.phone);
   const { data: existing } = await supabase
@@ -115,7 +107,6 @@ async function ensureConversation(
         last_outgoing_at: payload.timestamp,
       })
       .eq("id", existing.id);
-
     return existing.id;
   }
 
@@ -142,19 +133,12 @@ async function ensureConversation(
 async function insertConversationMessage(
   supabase: ReturnType<typeof createClient>,
   payload: {
-    companyId: string;
-    campaignId: string;
-    conversationId: string | null;
-    recipientId: string | null;
-    phone: string;
-    message: string;
-    messageType?: string;
-    deliveryStatus?: string;
-    createdAt: string;
+    companyId: string; campaignId: string; conversationId: string | null;
+    recipientId: string | null; phone: string; message: string;
+    messageType?: string; deliveryStatus?: string; createdAt: string;
   },
 ) {
   if (!payload.conversationId) return;
-
   await supabase.from("mass_broadcast_conversation_messages").insert({
     company_id: payload.companyId,
     campaign_id: payload.campaignId,
@@ -179,7 +163,7 @@ async function updateCampaignCounters(
 ) {
   const { data: campaign } = await supabase
     .from("mass_broadcast_campaigns")
-    .select("id, name, status, greeting_templates, message_delay_min_seconds, message_delay_max_seconds, total_recipients, processed_recipients, success_count, failure_count")
+    .select("id, name, status, greeting_templates, message_delay_min_seconds, message_delay_max_seconds, total_recipients, processed_recipients, success_count, failure_count, seller_instructions, offer_timeout_minutes")
     .eq("id", campaignId)
     .single<CampaignRow>();
 
@@ -196,11 +180,40 @@ async function updateCampaignCounters(
       ...patch,
       status: shouldComplete ? "completed" : (patch.status ?? campaign.status),
       completed_at: shouldComplete ? new Date().toISOString() : null,
-      started_at: campaign.started_at ?? new Date().toISOString(),
+      started_at: (campaign as any).started_at ?? new Date().toISOString(),
     })
     .eq("id", campaignId);
 
   return campaign;
+}
+
+/* ─── AI helper: generate a transition/timeout message ─── */
+async function generateAITransition(sellerInstructions: string, offerText: string): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return offerText; // fallback to raw offer
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um vendedor via WhatsApp. ${sellerInstructions || "Seja simpático e natural."}\n\nRegras:\n- Escreva uma frase curta de transição natural (1-2 linhas) antes de apresentar a oferta.\n- Exemplos: "Passei aqui pra te contar de uma promoção especial...", "Vi que você ainda não respondeu, mas queria te avisar de algo bacana..."\n- Depois da frase de transição, inclua a oferta abaixo.\n- NÃO use emojis excessivos. Seja humano e direto.\n- Responda APENAS com a mensagem final (transição + oferta). Nada mais.`,
+          },
+          { role: "user", content: `Gere a mensagem de transição + oferta. Oferta:\n${offerText}` },
+        ],
+      }),
+    });
+    if (!resp.ok) return offerText;
+    const data = await resp.json();
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    return content || offerText;
+  } catch {
+    return offerText;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -247,7 +260,7 @@ Deno.serve(async (req) => {
 
         const { data: campaign } = await supabase
           .from("mass_broadcast_campaigns")
-          .select("id, name, status, greeting_templates, message_delay_min_seconds, message_delay_max_seconds, total_recipients, processed_recipients, success_count, failure_count")
+          .select("id, name, status, greeting_templates, message_delay_min_seconds, message_delay_max_seconds, total_recipients, processed_recipients, success_count, failure_count, seller_instructions, offer_timeout_minutes")
           .eq("id", recipient.campaign_id)
           .single<CampaignRow>();
 
@@ -268,18 +281,13 @@ Deno.serve(async (req) => {
             .update({ status: "failed", error_message: errorMessage, last_attempt_at: new Date().toISOString() })
             .eq("id", recipient.id);
           await insertLog(supabase, {
-            campaign_id: campaign.id,
-            recipient_id: recipient.id,
-            company_id: recipient.company_id,
-            phone,
-            step: recipient.current_step,
-            status: "error",
-            message: "",
-            error_message: errorMessage,
+            campaign_id: campaign.id, recipient_id: recipient.id,
+            company_id: recipient.company_id, phone, step: recipient.current_step,
+            status: "error", message: "", error_message: errorMessage,
           });
-          await updateCampaignCounters(supabase, campaign.id, (current) => ({
-            processed_recipients: current.processed_recipients + 1,
-            failure_count: current.failure_count + 1,
+          await updateCampaignCounters(supabase, campaign.id, (c) => ({
+            processed_recipients: c.processed_recipients + 1,
+            failure_count: c.failure_count + 1,
           }));
           failed += 1;
           processed += 1;
@@ -287,20 +295,22 @@ Deno.serve(async (req) => {
         }
 
         try {
+          /* ═══ STEP: GREETING (Quebra-Gelo) ═══ */
           if (recipient.current_step === "greeting") {
             const greetingSentAt = new Date().toISOString();
             const greetings = nonEmptyList(campaign.greeting_templates, DEFAULT_GREETINGS);
             const greeting = pickRandom(greetings);
             await sendText(settings.api_url, settings.api_token, phone, greeting);
 
-            const { min, max } = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);
-            const nextActionAt = new Date(Date.now() + randomDelaySeconds(min, max) * 1000).toISOString();
+            // After greeting, move to "awaiting_reply" step
+            const timeoutMinutes = campaign.offer_timeout_minutes ?? 5;
+            const nextActionAt = new Date(Date.now() + timeoutMinutes * 60 * 1000).toISOString();
 
             await supabase
               .from("mass_broadcast_recipients")
               .update({
                 status: "processing",
-                current_step: "offer",
+                current_step: "awaiting_reply",
                 sent_greeting_at: greetingSentAt,
                 last_attempt_at: greetingSentAt,
                 next_action_at: nextActionAt,
@@ -309,117 +319,164 @@ Deno.serve(async (req) => {
               .eq("id", recipient.id);
 
             const conversationId = await ensureConversation(supabase, {
-              companyId: recipient.company_id,
-              campaignId: campaign.id,
-              recipientId: recipient.id,
-              phone,
-              timestamp: greetingSentAt,
+              companyId: recipient.company_id, campaignId: campaign.id,
+              recipientId: recipient.id, phone, timestamp: greetingSentAt,
             });
 
             await insertConversationMessage(supabase, {
-              companyId: recipient.company_id,
-              campaignId: campaign.id,
-              conversationId,
-              recipientId: recipient.id,
-              phone,
-              message: greeting,
-              createdAt: greetingSentAt,
+              companyId: recipient.company_id, campaignId: campaign.id,
+              conversationId, recipientId: recipient.id, phone,
+              message: greeting, createdAt: greetingSentAt,
             });
 
             await insertLog(supabase, {
-              campaign_id: campaign.id,
-              recipient_id: recipient.id,
-              company_id: recipient.company_id,
-              phone,
-              step: "greeting",
-              status: "success",
-              message: greeting,
-              error_message: null,
+              campaign_id: campaign.id, recipient_id: recipient.id,
+              company_id: recipient.company_id, phone, step: "greeting",
+              status: "success", message: greeting, error_message: null,
             });
 
             processed += 1;
             continue;
           }
 
-          const offerMessage = String(recipient.offer_template || "").trim();
-          if (!offerMessage) throw new Error("Template da oferta vazio.");
+          /* ═══ STEP: AWAITING_REPLY (Timeout → send offer with transition) ═══ */
+          if (recipient.current_step === "awaiting_reply") {
+            // Check if the client replied
+            const { data: conversation } = await supabase
+              .from("mass_broadcast_conversations")
+              .select("id, has_reply, conversation_status")
+              .eq("campaign_id", campaign.id)
+              .eq("normalized_phone", phone)
+              .maybeSingle();
 
-          const offerSentAt = new Date().toISOString();
-          await sendText(settings.api_url, settings.api_token, phone, offerMessage);
+            if (conversation?.has_reply && conversation?.conversation_status !== "human_takeover") {
+              // Client replied → AI already handled in webhook, mark as conversing
+              await supabase
+                .from("mass_broadcast_recipients")
+                .update({ current_step: "conversing", status: "processing", error_message: null })
+                .eq("id", recipient.id);
+              processed += 1;
+              continue;
+            }
 
-          await supabase
-            .from("mass_broadcast_recipients")
-            .update({
-              status: "sent",
-              current_step: "done",
-              sent_offer_at: offerSentAt,
-              last_attempt_at: offerSentAt,
-              error_message: null,
-            })
-            .eq("id", recipient.id);
+            if (conversation?.conversation_status === "human_takeover") {
+              // Human took over, skip
+              processed += 1;
+              continue;
+            }
 
-          const conversationId = await ensureConversation(supabase, {
-            companyId: recipient.company_id,
-            campaignId: campaign.id,
-            recipientId: recipient.id,
-            phone,
-            timestamp: offerSentAt,
-          });
+            // No reply → timeout reached, send offer with AI transition
+            const offerMessage = String(recipient.offer_template || "").trim();
+            if (!offerMessage) throw new Error("Template da oferta vazio.");
 
-          await insertConversationMessage(supabase, {
-            companyId: recipient.company_id,
-            campaignId: campaign.id,
-            conversationId,
-            recipientId: recipient.id,
-            phone,
-            message: offerMessage,
-            createdAt: offerSentAt,
-          });
+            const sellerInstructions = campaign.seller_instructions || "";
+            const finalMessage = sellerInstructions
+              ? await generateAITransition(sellerInstructions, offerMessage)
+              : offerMessage;
 
-          await insertLog(supabase, {
-            campaign_id: campaign.id,
-            recipient_id: recipient.id,
-            company_id: recipient.company_id,
-            phone,
-            step: "offer",
-            status: "success",
-            message: offerMessage,
-            error_message: null,
-          });
+            const offerSentAt = new Date().toISOString();
+            await sendText(settings.api_url, settings.api_token, phone, finalMessage);
 
-          await updateCampaignCounters(supabase, campaign.id, (current) => ({
-            processed_recipients: current.processed_recipients + 1,
-            success_count: current.success_count + 1,
-          }));
+            await supabase
+              .from("mass_broadcast_recipients")
+              .update({
+                status: "sent",
+                current_step: "done",
+                sent_offer_at: offerSentAt,
+                last_attempt_at: offerSentAt,
+                error_message: null,
+              })
+              .eq("id", recipient.id);
 
-          success += 1;
-          processed += 1;
+            const conversationId = await ensureConversation(supabase, {
+              companyId: recipient.company_id, campaignId: campaign.id,
+              recipientId: recipient.id, phone, timestamp: offerSentAt,
+            });
+
+            await insertConversationMessage(supabase, {
+              companyId: recipient.company_id, campaignId: campaign.id,
+              conversationId, recipientId: recipient.id, phone,
+              message: finalMessage, createdAt: offerSentAt,
+            });
+
+            await insertLog(supabase, {
+              campaign_id: campaign.id, recipient_id: recipient.id,
+              company_id: recipient.company_id, phone, step: "offer_timeout",
+              status: "success", message: finalMessage, error_message: null,
+            });
+
+            await updateCampaignCounters(supabase, campaign.id, (c) => ({
+              processed_recipients: c.processed_recipients + 1,
+              success_count: c.success_count + 1,
+            }));
+
+            success += 1;
+            processed += 1;
+            continue;
+          }
+
+          /* ═══ STEP: OFFER (legacy / direct offer) ═══ */
+          if (recipient.current_step === "offer" || recipient.current_step === "conversing") {
+            const offerMessage = String(recipient.offer_template || "").trim();
+            if (!offerMessage) throw new Error("Template da oferta vazio.");
+
+            const offerSentAt = new Date().toISOString();
+            await sendText(settings.api_url, settings.api_token, phone, offerMessage);
+
+            await supabase
+              .from("mass_broadcast_recipients")
+              .update({
+                status: "sent",
+                current_step: "done",
+                sent_offer_at: offerSentAt,
+                last_attempt_at: offerSentAt,
+                error_message: null,
+              })
+              .eq("id", recipient.id);
+
+            const conversationId = await ensureConversation(supabase, {
+              companyId: recipient.company_id, campaignId: campaign.id,
+              recipientId: recipient.id, phone, timestamp: offerSentAt,
+            });
+
+            await insertConversationMessage(supabase, {
+              companyId: recipient.company_id, campaignId: campaign.id,
+              conversationId, recipientId: recipient.id, phone,
+              message: offerMessage, createdAt: offerSentAt,
+            });
+
+            await insertLog(supabase, {
+              campaign_id: campaign.id, recipient_id: recipient.id,
+              company_id: recipient.company_id, phone, step: "offer",
+              status: "success", message: offerMessage, error_message: null,
+            });
+
+            await updateCampaignCounters(supabase, campaign.id, (c) => ({
+              processed_recipients: c.processed_recipients + 1,
+              success_count: c.success_count + 1,
+            }));
+
+            success += 1;
+            processed += 1;
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
 
           await supabase
             .from("mass_broadcast_recipients")
-            .update({
-              status: "failed",
-              error_message: errorMessage,
-              last_attempt_at: new Date().toISOString(),
-            })
+            .update({ status: "failed", error_message: errorMessage, last_attempt_at: new Date().toISOString() })
             .eq("id", recipient.id);
 
           await insertLog(supabase, {
-            campaign_id: campaign.id,
-            recipient_id: recipient.id,
-            company_id: recipient.company_id,
-            phone,
-            step: recipient.current_step,
-            status: "error",
-            message: recipient.current_step === "offer" ? recipient.offer_template : "",
+            campaign_id: campaign.id, recipient_id: recipient.id,
+            company_id: recipient.company_id, phone, step: recipient.current_step,
+            status: "error", message: recipient.current_step === "offer" ? recipient.offer_template : "",
             error_message: errorMessage,
           });
 
-          await updateCampaignCounters(supabase, campaign.id, (current) => ({
-            processed_recipients: current.processed_recipients + 1,
-            failure_count: current.failure_count + 1,
+          await updateCampaignCounters(supabase, campaign.id, (c) => ({
+            processed_recipients: c.processed_recipients + 1,
+            failure_count: c.failure_count + 1,
           }));
 
           failed += 1;

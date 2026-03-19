@@ -149,6 +149,13 @@ const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
   failed: { icon: X, cls: "text-destructive" },
 };
 
+const recipientStatusText: Record<string, string> = {
+  pending: "Pendente",
+  processing: "Conversando",
+  sent: "Finalizado",
+  failed: "Erro",
+};
+
 const conversationStatusMeta: Record<string, { label: string; className: string }> = {
   bot_active: { label: "Gerenciada pelo bot", className: "border-primary/40 bg-primary/10 text-primary" },
   awaiting_human: { label: "Aguardando humano", className: "border-warning/30 bg-warning/15 text-warning" },
@@ -187,6 +194,8 @@ export default function MassBroadcast() {
   const [phoneInput, setPhoneInput] = useState("");
   const [delayRange, setDelayRange] = useState<[number, number]>([60, 120]);
   const [startHour, setStartHour] = useState("08:00");
+  const [sellerInstructions, setSellerInstructions] = useState("");
+  const [offerTimeout, setOfferTimeout] = useState(5);
 
   // Template management
   const [savedTemplates, setSavedTemplates] = useState<string[]>(loadSavedTemplates);
@@ -395,6 +404,8 @@ export default function MassBroadcast() {
           greeting_templates: ["Olá!", "Tudo bem?", "Bom dia, como vai?"],
           message_delay_min_seconds: delayRange[0],
           message_delay_max_seconds: delayRange[1],
+          seller_instructions: sellerInstructions,
+          offer_timeout_minutes: offerTimeout,
         })
         .select("id")
         .single();
@@ -686,7 +697,39 @@ export default function MassBroadcast() {
                   </CardContent>
                 </Card>
 
-                {/* Message Templates Editor */}
+                {/* AI Seller Config */}
+                <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+                  <CardHeader className="relative pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                      <Bot className="h-4 w-4 text-primary" />
+                      Vendedor IA Conversacional
+                    </CardTitle>
+                    <CardDescription>Configure o comportamento do vendedor inteligente.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="relative space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-instructions">Instruções para o Vendedor IA</Label>
+                      <Textarea
+                        id="seller-instructions"
+                        value={sellerInstructions}
+                        onChange={(e) => setSellerInstructions(e.target.value)}
+                        placeholder="Ex: Você é um vendedor simpático da Meu Gestor, focado em planos de streaming. Seja direto e convincente."
+                        className="min-h-[100px] border-primary/20 focus:border-primary/40"
+                      />
+                      <p className="text-[10px] text-muted-foreground">A IA usará estas instruções para gerar respostas naturais e fechar vendas.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tempo de espera para oferta (min)</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider min={1} max={30} step={1} value={[offerTimeout]} onValueChange={(v) => setOfferTimeout(v[0])} className="flex-1" />
+                        <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary shrink-0 min-w-[50px] justify-center">{offerTimeout}m</Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Se o cliente não responder à saudação, a oferta será enviada após este tempo com uma transição natural gerada pela IA.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="border-border/30 bg-card/80 backdrop-blur">
                   <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen}>
                     <CardHeader className="pb-3">
@@ -1021,7 +1064,7 @@ export default function MassBroadcast() {
                               {recipients.map((r) => {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
-                                const statusText = r.status === "sent" || r.status === "success" ? "Enviado" : r.status === "failed" ? "Erro" : r.status === "processing" ? "Processando" : "Pendente";
+                                const statusText = recipientStatusText[r.status] || "Pendente";
                                 return (
                                   <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                     <div className="min-w-0">
