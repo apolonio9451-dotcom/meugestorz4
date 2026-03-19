@@ -456,6 +456,13 @@ Deno.serve(async (req: Request) => {
 
     // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
+      await recordMassBroadcastIncoming(supabase, {
+        companyId: companyIdParam,
+        phone: senderPhone,
+        message: `[${messageType.toUpperCase()}]`,
+        messageType,
+      });
+
       await supabase.from("chatbot_logs").insert({
         company_id: companyIdParam, phone: normalizePhone(senderPhone),
         client_name: `Mídia (${messageType})`, message_received: `[${messageType.toUpperCase()}]`,
