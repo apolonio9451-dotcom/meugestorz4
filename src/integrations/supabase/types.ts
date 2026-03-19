@@ -25,6 +25,7 @@ export type Database = {
           id: string
           instance_name: string
           overdue_charge_pause_days: number
+          overdue_charge_pause_enabled: boolean
           pix_key: string
           send_interval_seconds: number
           uazapi_base_url: string
@@ -41,6 +42,7 @@ export type Database = {
           id?: string
           instance_name?: string
           overdue_charge_pause_days?: number
+          overdue_charge_pause_enabled?: boolean
           pix_key?: string
           send_interval_seconds?: number
           uazapi_base_url?: string
@@ -57,6 +59,7 @@ export type Database = {
           id?: string
           instance_name?: string
           overdue_charge_pause_days?: number
+          overdue_charge_pause_enabled?: boolean
           pix_key?: string
           send_interval_seconds?: number
           uazapi_base_url?: string
