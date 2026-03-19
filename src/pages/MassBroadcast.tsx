@@ -949,6 +949,27 @@ export default function MassBroadcast() {
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2 border-warning/30 text-warning hover:bg-warning/10">
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  Resetar Fila
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Resetar fila?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Todos os contatos voltarão para o status "Pendente". Isso permite reenviar para toda a lista.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => void handleResetQueue(campaign.id)} className="bg-warning text-warning-foreground hover:bg-warning/90">
+                                    Resetar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                              <AlertDialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
                                   {deletingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                                   Excluir
