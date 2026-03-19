@@ -1064,7 +1064,7 @@ export default function MassBroadcast() {
                               {recipients.map((r) => {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
-                                const statusText = r.status === "sent" || r.status === "success" ? "Enviado" : r.status === "failed" ? "Erro" : r.status === "processing" ? "Processando" : "Pendente";
+                                const statusText = recipientStatusText[r.status] || "Pendente";
                                 return (
                                   <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                     <div className="min-w-0">
