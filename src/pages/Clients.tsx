@@ -988,11 +988,11 @@ export default function Clients() {
   };
 
   const getExpiryBadge = (days: number, paused: boolean = false) => {
-    if (paused) return <Badge className="bg-muted/70 text-muted-foreground border-border/60 text-[10px] font-bold uppercase">Vencido · Pausado</Badge>;
+    if (paused) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase shadow-[0_0_14px_hsl(var(--warning)/0.18)]">Vencido · Pausado</Badge>;
     if (days < 0) return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] font-bold uppercase">Vencido</Badge>;
-    if (days === 0) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
-    if (days === 1) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
-    if (days === 3) return <Badge className="bg-yellow-600/20 text-yellow-500 border-yellow-600/30 text-[10px] font-bold uppercase">A Vencer ({days}D)</Badge>;
+    if (days === 0) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
+    if (days === 1) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
+    if (days === 3) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">A Vencer ({days}D)</Badge>;
     return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-bold uppercase">Ativo</Badge>;
   };
 
