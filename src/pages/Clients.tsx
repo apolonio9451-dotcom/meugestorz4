@@ -761,10 +761,10 @@ export default function Clients() {
   }, [subscriptions, clients]);
 
   const isAutoChargePaused = useCallback((days: number | null) => {
+    if (!overdueChargePauseEnabled) return false;
     if (days === null || days >= 0) return false;
-    if (overdueChargePauseDays === 0) return false;
     return Math.abs(days) > overdueChargePauseDays;
-  }, [overdueChargePauseDays]);
+  }, [overdueChargePauseEnabled, overdueChargePauseDays]);
 
   const filtered = useMemo(() => {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
