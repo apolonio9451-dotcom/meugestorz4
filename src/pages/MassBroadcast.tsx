@@ -141,6 +141,7 @@ const statusLabel: Record<string, string> = {
 };
 
 const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
+  sent: { icon: Check, cls: "text-primary" },
   success: { icon: Check, cls: "text-primary" },
   completed: { icon: Check, cls: "text-primary" },
   pending: { icon: Clock, cls: "text-warning" },
