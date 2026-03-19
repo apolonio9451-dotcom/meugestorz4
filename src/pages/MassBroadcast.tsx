@@ -544,6 +544,24 @@ export default function MassBroadcast() {
     }
   };
 
+  const handleResetQueue = async (campaignId: string) => {
+    if (!companyId) return;
+    try {
+      const { error } = await supabase.from("mass_broadcast_recipients" as any)
+        .update({ status: "pending", current_step: "greeting", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date().toISOString() })
+        .eq("campaign_id", campaignId);
+      if (error) throw error;
+      await supabase.from("mass_broadcast_campaigns" as any)
+        .update({ status: "queued", processed_recipients: 0, success_count: 0, failure_count: 0, started_at: null, completed_at: null })
+        .eq("id", campaignId);
+      toast({ title: "Fila resetada", description: "Todos os contatos voltaram para 'Pendente'." });
+      await loadData();
+      await loadCampaignRecipients(campaignId);
+    } catch (error: any) {
+      toast({ title: "Erro ao resetar", description: error?.message, variant: "destructive" });
+    }
+  };
+
   const handleAssumeConversation = async () => {
     if (!activeConversation) return;
     setTakingOverConversationId(activeConversation.id);
