@@ -141,6 +141,7 @@ const statusLabel: Record<string, string> = {
 };
 
 const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
+  sent: { icon: Check, cls: "text-primary" },
   success: { icon: Check, cls: "text-primary" },
   completed: { icon: Check, cls: "text-primary" },
   pending: { icon: Clock, cls: "text-warning" },
@@ -543,6 +544,24 @@ export default function MassBroadcast() {
     }
   };
 
+  const handleResetQueue = async (campaignId: string) => {
+    if (!companyId) return;
+    try {
+      const { error } = await supabase.from("mass_broadcast_recipients" as any)
+        .update({ status: "pending", current_step: "greeting", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date().toISOString() })
+        .eq("campaign_id", campaignId);
+      if (error) throw error;
+      await supabase.from("mass_broadcast_campaigns" as any)
+        .update({ status: "queued", processed_recipients: 0, success_count: 0, failure_count: 0, started_at: null, completed_at: null })
+        .eq("id", campaignId);
+      toast({ title: "Fila resetada", description: "Todos os contatos voltaram para 'Pendente'." });
+      await loadData();
+      await loadCampaignRecipients(campaignId);
+    } catch (error: any) {
+      toast({ title: "Erro ao resetar", description: error?.message, variant: "destructive" });
+    }
+  };
+
   const handleAssumeConversation = async () => {
     if (!activeConversation) return;
     setTakingOverConversationId(activeConversation.id);
@@ -930,6 +949,28 @@ export default function MassBroadcast() {
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2 border-warning/30 text-warning hover:bg-warning/10">
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  Resetar Fila
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Resetar fila?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Todos os contatos voltarão para o status "Pendente". Isso permite reenviar para toda a lista.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => void handleResetQueue(campaign.id)} className="bg-warning text-warning-foreground hover:bg-warning/90">
+                                    Resetar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
                                   {deletingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                                   Excluir
@@ -971,7 +1012,7 @@ export default function MassBroadcast() {
                             </div>
                           ) : recipients ? (
                             <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
+                              <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
                                 <span>Status</span>
                                 <span>Modelo</span>
@@ -980,12 +1021,21 @@ export default function MassBroadcast() {
                               {recipients.map((r) => {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
+                                const statusText = r.status === "sent" || r.status === "success" ? "Enviado" : r.status === "failed" ? "Erro" : r.status === "processing" ? "Processando" : "Pendente";
                                 return (
-                                  <div key={r.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors">
-                                    <span className="text-sm font-mono text-foreground truncate">{r.phone}</span>
-                                    <SiComp className={`h-4 w-4 ${si.cls}`} />
-                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px]">
-                                      {r.offer_template?.substring(0, 20)}...
+                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                    <div className="min-w-0">
+                                      <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
+                                      {r.error_message && (
+                                        <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <SiComp className={`h-4 w-4 ${si.cls}`} />
+                                      <span className={`text-[10px] font-medium ${si.cls}`}>{statusText}</span>
+                                    </div>
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
+                                      {r.offer_template?.substring(0, 25)}...
                                     </Badge>
                                     <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
                                       <ExternalLink className="h-3.5 w-3.5" />
