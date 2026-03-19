@@ -818,6 +818,10 @@ export default function Clients() {
     return differenceInCalendarDays(new Date(), parseISO(client.created_at));
   }, [subscriptions, clients]);
 
+  const hasChargeResumeOverride = useCallback((pauseNote?: string | null) => {
+    return (pauseNote || "").trim().startsWith("resumed");
+  }, []);
+
   const isAutoChargePaused = useCallback((days: number | null) => {
     if (!overdueChargePauseEnabled) return false;
     if (days === null || days >= 0) return false;
