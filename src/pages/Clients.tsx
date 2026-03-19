@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -36,6 +36,8 @@ interface Client {
   status: string;
   created_at: string;
   referred_by: string;
+  charge_pause_until?: string | null;
+  charge_pause_note?: string;
 }
 
 interface Subscription {
@@ -62,6 +64,8 @@ interface Credential {
   password: string;
   label: string;
 }
+
+const clampClientPauseDays = (value: number) => Math.min(90, Math.max(1, Number.isFinite(value) ? Math.round(value) : 7));
 
 export default function Clients() {
   const { effectiveCompanyId: companyId, user } = useAuth();
@@ -97,6 +101,13 @@ export default function Clients() {
   const [pixKey, setPixKey] = useState("");
   const [overdueChargePauseEnabled, setOverdueChargePauseEnabled] = useState(true);
   const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
+  const [pauseUpdatingClientId, setPauseUpdatingClientId] = useState<string | null>(null);
+  const [chargePauseDialog, setChargePauseDialog] = useState<{
+    clientId: string;
+    clientName: string;
+    days: number;
+    chargePauseUntil: string | null;
+  } | null>(null);
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
   const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
@@ -672,6 +683,53 @@ export default function Clients() {
     }
   };
 
+  const handleSetClientChargePause = async (clientId: string, clientName: string, days: number) => {
+    const safeDays = clampClientPauseDays(days);
+    const pauseUntil = format(addDays(new Date(), safeDays - 1), "yyyy-MM-dd");
+
+    setPauseUpdatingClientId(clientId);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({ charge_pause_until: pauseUntil, charge_pause_note: `manual:${safeDays}` } as any)
+        .eq("id", clientId);
+
+      if (error) throw error;
+
+      toast.success(`Cobrança pausada por ${safeDays} dia${safeDays > 1 ? "s" : ""}.`);
+      await logActivity("pausa_cobranca", clientName, clientId, `Cobrança automática pausada até ${format(parseISO(pauseUntil), "dd/MM/yyyy")}`);
+      setChargePauseDialog(null);
+      fetchClients();
+      fetchActivityLogs();
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao pausar cobrança");
+    } finally {
+      setPauseUpdatingClientId(null);
+    }
+  };
+
+  const handleClearClientChargePause = async (clientId: string, clientName: string) => {
+    setPauseUpdatingClientId(clientId);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({ charge_pause_until: null, charge_pause_note: "" } as any)
+        .eq("id", clientId);
+
+      if (error) throw error;
+
+      toast.success("Cobrança automática reativada.");
+      await logActivity("retomada_cobranca", clientName, clientId, "Pausa manual de cobrança removida");
+      setChargePauseDialog(null);
+      fetchClients();
+      fetchActivityLogs();
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao retomar cobrança");
+    } finally {
+      setPauseUpdatingClientId(null);
+    }
+  };
+
   const handleRenew = async (clientId: string, months: number, paid: boolean = true) => {
     const sub = subscriptions[clientId];
     if (!sub) { toast.error("Cliente sem assinatura ativa"); return; }
@@ -765,6 +823,17 @@ export default function Clients() {
     if (days === null || days >= 0) return false;
     return Math.abs(days) > overdueChargePauseDays;
   }, [overdueChargePauseEnabled, overdueChargePauseDays]);
+
+  const isManualChargePaused = useCallback((pauseUntil?: string | null) => {
+    if (!pauseUntil) return false;
+    return differenceInCalendarDays(parseISO(pauseUntil), new Date()) >= 0;
+  }, []);
+
+  const getManualChargePauseLabel = useCallback((pauseUntil?: string | null) => {
+    if (!pauseUntil || !isManualChargePaused(pauseUntil)) return null;
+    const remainingDays = differenceInCalendarDays(parseISO(pauseUntil), new Date()) + 1;
+    return `Pausa manual · ${remainingDays}d`;
+  }, [isManualChargePaused]);
 
   const filtered = useMemo(() => {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
@@ -872,8 +941,8 @@ export default function Clients() {
     return Math.min(100, (days / max) * 100);
   };
 
-  const getDaysLabel = (days: number, paused: boolean = false) => {
-    if (paused) return "Cobrança automática pausada";
+  const getDaysLabel = (days: number, pauseLabel: string | null = null) => {
+    if (pauseLabel) return pauseLabel;
     if (days < 0) return "Vencido";
     if (days === 0) return "Vence hoje";
     if (days === 1) return "1 dia restante";
@@ -891,6 +960,60 @@ export default function Clients() {
 
   return (
     <AnimatedPage><div className="space-y-3 sm:space-y-6">
+      <Dialog open={!!chargePauseDialog} onOpenChange={(open) => { if (!open) setChargePauseDialog(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Pausar cobrança</DialogTitle>
+            <DialogDescription>
+              Defina por quantos dias o bot deve ignorar a cobrança automática deste cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="client-charge-pause-days">Pausar por (dias)</Label>
+              <Input
+                id="client-charge-pause-days"
+                type="number"
+                min={1}
+                max={90}
+                value={chargePauseDialog?.days ?? 7}
+                onChange={(e) => setChargePauseDialog((current) => current ? { ...current, days: clampClientPauseDays(Number(e.target.value || 7)) } : current)}
+                className="max-w-[140px] bg-secondary/50 border-border"
+              />
+              <p className="text-xs text-muted-foreground">
+                A pausa é individual e não remove o cliente da lista de vencidos.
+              </p>
+              {chargePauseDialog?.chargePauseUntil && isManualChargePaused(chargePauseDialog.chargePauseUntil) && (
+                <p className="text-xs text-muted-foreground">
+                  Atualmente pausado até {format(parseISO(chargePauseDialog.chargePauseUntil), "dd/MM/yyyy")}.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            {chargePauseDialog?.chargePauseUntil && isManualChargePaused(chargePauseDialog.chargePauseUntil) ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pauseUpdatingClientId === chargePauseDialog.clientId}
+                onClick={() => void handleClearClientChargePause(chargePauseDialog.clientId, chargePauseDialog.clientName)}
+              >
+                Retomar cobrança
+              </Button>
+            ) : <div />}
+            <Button
+              type="button"
+              disabled={!chargePauseDialog || pauseUpdatingClientId === chargePauseDialog.clientId}
+              onClick={() => chargePauseDialog && void handleSetClientChargePause(chargePauseDialog.clientId, chargePauseDialog.clientName, chargePauseDialog.days)}
+            >
+              {chargePauseDialog && pauseUpdatingClientId === chargePauseDialog.clientId ? "Salvando..." : "Salvar pausa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpenSynced(o); if (!o) { if (!editing) clearFormDraft(); setEditing(null); setFormMacKeys([]); setFormCredentials([{ username: "", password: "", label: "" }]); setFormPlanId(""); setFormAmount(""); setFormEndDate(undefined); setFormBirthDate(undefined); setFormReferredBy(""); setReferralSearch(""); } }}>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -1325,11 +1448,18 @@ export default function Clients() {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
             const isPausedByOverdueLimit = isAutoChargePaused(days);
+            const isPausedManually = isManualChargePaused(client.charge_pause_until);
+            const pauseStatusLabel = isPausedManually
+              ? getManualChargePauseLabel(client.charge_pause_until)
+              : isPausedByOverdueLimit
+                ? "Cobrança automática pausada"
+                : null;
+            const isChargePaused = Boolean(pauseStatusLabel);
             const clientMacKeys = macKeys[client.id] || [];
 
             const neonColor = days === null
               ? "border-muted-foreground/20 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.15)] hover:shadow-[0_0_20px_-3px_hsl(var(--muted-foreground)/0.3)]"
-              : isPausedByOverdueLimit
+              : isChargePaused
                 ? "border-border/60 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.12)] hover:shadow-[0_0_18px_-3px_hsl(var(--muted-foreground)/0.18)]"
                 : days < 0
                   ? "border-destructive/30 shadow-[0_0_12px_-3px_hsl(var(--destructive)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--destructive)/0.5)]"
@@ -1350,7 +1480,7 @@ export default function Clients() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-display font-bold text-foreground text-sm leading-tight truncate">{client.name}</h3>
-                        {days !== null && getExpiryBadge(days, isPausedByOverdueLimit)}
+                        {days !== null && getExpiryBadge(days, isChargePaused)}
                       </div>
                       {client.iptv_user && (
                         <p className="text-[10px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
@@ -1380,6 +1510,29 @@ export default function Clients() {
                             </>
                           ) : (
                             <>
+                              <DropdownMenuLabel className="px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Cobrança</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                disabled={pauseUpdatingClientId === client.id}
+                                onClick={() => setChargePauseDialog({
+                                  clientId: client.id,
+                                  clientName: client.name,
+                                  days: isPausedManually && client.charge_pause_until
+                                    ? clampClientPauseDays(differenceInCalendarDays(parseISO(client.charge_pause_until), new Date()) + 1)
+                                    : 7,
+                                  chargePauseUntil: client.charge_pause_until ?? null,
+                                })}
+                              >
+                                <BellOff className="w-3.5 h-3.5 mr-2" /> {isPausedManually ? "Editar pausa manual" : "Pausar cobrança..."}
+                              </DropdownMenuItem>
+                              {isPausedManually && (
+                                <DropdownMenuItem
+                                  disabled={pauseUpdatingClientId === client.id}
+                                  onClick={() => void handleClearClientChargePause(client.id, client.name)}
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 mr-2 text-emerald-400" /> Retomar cobrança
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
                               {mainFilter === "status" && statusSubFilter === "suporte" ? (
                                 <DropdownMenuItem onClick={async () => {
                                   const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
@@ -1429,9 +1582,9 @@ export default function Clients() {
                         <Handshake className="w-2.5 h-2.5" /> {client.referred_by}
                       </span>
                     )}
-                    {isPausedByOverdueLimit && (
+                    {pauseStatusLabel && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60 font-medium">
-                        <BellOff className="w-2.5 h-2.5" /> Cobrança pausada
+                        <BellOff className="w-2.5 h-2.5" /> {pauseStatusLabel}
                       </span>
                     )}
                   </div>
@@ -1451,12 +1604,12 @@ export default function Clients() {
                 {/* Progress bar + date */}
                 {days !== null && sub && (
                   <div className="px-3.5 pb-2 sm:px-4">
-                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isPausedByOverdueLimit))}>
-                      <div className={`h-full rounded-full transition-all ${getBarColor(days, isPausedByOverdueLimit)}`} style={{ width: `${getBarPercent(days)}%` }} />
+                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isChargePaused))}>
+                      <div className={`h-full rounded-full transition-all ${getBarColor(days, isChargePaused)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-[10px] font-medium", isPausedByOverdueLimit ? "text-muted-foreground" : days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
-                        {getDaysLabel(days, isPausedByOverdueLimit)}
+                      <span className={cn("text-[10px] font-medium", isChargePaused ? "text-muted-foreground" : days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
+                        {getDaysLabel(days, pauseStatusLabel)}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">
                         {format(parseISO(sub.end_date), "dd/MM/yyyy")}
