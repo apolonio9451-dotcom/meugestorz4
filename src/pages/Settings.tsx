@@ -7,8 +7,10 @@ import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSecti
 export default function Settings() {
   const { effectiveCompanyId: companyId, parentCompanyId, userRole, effectivePlanType, loading } = useAuth();
   const isOwner = userRole === "Proprietário";
+  const isMaster = userRole === "master";
+  const canManageApiSettings = isOwner || isMaster;
   const isReseller = !!parentCompanyId;
-  const hasInstanceAccess = loading ? true : (isOwner || effectivePlanType === "pro");
+  const hasInstanceAccess = loading ? true : (canManageApiSettings || effectivePlanType === "pro");
 
   return (
     <div className="space-y-6">
@@ -24,11 +26,8 @@ export default function Settings() {
 
       {hasInstanceAccess ? (
         <>
-          {/* WhatsApp Instance Management */}
-          <WhatsAppInstanceSection companyId={companyId} isOwner={isOwner} />
-
-          {/* API Settings */}
-          <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={isOwner} />
+          <WhatsAppInstanceSection companyId={companyId} isOwner={canManageApiSettings} />
+          <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={canManageApiSettings} />
         </>
       ) : (
         <div className="glass-card rounded-xl p-6 border border-border/60">

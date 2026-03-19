@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { Save, Loader2, Eye, EyeOff, Wifi } from "lucide-react";
 
@@ -11,10 +12,13 @@ interface Props {
   isOwner?: boolean;
 }
 
+const clampPauseDays = (value: number) => Math.min(90, Math.max(1, Number.isFinite(value) ? value : 10));
+
 export default function ApiSettingsSection({ companyId, isOwner = false }: Props) {
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [overdueChargePauseEnabled, setOverdueChargePauseEnabled] = useState(true);
   const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
   const [showToken, setShowToken] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
@@ -31,15 +35,21 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
-        .select("id, api_url, api_token, pix_key, overdue_charge_pause_days")
+        .select("id, api_url, api_token, pix_key, overdue_charge_pause_enabled, overdue_charge_pause_days")
         .eq("company_id", companyId)
         .maybeSingle();
       if (data) {
+        const parsedDays = Number((data as any).overdue_charge_pause_days ?? 10);
+        const normalizedDays = parsedDays > 0 ? clampPauseDays(parsedDays) : 10;
         setApiUrl((data as any).api_url || "");
         setApiToken((data as any).api_token || "");
         setPixKey((data as any).pix_key || "");
-        setOverdueChargePauseDays(Math.max(0, Number((data as any).overdue_charge_pause_days ?? 10)));
+        setOverdueChargePauseEnabled(Boolean((data as any).overdue_charge_pause_enabled ?? parsedDays > 0));
+        setOverdueChargePauseDays(normalizedDays);
         setExistingId((data as any).id);
+      } else {
+        setOverdueChargePauseEnabled(true);
+        setOverdueChargePauseDays(10);
       }
       setLoading(false);
     };
@@ -55,7 +65,8 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
         api_url: apiUrl.trim().replace(/\/$/, ""),
         api_token: apiToken.trim(),
         pix_key: pixKey.trim(),
-        overdue_charge_pause_days: Math.max(0, Number.isFinite(overdueChargePauseDays) ? overdueChargePauseDays : 10),
+        overdue_charge_pause_enabled: overdueChargePauseEnabled,
+        overdue_charge_pause_days: clampPauseDays(overdueChargePauseDays),
       };
       let error;
       if (existingId) {
@@ -86,7 +97,6 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
         Configure os dados necessários para o envio automático de mensagens.
       </p>
 
-      {/* URL e Token da API — visível apenas para Proprietário */}
       {isOwner ? (
         <>
           <div className="space-y-2">
@@ -99,7 +109,7 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
                 placeholder="https://..."
                 className="bg-secondary/50 border-border font-mono"
               />
-              <Button variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
+              <Button type="button" variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
                 {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
@@ -115,7 +125,7 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
                 placeholder="Cole seu token aqui"
                 className="bg-secondary/50 border-border font-mono"
               />
-              <Button variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
+              <Button type="button" variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
@@ -124,20 +134,46 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-foreground">Limite de Cobrança Diária (Dias)</Label>
-            <Input
-              type="number"
-              min={0}
-              step={1}
-              value={overdueChargePauseDays}
-              onChange={(e) => setOverdueChargePauseDays(Math.max(0, Number(e.target.value || 0)))}
-              placeholder="10"
-              className="bg-secondary/50 border-border max-w-[220px]"
-            />
-            <p className="text-muted-foreground text-xs">
-              Clientes vencidos há mais de {overdueChargePauseDays || 0} dias terão a cobrança automática pausada. Use 0 para desativar a trava.
-            </p>
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-[0_0_24px_-12px_hsl(var(--primary)/0.65)] space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="overdue-charge-pause" className="text-sm font-semibold text-foreground">
+                  Ativar Pausa Automática
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Interrompe a cobrança diária de clientes vencidos há muito tempo sem alterar a categoria deles.
+                </p>
+              </div>
+              <Switch
+                id="overdue-charge-pause"
+                checked={overdueChargePauseEnabled}
+                onCheckedChange={setOverdueChargePauseEnabled}
+                aria-label="Ativar pausa automática"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="overdue-charge-pause-days" className="text-sm font-semibold text-foreground">
+                Pausar após (dias)
+              </Label>
+              <Input
+                id="overdue-charge-pause-days"
+                type="number"
+                min={1}
+                max={90}
+                step={1}
+                value={overdueChargePauseDays}
+                disabled={!overdueChargePauseEnabled}
+                onChange={(e) => setOverdueChargePauseDays(clampPauseDays(Number(e.target.value || 10)))}
+                placeholder="10"
+                className="max-w-[180px] bg-background/70 border-border"
+              />
+              <p className="text-xs text-muted-foreground">
+                {overdueChargePauseEnabled
+                  ? `Clientes vencidos há mais de ${overdueChargePauseDays} dias ficarão com a cobrança automática pausada.`
+                  : "A pausa automática está desativada; clientes vencidos continuarão elegíveis para cobrança diária."}
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-end">
@@ -150,7 +186,7 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
       ) : (
         <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            🔒 Informações de Acesso Master (URL e Token) são visíveis apenas para o Proprietário.
+            🔒 Informações de Acesso Master (URL, Token e pausa automática) são visíveis apenas para o Proprietário/Master.
           </p>
         </div>
       )}
