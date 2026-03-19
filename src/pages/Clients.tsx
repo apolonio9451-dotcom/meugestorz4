@@ -1623,12 +1623,25 @@ export default function Clients() {
                         <Handshake className="w-2.5 h-2.5" /> {client.referred_by}
                       </span>
                     )}
-                    {pauseStatusLabel && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60 font-medium">
-                        <BellOff className="w-2.5 h-2.5" /> {pauseStatusLabel}
-                      </span>
-                    )}
                   </div>
+
+                  {isPausedManually && manualPauseInfo && (
+                    <div className="flex justify-center pt-1">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-warning/30 bg-warning/15 px-3 py-1 text-[11px] font-semibold text-warning shadow-[0_0_18px_hsl(var(--warning)/0.18)]">
+                        <VolumeX className="h-3.5 w-3.5" />
+                        {getManualChargePauseLabel(client.charge_pause_until, client.charge_pause_note)}
+                      </span>
+                    </div>
+                  )}
+
+                  {isPausedByOverdueLimit && !isPausedManually && (
+                    <div className="flex justify-center pt-1">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/60 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                        <BellOff className="h-3.5 w-3.5" />
+                        Cobrança automática pausada
+                      </span>
+                    </div>
+                  )}
 
                   {/* App names */}
                   {clientMacKeys.some(mk => mk.app_name) && (
