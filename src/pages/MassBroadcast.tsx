@@ -149,6 +149,13 @@ const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
   failed: { icon: X, cls: "text-destructive" },
 };
 
+const recipientStatusText: Record<string, string> = {
+  pending: "Pendente",
+  processing: "Conversando",
+  sent: "Finalizado",
+  failed: "Erro",
+};
+
 const conversationStatusMeta: Record<string, { label: string; className: string }> = {
   bot_active: { label: "Gerenciada pelo bot", className: "border-primary/40 bg-primary/10 text-primary" },
   awaiting_human: { label: "Aguardando humano", className: "border-warning/30 bg-warning/15 text-warning" },
