@@ -1,3 +1,4 @@
+@import url('./styles/tailwind-base-patch.css');
 
 #lovable-badge {
   display: none !important;
