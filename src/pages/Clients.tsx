@@ -95,6 +95,7 @@ export default function Clients() {
   const [showReferralDropdown, setShowReferralDropdown] = useState(false);
   const [formFollowUpActive, setFormFollowUpActive] = useState(false);
   const [pixKey, setPixKey] = useState("");
+  const [overdueChargePauseEnabled, setOverdueChargePauseEnabled] = useState(true);
   const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
