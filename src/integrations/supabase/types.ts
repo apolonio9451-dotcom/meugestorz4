@@ -761,6 +761,8 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          charge_pause_note: string
+          charge_pause_until: string | null
           company_id: string
           cpf: string | null
           created_at: string
@@ -783,6 +785,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          charge_pause_note?: string
+          charge_pause_until?: string | null
           company_id: string
           cpf?: string | null
           created_at?: string
@@ -805,6 +809,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          charge_pause_note?: string
+          charge_pause_until?: string | null
           company_id?: string
           cpf?: string | null
           created_at?: string
