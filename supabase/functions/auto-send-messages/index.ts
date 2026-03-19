@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_days");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -124,17 +124,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // BATCH PROCESSING: Instead of processing ALL at once (causes timeout),
-    // process a limited batch per cron invocation.
-    // The cron fires every minute, so we process what fits in ~50 seconds.
-    // Companies whose hour has ALREADY passed today but still have pending clients
-    // will continue to be processed in subsequent cron ticks.
-
     const eligibleConfigs = apiConfigs.filter((c: any) => {
       const configuredHour = c.auto_send_hour ?? 8;
       const configuredMinute = c.auto_send_minute ?? 0;
-      // Process if we're at or past the configured time today
-      // This allows the queue to drain over multiple cron invocations
       if (brasiliaHour > configuredHour) return true;
       if (brasiliaHour === configuredHour && brasiliaMinute >= configuredMinute) return true;
       return false;
@@ -145,7 +137,6 @@ Deno.serve(async (req) => {
 
     for (const config of eligibleConfigs) {
       if (!config.api_url || !config.api_token) continue;
-      // Safety: stop if we're running too long
       if (Date.now() - execStart > MAX_EXEC_MS) {
         console.log(`[auto-send] ⏱️ Tempo limite atingido, continuando no próximo ciclo`);
         break;
@@ -155,11 +146,13 @@ Deno.serve(async (req) => {
       const apiToken = config.api_token;
       const companyId = config.company_id;
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
-      const overdueChargePauseDays = Math.max(0, Number((config as any).overdue_charge_pause_days ?? 10));
+      const overdueChargePauseEnabled = Boolean((config as any).overdue_charge_pause_enabled ?? true);
+      const overdueChargePauseDays = Math.min(90, Math.max(1, Number((config as any).overdue_charge_pause_days ?? 10)));
 
-      console.log(`[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa-vencidos>${overdueChargePauseDays}d`);
+      console.log(
+        `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}`
+      );
 
-      // Fetch category active settings
       const { data: categorySettings } = await supabase
         .from("auto_send_category_settings")
         .select("category, is_active")
@@ -172,7 +165,6 @@ Deno.serve(async (req) => {
 
       console.log(`[auto-send] Categorias desabilitadas: ${[...disabledCategories].join(", ") || "nenhuma"}`);
 
-      // Fetch templates
       const { data: templateRows } = await supabase
         .from("message_templates")
         .select("category, message")
@@ -183,7 +175,6 @@ Deno.serve(async (req) => {
         templates[t.category] = t.message;
       });
 
-      // Fetch active clients with subscriptions that HAVEN'T been sent today
       const { data: clients } = await supabase
         .from("clients")
         .select(`
@@ -200,7 +191,6 @@ Deno.serve(async (req) => {
 
       if (!clients) continue;
 
-      // Build queue
       const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
       let pausedOverdueClients = 0;
 
@@ -221,7 +211,7 @@ Deno.serve(async (req) => {
         if (!category) continue;
         if (disabledCategories.has(category)) continue;
 
-        if (category === "vencidos" && overdueChargePauseDays > 0 && Math.abs(diffDays) > overdueChargePauseDays) {
+        if (category === "vencidos" && overdueChargePauseEnabled && Math.abs(diffDays) > overdueChargePauseDays) {
           pausedOverdueClients++;
           continue;
         }
