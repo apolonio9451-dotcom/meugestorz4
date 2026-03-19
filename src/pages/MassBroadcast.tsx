@@ -690,7 +690,39 @@ export default function MassBroadcast() {
                   </CardContent>
                 </Card>
 
-                {/* Message Templates Editor */}
+                {/* AI Seller Config */}
+                <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+                  <CardHeader className="relative pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                      <Bot className="h-4 w-4 text-primary" />
+                      Vendedor IA Conversacional
+                    </CardTitle>
+                    <CardDescription>Configure o comportamento do vendedor inteligente.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="relative space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="seller-instructions">Instruções para o Vendedor IA</Label>
+                      <Textarea
+                        id="seller-instructions"
+                        value={sellerInstructions}
+                        onChange={(e) => setSellerInstructions(e.target.value)}
+                        placeholder="Ex: Você é um vendedor simpático da Meu Gestor, focado em planos de streaming. Seja direto e convincente."
+                        className="min-h-[100px] border-primary/20 focus:border-primary/40"
+                      />
+                      <p className="text-[10px] text-muted-foreground">A IA usará estas instruções para gerar respostas naturais e fechar vendas.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tempo de espera para oferta (min)</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider min={1} max={30} step={1} value={[offerTimeout]} onValueChange={(v) => setOfferTimeout(v[0])} className="flex-1" />
+                        <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary shrink-0 min-w-[50px] justify-center">{offerTimeout}m</Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Se o cliente não responder à saudação, a oferta será enviada após este tempo com uma transição natural gerada pela IA.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="border-border/30 bg-card/80 backdrop-blur">
                   <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen}>
                     <CardHeader className="pb-3">
