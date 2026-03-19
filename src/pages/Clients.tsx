@@ -1486,11 +1486,12 @@ export default function Clients() {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
             const hasResumeOverride = hasChargeResumeOverride(client.charge_pause_note);
-            const isPausedManually = isManualChargePaused(client.charge_pause_until);
+            const manualPauseInfo = getManualChargePauseInfo(client.charge_pause_until, client.charge_pause_note);
+            const isPausedManually = Boolean(manualPauseInfo);
             const isPausedByOverdueLimit = isAutoChargePaused(days) && !hasResumeOverride;
             const canResumeCharge = isPausedManually || isPausedByOverdueLimit;
             const pauseStatusLabel = isPausedManually
-              ? getManualChargePauseLabel(client.charge_pause_until)
+              ? getManualChargePauseLabel(client.charge_pause_until, client.charge_pause_note)
               : isPausedByOverdueLimit
                 ? "Cobrança automática pausada"
                 : null;
@@ -1500,13 +1501,13 @@ export default function Clients() {
             const neonColor = days === null
               ? "border-muted-foreground/20 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.15)] hover:shadow-[0_0_20px_-3px_hsl(var(--muted-foreground)/0.3)]"
               : isChargePaused
-                ? "border-border/60 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.12)] hover:shadow-[0_0_18px_-3px_hsl(var(--muted-foreground)/0.18)]"
+                ? "border-warning/30 shadow-[0_0_12px_-3px_hsl(var(--warning)/0.24)] hover:shadow-[0_0_22px_-3px_hsl(var(--warning)/0.34)]"
                 : days < 0
                   ? "border-destructive/30 shadow-[0_0_12px_-3px_hsl(var(--destructive)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--destructive)/0.5)]"
                   : days === 0
-                    ? "border-orange-500/30 shadow-[0_0_12px_-3px_rgb(249_115_22/0.3)] hover:shadow-[0_0_20px_-3px_rgb(249_115_22/0.5)]"
+                    ? "border-warning/30 shadow-[0_0_12px_-3px_hsl(var(--warning)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--warning)/0.5)]"
                     : days <= 7
-                      ? "border-yellow-500/30 shadow-[0_0_12px_-3px_rgb(234_179_8/0.3)] hover:shadow-[0_0_20px_-3px_rgb(234_179_8/0.5)]"
+                      ? "border-warning/30 shadow-[0_0_12px_-3px_hsl(var(--warning)/0.22)] hover:shadow-[0_0_20px_-3px_hsl(var(--warning)/0.38)]"
                       : "border-emerald-500/30 shadow-[0_0_12px_-3px_rgb(16_185_129/0.3)] hover:shadow-[0_0_20px_-3px_rgb(16_185_129/0.5)]";
 
             return (
