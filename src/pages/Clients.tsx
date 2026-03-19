@@ -13,7 +13,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -686,12 +686,19 @@ export default function Clients() {
   const handleSetClientChargePause = async (clientId: string, clientName: string, days: number) => {
     const safeDays = clampClientPauseDays(days);
     const pauseUntil = format(addDays(new Date(), safeDays - 1), "yyyy-MM-dd");
+    const pauseNote = `manual:${safeDays}`;
 
     setPauseUpdatingClientId(clientId);
+    setClients((current) => current.map((client) => (
+      client.id === clientId
+        ? { ...client, charge_pause_until: pauseUntil, charge_pause_note: pauseNote }
+        : client
+    )));
+
     try {
       const { error } = await supabase
         .from("clients")
-        .update({ charge_pause_until: pauseUntil, charge_pause_note: `manual:${safeDays}` } as any)
+        .update({ charge_pause_until: pauseUntil, charge_pause_note: pauseNote } as any)
         .eq("id", clientId);
 
       if (error) throw error;
@@ -702,6 +709,7 @@ export default function Clients() {
       fetchClients();
       fetchActivityLogs();
     } catch (error: any) {
+      fetchClients();
       toast.error(error?.message || "Erro ao pausar cobrança");
     } finally {
       setPauseUpdatingClientId(null);
@@ -709,21 +717,30 @@ export default function Clients() {
   };
 
   const handleClearClientChargePause = async (clientId: string, clientName: string) => {
+    const resumedNote = "resumed:auto";
+
     setPauseUpdatingClientId(clientId);
+    setClients((current) => current.map((client) => (
+      client.id === clientId
+        ? { ...client, charge_pause_until: null, charge_pause_note: resumedNote }
+        : client
+    )));
+
     try {
       const { error } = await supabase
         .from("clients")
-        .update({ charge_pause_until: null, charge_pause_note: "" } as any)
+        .update({ charge_pause_until: null, charge_pause_note: resumedNote, ultimo_envio_auto: null } as any)
         .eq("id", clientId);
 
       if (error) throw error;
 
-      toast.success("Cobrança automática reativada.");
-      await logActivity("retomada_cobranca", clientName, clientId, "Pausa manual de cobrança removida");
+      toast.success(`Cobrança retomada para ${clientName}`);
+      await logActivity("retomada_cobranca", clientName, clientId, "Cobrança retomada manualmente e recolocada na fila automática");
       setChargePauseDialog(null);
       fetchClients();
       fetchActivityLogs();
     } catch (error: any) {
+      fetchClients();
       toast.error(error?.message || "Erro ao retomar cobrança");
     } finally {
       setPauseUpdatingClientId(null);
@@ -833,11 +850,28 @@ export default function Clients() {
     return differenceInCalendarDays(parseISO(pauseUntil), new Date()) >= 0;
   }, []);
 
-  const getManualChargePauseLabel = useCallback((pauseUntil?: string | null) => {
+  const parseManualChargePauseDays = useCallback((pauseNote?: string | null) => {
+    const match = (pauseNote || "").trim().match(/^manual:(\d{1,3})$/);
+    return match ? clampClientPauseDays(Number(match[1])) : null;
+  }, []);
+
+  const getManualChargePauseInfo = useCallback((pauseUntil?: string | null, pauseNote?: string | null) => {
     if (!pauseUntil || !isManualChargePaused(pauseUntil)) return null;
-    const remainingDays = differenceInCalendarDays(parseISO(pauseUntil), new Date()) + 1;
-    return `Pausa manual · ${remainingDays}d`;
-  }, [isManualChargePaused]);
+
+    const remainingDays = clampClientPauseDays(differenceInCalendarDays(parseISO(pauseUntil), new Date()) + 1);
+    const configuredDays = parseManualChargePauseDays(pauseNote) ?? remainingDays;
+    const startDate = addDays(parseISO(pauseUntil), -(configuredDays - 1));
+
+    return {
+      remainingDays,
+      startDate,
+    };
+  }, [isManualChargePaused, parseManualChargePauseDays]);
+
+  const getManualChargePauseLabel = useCallback((pauseUntil?: string | null, pauseNote?: string | null) => {
+    const pauseInfo = getManualChargePauseInfo(pauseUntil, pauseNote);
+    return pauseInfo ? `Pausa Ativa (${pauseInfo.remainingDays}d)` : null;
+  }, [getManualChargePauseInfo]);
 
   const filtered = useMemo(() => {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
@@ -954,11 +988,11 @@ export default function Clients() {
   };
 
   const getExpiryBadge = (days: number, paused: boolean = false) => {
-    if (paused) return <Badge className="bg-muted/70 text-muted-foreground border-border/60 text-[10px] font-bold uppercase">Vencido · Pausado</Badge>;
+    if (paused) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase shadow-[0_0_14px_hsl(var(--warning)/0.18)]">Vencido · Pausado</Badge>;
     if (days < 0) return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] font-bold uppercase">Vencido</Badge>;
-    if (days === 0) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
-    if (days === 1) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
-    if (days === 3) return <Badge className="bg-yellow-600/20 text-yellow-500 border-yellow-600/30 text-[10px] font-bold uppercase">A Vencer ({days}D)</Badge>;
+    if (days === 0) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
+    if (days === 1) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
+    if (days === 3) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">A Vencer ({days}D)</Badge>;
     return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] font-bold uppercase">Ativo</Badge>;
   };
 
@@ -1452,11 +1486,12 @@ export default function Clients() {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
             const hasResumeOverride = hasChargeResumeOverride(client.charge_pause_note);
-            const isPausedManually = isManualChargePaused(client.charge_pause_until);
+            const manualPauseInfo = getManualChargePauseInfo(client.charge_pause_until, client.charge_pause_note);
+            const isPausedManually = Boolean(manualPauseInfo);
             const isPausedByOverdueLimit = isAutoChargePaused(days) && !hasResumeOverride;
             const canResumeCharge = isPausedManually || isPausedByOverdueLimit;
             const pauseStatusLabel = isPausedManually
-              ? getManualChargePauseLabel(client.charge_pause_until)
+              ? getManualChargePauseLabel(client.charge_pause_until, client.charge_pause_note)
               : isPausedByOverdueLimit
                 ? "Cobrança automática pausada"
                 : null;
@@ -1466,13 +1501,13 @@ export default function Clients() {
             const neonColor = days === null
               ? "border-muted-foreground/20 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.15)] hover:shadow-[0_0_20px_-3px_hsl(var(--muted-foreground)/0.3)]"
               : isChargePaused
-                ? "border-border/60 shadow-[0_0_12px_-3px_hsl(var(--muted-foreground)/0.12)] hover:shadow-[0_0_18px_-3px_hsl(var(--muted-foreground)/0.18)]"
+                ? "border-warning/30 shadow-[0_0_12px_-3px_hsl(var(--warning)/0.24)] hover:shadow-[0_0_22px_-3px_hsl(var(--warning)/0.34)]"
                 : days < 0
                   ? "border-destructive/30 shadow-[0_0_12px_-3px_hsl(var(--destructive)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--destructive)/0.5)]"
                   : days === 0
-                    ? "border-orange-500/30 shadow-[0_0_12px_-3px_rgb(249_115_22/0.3)] hover:shadow-[0_0_20px_-3px_rgb(249_115_22/0.5)]"
+                    ? "border-warning/30 shadow-[0_0_12px_-3px_hsl(var(--warning)/0.3)] hover:shadow-[0_0_20px_-3px_hsl(var(--warning)/0.5)]"
                     : days <= 7
-                      ? "border-yellow-500/30 shadow-[0_0_12px_-3px_rgb(234_179_8/0.3)] hover:shadow-[0_0_20px_-3px_rgb(234_179_8/0.5)]"
+                      ? "border-warning/30 shadow-[0_0_12px_-3px_hsl(var(--warning)/0.22)] hover:shadow-[0_0_20px_-3px_hsl(var(--warning)/0.38)]"
                       : "border-emerald-500/30 shadow-[0_0_12px_-3px_rgb(16_185_129/0.3)] hover:shadow-[0_0_20px_-3px_rgb(16_185_129/0.5)]";
 
             return (
@@ -1588,12 +1623,25 @@ export default function Clients() {
                         <Handshake className="w-2.5 h-2.5" /> {client.referred_by}
                       </span>
                     )}
-                    {pauseStatusLabel && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/60 font-medium">
-                        <BellOff className="w-2.5 h-2.5" /> {pauseStatusLabel}
-                      </span>
-                    )}
                   </div>
+
+                  {isPausedManually && manualPauseInfo && (
+                    <div className="flex justify-center pt-1">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-warning/30 bg-warning/15 px-3 py-1 text-[11px] font-semibold text-warning shadow-[0_0_18px_hsl(var(--warning)/0.18)]">
+                        <VolumeX className="h-3.5 w-3.5" />
+                        {getManualChargePauseLabel(client.charge_pause_until, client.charge_pause_note)}
+                      </span>
+                    </div>
+                  )}
+
+                  {isPausedByOverdueLimit && !isPausedManually && (
+                    <div className="flex justify-center pt-1">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/60 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                        <BellOff className="h-3.5 w-3.5" />
+                        Cobrança automática pausada
+                      </span>
+                    </div>
+                  )}
 
                   {/* App names */}
                   {clientMacKeys.some(mk => mk.app_name) && (
@@ -1613,9 +1661,22 @@ export default function Clients() {
                     <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isChargePaused))}>
                       <div className={`h-full rounded-full transition-all ${getBarColor(days, isChargePaused)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-[10px] font-medium", isChargePaused ? "text-muted-foreground" : days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
-                        {getDaysLabel(days, pauseStatusLabel)}
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        isPausedManually || isPausedByOverdueLimit
+                          ? "text-muted-foreground"
+                          : days < 0
+                            ? "text-destructive"
+                            : days === 0 || days <= 7
+                              ? "text-warning"
+                              : "text-emerald-400"
+                      )}>
+                        {isPausedManually && manualPauseInfo
+                          ? `Pausa iniciada em: ${format(manualPauseInfo.startDate, "dd/MM/yyyy")}`
+                          : isPausedByOverdueLimit
+                            ? "Cobrança automática pausada"
+                            : getDaysLabel(days)}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">
                         {format(parseISO(sub.end_date), "dd/MM/yyyy")}
