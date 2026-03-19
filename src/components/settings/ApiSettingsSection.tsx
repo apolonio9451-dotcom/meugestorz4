@@ -15,6 +15,7 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
   const [showToken, setShowToken] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,13 +31,14 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
       setLoading(true);
       const { data } = await supabase
         .from("api_settings" as any)
-        .select("id, api_url, api_token, pix_key")
+        .select("id, api_url, api_token, pix_key, overdue_charge_pause_days")
         .eq("company_id", companyId)
         .maybeSingle();
       if (data) {
         setApiUrl((data as any).api_url || "");
         setApiToken((data as any).api_token || "");
         setPixKey((data as any).pix_key || "");
+        setOverdueChargePauseDays(Math.max(0, Number((data as any).overdue_charge_pause_days ?? 10)));
         setExistingId((data as any).id);
       }
       setLoading(false);
@@ -48,7 +50,13 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
     if (!companyId) return;
     setSaving(true);
     try {
-      const payload = { company_id: companyId, api_url: apiUrl.trim().replace(/\/$/, ""), api_token: apiToken.trim(), pix_key: pixKey.trim() };
+      const payload = {
+        company_id: companyId,
+        api_url: apiUrl.trim().replace(/\/$/, ""),
+        api_token: apiToken.trim(),
+        pix_key: pixKey.trim(),
+        overdue_charge_pause_days: Math.max(0, Number.isFinite(overdueChargePauseDays) ? overdueChargePauseDays : 10),
+      };
       let error;
       if (existingId) {
         ({ error } = await supabase.from("api_settings" as any).update(payload).eq("id", existingId));
@@ -113,6 +121,22 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             </div>
             <p className="text-muted-foreground text-xs">
               O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground">Limite de Cobrança Diária (Dias)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={overdueChargePauseDays}
+              onChange={(e) => setOverdueChargePauseDays(Math.max(0, Number(e.target.value || 0)))}
+              placeholder="10"
+              className="bg-secondary/50 border-border max-w-[220px]"
+            />
+            <p className="text-muted-foreground text-xs">
+              Clientes vencidos há mais de {overdueChargePauseDays || 0} dias terão a cobrança automática pausada. Use 0 para desativar a trava.
             </p>
           </div>
 
