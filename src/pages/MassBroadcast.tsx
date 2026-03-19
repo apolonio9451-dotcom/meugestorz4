@@ -397,6 +397,8 @@ export default function MassBroadcast() {
           greeting_templates: ["Olá!", "Tudo bem?", "Bom dia, como vai?"],
           message_delay_min_seconds: delayRange[0],
           message_delay_max_seconds: delayRange[1],
+          seller_instructions: sellerInstructions,
+          offer_timeout_minutes: offerTimeout,
         })
         .select("id")
         .single();
