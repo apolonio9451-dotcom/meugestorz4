@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Bot,
+  ImagePlus,
   Loader2,
   MessageSquareMore,
+  Mic,
+  PauseCircle,
   Play,
   Radio,
   RefreshCw,
@@ -75,6 +78,8 @@ type ConversationMessage = {
   created_at: string;
 };
 
+type MediaKind = "audio" | "image";
+
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
 const splitOfferTemplates = (value: string) =>
   value
@@ -98,10 +103,16 @@ const conversationStatusMeta: Record<string, { label: string; className: string 
     label: "Aguardando humano",
     className: "border-warning/30 bg-warning/15 text-warning",
   },
+  human_takeover: {
+    label: "Assumida por humano",
+    className: "border-warning/30 bg-warning/15 text-warning",
+  },
 };
 
 export default function MassBroadcast() {
   const { effectiveCompanyId: companyId, user } = useAuth();
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [globalEnabled, setGlobalEnabled] = useState(false);
   const [savingToggle, setSavingToggle] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -114,6 +125,8 @@ export default function MassBroadcast() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
+  const [takingOverConversationId, setTakingOverConversationId] = useState<string | null>(null);
 
   const cleanedPhones = useMemo(
     () => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter((phone) => phone.length >= 10))),
