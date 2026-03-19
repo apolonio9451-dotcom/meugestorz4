@@ -380,6 +380,124 @@ export default function MassBroadcast() {
     }
   };
 
+  const handleAssumeConversation = async () => {
+    if (!activeConversation) return;
+
+    const previousConversations = conversations;
+    const nowIso = new Date().toISOString();
+
+    setTakingOverConversationId(activeConversation.id);
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === activeConversation.id
+          ? {
+              ...conversation,
+              conversation_status: "human_takeover",
+              has_reply: true,
+              last_message_at: nowIso,
+            }
+          : conversation,
+      ),
+    );
+
+    try {
+      const { error } = await supabase
+        .from("mass_broadcast_conversations" as any)
+        .update({ conversation_status: "human_takeover", has_reply: true, updated_at: nowIso })
+        .eq("id", activeConversation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Conversa assumida",
+        description: "O bot foi pausado apenas neste chat para sua negociação manual.",
+      });
+    } catch (error: any) {
+      setConversations(previousConversations);
+      toast({
+        title: "Erro ao assumir conversa",
+        description: error?.message || "Não foi possível pausar o bot neste chat.",
+        variant: "destructive",
+      });
+    } finally {
+      setTakingOverConversationId(null);
+    }
+  };
+
+  const handleQuickMediaUpload = async (kind: MediaKind, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !companyId || !activeConversation) return;
+
+    const validType = kind === "audio" ? file.type.startsWith("audio/") : file.type.startsWith("image/");
+    if (!validType) {
+      toast({
+        title: "Formato inválido",
+        description: kind === "audio" ? "Selecione um arquivo de áudio válido." : "Selecione uma imagem válida.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O limite para envio rápido é de 20MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMediaSending(kind);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+      const path = `${companyId}/manual/${Date.now()}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("chatbot-media")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("chatbot-media").getPublicUrl(path);
+      const { error: dbError } = await supabase.from("chatbot_media").insert({
+        company_id: companyId,
+        file_name: file.name,
+        file_url: urlData.publicUrl,
+        file_type: kind,
+        file_size: file.size,
+      });
+      if (dbError) throw dbError;
+
+      const { error: sendError } = await supabase.functions.invoke("mass-broadcast-manual-send", {
+        body: {
+          conversationId: activeConversation.id,
+          mediaUrl: urlData.publicUrl,
+          mediaType: kind,
+          fileName: file.name,
+        },
+      });
+      if (sendError) throw sendError;
+
+      await loadConversationMonitor();
+      toast({
+        title: kind === "audio" ? "Áudio enviado" : "Imagem enviada",
+        description:
+          kind === "audio"
+            ? "O WhatsApp simulou a gravação antes do disparo do arquivo."
+            : "A imagem foi enviada para o chat selecionado.",
+      });
+    } catch (error: any) {
+      toast({
+        title: kind === "audio" ? "Erro ao enviar áudio" : "Erro ao enviar imagem",
+        description: error?.message || "Não foi possível concluir o envio manual.",
+        variant: "destructive",
+      });
+    } finally {
+      setMediaSending(null);
+    }
+  };
+
   return (
     <AnimatedPage>
       <div className="space-y-6">
