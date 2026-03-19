@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Bot,
+  ImagePlus,
   Loader2,
   MessageSquareMore,
+  Mic,
+  PauseCircle,
   Play,
   Radio,
   RefreshCw,
@@ -75,6 +78,8 @@ type ConversationMessage = {
   created_at: string;
 };
 
+type MediaKind = "audio" | "image";
+
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
 const splitOfferTemplates = (value: string) =>
   value
@@ -98,10 +103,16 @@ const conversationStatusMeta: Record<string, { label: string; className: string 
     label: "Aguardando humano",
     className: "border-warning/30 bg-warning/15 text-warning",
   },
+  human_takeover: {
+    label: "Assumida por humano",
+    className: "border-warning/30 bg-warning/15 text-warning",
+  },
 };
 
 export default function MassBroadcast() {
   const { effectiveCompanyId: companyId, user } = useAuth();
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [globalEnabled, setGlobalEnabled] = useState(false);
   const [savingToggle, setSavingToggle] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -114,6 +125,8 @@ export default function MassBroadcast() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
+  const [takingOverConversationId, setTakingOverConversationId] = useState<string | null>(null);
 
   const cleanedPhones = useMemo(
     () => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter((phone) => phone.length >= 10))),
@@ -364,6 +377,124 @@ export default function MassBroadcast() {
       toast({ title: "Erro ao criar fila", description: error?.message || "Não foi possível preparar a campanha.", variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAssumeConversation = async () => {
+    if (!activeConversation) return;
+
+    const previousConversations = conversations;
+    const nowIso = new Date().toISOString();
+
+    setTakingOverConversationId(activeConversation.id);
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === activeConversation.id
+          ? {
+              ...conversation,
+              conversation_status: "human_takeover",
+              has_reply: true,
+              last_message_at: nowIso,
+            }
+          : conversation,
+      ),
+    );
+
+    try {
+      const { error } = await supabase
+        .from("mass_broadcast_conversations" as any)
+        .update({ conversation_status: "human_takeover", has_reply: true, updated_at: nowIso })
+        .eq("id", activeConversation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Conversa assumida",
+        description: "O bot foi pausado apenas neste chat para sua negociação manual.",
+      });
+    } catch (error: any) {
+      setConversations(previousConversations);
+      toast({
+        title: "Erro ao assumir conversa",
+        description: error?.message || "Não foi possível pausar o bot neste chat.",
+        variant: "destructive",
+      });
+    } finally {
+      setTakingOverConversationId(null);
+    }
+  };
+
+  const handleQuickMediaUpload = async (kind: MediaKind, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !companyId || !activeConversation) return;
+
+    const validType = kind === "audio" ? file.type.startsWith("audio/") : file.type.startsWith("image/");
+    if (!validType) {
+      toast({
+        title: "Formato inválido",
+        description: kind === "audio" ? "Selecione um arquivo de áudio válido." : "Selecione uma imagem válida.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O limite para envio rápido é de 20MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMediaSending(kind);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+      const path = `${companyId}/manual/${Date.now()}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("chatbot-media")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("chatbot-media").getPublicUrl(path);
+      const { error: dbError } = await supabase.from("chatbot_media").insert({
+        company_id: companyId,
+        file_name: file.name,
+        file_url: urlData.publicUrl,
+        file_type: kind,
+        file_size: file.size,
+      });
+      if (dbError) throw dbError;
+
+      const { error: sendError } = await supabase.functions.invoke("mass-broadcast-manual-send", {
+        body: {
+          conversationId: activeConversation.id,
+          mediaUrl: urlData.publicUrl,
+          mediaType: kind,
+          fileName: file.name,
+        },
+      });
+      if (sendError) throw sendError;
+
+      await loadConversationMonitor();
+      toast({
+        title: kind === "audio" ? "Áudio enviado" : "Imagem enviada",
+        description:
+          kind === "audio"
+            ? "O WhatsApp simulou a gravação antes do disparo do arquivo."
+            : "A imagem foi enviada para o chat selecionado.",
+      });
+    } catch (error: any) {
+      toast({
+        title: kind === "audio" ? "Erro ao enviar áudio" : "Erro ao enviar imagem",
+        description: error?.message || "Não foi possível concluir o envio manual.",
+        variant: "destructive",
+      });
+    } finally {
+      setMediaSending(null);
     }
   };
 
@@ -656,17 +787,34 @@ export default function MassBroadcast() {
                             ) : (
                               activeConversationMessages.map((message) => {
                                 const isOutbound = message.direction === "outbound";
+                                const isHumanManual = isOutbound && message.sender_type === "human";
+                                const badgeLabel =
+                                  message.message_type === "text"
+                                    ? "Texto"
+                                    : message.message_type === "audio"
+                                      ? "Áudio"
+                                      : message.message_type === "image"
+                                        ? "Imagem"
+                                        : message.message_type;
+
                                 return (
                                   <div key={message.id} className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}>
                                     <div
                                       className={`max-w-[85%] rounded-2xl border px-4 py-3 shadow-sm ${
-                                        isOutbound
-                                          ? "border-primary/30 bg-primary/10 text-foreground"
-                                          : "border-border/60 bg-muted/40 text-foreground"
+                                        isHumanManual
+                                          ? "border-warning/30 bg-warning/10 text-foreground"
+                                          : isOutbound
+                                            ? "border-primary/30 bg-primary/10 text-foreground"
+                                            : "border-border/60 bg-muted/40 text-foreground"
                                       }`}
                                     >
                                       <div className="mb-2 flex items-center gap-2 text-[11px] font-medium">
-                                        {isOutbound ? (
+                                        {isHumanManual ? (
+                                          <>
+                                            <User className="h-3.5 w-3.5 text-warning" />
+                                            <span className="text-warning">Humano</span>
+                                          </>
+                                        ) : isOutbound ? (
                                           <>
                                             <Bot className="h-3.5 w-3.5 text-primary" />
                                             <span className="text-primary">Robô</span>
@@ -682,7 +830,7 @@ export default function MassBroadcast() {
                                       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.message}</p>
                                       <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <Badge variant="outline" className="border-border/60 bg-background/70 text-muted-foreground">
-                                          {message.message_type === "text" ? "Texto" : message.message_type}
+                                          {badgeLabel}
                                         </Badge>
                                         {message.delivery_status ? (
                                           <Badge variant="outline" className="border-border/60 bg-background/70 text-muted-foreground">
@@ -695,6 +843,63 @@ export default function MassBroadcast() {
                                 );
                               })
                             )}
+                          </div>
+
+                          <div className="mt-3 rounded-xl border border-border/60 bg-background/70 p-3">
+                            <input
+                              ref={audioInputRef}
+                              type="file"
+                              accept="audio/*"
+                              className="hidden"
+                              onChange={(event) => void handleQuickMediaUpload("audio", event)}
+                            />
+                            <input
+                              ref={imageInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => void handleQuickMediaUpload("image", event)}
+                            />
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => audioInputRef.current?.click()}
+                                disabled={mediaSending !== null}
+                              >
+                                {mediaSending === "audio" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic className="mr-2 h-4 w-4" />}
+                                Enviar Áudio
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => imageInputRef.current?.click()}
+                                disabled={mediaSending !== null}
+                              >
+                                {mediaSending === "image" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImagePlus className="mr-2 h-4 w-4" />}
+                                Enviar Imagem
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={activeConversation.conversation_status === "human_takeover" ? "secondary" : "default"}
+                                onClick={() => void handleAssumeConversation()}
+                                disabled={takingOverConversationId === activeConversation.id || activeConversation.conversation_status === "human_takeover"}
+                              >
+                                {takingOverConversationId === activeConversation.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <PauseCircle className="mr-2 h-4 w-4" />
+                                )}
+                                {activeConversation.conversation_status === "human_takeover" ? "Conversa Assumida" : "Assumir Conversa"}
+                              </Button>
+                            </div>
+
+                            <p className="mt-3 text-xs text-muted-foreground">
+                              {activeConversation.conversation_status === "human_takeover"
+                                ? "Bot pausado neste chat. Agora você pode negociar manualmente sem interrupções automáticas."
+                                : "O envio de áudio simula “gravando áudio...” antes do disparo. Se quiser negociar sem interrupções, use Assumir Conversa."}
+                            </p>
                           </div>
                         </div>
                       )}

@@ -337,7 +337,7 @@ async function recordMassBroadcastIncoming(
 
   const { data: conversation } = await supabase
     .from("mass_broadcast_conversations")
-    .select("id, campaign_id, recipient_id")
+    .select("id, campaign_id, recipient_id, conversation_status")
     .eq("company_id", payload.companyId)
     .eq("normalized_phone", normalizedPhone)
     .order("last_message_at", { ascending: false })
@@ -347,6 +347,7 @@ async function recordMassBroadcastIncoming(
   if (!conversation) return null;
 
   const nowIso = new Date().toISOString();
+  const nextStatus = (conversation as any).conversation_status === "human_takeover" ? "human_takeover" : "awaiting_human";
 
   await supabase.from("mass_broadcast_conversation_messages").insert({
     company_id: payload.companyId,
@@ -367,14 +368,17 @@ async function recordMassBroadcastIncoming(
   await supabase
     .from("mass_broadcast_conversations")
     .update({
-      conversation_status: "awaiting_human",
+      conversation_status: nextStatus,
       has_reply: true,
       last_message_at: nowIso,
       last_incoming_at: nowIso,
     })
     .eq("id", (conversation as any).id);
 
-  return conversation;
+  return {
+    ...(conversation as any),
+    conversation_status: nextStatus,
+  };
 }
 
 // ===================== MAIN HANDLER =====================
@@ -456,7 +460,7 @@ Deno.serve(async (req: Request) => {
 
     // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      await recordMassBroadcastIncoming(supabase, {
+      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
         companyId: companyIdParam,
         phone: senderPhone,
         message: `[${messageType.toUpperCase()}]`,
@@ -469,6 +473,13 @@ Deno.serve(async (req: Request) => {
         message_sent: "", context_type: "media_received", status: "ignored",
         error_message: `Tipo de mensagem não processável: ${messageType}`,
       });
+
+      if ((massBroadcastConversation as any)?.conversation_status === "human_takeover") {
+        return new Response(JSON.stringify({ status: "ok", reason: "human_takeover_media" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ status: "ok", reason: "non_text", type: messageType }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -492,12 +503,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const phone = normalizePhone(senderPhone);
-    await recordMassBroadcastIncoming(supabase, {
+    const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
       companyId: companyIdParam,
       phone,
       message: messageText.slice(0, 4000),
       messageType: messageType || "text",
     });
+    if ((massBroadcastConversation as any)?.conversation_status === "human_takeover") {
+      return new Response(JSON.stringify({ status: "ok", reason: "human_takeover" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
     decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
 
