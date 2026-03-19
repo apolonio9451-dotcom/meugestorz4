@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
       const { data: clients } = await supabase
         .from("clients")
         .select(`
-          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto,
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until,
           client_subscriptions (
             end_date, amount, custom_price,
             subscription_plans ( name, price )
@@ -193,10 +193,22 @@ Deno.serve(async (req) => {
 
       const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
       let pausedOverdueClients = 0;
+      let manuallyPausedClients = 0;
+      const todayDate = new Date(today + "T00:00:00");
 
       for (const client of clients) {
         const phone = client.whatsapp || client.phone || "";
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
+
+        const manualPauseUntil = (client as any).charge_pause_until as string | null;
+        if (manualPauseUntil) {
+          const manualPauseDate = new Date(manualPauseUntil + "T00:00:00");
+          const remainingPauseDays = Math.round((manualPauseDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (remainingPauseDays >= 0) {
+            manuallyPausedClients++;
+            continue;
+          }
+        }
 
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
@@ -204,7 +216,6 @@ Deno.serve(async (req) => {
         const sub = subs[0];
         const plan = sub.subscription_plans;
         const endDate = new Date(sub.end_date + "T00:00:00");
-        const todayDate = new Date(today + "T00:00:00");
         const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
         const category = getCategory(diffDays);
@@ -222,7 +233,7 @@ Deno.serve(async (req) => {
         sendQueue.push({ client, category, sub, plan, diffDays });
       }
 
-      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados por limite: ${pausedOverdueClients}. Categorias: ${JSON.stringify(
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Categorias: ${JSON.stringify(
         sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
       )}`);
 
