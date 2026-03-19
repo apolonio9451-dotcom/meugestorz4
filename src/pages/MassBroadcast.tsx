@@ -187,6 +187,8 @@ export default function MassBroadcast() {
   const [phoneInput, setPhoneInput] = useState("");
   const [delayRange, setDelayRange] = useState<[number, number]>([60, 120]);
   const [startHour, setStartHour] = useState("08:00");
+  const [sellerInstructions, setSellerInstructions] = useState("");
+  const [offerTimeout, setOfferTimeout] = useState(5);
 
   // Template management
   const [savedTemplates, setSavedTemplates] = useState<string[]>(loadSavedTemplates);
