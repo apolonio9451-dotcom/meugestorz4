@@ -106,8 +106,8 @@ export default function MassBroadcast() {
       ]);
 
       setGlobalEnabled(Boolean((settingsRes.data as any)?.bulk_send_enabled ?? false));
-      setCampaigns((campaignsRes.data as Campaign[]) || []);
-      setLogs((logsRes.data as LogRow[]) || []);
+      setCampaigns(((campaignsRes.data as unknown) as Campaign[]) || []);
+      setLogs(((logsRes.data as unknown) as LogRow[]) || []);
     } finally {
       if (showSpinner) setRefreshing(false);
     }
