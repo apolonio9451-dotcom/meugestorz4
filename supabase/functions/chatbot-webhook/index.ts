@@ -460,7 +460,7 @@ Deno.serve(async (req: Request) => {
 
     // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      await recordMassBroadcastIncoming(supabase, {
+      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
         companyId: companyIdParam,
         phone: senderPhone,
         message: `[${messageType.toUpperCase()}]`,
@@ -473,6 +473,13 @@ Deno.serve(async (req: Request) => {
         message_sent: "", context_type: "media_received", status: "ignored",
         error_message: `Tipo de mensagem não processável: ${messageType}`,
       });
+
+      if ((massBroadcastConversation as any)?.conversation_status === "human_takeover") {
+        return new Response(JSON.stringify({ status: "ok", reason: "human_takeover_media" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ status: "ok", reason: "non_text", type: messageType }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -496,12 +503,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const phone = normalizePhone(senderPhone);
-    await recordMassBroadcastIncoming(supabase, {
+    const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
       companyId: companyIdParam,
       phone,
       message: messageText.slice(0, 4000),
       messageType: messageType || "text",
     });
+    if ((massBroadcastConversation as any)?.conversation_status === "human_takeover") {
+      return new Response(JSON.stringify({ status: "ok", reason: "human_takeover" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
     decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
 
