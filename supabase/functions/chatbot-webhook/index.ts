@@ -624,9 +624,19 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Fetch API settings for AI seller
+    let companyApiUrl: string | null = null;
+    let companyApiToken: string | null = null;
+    if (companyIdParam) {
+      const { data: apiSettings } = await supabase
+        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+      companyApiUrl = (apiSettings as any)?.api_url || null;
+      companyApiToken = (apiSettings as any)?.api_token || null;
+    }
+
     // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, {
+      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, companyApiUrl, companyApiToken, {
         companyId: companyIdParam,
         phone: senderPhone,
         message: `[${messageType.toUpperCase()}]`,
