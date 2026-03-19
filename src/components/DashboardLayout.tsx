@@ -45,7 +45,7 @@ import {
   MessageCircle,
   FlaskConical,
   Bot,
-  
+  Rocket,
   Zap,
   Lock,
   AlertTriangle,
@@ -77,9 +77,9 @@ const navItems: NavItem[] = [
     children: [
       { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
       { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw, proOnly: true },
+      { href: "/dashboard/mass-broadcast", label: "Disparo em Massa", icon: Rocket, proOnly: true },
     ],
   },
-  { href: "/dashboard/mass-broadcast", label: "Disparo em Massa", icon: AlertTriangle },
   { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
   { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: UserCog, adminOnly: true, proOnly: true },
   
