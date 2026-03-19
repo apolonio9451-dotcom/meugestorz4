@@ -686,12 +686,19 @@ export default function Clients() {
   const handleSetClientChargePause = async (clientId: string, clientName: string, days: number) => {
     const safeDays = clampClientPauseDays(days);
     const pauseUntil = format(addDays(new Date(), safeDays - 1), "yyyy-MM-dd");
+    const pauseNote = `manual:${safeDays}`;
 
     setPauseUpdatingClientId(clientId);
+    setClients((current) => current.map((client) => (
+      client.id === clientId
+        ? { ...client, charge_pause_until: pauseUntil, charge_pause_note: pauseNote }
+        : client
+    )));
+
     try {
       const { error } = await supabase
         .from("clients")
-        .update({ charge_pause_until: pauseUntil, charge_pause_note: `manual:${safeDays}` } as any)
+        .update({ charge_pause_until: pauseUntil, charge_pause_note: pauseNote } as any)
         .eq("id", clientId);
 
       if (error) throw error;
@@ -702,6 +709,7 @@ export default function Clients() {
       fetchClients();
       fetchActivityLogs();
     } catch (error: any) {
+      fetchClients();
       toast.error(error?.message || "Erro ao pausar cobrança");
     } finally {
       setPauseUpdatingClientId(null);
@@ -709,21 +717,30 @@ export default function Clients() {
   };
 
   const handleClearClientChargePause = async (clientId: string, clientName: string) => {
+    const resumedNote = "resumed:auto";
+
     setPauseUpdatingClientId(clientId);
+    setClients((current) => current.map((client) => (
+      client.id === clientId
+        ? { ...client, charge_pause_until: null, charge_pause_note: resumedNote }
+        : client
+    )));
+
     try {
       const { error } = await supabase
         .from("clients")
-        .update({ charge_pause_until: null, charge_pause_note: "" } as any)
+        .update({ charge_pause_until: null, charge_pause_note: resumedNote, ultimo_envio_auto: null } as any)
         .eq("id", clientId);
 
       if (error) throw error;
 
-      toast.success("Cobrança automática reativada.");
-      await logActivity("retomada_cobranca", clientName, clientId, "Pausa manual de cobrança removida");
+      toast.success(`Cobrança retomada para ${clientName}`);
+      await logActivity("retomada_cobranca", clientName, clientId, "Cobrança retomada manualmente e recolocada na fila automática");
       setChargePauseDialog(null);
       fetchClients();
       fetchActivityLogs();
     } catch (error: any) {
+      fetchClients();
       toast.error(error?.message || "Erro ao retomar cobrança");
     } finally {
       setPauseUpdatingClientId(null);
