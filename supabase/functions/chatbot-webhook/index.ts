@@ -337,7 +337,7 @@ async function recordMassBroadcastIncoming(
 
   const { data: conversation } = await supabase
     .from("mass_broadcast_conversations")
-    .select("id, campaign_id, recipient_id")
+    .select("id, campaign_id, recipient_id, conversation_status")
     .eq("company_id", payload.companyId)
     .eq("normalized_phone", normalizedPhone)
     .order("last_message_at", { ascending: false })
@@ -347,6 +347,7 @@ async function recordMassBroadcastIncoming(
   if (!conversation) return null;
 
   const nowIso = new Date().toISOString();
+  const nextStatus = (conversation as any).conversation_status === "human_takeover" ? "human_takeover" : "awaiting_human";
 
   await supabase.from("mass_broadcast_conversation_messages").insert({
     company_id: payload.companyId,
@@ -367,14 +368,17 @@ async function recordMassBroadcastIncoming(
   await supabase
     .from("mass_broadcast_conversations")
     .update({
-      conversation_status: "awaiting_human",
+      conversation_status: nextStatus,
       has_reply: true,
       last_message_at: nowIso,
       last_incoming_at: nowIso,
     })
     .eq("id", (conversation as any).id);
 
-  return conversation;
+  return {
+    ...(conversation as any),
+    conversation_status: nextStatus,
+  };
 }
 
 // ===================== MAIN HANDLER =====================
