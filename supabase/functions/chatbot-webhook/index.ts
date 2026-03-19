@@ -323,6 +323,60 @@ function parseAiCommands(text: string): AiCommandResult {
   return { cleanText, commands };
 }
 
+async function recordMassBroadcastIncoming(
+  supabase: ReturnType<typeof createClient>,
+  payload: {
+    companyId: string;
+    phone: string;
+    message: string;
+    messageType: string;
+  },
+) {
+  const normalizedPhone = normalizePhone(payload.phone);
+  if (!payload.companyId || !normalizedPhone) return null;
+
+  const { data: conversation } = await supabase
+    .from("mass_broadcast_conversations")
+    .select("id, campaign_id, recipient_id")
+    .eq("company_id", payload.companyId)
+    .eq("normalized_phone", normalizedPhone)
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!conversation) return null;
+
+  const nowIso = new Date().toISOString();
+
+  await supabase.from("mass_broadcast_conversation_messages").insert({
+    company_id: payload.companyId,
+    campaign_id: (conversation as any).campaign_id,
+    conversation_id: (conversation as any).id,
+    recipient_id: (conversation as any).recipient_id,
+    phone: normalizedPhone,
+    normalized_phone: normalizedPhone,
+    direction: "inbound",
+    sender_type: "client",
+    source: "whatsapp_webhook",
+    message_type: payload.messageType || "text",
+    message: payload.message,
+    delivery_status: "received",
+    created_at: nowIso,
+  });
+
+  await supabase
+    .from("mass_broadcast_conversations")
+    .update({
+      conversation_status: "awaiting_human",
+      has_reply: true,
+      last_message_at: nowIso,
+      last_incoming_at: nowIso,
+    })
+    .eq("id", (conversation as any).id);
+
+  return conversation;
+}
+
 // ===================== MAIN HANDLER =====================
 
 Deno.serve(async (req: Request) => {
