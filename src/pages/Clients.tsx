@@ -1661,9 +1661,22 @@ export default function Clients() {
                     <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isChargePaused))}>
                       <div className={`h-full rounded-full transition-all ${getBarColor(days, isChargePaused)}`} style={{ width: `${getBarPercent(days)}%` }} />
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className={cn("text-[10px] font-medium", isChargePaused ? "text-muted-foreground" : days < 0 ? "text-destructive" : days === 0 ? "text-orange-400" : days <= 7 ? "text-yellow-400" : "text-emerald-400")}>
-                        {getDaysLabel(days, pauseStatusLabel)}
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        isPausedManually || isPausedByOverdueLimit
+                          ? "text-muted-foreground"
+                          : days < 0
+                            ? "text-destructive"
+                            : days === 0 || days <= 7
+                              ? "text-warning"
+                              : "text-emerald-400"
+                      )}>
+                        {isPausedManually && manualPauseInfo
+                          ? `Pausa iniciada em: ${format(manualPauseInfo.startDate, "dd/MM/yyyy")}`
+                          : isPausedByOverdueLimit
+                            ? "Cobrança automática pausada"
+                            : getDaysLabel(days)}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">
                         {format(parseISO(sub.end_date), "dd/MM/yyyy")}
