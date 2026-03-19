@@ -48,6 +48,7 @@ import {
   
   Zap,
   Lock,
+  AlertTriangle,
 } from "lucide-react";
 
 type NavItem = {
@@ -78,6 +79,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw, proOnly: true },
     ],
   },
+  { href: "/dashboard/mass-broadcast", label: "Disparo em Massa", icon: AlertTriangle },
   { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
   { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: UserCog, adminOnly: true, proOnly: true },
   

@@ -20,6 +20,7 @@ export type Database = {
           api_url: string
           auto_send_hour: number
           auto_send_minute: number
+          bulk_send_enabled: boolean
           company_id: string
           created_at: string
           id: string
@@ -37,6 +38,7 @@ export type Database = {
           api_url?: string
           auto_send_hour?: number
           auto_send_minute?: number
+          bulk_send_enabled?: boolean
           company_id: string
           created_at?: string
           id?: string
@@ -54,6 +56,7 @@ export type Database = {
           api_url?: string
           auto_send_hour?: number
           auto_send_minute?: number
+          bulk_send_enabled?: boolean
           company_id?: string
           created_at?: string
           id?: string
@@ -1015,6 +1018,204 @@ export type Database = {
             foreignKeyName: "credit_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mass_broadcast_campaigns: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          failure_count: number
+          greeting_templates: string[]
+          id: string
+          message_delay_max_seconds: number
+          message_delay_min_seconds: number
+          name: string
+          offer_templates: string[]
+          processed_recipients: number
+          started_at: string | null
+          status: string
+          success_count: number
+          total_recipients: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          failure_count?: number
+          greeting_templates?: string[]
+          id?: string
+          message_delay_max_seconds?: number
+          message_delay_min_seconds?: number
+          name?: string
+          offer_templates?: string[]
+          processed_recipients?: number
+          started_at?: string | null
+          status?: string
+          success_count?: number
+          total_recipients?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          failure_count?: number
+          greeting_templates?: string[]
+          id?: string
+          message_delay_max_seconds?: number
+          message_delay_min_seconds?: number
+          name?: string
+          offer_templates?: string[]
+          processed_recipients?: number
+          started_at?: string | null
+          status?: string
+          success_count?: number
+          total_recipients?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_broadcast_campaigns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mass_broadcast_logs: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          phone: string
+          recipient_id: string | null
+          status: string
+          step: string
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          phone: string
+          recipient_id?: string | null
+          status: string
+          step: string
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          phone?: string
+          recipient_id?: string | null
+          status?: string
+          step?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_broadcast_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_logs_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_recipients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mass_broadcast_recipients: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string
+          current_step: string
+          error_message: string | null
+          id: string
+          last_attempt_at: string | null
+          next_action_at: string
+          normalized_phone: string
+          offer_template: string
+          phone: string
+          sent_greeting_at: string | null
+          sent_offer_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string
+          current_step?: string
+          error_message?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          next_action_at?: string
+          normalized_phone: string
+          offer_template?: string
+          phone: string
+          sent_greeting_at?: string | null
+          sent_offer_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string
+          current_step?: string
+          error_message?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          next_action_at?: string
+          normalized_phone?: string
+          offer_template?: string
+          phone?: string
+          sent_greeting_at?: string | null
+          sent_offer_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_broadcast_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_recipients_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
