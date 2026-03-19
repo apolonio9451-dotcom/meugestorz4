@@ -251,14 +251,17 @@ export default function Clients() {
     if (!companyId) return;
     const { data } = await supabase
       .from("api_settings" as any)
-      .select("pix_key, overdue_charge_pause_days")
+      .select("pix_key, overdue_charge_pause_enabled, overdue_charge_pause_days")
       .eq("company_id", companyId)
       .maybeSingle();
     if (data) {
+      const parsedDays = Number((data as any).overdue_charge_pause_days ?? 10);
       setPixKey((data as any).pix_key || "");
-      setOverdueChargePauseDays(Math.max(0, Number((data as any).overdue_charge_pause_days ?? 10)));
+      setOverdueChargePauseEnabled(Boolean((data as any).overdue_charge_pause_enabled ?? parsedDays > 0));
+      setOverdueChargePauseDays(Math.min(90, Math.max(1, parsedDays > 0 ? parsedDays : 10)));
     } else {
       setPixKey("");
+      setOverdueChargePauseEnabled(true);
       setOverdueChargePauseDays(10);
     }
   };
