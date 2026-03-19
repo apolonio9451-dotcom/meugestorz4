@@ -787,17 +787,34 @@ export default function MassBroadcast() {
                             ) : (
                               activeConversationMessages.map((message) => {
                                 const isOutbound = message.direction === "outbound";
+                                const isHumanManual = isOutbound && message.sender_type === "human";
+                                const badgeLabel =
+                                  message.message_type === "text"
+                                    ? "Texto"
+                                    : message.message_type === "audio"
+                                      ? "Áudio"
+                                      : message.message_type === "image"
+                                        ? "Imagem"
+                                        : message.message_type;
+
                                 return (
                                   <div key={message.id} className={`flex ${isOutbound ? "justify-end" : "justify-start"}`}>
                                     <div
                                       className={`max-w-[85%] rounded-2xl border px-4 py-3 shadow-sm ${
-                                        isOutbound
-                                          ? "border-primary/30 bg-primary/10 text-foreground"
-                                          : "border-border/60 bg-muted/40 text-foreground"
+                                        isHumanManual
+                                          ? "border-warning/30 bg-warning/10 text-foreground"
+                                          : isOutbound
+                                            ? "border-primary/30 bg-primary/10 text-foreground"
+                                            : "border-border/60 bg-muted/40 text-foreground"
                                       }`}
                                     >
                                       <div className="mb-2 flex items-center gap-2 text-[11px] font-medium">
-                                        {isOutbound ? (
+                                        {isHumanManual ? (
+                                          <>
+                                            <User className="h-3.5 w-3.5 text-warning" />
+                                            <span className="text-warning">Humano</span>
+                                          </>
+                                        ) : isOutbound ? (
                                           <>
                                             <Bot className="h-3.5 w-3.5 text-primary" />
                                             <span className="text-primary">Robô</span>
@@ -813,7 +830,7 @@ export default function MassBroadcast() {
                                       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.message}</p>
                                       <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <Badge variant="outline" className="border-border/60 bg-background/70 text-muted-foreground">
-                                          {message.message_type === "text" ? "Texto" : message.message_type}
+                                          {badgeLabel}
                                         </Badge>
                                         {message.delivery_status ? (
                                           <Badge variant="outline" className="border-border/60 bg-background/70 text-muted-foreground">
@@ -826,6 +843,63 @@ export default function MassBroadcast() {
                                 );
                               })
                             )}
+                          </div>
+
+                          <div className="mt-3 rounded-xl border border-border/60 bg-background/70 p-3">
+                            <input
+                              ref={audioInputRef}
+                              type="file"
+                              accept="audio/*"
+                              className="hidden"
+                              onChange={(event) => void handleQuickMediaUpload("audio", event)}
+                            />
+                            <input
+                              ref={imageInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => void handleQuickMediaUpload("image", event)}
+                            />
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => audioInputRef.current?.click()}
+                                disabled={mediaSending !== null}
+                              >
+                                {mediaSending === "audio" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic className="mr-2 h-4 w-4" />}
+                                Enviar Áudio
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => imageInputRef.current?.click()}
+                                disabled={mediaSending !== null}
+                              >
+                                {mediaSending === "image" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImagePlus className="mr-2 h-4 w-4" />}
+                                Enviar Imagem
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={activeConversation.conversation_status === "human_takeover" ? "secondary" : "default"}
+                                onClick={() => void handleAssumeConversation()}
+                                disabled={takingOverConversationId === activeConversation.id || activeConversation.conversation_status === "human_takeover"}
+                              >
+                                {takingOverConversationId === activeConversation.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <PauseCircle className="mr-2 h-4 w-4" />
+                                )}
+                                {activeConversation.conversation_status === "human_takeover" ? "Conversa Assumida" : "Assumir Conversa"}
+                              </Button>
+                            </div>
+
+                            <p className="mt-3 text-xs text-muted-foreground">
+                              {activeConversation.conversation_status === "human_takeover"
+                                ? "Bot pausado neste chat. Agora você pode negociar manualmente sem interrupções automáticas."
+                                : "O envio de áudio simula “gravando áudio...” antes do disparo. Se quiser negociar sem interrupções, use Assumir Conversa."}
+                            </p>
                           </div>
                         </div>
                       )}
