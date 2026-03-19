@@ -1447,8 +1447,10 @@ export default function Clients() {
           {visibleFiltered.map((client) => {
             const sub = subscriptions[client.id];
             const days = sub ? getDaysRemaining(sub.end_date) : null;
-            const isPausedByOverdueLimit = isAutoChargePaused(days);
+            const hasResumeOverride = hasChargeResumeOverride(client.charge_pause_note);
             const isPausedManually = isManualChargePaused(client.charge_pause_until);
+            const isPausedByOverdueLimit = isAutoChargePaused(days) && !hasResumeOverride;
+            const canResumeCharge = isPausedManually || isPausedByOverdueLimit;
             const pauseStatusLabel = isPausedManually
               ? getManualChargePauseLabel(client.charge_pause_until)
               : isPausedByOverdueLimit
@@ -1524,7 +1526,7 @@ export default function Clients() {
                               >
                                 <BellOff className="w-3.5 h-3.5 mr-2" /> {isPausedManually ? "Editar pausa manual" : "Pausar cobrança..."}
                               </DropdownMenuItem>
-                              {isPausedManually && (
+                              {canResumeCharge && (
                                 <DropdownMenuItem
                                   disabled={pauseUpdatingClientId === client.id}
                                   onClick={() => void handleClearClientChargePause(client.id, client.name)}

@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
       const { data: clients } = await supabase
         .from("clients")
         .select(`
-          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until,
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note,
           client_subscriptions (
             end_date, amount, custom_price,
             subscription_plans ( name, price )
@@ -201,6 +201,8 @@ Deno.serve(async (req) => {
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
         const manualPauseUntil = (client as any).charge_pause_until as string | null;
+        const chargePauseNote = String((client as any).charge_pause_note || "").trim();
+        const hasResumeOverride = chargePauseNote.startsWith("resumed");
         if (manualPauseUntil) {
           const manualPauseDate = new Date(manualPauseUntil + "T00:00:00");
           const remainingPauseDays = Math.round((manualPauseDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -222,7 +224,7 @@ Deno.serve(async (req) => {
         if (!category) continue;
         if (disabledCategories.has(category)) continue;
 
-        if (category === "vencidos" && overdueChargePauseEnabled && Math.abs(diffDays) > overdueChargePauseDays) {
+        if (category === "vencidos" && overdueChargePauseEnabled && Math.abs(diffDays) > overdueChargePauseDays && !hasResumeOverride) {
           pausedOverdueClients++;
           continue;
         }
