@@ -850,11 +850,28 @@ export default function Clients() {
     return differenceInCalendarDays(parseISO(pauseUntil), new Date()) >= 0;
   }, []);
 
-  const getManualChargePauseLabel = useCallback((pauseUntil?: string | null) => {
+  const parseManualChargePauseDays = useCallback((pauseNote?: string | null) => {
+    const match = (pauseNote || "").trim().match(/^manual:(\d{1,3})$/);
+    return match ? clampClientPauseDays(Number(match[1])) : null;
+  }, []);
+
+  const getManualChargePauseInfo = useCallback((pauseUntil?: string | null, pauseNote?: string | null) => {
     if (!pauseUntil || !isManualChargePaused(pauseUntil)) return null;
-    const remainingDays = differenceInCalendarDays(parseISO(pauseUntil), new Date()) + 1;
-    return `Pausa manual · ${remainingDays}d`;
-  }, [isManualChargePaused]);
+
+    const remainingDays = clampClientPauseDays(differenceInCalendarDays(parseISO(pauseUntil), new Date()) + 1);
+    const configuredDays = parseManualChargePauseDays(pauseNote) ?? remainingDays;
+    const startDate = addDays(parseISO(pauseUntil), -(configuredDays - 1));
+
+    return {
+      remainingDays,
+      startDate,
+    };
+  }, [isManualChargePaused, parseManualChargePauseDays]);
+
+  const getManualChargePauseLabel = useCallback((pauseUntil?: string | null, pauseNote?: string | null) => {
+    const pauseInfo = getManualChargePauseInfo(pauseUntil, pauseNote);
+    return pauseInfo ? `Pausa Ativa (${pauseInfo.remainingDays}d)` : null;
+  }, [getManualChargePauseInfo]);
 
   const filtered = useMemo(() => {
     if (mainFilter === "excluidos") return searchFilteredExcluded;
