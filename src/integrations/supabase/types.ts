@@ -1091,6 +1091,159 @@ export type Database = {
           },
         ]
       }
+      mass_broadcast_conversation_messages: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          conversation_id: string
+          created_at: string
+          delivery_status: string | null
+          direction: string
+          id: string
+          message: string
+          message_type: string
+          normalized_phone: string
+          phone: string
+          recipient_id: string | null
+          sender_type: string
+          source: string
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          conversation_id: string
+          created_at?: string
+          delivery_status?: string | null
+          direction?: string
+          id?: string
+          message?: string
+          message_type?: string
+          normalized_phone: string
+          phone: string
+          recipient_id?: string | null
+          sender_type?: string
+          source?: string
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          conversation_id?: string
+          created_at?: string
+          delivery_status?: string | null
+          direction?: string
+          id?: string
+          message?: string
+          message_type?: string
+          normalized_phone?: string
+          phone?: string
+          recipient_id?: string | null
+          sender_type?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_broadcast_conversation_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_conversation_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_conversation_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_conversation_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_recipients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mass_broadcast_conversations: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          contact_name: string
+          conversation_status: string
+          created_at: string
+          has_reply: boolean
+          id: string
+          last_incoming_at: string | null
+          last_message_at: string
+          last_outgoing_at: string | null
+          normalized_phone: string
+          phone: string
+          recipient_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          contact_name?: string
+          conversation_status?: string
+          created_at?: string
+          has_reply?: boolean
+          id?: string
+          last_incoming_at?: string | null
+          last_message_at?: string
+          last_outgoing_at?: string | null
+          normalized_phone: string
+          phone: string
+          recipient_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          contact_name?: string
+          conversation_status?: string
+          created_at?: string
+          has_reply?: boolean
+          id?: string
+          last_incoming_at?: string | null
+          last_message_at?: string
+          last_outgoing_at?: string | null
+          normalized_phone?: string
+          phone?: string
+          recipient_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_broadcast_conversations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_broadcast_conversations_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "mass_broadcast_recipients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mass_broadcast_logs: {
         Row: {
           campaign_id: string
