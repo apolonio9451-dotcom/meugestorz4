@@ -2,15 +2,18 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "
 import {
   AlertTriangle,
   Bot,
+  Check,
   ChevronDown,
   ChevronUp,
   Clock,
+  Copy,
   ExternalLink,
   ImagePlus,
   Loader2,
   MessageSquareMore,
   Mic,
   PauseCircle,
+  Pencil,
   Play,
   Plus,
   Radio,
@@ -38,6 +41,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Slider } from "@/components/ui/slider";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 /* ─── Types ─── */
 type Campaign = {
@@ -51,6 +56,21 @@ type Campaign = {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  offer_templates: string[];
+  greeting_templates: string[];
+  message_delay_min_seconds: number;
+  message_delay_max_seconds: number;
+};
+
+type Recipient = {
+  id: string;
+  campaign_id: string;
+  phone: string;
+  normalized_phone: string;
+  offer_template: string;
+  status: string;
+  current_step: string;
+  error_message: string | null;
 };
 
 type LogRow = {
@@ -95,11 +115,6 @@ type MediaKind = "audio" | "image";
 
 /* ─── Helpers ─── */
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
-const splitOfferTemplates = (value: string) =>
-  value
-    .split(/\n\s*\n+/)
-    .map((block) => block.trim())
-    .filter(Boolean);
 
 const STORAGE_KEY_TEMPLATES = "mass_broadcast_saved_templates";
 const MAX_TEMPLATES = 10;
@@ -125,33 +140,26 @@ const statusLabel: Record<string, string> = {
   paused: "Pausada",
 };
 
+const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
+  success: { icon: Check, cls: "text-primary" },
+  completed: { icon: Check, cls: "text-primary" },
+  pending: { icon: Clock, cls: "text-warning" },
+  processing: { icon: Loader2, cls: "text-warning animate-spin" },
+  failed: { icon: X, cls: "text-destructive" },
+};
+
 const conversationStatusMeta: Record<string, { label: string; className: string }> = {
-  bot_active: {
-    label: "Gerenciada pelo bot",
-    className: "border-primary/40 bg-primary/10 text-primary",
-  },
-  awaiting_human: {
-    label: "Aguardando humano",
-    className: "border-warning/30 bg-warning/15 text-warning",
-  },
-  human_takeover: {
-    label: "Assumida por humano",
-    className: "border-warning/30 bg-warning/15 text-warning",
-  },
+  bot_active: { label: "Gerenciada pelo bot", className: "border-primary/40 bg-primary/10 text-primary" },
+  awaiting_human: { label: "Aguardando humano", className: "border-warning/30 bg-warning/15 text-warning" },
+  human_takeover: { label: "Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
 };
 
 /* ─── Countdown Hook ─── */
 function useCountdown(targetIso: string | null) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
-    if (!targetIso) {
-      setSeconds(0);
-      return;
-    }
-    const calc = () => {
-      const diff = Math.max(0, Math.floor((new Date(targetIso).getTime() - Date.now()) / 1000));
-      setSeconds(diff);
-    };
+    if (!targetIso) { setSeconds(0); return; }
+    const calc = () => setSeconds(Math.max(0, Math.floor((new Date(targetIso).getTime() - Date.now()) / 1000)));
     calc();
     const interval = setInterval(calc, 1000);
     return () => clearInterval(interval);
@@ -187,11 +195,22 @@ export default function MassBroadcast() {
   // Data
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [logs, setLogs] = useState<LogRow[]>([]);
+
+  // Campaign library: expanded campaign recipients
+  const [expandedCampaignRecipients, setExpandedCampaignRecipients] = useState<Record<string, Recipient[]>>({});
+  const [loadingRecipients, setLoadingRecipients] = useState<string | null>(null);
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+  const [editPhoneInput, setEditPhoneInput] = useState("");
+  const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
+  const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | null>(null);
+
+  // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
   const [takingOverConversationId, setTakingOverConversationId] = useState<string | null>(null);
+  const [monitorCampaignId, setMonitorCampaignId] = useState<string | null>(null);
 
   // Next action countdown
   const [nextActionAt, setNextActionAt] = useState<string | null>(null);
@@ -202,18 +221,14 @@ export default function MassBroadcast() {
     [phoneInput],
   );
 
-  const activeCampaign = useMemo(
-    () => campaigns.find((c) => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null,
-    [campaigns],
+  const monitorCampaign = useMemo(
+    () => campaigns.find((c) => c.id === monitorCampaignId) ?? campaigns.find((c) => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null,
+    [campaigns, monitorCampaignId],
   );
 
-  const progressValue = activeCampaign
-    ? Math.min(100, Math.round((activeCampaign.processed_recipients / Math.max(activeCampaign.total_recipients, 1)) * 100))
-    : 0;
-
   const activeLogs = useMemo(
-    () => (activeCampaign ? logs.filter((l) => l.campaign_id === activeCampaign.id) : logs).slice(0, 20),
-    [activeCampaign, logs],
+    () => logs.slice(0, 20),
+    [logs],
   );
 
   const latestMessageByConversation = useMemo(() => {
@@ -240,8 +255,8 @@ export default function MassBroadcast() {
       const [settingsRes, campaignsRes, logsRes, nextActionRes] = await Promise.all([
         supabase.from("api_settings" as any).select("id, bulk_send_enabled").eq("company_id", companyId).maybeSingle(),
         supabase.from("mass_broadcast_campaigns" as any)
-          .select("id, name, status, total_recipients, processed_recipients, success_count, failure_count, created_at, started_at, completed_at")
-          .eq("company_id", companyId).order("created_at", { ascending: false }).limit(8),
+          .select("id, name, status, total_recipients, processed_recipients, success_count, failure_count, created_at, started_at, completed_at, offer_templates, greeting_templates, message_delay_min_seconds, message_delay_max_seconds")
+          .eq("company_id", companyId).order("created_at", { ascending: false }).limit(20),
         supabase.from("mass_broadcast_logs" as any)
           .select("id, campaign_id, phone, step, status, message, error_message, created_at")
           .eq("company_id", companyId).order("created_at", { ascending: false }).limit(60),
@@ -261,18 +276,18 @@ export default function MassBroadcast() {
   }, [companyId]);
 
   const loadConversationMonitor = useCallback(async () => {
-    if (!companyId || !activeCampaign?.id) {
+    if (!companyId || !monitorCampaign?.id) {
       setConversations([]); setConversationMessages([]); setSelectedConversationId(null);
       return;
     }
     const [cRes, mRes] = await Promise.all([
       supabase.from("mass_broadcast_conversations" as any)
         .select("id, campaign_id, recipient_id, phone, normalized_phone, contact_name, conversation_status, has_reply, last_message_at, last_outgoing_at, last_incoming_at")
-        .eq("company_id", companyId).eq("campaign_id", activeCampaign.id)
+        .eq("company_id", companyId).eq("campaign_id", monitorCampaign.id)
         .order("last_message_at", { ascending: false }).limit(60),
       supabase.from("mass_broadcast_conversation_messages" as any)
         .select("id, conversation_id, campaign_id, phone, direction, sender_type, message_type, message, delivery_status, created_at")
-        .eq("company_id", companyId).eq("campaign_id", activeCampaign.id)
+        .eq("company_id", companyId).eq("campaign_id", monitorCampaign.id)
         .order("created_at", { ascending: true }).limit(300),
     ]);
     const nextConvs = ((cRes.data as unknown) as Conversation[]) || [];
@@ -280,7 +295,21 @@ export default function MassBroadcast() {
     setConversations(nextConvs);
     setConversationMessages(nextMsgs);
     setSelectedConversationId((cur) => cur && nextConvs.some((c) => c.id === cur) ? cur : nextConvs[0]?.id ?? null);
-  }, [activeCampaign?.id, companyId]);
+  }, [monitorCampaign?.id, companyId]);
+
+  const loadCampaignRecipients = useCallback(async (campaignId: string) => {
+    if (!companyId) return;
+    setLoadingRecipients(campaignId);
+    try {
+      const { data } = await supabase.from("mass_broadcast_recipients" as any)
+        .select("id, campaign_id, phone, normalized_phone, offer_template, status, current_step, error_message")
+        .eq("company_id", companyId).eq("campaign_id", campaignId)
+        .order("created_at", { ascending: true }).limit(500);
+      setExpandedCampaignRecipients((prev) => ({ ...prev, [campaignId]: ((data as unknown) as Recipient[]) || [] }));
+    } finally {
+      setLoadingRecipients(null);
+    }
+  }, [companyId]);
 
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void loadConversationMonitor(); }, [loadConversationMonitor]);
@@ -312,9 +341,9 @@ export default function MassBroadcast() {
         if (error) throw error;
       }
       setGlobalEnabled(checked);
-      toast({ title: checked ? "Disparos ativados" : "Disparos pausados", description: checked ? "A fila voltará a processar em segundo plano." : "Todos os envios foram congelados imediatamente." });
+      toast({ title: checked ? "Disparos ativados" : "Disparos pausados", description: checked ? "A fila voltará a processar." : "Envios congelados." });
     } catch (error: any) {
-      toast({ title: "Erro ao salvar", description: error?.message || "Não foi possível atualizar.", variant: "destructive" });
+      toast({ title: "Erro ao salvar", description: error?.message, variant: "destructive" });
     } finally {
       setSavingToggle(false);
     }
@@ -331,7 +360,7 @@ export default function MassBroadcast() {
     setSavedTemplates(next);
     saveSavedTemplates(next);
     setEditingTemplate("");
-    toast({ title: "Modelo salvo", description: `${next.length}/${MAX_TEMPLATES} modelos cadastrados.` });
+    toast({ title: "Modelo salvo", description: `${next.length}/${MAX_TEMPLATES} modelos.` });
   };
 
   const handleRemoveTemplate = (index: number) => {
@@ -343,11 +372,11 @@ export default function MassBroadcast() {
   const handleCreateCampaign = async () => {
     if (!companyId || !user?.id) return;
     if (cleanedPhones.length === 0) {
-      toast({ title: "Adicione números válidos", description: "Cole ao menos um telefone por linha.", variant: "destructive" });
+      toast({ title: "Adicione números válidos", variant: "destructive" });
       return;
     }
     if (savedTemplates.length === 0) {
-      toast({ title: "Cadastre os modelos", description: "Salve ao menos um modelo de mensagem na seção de modelos.", variant: "destructive" });
+      toast({ title: "Cadastre modelos de mensagem", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -370,14 +399,10 @@ export default function MassBroadcast() {
         .single();
       if (campaignError) throw campaignError;
 
-      // Rotation logic: assign templates in round-robin, never same for consecutive contacts
       let lastIndex = -1;
       const recipients = cleanedPhones.map((phone) => {
         let idx = (lastIndex + 1) % savedTemplates.length;
-        // If only 1 template, can't avoid repetition
-        if (savedTemplates.length > 1 && idx === lastIndex) {
-          idx = (idx + 1) % savedTemplates.length;
-        }
+        if (savedTemplates.length > 1 && idx === lastIndex) idx = (idx + 1) % savedTemplates.length;
         lastIndex = idx;
         return {
           campaign_id: (campaign as any).id,
@@ -394,26 +419,138 @@ export default function MassBroadcast() {
       const { error: recipientsError } = await supabase.from("mass_broadcast_recipients" as any).insert(recipients);
       if (recipientsError) throw recipientsError;
 
-      toast({ title: "Fila criada", description: `${cleanedPhones.length} contatos na fila com rotação de ${savedTemplates.length} modelos.` });
+      toast({ title: "Campanha criada", description: `${cleanedPhones.length} contatos com ${savedTemplates.length} modelos.` });
       setCampaignName("");
       setPhoneInput("");
       await loadData();
-      await loadConversationMonitor();
     } catch (error: any) {
-      toast({ title: "Erro ao criar fila", description: error?.message || "Não foi possível preparar a campanha.", variant: "destructive" });
+      toast({ title: "Erro ao criar", description: error?.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCampaign = async (campaignId: string) => {
+    if (!companyId) return;
+    setDeletingCampaignId(campaignId);
+    try {
+      // Delete recipients, logs, conversations, messages first
+      await Promise.all([
+        supabase.from("mass_broadcast_conversation_messages" as any).delete().eq("campaign_id", campaignId),
+        supabase.from("mass_broadcast_conversations" as any).delete().eq("campaign_id", campaignId),
+        supabase.from("mass_broadcast_logs" as any).delete().eq("campaign_id", campaignId),
+        supabase.from("mass_broadcast_recipients" as any).delete().eq("campaign_id", campaignId),
+      ]);
+      const { error } = await supabase.from("mass_broadcast_campaigns" as any).delete().eq("id", campaignId);
+      if (error) throw error;
+      toast({ title: "Campanha excluída" });
+      setExpandedCampaignRecipients((prev) => { const n = { ...prev }; delete n[campaignId]; return n; });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Erro ao excluir", description: error?.message, variant: "destructive" });
+    } finally {
+      setDeletingCampaignId(null);
+    }
+  };
+
+  const handleDuplicateCampaign = async (campaign: Campaign) => {
+    if (!companyId || !user?.id) return;
+    setDuplicatingCampaignId(campaign.id);
+    try {
+      // Load original recipients
+      const { data: origRecipients } = await supabase.from("mass_broadcast_recipients" as any)
+        .select("phone, normalized_phone, offer_template")
+        .eq("campaign_id", campaign.id).limit(1000);
+      const recs = ((origRecipients as unknown) as { phone: string; normalized_phone: string; offer_template: string }[]) || [];
+      if (recs.length === 0) { toast({ title: "Sem contatos para duplicar", variant: "destructive" }); return; }
+
+      const { data: newCampaign, error: cErr } = await supabase
+        .from("mass_broadcast_campaigns" as any)
+        .insert({
+          company_id: companyId,
+          created_by: user.id,
+          name: `${campaign.name} (cópia)`,
+          status: "queued",
+          total_recipients: recs.length,
+          offer_templates: campaign.offer_templates,
+          greeting_templates: campaign.greeting_templates,
+          message_delay_min_seconds: campaign.message_delay_min_seconds,
+          message_delay_max_seconds: campaign.message_delay_max_seconds,
+        })
+        .select("id")
+        .single();
+      if (cErr) throw cErr;
+
+      const newRecipients = recs.map((r) => ({
+        campaign_id: (newCampaign as any).id,
+        company_id: companyId,
+        phone: r.phone,
+        normalized_phone: r.normalized_phone,
+        offer_template: r.offer_template,
+        status: "pending",
+        current_step: "greeting",
+        next_action_at: new Date().toISOString(),
+      }));
+      const { error: rErr } = await supabase.from("mass_broadcast_recipients" as any).insert(newRecipients);
+      if (rErr) throw rErr;
+
+      toast({ title: "Campanha duplicada", description: `${recs.length} contatos copiados.` });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Erro ao duplicar", description: error?.message, variant: "destructive" });
+    } finally {
+      setDuplicatingCampaignId(null);
+    }
+  };
+
+  const handleEditCampaignRecipients = async (campaignId: string) => {
+    if (!companyId) return;
+    const newPhones = Array.from(new Set(editPhoneInput.split("\n").map(normalizePhone).filter((p) => p.length >= 10)));
+    if (newPhones.length === 0) { toast({ title: "Adicione números válidos", variant: "destructive" }); return; }
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) return;
+    try {
+      // Delete old recipients & re-insert
+      await supabase.from("mass_broadcast_recipients" as any).delete().eq("campaign_id", campaignId);
+      let lastIndex = -1;
+      const templates = campaign.offer_templates?.length > 0 ? campaign.offer_templates : savedTemplates;
+      const recipients = newPhones.map((phone) => {
+        let idx = templates.length > 0 ? (lastIndex + 1) % templates.length : 0;
+        if (templates.length > 1 && idx === lastIndex) idx = (idx + 1) % templates.length;
+        lastIndex = idx;
+        return {
+          campaign_id: campaignId,
+          company_id: companyId,
+          phone,
+          normalized_phone: phone,
+          offer_template: templates[idx] || "",
+          status: "pending",
+          current_step: "greeting",
+          next_action_at: new Date().toISOString(),
+        };
+      });
+      const { error } = await supabase.from("mass_broadcast_recipients" as any).insert(recipients);
+      if (error) throw error;
+      // Update campaign total
+      await supabase.from("mass_broadcast_campaigns" as any).update({ total_recipients: newPhones.length, processed_recipients: 0, success_count: 0, failure_count: 0, status: "queued" }).eq("id", campaignId);
+      toast({ title: "Lista atualizada", description: `${newPhones.length} contatos.` });
+      setEditingCampaignId(null);
+      setEditPhoneInput("");
+      await loadData();
+      await loadCampaignRecipients(campaignId);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
     }
   };
 
   const handleAssumeConversation = async () => {
     if (!activeConversation) return;
     setTakingOverConversationId(activeConversation.id);
-    setConversations((cur) => cur.map((c) => c.id === activeConversation.id ? { ...c, conversation_status: "human_takeover", has_reply: true, last_message_at: new Date().toISOString() } : c));
+    setConversations((cur) => cur.map((c) => c.id === activeConversation.id ? { ...c, conversation_status: "human_takeover", has_reply: true } : c));
     try {
       const { error } = await supabase.from("mass_broadcast_conversations" as any).update({ conversation_status: "human_takeover", has_reply: true, updated_at: new Date().toISOString() }).eq("id", activeConversation.id);
       if (error) throw error;
-      toast({ title: "Conversa assumida", description: "Bot pausado neste chat para negociação manual." });
+      toast({ title: "Conversa assumida" });
     } catch (error: any) {
       toast({ title: "Erro", description: error?.message, variant: "destructive" });
       void loadConversationMonitor();
@@ -459,9 +596,7 @@ export default function MassBroadcast() {
             <ShieldAlert className="mt-0.5 h-5 w-5 text-destructive shrink-0" />
             <div className="space-y-1">
               <p className="text-sm font-bold text-destructive">⚠️ SPECIAL · Disparo em Massa</p>
-              <p className="text-xs text-muted-foreground">
-                Simulação humana em duas etapas com rotação inteligente de mensagens. Use com moderação e intervalos longos.
-              </p>
+              <p className="text-xs text-muted-foreground">Simulação humana com rotação inteligente. Use com moderação.</p>
             </div>
           </div>
         </div>
@@ -470,7 +605,11 @@ export default function MassBroadcast() {
           <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl">
             <TabsTrigger value="config" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)]">
               <Rocket className="h-4 w-4" />
-              Painel de Disparo
+              Nova Campanha
+            </TabsTrigger>
+            <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)]">
+              <Radio className="h-4 w-4" />
+              Campanhas ({campaigns.length})
             </TabsTrigger>
             <TabsTrigger value="monitor" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)]">
               <MessageSquareMore className="h-4 w-4" />
@@ -478,7 +617,7 @@ export default function MassBroadcast() {
             </TabsTrigger>
           </TabsList>
 
-          {/* ═══ TAB: PAINEL DE DISPARO ═══ */}
+          {/* ═══ TAB: NOVA CAMPANHA ═══ */}
           <TabsContent value="config" className="space-y-6">
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
               {/* Left Column: Config */}
@@ -517,13 +656,7 @@ export default function MassBroadcast() {
                       <div className="space-y-2">
                         <Label>Delay entre mensagens</Label>
                         <div className="pt-2">
-                          <Slider
-                            min={30}
-                            max={300}
-                            step={5}
-                            value={delayRange}
-                            onValueChange={(v) => setDelayRange(v as [number, number])}
-                          />
+                          <Slider min={30} max={300} step={5} value={delayRange} onValueChange={(v) => setDelayRange(v as [number, number])} />
                           <div className="flex justify-between mt-2">
                             <span className="text-xs text-muted-foreground">Mín: {delayRange[0]}s</span>
                             <span className="text-xs text-muted-foreground">Máx: {delayRange[1]}s</span>
@@ -546,18 +679,17 @@ export default function MassBroadcast() {
                         </CardTitle>
                         {templatesOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                       </CollapsibleTrigger>
-                      <CardDescription>Gerencie até {MAX_TEMPLATES} variações. O sistema alterna automaticamente para nunca repetir em sequência.</CardDescription>
+                      <CardDescription>Gerencie até {MAX_TEMPLATES} variações com rotação automática.</CardDescription>
                     </CardHeader>
                     <CollapsibleContent>
                       <CardContent className="space-y-4">
-                        {/* Existing templates */}
                         {savedTemplates.length > 0 && (
                           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                             {savedTemplates.map((tmpl, i) => (
                               <div key={i} className="group relative rounded-xl border border-border/40 bg-muted/20 p-3 hover:border-primary/20 transition-colors">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1 min-w-0">
-                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary mb-2">Modelo {i + 1}</Badge>
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary mb-2">M{i + 1}</Badge>
                                     <p className="text-sm text-foreground whitespace-pre-wrap break-words line-clamp-4">{tmpl}</p>
                                   </div>
                                   <Button size="icon" variant="ghost" className="shrink-0 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive transition-opacity" onClick={() => handleRemoveTemplate(i)}>
@@ -568,16 +700,9 @@ export default function MassBroadcast() {
                             ))}
                           </div>
                         )}
-
-                        {/* Add new template */}
                         {savedTemplates.length < MAX_TEMPLATES && (
                           <div className="space-y-2">
-                            <Textarea
-                              value={editingTemplate}
-                              onChange={(e) => setEditingTemplate(e.target.value)}
-                              placeholder="Digite o texto do novo modelo aqui..."
-                              className="min-h-[100px] border-dashed border-primary/20 focus:border-primary/40"
-                            />
+                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="min-h-[100px] border-dashed border-primary/20 focus:border-primary/40" />
                             <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="gap-2 border-primary/30 hover:bg-primary/10">
                               <Plus className="h-4 w-4" />
                               Salvar Modelo ({savedTemplates.length + 1}/{MAX_TEMPLATES})
@@ -596,63 +721,24 @@ export default function MassBroadcast() {
                       <Radio className="h-4 w-4 text-primary" />
                       Lista de Contatos
                     </CardTitle>
-                    <CardDescription>Cole os números. Cada um receberá um modelo diferente em rotação.</CardDescription>
+                    <CardDescription>Cole números e nomeie a campanha.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Oferta IPTV Março" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phones">Números de telefone (um por linha)</Label>
-                      <Textarea
-                        id="phones"
-                        value={phoneInput}
-                        onChange={(e) => setPhoneInput(e.target.value)}
-                        placeholder={"5511999999999\n(11) 98888-7777\n+55 21 97777-6666"}
-                        className="min-h-[160px] font-mono text-sm"
-                      />
+                      <Label htmlFor="phones">Números (um por linha)</Label>
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm" />
                     </div>
-
-                    {/* Cleaned phones table */}
-                    {cleanedPhones.length > 0 && (
-                      <div className="rounded-xl border border-border/40 bg-muted/10 max-h-[300px] overflow-y-auto">
-                        <div className="grid grid-cols-[1fr_auto_auto] gap-2 p-2 text-xs font-semibold text-muted-foreground border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
-                          <span>Número</span>
-                          <span>Modelo</span>
-                          <span>WhatsApp</span>
-                        </div>
-                        {cleanedPhones.map((phone, i) => {
-                          const templateIndex = savedTemplates.length > 0 ? i % savedTemplates.length : -1;
-                          return (
-                            <div key={phone} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center p-2 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors">
-                              <span className="text-sm font-mono text-foreground truncate">{phone}</span>
-                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[10px]">
-                                {templateIndex >= 0 ? `M${templateIndex + 1}` : "—"}
-                              </Badge>
-                              <a
-                                href={`https://wa.me/${phone}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:text-primary/80 transition-colors"
-                                title="Abrir no WhatsApp"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                     </p>
-
                     <div className="flex flex-wrap gap-3">
                       <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="min-w-[200px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-                        Criar Fila de Disparo
+                        Criar Campanha
                       </Button>
                       <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="gap-2">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -665,57 +751,37 @@ export default function MassBroadcast() {
 
               {/* Right Column: Dashboard */}
               <div className="space-y-6">
-                {/* Progress Stats */}
+                {/* Progress Stats (global) */}
                 <Card className="relative overflow-hidden border-primary/15 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
                   <CardHeader className="relative pb-3">
                     <CardTitle className="flex items-center gap-2 text-base text-foreground">
                       <Radio className="h-4 w-4 text-primary" />
-                      Dashboard de Progresso
+                      Resumo Global
                     </CardTitle>
-                    <CardDescription>
-                      {activeCampaign
-                        ? activeCampaign.status === "completed"
-                          ? `Concluída: ${activeCampaign.name}`
-                          : `Processando ${activeCampaign.name}...`
-                        : "Nenhuma campanha ativa."}
-                    </CardDescription>
                   </CardHeader>
                   <CardContent className="relative space-y-4">
-                    <Progress value={progressValue} className="h-3" />
-                    {activeCampaign ? (
-                      <>
-                        <div className="grid gap-3 grid-cols-2">
-                          {[
-                            { label: "Na Fila", value: activeCampaign.total_recipients, cls: "text-foreground" },
-                            { label: "Processados", value: `${activeCampaign.processed_recipients}/${activeCampaign.total_recipients}`, cls: "text-foreground" },
-                            { label: "Sucesso", value: activeCampaign.success_count, cls: "text-primary" },
-                            { label: "Falhas", value: activeCampaign.failure_count, cls: "text-destructive" },
-                          ].map((item) => (
-                            <div key={item.label} className="rounded-xl border border-border/30 bg-muted/20 p-3">
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
-                              <p className={`mt-1 text-lg font-bold ${item.cls}`}>{item.value}</p>
-                            </div>
-                          ))}
+                    <div className="grid gap-3 grid-cols-2">
+                      {[
+                        { label: "Campanhas", value: campaigns.length, cls: "text-foreground" },
+                        { label: "Total Contatos", value: campaigns.reduce((a, c) => a + c.total_recipients, 0), cls: "text-foreground" },
+                        { label: "Sucesso", value: campaigns.reduce((a, c) => a + c.success_count, 0), cls: "text-primary" },
+                        { label: "Falhas", value: campaigns.reduce((a, c) => a + c.failure_count, 0), cls: "text-destructive" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-xl border border-border/30 bg-muted/20 p-3">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                          <p className={`mt-1 text-lg font-bold ${item.cls}`}>{item.value}</p>
                         </div>
-
-                        {/* Countdown */}
-                        {countdown.seconds > 0 && (
-                          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center shadow-[0_0_16px_-10px_hsl(var(--primary)/0.5)]">
-                            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-1">
-                              <Timer className="h-3.5 w-3.5 text-primary" />
-                              Próximo envio em
-                            </div>
-                            <p className="text-2xl font-bold text-primary font-mono tracking-wider">{countdown.display}</p>
-                          </div>
-                        )}
-
-                        <Badge variant="outline" className={`${statusLabel[activeCampaign.status] ? "border-primary/30 bg-primary/10 text-primary" : "border-border/30 bg-muted/20 text-muted-foreground"}`}>
-                          {statusLabel[activeCampaign.status] || activeCampaign.status}
-                        </Badge>
-                      </>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Crie uma fila para monitorar.</p>
+                      ))}
+                    </div>
+                    {countdown.seconds > 0 && (
+                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center shadow-[0_0_16px_-10px_hsl(var(--primary)/0.5)]">
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mb-1">
+                          <Timer className="h-3.5 w-3.5 text-primary" />
+                          Próximo envio em
+                        </div>
+                        <p className="text-2xl font-bold text-primary font-mono tracking-wider">{countdown.display}</p>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -724,7 +790,6 @@ export default function MassBroadcast() {
                 <Card className="border-border/30 bg-card/80 backdrop-blur">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base text-foreground">Log em Tempo Real</CardTitle>
-                    <CardDescription>Últimos eventos de envio.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
@@ -737,7 +802,7 @@ export default function MassBroadcast() {
                               <div className="min-w-0">
                                 <p className="text-sm font-medium text-foreground font-mono">{log.phone}</p>
                                 <p className="text-[11px] text-muted-foreground">
-                                  {log.step === "greeting" ? "Saudação" : `Modelo`} · {new Date(log.created_at).toLocaleString("pt-BR")}
+                                  {log.step === "greeting" ? "Saudação" : "Modelo"} · {new Date(log.created_at).toLocaleString("pt-BR")}
                                 </p>
                               </div>
                               <Badge variant="outline" className={log.status === "success" ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}>
@@ -756,6 +821,189 @@ export default function MassBroadcast() {
             </div>
           </TabsContent>
 
+          {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
+          <TabsContent value="library" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Biblioteca de Campanhas</h2>
+                <p className="text-sm text-muted-foreground">Gerencie todas as suas campanhas salvas.</p>
+              </div>
+              <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="gap-2">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+
+            {campaigns.length === 0 ? (
+              <Card className="border-dashed border-border/40 bg-muted/10">
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhuma campanha criada ainda. Vá para "Nova Campanha" para começar.
+                </CardContent>
+              </Card>
+            ) : (
+              <Accordion type="single" collapsible className="space-y-3">
+                {campaigns.map((campaign) => {
+                  const progress = campaign.total_recipients > 0
+                    ? Math.round((campaign.processed_recipients / campaign.total_recipients) * 100)
+                    : 0;
+                  const recipients = expandedCampaignRecipients[campaign.id];
+                  const isEditing = editingCampaignId === campaign.id;
+                  const statusMeta = statusIcon[campaign.status] || statusIcon.pending;
+                  const StatusIconComp = statusMeta.icon;
+
+                  return (
+                    <AccordionItem
+                      key={campaign.id}
+                      value={campaign.id}
+                      className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur overflow-hidden shadow-[0_0_20px_-14px_hsl(var(--primary)/0.3)] data-[state=open]:border-primary/20"
+                    >
+                      <AccordionTrigger
+                        className="px-5 py-4 hover:no-underline hover:bg-primary/5 transition-colors [&[data-state=open]>svg]:rotate-180"
+                        onClick={() => {
+                          if (!recipients) void loadCampaignRecipients(campaign.id);
+                        }}
+                      >
+                        <div className="flex flex-1 items-center gap-4 text-left">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/30 bg-muted/20 ${statusMeta.cls}`}>
+                            <StatusIconComp className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-foreground truncate">{campaign.name}</p>
+                              <Badge variant="outline" className={`text-[10px] shrink-0 ${campaign.status === "completed" ? "border-primary/30 bg-primary/10 text-primary" : campaign.status === "running" ? "border-warning/30 bg-warning/10 text-warning" : "border-border/40 text-muted-foreground"}`}>
+                                {statusLabel[campaign.status] || campaign.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              <span className="text-[11px] text-muted-foreground">
+                                {new Date(campaign.created_at).toLocaleDateString("pt-BR")}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">·</span>
+                              <span className="text-[11px] font-medium text-foreground">
+                                {campaign.processed_recipients}/{campaign.total_recipients} enviados
+                              </span>
+                              <div className="flex-1 max-w-[120px]">
+                                <Progress value={progress} className="h-1.5" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-5">
+                        <div className="space-y-4">
+                          {/* Action buttons */}
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              onClick={() => {
+                                if (isEditing) {
+                                  setEditingCampaignId(null);
+                                  setEditPhoneInput("");
+                                } else {
+                                  setEditingCampaignId(campaign.id);
+                                  setEditPhoneInput(recipients?.map((r) => r.phone).join("\n") || "");
+                                }
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {isEditing ? "Cancelar" : "Editar Lista"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              disabled={duplicatingCampaignId === campaign.id}
+                              onClick={() => void handleDuplicateCampaign(campaign)}
+                            >
+                              {duplicatingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+                              Duplicar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              onClick={() => { setMonitorCampaignId(campaign.id); }}
+                            >
+                              <MessageSquareMore className="h-3.5 w-3.5" />
+                              Monitor
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
+                                  {deletingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                  Excluir
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Todos os contatos, logs e conversas desta campanha serão removidos permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => void handleDeleteCampaign(campaign.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+
+                          {/* Edit mode */}
+                          {isEditing && (
+                            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                              <Label>Editar números (um por linha)</Label>
+                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="min-h-[120px] font-mono text-sm" />
+                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="gap-2">
+                                <Save className="h-4 w-4" />
+                                Salvar Alterações
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Recipients table */}
+                          {loadingRecipients === campaign.id ? (
+                            <div className="flex items-center justify-center py-6">
+                              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                            </div>
+                          ) : recipients ? (
+                            <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
+                              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
+                                <span>Número</span>
+                                <span>Status</span>
+                                <span>Modelo</span>
+                                <span>Link</span>
+                              </div>
+                              {recipients.map((r) => {
+                                const si = statusIcon[r.status] || statusIcon.pending;
+                                const SiComp = si.icon;
+                                return (
+                                  <div key={r.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors">
+                                    <span className="text-sm font-mono text-foreground truncate">{r.phone}</span>
+                                    <SiComp className={`h-4 w-4 ${si.cls}`} />
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px]">
+                                      {r.offer_template?.substring(0, 20)}...
+                                    </Badge>
+                                    <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                                      <ExternalLink className="h-3.5 w-3.5" />
+                                    </a>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            )}
+          </TabsContent>
+
           {/* ═══ TAB: MONITOR DE CONVERSAS ═══ */}
           <TabsContent value="monitor" className="space-y-6">
             <Card className="border-border/30 bg-card/80 backdrop-blur">
@@ -765,11 +1013,11 @@ export default function MassBroadcast() {
                   Monitor de Conversas
                 </CardTitle>
                 <CardDescription>
-                  {activeCampaign ? `Acompanhe respostas em tempo real: ${activeCampaign.name}` : "Crie uma campanha para usar o monitor."}
+                  {monitorCampaign ? `Acompanhe: ${monitorCampaign.name}` : "Crie uma campanha para usar o monitor."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {!activeCampaign ? (
+                {!monitorCampaign ? (
                   <div className="rounded-2xl border border-dashed border-border/40 bg-muted/10 p-8 text-center text-sm text-muted-foreground">
                     Nenhuma campanha disponível.
                   </div>
@@ -792,15 +1040,8 @@ export default function MassBroadcast() {
                             const meta = conversationStatusMeta[conv.conversation_status] || conversationStatusMeta.bot_active;
                             const isSel = conv.id === selectedConversationId;
                             return (
-                              <button
-                                key={conv.id}
-                                type="button"
-                                onClick={() => setSelectedConversationId(conv.id)}
-                                className={`w-full rounded-xl border p-3 text-left transition-all ${
-                                  isSel
-                                    ? "border-primary/30 bg-primary/10 shadow-[0_0_14px_-8px_hsl(var(--primary)/0.6)]"
-                                    : "border-border/30 bg-background/60 hover:border-primary/15 hover:bg-primary/5"
-                                }`}
+                              <button key={conv.id} type="button" onClick={() => setSelectedConversationId(conv.id)}
+                                className={`w-full rounded-xl border p-3 text-left transition-all ${isSel ? "border-primary/30 bg-primary/10 shadow-[0_0_14px_-8px_hsl(var(--primary)/0.6)]" : "border-border/30 bg-background/60 hover:border-primary/15 hover:bg-primary/5"}`}
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0">
@@ -821,11 +1062,10 @@ export default function MassBroadcast() {
                     <div className="rounded-2xl border border-border/30 bg-muted/10 p-3">
                       {!activeConversation ? (
                         <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-dashed border-border/30 p-6 text-center text-sm text-muted-foreground">
-                          Selecione um chat para visualizar.
+                          Selecione um chat.
                         </div>
                       ) : (
                         <div className="flex min-h-[560px] flex-col">
-                          {/* Header */}
                           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/30 bg-background/60 px-4 py-3">
                             <div>
                               <p className="text-sm font-semibold text-foreground">{activeConversation.contact_name || activeConversation.phone}</p>
@@ -840,32 +1080,18 @@ export default function MassBroadcast() {
                               </Badge>
                             </div>
                           </div>
-
-                          {/* Messages */}
                           <div className="mt-3 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/30 bg-background/60 p-4">
                             {activeConversationMessages.length === 0 ? (
-                              <p className="text-sm text-muted-foreground text-center">Nenhuma mensagem registrada.</p>
+                              <p className="text-sm text-muted-foreground text-center">Nenhuma mensagem.</p>
                             ) : (
                               activeConversationMessages.map((msg) => {
                                 const isOut = msg.direction === "outbound";
                                 const isHuman = isOut && msg.sender_type === "human";
                                 return (
                                   <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
-                                    <div className={`max-w-[85%] rounded-2xl border px-4 py-3 ${
-                                      isHuman
-                                        ? "border-warning/20 bg-warning/10"
-                                        : isOut
-                                          ? "border-primary/20 bg-primary/10"
-                                          : "border-border/30 bg-muted/20"
-                                    }`}>
+                                    <div className={`max-w-[85%] rounded-2xl border px-4 py-3 ${isHuman ? "border-warning/20 bg-warning/10" : isOut ? "border-primary/20 bg-primary/10" : "border-border/30 bg-muted/20"}`}>
                                       <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium">
-                                        {isHuman ? (
-                                          <><User className="h-3 w-3 text-warning" /><span className="text-warning">Humano</span></>
-                                        ) : isOut ? (
-                                          <><Bot className="h-3 w-3 text-primary" /><span className="text-primary">Robô</span></>
-                                        ) : (
-                                          <><User className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">Cliente</span></>
-                                        )}
+                                        {isHuman ? (<><User className="h-3 w-3 text-warning" /><span className="text-warning">Humano</span></>) : isOut ? (<><Bot className="h-3 w-3 text-primary" /><span className="text-primary">Robô</span></>) : (<><User className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">Cliente</span></>)}
                                         <span className="text-muted-foreground">· {new Date(msg.created_at).toLocaleString("pt-BR")}</span>
                                       </div>
                                       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">{msg.message}</p>
@@ -875,8 +1101,6 @@ export default function MassBroadcast() {
                               })
                             )}
                           </div>
-
-                          {/* Action Bar */}
                           <div className="mt-3 rounded-xl border border-border/30 bg-background/60 p-3">
                             <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("audio", e)} />
                             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("image", e)} />
@@ -900,9 +1124,7 @@ export default function MassBroadcast() {
                               </Button>
                             </div>
                             <p className="mt-2 text-[11px] text-muted-foreground">
-                              {activeConversation.conversation_status === "human_takeover"
-                                ? "Bot pausado neste chat. Negocie manualmente."
-                                : "Áudio simula gravação. Use 'Assumir' para pausar o bot."}
+                              {activeConversation.conversation_status === "human_takeover" ? "Bot pausado. Negocie manualmente." : "Áudio simula gravação. 'Assumir' pausa o bot."}
                             </p>
                           </div>
                         </div>
