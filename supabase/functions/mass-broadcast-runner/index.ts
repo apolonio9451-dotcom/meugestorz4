@@ -6,6 +6,8 @@ const corsHeaders = {
 };
 
 const MAX_PER_RUN = 12;
+const BATCH_PAUSE_EVERY = 20;
+const BATCH_PAUSE_SECONDS = 300;
 
 type CampaignRow = {
   id: string;
@@ -37,13 +39,33 @@ function normalizePhone(phone: string): string {
 }
 
 function clampDelayRange(minSeconds: number | null | undefined, maxSeconds: number | null | undefined) {
-  const min = Math.min(300, Math.max(30, Number(minSeconds ?? 60)));
-  const max = Math.min(300, Math.max(min, Number(maxSeconds ?? 120)));
+  const min = Math.min(300, Math.max(15, Number(minSeconds ?? 15)));
+  const max = Math.min(300, Math.max(min, Number(maxSeconds ?? 45)));
   return { min, max };
 }
 
 function randomDelaySeconds(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Simulate "composing" presence before sending */
+async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
+  const durationMs = Math.floor(Math.random() * 2001) + 3000; // 3-5 seconds
+  try {
+    await fetch(`${apiUrl.replace(/\/$/, "")}/operations/presence`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token: apiToken },
+      body: JSON.stringify({ phone, presence: "composing" }),
+    });
+    await sleep(durationMs);
+  } catch {
+    // Non-critical: if presence fails, continue sending
+    await sleep(durationMs);
+  }
 }
 
 async function sendText(apiUrl: string, apiToken: string, number: string, text: string) {
@@ -91,6 +113,11 @@ async function updateCampaignCounters(
     .eq("id", campaignId);
 
   return campaign;
+}
+
+/** Check if batch pause is needed (every BATCH_PAUSE_EVERY messages) */
+function shouldBatchPause(processedCount: number): boolean {
+  return processedCount > 0 && processedCount % BATCH_PAUSE_EVERY === 0;
 }
 
 Deno.serve(async (req) => {
@@ -179,16 +206,30 @@ Deno.serve(async (req) => {
         }
 
         try {
-          // ═══ SIMPLE DIRECT DISPATCH: Send the message assigned to this recipient ═══
+          // ═══ ANTI-BAN: Simulate typing before sending ═══
           const message = String(recipient.offer_template || "").trim();
           if (!message) throw new Error("Mensagem vazia para este contato.");
+
+          await simulateTyping(effectiveUrl, effectiveToken, phone);
 
           const sentAt = new Date().toISOString();
           await sendText(effectiveUrl, effectiveToken, phone, message);
 
           // Calculate delay for the NEXT recipient in queue
           const delay = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);
-          const nextDelay = randomDelaySeconds(delay.min, delay.max);
+          let nextDelay = randomDelaySeconds(delay.min, delay.max);
+
+          // ═══ ANTI-BAN: Batch pause every N messages ═══
+          const newProcessed = campaign.processed_recipients + 1;
+          if (shouldBatchPause(newProcessed)) {
+            nextDelay = BATCH_PAUSE_SECONDS;
+            await insertLog(supabase, {
+              campaign_id: campaign.id, recipient_id: recipient.id,
+              company_id: recipient.company_id, phone, step: "batch_pause",
+              status: "success", message: `☕ Pausa de segurança: ${BATCH_PAUSE_SECONDS}s após ${newProcessed} mensagens`,
+              error_message: null,
+            });
+          }
 
           await supabase
             .from("mass_broadcast_recipients")
