@@ -731,7 +731,7 @@ export default function MassBroadcast() {
 
         {/* Chat History Dialog */}
         <Dialog open={!!historyPhone} onOpenChange={(open) => { if (!open) { setHistoryPhone(null); setHistoryCampaignId(null); setHistoryMessages([]); } }}>
-          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
                 <MessageSquareMore className="h-4 w-4 text-primary" />
