@@ -648,15 +648,22 @@ export default function MassBroadcast() {
   return (
     <AnimatedPage>
       <div className="space-y-6">
-        {/* Warning Banner */}
-        <div className="relative overflow-hidden rounded-2xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5 shadow-[0_0_30px_-15px_hsl(var(--destructive)/0.6)]">
-          <div className="absolute inset-0 bg-gradient-to-r from-destructive/5 via-transparent to-destructive/5 pointer-events-none" />
-          <div className="relative flex items-start gap-3">
-            <ShieldAlert className="mt-0.5 h-5 w-5 text-destructive shrink-0" />
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-destructive">⚠️ SPECIAL · Disparo em Massa</p>
-              <p className="text-xs text-muted-foreground">Simulação humana com rotação inteligente. Use com moderação.</p>
-            </div>
+        {/* Compact Header with Info Tooltip */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">SPECIAL · Disparo</h1>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="rounded-full p-1 hover:bg-muted/40 transition-colors">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[280px]">
+                  <p className="text-xs">Disparo em Massa: Simulação humana e rotação inteligente. Use com moderação.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
