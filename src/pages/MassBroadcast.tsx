@@ -261,9 +261,12 @@ export default function MassBroadcast() {
         message_delay_min_seconds: delayRange[0], message_delay_max_seconds: delayRange[1],
       }).select("id").single();
       if (cErr) throw cErr;
-      const recs = cleanedPhones.map((p, i) => ({
+      // Random template assignment (shuffled order per recipient)
+      const recs = cleanedPhones.map((p, i) => {
+        const shuffled = shuffleArray(savedTemplates);
+        return {
         campaign_id: (c as any).id, company_id: companyId, phone: p, normalized_phone: p,
-        offer_template: savedTemplates[i % savedTemplates.length], status: "pending",
+        offer_template: shuffled[i % shuffled.length], status: "pending",
         current_step: "offer", next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       }));
       await supabase.from("mass_broadcast_recipients" as any).insert(recs);
