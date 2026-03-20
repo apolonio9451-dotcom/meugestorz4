@@ -839,8 +839,8 @@ export default function MassBroadcast() {
                         )}
                         {savedTemplates.length < MAX_TEMPLATES && (
                           <div className="space-y-2">
-                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="min-h-[100px] border-dashed border-primary/20 focus:border-primary/40" />
-                            <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="gap-2 border-primary/30 hover:bg-primary/10">
+                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="w-full box-border mb-4 min-h-[6.25rem] border-dashed border-primary/20 focus:border-primary/40" />
+                            <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="w-full sm:w-auto my-[5px] gap-2 border-primary/30 hover:bg-primary/10">
                               <Plus className="h-4 w-4" />
                               Salvar Modelo ({savedTemplates.length + 1}/{MAX_TEMPLATES})
                             </Button>
