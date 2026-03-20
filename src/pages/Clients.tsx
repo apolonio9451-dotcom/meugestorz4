@@ -754,15 +754,19 @@ export default function Clients() {
     const currentEnd = parseISO(sub.end_date);
     const baseDate = currentEnd > new Date() ? currentEnd : new Date();
     const newEnd = addMonths(baseDate, months);
+    const newEndFormatted = format(newEnd, "yyyy-MM-dd");
     const { error } = await supabase
       .from("client_subscriptions")
-      .update({ end_date: format(newEnd, "yyyy-MM-dd"), payment_status: paid ? "paid" : "pending", updated_at: new Date().toISOString() })
+      .update({ end_date: newEndFormatted, payment_status: paid ? "paid" : "pending", updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
     else {
       const client = clients.find(c => c.id === clientId);
       await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)${!paid ? " (pgto pendente)" : ""}`);
       toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs();
+      if (client?.whatsapp) {
+        setRenewSuccess({ clientId, clientName: client.name, whatsapp: client.whatsapp, newEndDate: format(newEnd, "dd/MM/yyyy") });
+      }
     }
   };
 
