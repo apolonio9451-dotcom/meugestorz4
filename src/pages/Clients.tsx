@@ -1485,7 +1485,8 @@ export default function Clients() {
             Retomar Todos
           </Button>
         </div>
-      )
+      )}
+
       {/* Follow-up info text */}
       {mainFilter === "status" && statusSubFilter === "followup" && (
         <p className="text-xs text-muted-foreground bg-cyan-400/5 border border-cyan-400/20 rounded-lg px-3 py-2">
