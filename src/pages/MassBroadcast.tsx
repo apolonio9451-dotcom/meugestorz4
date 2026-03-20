@@ -1241,83 +1241,38 @@ export default function MassBroadcast() {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
                                 const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
-                                const isHot = r.current_step === "conversing" || r.current_step === "awaiting_reply";
-                                const isNotInterested = r.current_step === "not_interested";
-                                const isBotTyping = isHot && r.status === "processing";
                                 return (
-                                  <div key={r.id} className={`border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
+                                  <div key={r.id} className={`border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                     {/* Mobile card layout */}
-                                    <div className="sm:hidden p-3 space-y-1.5">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-sm font-mono text-foreground">{r.phone}</span>
-                                        <div className="flex items-center gap-1">
-                                          <button type="button" onClick={() => void handleViewHistory(r.phone, campaign.id)} className="text-muted-foreground hover:text-primary p-1 transition-colors" title="Ver histórico">
-                                            <Eye className="h-4 w-4" />
-                                          </button>
-                                          <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1">
-                                            <ExternalLink className="h-4 w-4" />
-                                          </a>
-                                        </div>
+                                    <div className="sm:hidden p-3 space-y-1.5 w-full min-w-0">
+                                      <div className="flex items-center justify-between gap-2 min-w-0">
+                                        <span className="text-sm font-mono text-foreground truncate">{r.phone}</span>
+                                        <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1 shrink-0">
+                                          <ExternalLink className="h-4 w-4" />
+                                        </a>
                                       </div>
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        {isHot && (
-                                          <span className="relative flex h-2.5 w-2.5 shrink-0">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
-                                          </span>
-                                        )}
-                                        <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
-                                        <span className={`text-[11px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
-                                        {isBotTyping && (
-                                          <span className="flex items-center gap-1 ml-1">
-                                            <span className="relative flex h-2 w-2 shrink-0">
-                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                                              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                                            </span>
-                                            <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
-                                          </span>
-                                        )}
+                                      <div className="flex items-center gap-1.5">
+                                        <SiComp className={`h-4 w-4 ${si.cls}`} />
+                                        <span className={`text-[11px] font-medium ${si.cls}`}>{stepText}</span>
                                       </div>
-                                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] max-w-full truncate">
-                                        {r.offer_template?.substring(0, 40)}...
-                                      </Badge>
-                                      {r.error_message && !isNotInterested && (
+                                      <p className="text-[10px] text-muted-foreground line-clamp-2 break-words">{r.offer_template}</p>
+                                      {r.error_message && (
                                         <span className="text-[10px] text-destructive line-clamp-1 block" title={r.error_message}>❌ {r.error_message}</span>
                                       )}
                                     </div>
                                     {/* Desktop grid layout */}
-                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2.5">
+                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5">
                                       <div className="min-w-0">
                                         <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
-                                        {r.error_message && !isNotInterested && (
+                                        {r.error_message && (
                                           <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
                                         )}
                                       </div>
                                       <div className="flex items-center gap-1.5">
-                                        {isHot && (
-                                          <span className="relative flex h-2.5 w-2.5 shrink-0">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
-                                          </span>
-                                        )}
-                                        <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
-                                        <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
-                                        {isBotTyping && (
-                                          <span className="flex items-center gap-1 ml-1">
-                                            <span className="relative flex h-2 w-2 shrink-0">
-                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                                              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                                            </span>
-                                            <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
-                                          </span>
-                                        )}
+                                        <SiComp className={`h-4 w-4 ${si.cls}`} />
+                                        <span className={`text-[10px] font-medium ${si.cls}`}>{stepText}</span>
                                       </div>
-                                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
-                                        {r.offer_template?.substring(0, 25)}...
-                                      </Badge>
-                                      <button type="button" onClick={() => void handleViewHistory(r.phone, campaign.id)} className="text-muted-foreground hover:text-primary transition-colors" title="Ver histórico">
-                                        <Eye className="h-3.5 w-3.5" />
-                                      </button>
+                                      <p className="text-[10px] text-muted-foreground truncate">{r.offer_template?.substring(0, 50)}</p>
                                       <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
                                         <ExternalLink className="h-3.5 w-3.5" />
                                       </a>
