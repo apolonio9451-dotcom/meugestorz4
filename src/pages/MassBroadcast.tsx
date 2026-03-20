@@ -578,12 +578,9 @@ export default function MassBroadcast() {
     try {
       // Delete old recipients & re-insert
       await supabase.from("mass_broadcast_recipients" as any).delete().eq("campaign_id", campaignId);
-      let lastIndex = -1;
       const templates = campaign.offer_templates?.length > 0 ? campaign.offer_templates : savedTemplates;
-      const recipients = newPhones.map((phone) => {
-        let idx = templates.length > 0 ? (lastIndex + 1) % templates.length : 0;
-        if (templates.length > 1 && idx === lastIndex) idx = (idx + 1) % templates.length;
-        lastIndex = idx;
+      const recipients = newPhones.map((phone, index) => {
+        const idx = templates.length > 0 ? index % templates.length : 0;
         return {
           campaign_id: campaignId,
           company_id: companyId,
