@@ -1130,7 +1130,7 @@ export default function MassBroadcast() {
                         </div>
 
                         {/* Action buttons */}
-                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20">
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20 w-full overflow-x-auto">
                             <Button
                               variant="outline"
                               size="sm"
