@@ -1133,7 +1133,7 @@ export default function MassBroadcast() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
                               onClick={() => {
                                 if (isEditing) {
                                   setEditingCampaignId(null);
