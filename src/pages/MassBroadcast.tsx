@@ -1413,7 +1413,7 @@ export default function MassBroadcast() {
                           <div className="mt-3 rounded-xl border border-border/30 bg-background/60 p-3">
                             <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("audio", e)} />
                             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("image", e)} />
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
                               <Button variant="outline" onClick={() => audioInputRef.current?.click()} disabled={mediaSending !== null} className="gap-2 border-border/40">
                                 {mediaSending === "audio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                                 Áudio
