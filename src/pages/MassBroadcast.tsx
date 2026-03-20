@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Clock,
   Copy,
+  Eye,
   ExternalLink,
   ImagePlus,
   Info,
@@ -47,7 +48,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /* ─── Types ─── */
 type Campaign = {
@@ -245,6 +247,12 @@ export default function MassBroadcast() {
   const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
   const [takingOverConversationId, setTakingOverConversationId] = useState<string | null>(null);
   const [monitorCampaignId, setMonitorCampaignId] = useState<string | null>(null);
+
+  // Chat history modal
+  const [historyPhone, setHistoryPhone] = useState<string | null>(null);
+  const [historyCampaignId, setHistoryCampaignId] = useState<string | null>(null);
+  const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Next action countdown
   const [nextActionAt, setNextActionAt] = useState<string | null>(null);
@@ -644,28 +652,89 @@ export default function MassBroadcast() {
     }
   };
 
+   /* ─── Chat History Modal Handler ─── */
+  const handleViewHistory = async (phone: string, campaignId: string) => {
+    setHistoryPhone(phone);
+    setHistoryCampaignId(campaignId);
+    setHistoryLoading(true);
+    setHistoryMessages([]);
+    try {
+      const normalized = phone.replace(/\D/g, "");
+      const { data } = await supabase
+        .from("mass_broadcast_conversation_messages" as any)
+        .select("id, conversation_id, campaign_id, phone, direction, sender_type, message_type, message, delivery_status, created_at")
+        .eq("company_id", companyId)
+        .eq("campaign_id", campaignId)
+        .eq("normalized_phone", normalized)
+        .order("created_at", { ascending: true })
+        .limit(10);
+      setHistoryMessages(((data as unknown) as ConversationMessage[]) || []);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="space-y-6">
-        {/* Compact Header with Info Tooltip */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-foreground">SPECIAL · Disparo</h1>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" className="rounded-full p-1 hover:bg-muted/40 transition-colors">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[280px]">
-                  <p className="text-xs">Disparo em Massa: Simulação humana e rotação inteligente. Use com moderação.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" className="rounded-full p-1.5 hover:bg-muted/40 transition-colors">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="start" className="max-w-[300px] text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground mb-1">Disparo em Massa</p>
+                <p>Simulação humana com rotação inteligente de mensagens. Atendimento IA automático quando o cliente responde. Use com moderação.</p>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${globalEnabled ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-muted-foreground/30"}`} />
+            <Label htmlFor="master-switch-top" className="text-xs font-medium text-muted-foreground hidden sm:inline">API</Label>
+            <Switch id="master-switch-top" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} />
           </div>
         </div>
+
+        {/* Chat History Dialog */}
+        <Dialog open={!!historyPhone} onOpenChange={(open) => { if (!open) { setHistoryPhone(null); setHistoryCampaignId(null); setHistoryMessages([]); } }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <MessageSquareMore className="h-4 w-4 text-primary" />
+                Histórico · {historyPhone}
+              </DialogTitle>
+            </DialogHeader>
+            {historyLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : historyMessages.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma mensagem registrada.</p>
+            ) : (
+              <div className="space-y-3">
+                {historyMessages.map((msg) => {
+                  const isOut = msg.direction === "outbound";
+                  return (
+                    <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-2xl border px-3 py-2 ${isOut ? "border-primary/20 bg-primary/10" : "border-border/30 bg-muted/20"}`}>
+                        <div className="flex items-center gap-1.5 text-[10px] font-medium mb-1">
+                          {isOut ? <Bot className="h-3 w-3 text-primary" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                          <span className={isOut ? "text-primary" : "text-muted-foreground"}>{isOut ? "Robô" : "Cliente"}</span>
+                          <span className="text-muted-foreground/60">· {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap break-words text-sm text-foreground">{msg.message}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <Tabs defaultValue="config" className="space-y-4">
           <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl w-full flex">
@@ -688,22 +757,6 @@ export default function MassBroadcast() {
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
               {/* Left Column: Config */}
               <div className="space-y-6">
-                {/* Master Switch */}
-                <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_30px_-18px_hsl(var(--primary)/0.5)]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3 pointer-events-none" />
-                  <CardContent className="relative p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className={`h-3 w-3 rounded-full ${globalEnabled ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-muted-foreground/30"}`} />
-                          <Label htmlFor="master-switch" className="text-base font-bold text-foreground">Ativar/Pausar Disparos API</Label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Se desligado, toda a fila congela imediatamente.</p>
-                      </div>
-                      <Switch id="master-switch" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} className="scale-125" />
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {/* AI Seller Config */}
                 <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
@@ -1107,10 +1160,11 @@ export default function MassBroadcast() {
                           ) : recipients ? (
                             <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
                               {/* Desktop table header */}
-                              <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
+                              <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
                                 <span>Status</span>
                                 <span>Modelo</span>
+                                <span>Chat</span>
                                 <span>Link</span>
                               </div>
                               {recipients.map((r) => {
@@ -1126,9 +1180,14 @@ export default function MassBroadcast() {
                                     <div className="sm:hidden p-3 space-y-1.5">
                                       <div className="flex items-center justify-between">
                                         <span className="text-sm font-mono text-foreground">{r.phone}</span>
-                                        <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1">
-                                          <ExternalLink className="h-4 w-4" />
-                                        </a>
+                                        <div className="flex items-center gap-1">
+                                          <button type="button" onClick={() => void handleViewHistory(r.phone, campaign.id)} className="text-muted-foreground hover:text-primary p-1 transition-colors" title="Ver histórico">
+                                            <Eye className="h-4 w-4" />
+                                          </button>
+                                          <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1">
+                                            <ExternalLink className="h-4 w-4" />
+                                          </a>
+                                        </div>
                                       </div>
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         {isHot && (
@@ -1157,7 +1216,7 @@ export default function MassBroadcast() {
                                       )}
                                     </div>
                                     {/* Desktop grid layout */}
-                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5">
+                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2.5">
                                       <div className="min-w-0">
                                         <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
                                         {r.error_message && !isNotInterested && (
@@ -1186,6 +1245,9 @@ export default function MassBroadcast() {
                                       <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
                                         {r.offer_template?.substring(0, 25)}...
                                       </Badge>
+                                      <button type="button" onClick={() => void handleViewHistory(r.phone, campaign.id)} className="text-muted-foreground hover:text-primary transition-colors" title="Ver histórico">
+                                        <Eye className="h-3.5 w-3.5" />
+                                      </button>
                                       <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
                                         <ExternalLink className="h-3.5 w-3.5" />
                                       </a>
