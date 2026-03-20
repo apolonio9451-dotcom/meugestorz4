@@ -531,7 +531,7 @@ async function recordMassBroadcastIncoming(
           .map((m: any) => `${m.direction === "outbound" ? "Vendedor" : "Cliente"}: ${m.message}`)
           .join("\n");
 
-        if ((recipient as any).current_step === "awaiting_reply") {
+        if ((recipient as any).current_step === "awaiting_reply" || (recipient as any).current_step === "greeting") {
           // Client replied to greeting → AI generates response + offer
           const offerText = (recipient as any).offer_template || "";
           const aiResponse = await callAISeller(sellerInstructions, payload.message, offerText, historyText);
