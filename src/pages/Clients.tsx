@@ -1460,30 +1460,35 @@ export default function Clients() {
       )}
 
       {/* Bulk pause/resume for Vencidos */}
-      {mainFilter === "vencidos" && (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={handleBulkPauseAll}
-            disabled={bulkPauseLoading}
-          >
-            {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PauseCircle className="h-3.5 w-3.5" />}
-            Pausar Todos
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={handleBulkResumeAll}
-            disabled={bulkPauseLoading}
-          >
-            {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
-            Retomar Todos
-          </Button>
-        </div>
-      )}
+      {mainFilter === "vencidos" && (() => {
+        const overdue = filtered;
+        const pausedCount = overdue.filter(c => isManualChargePaused(c.charge_pause_until)).length;
+        const allPaused = pausedCount > 0 && pausedCount === overdue.length;
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={handleBulkTogglePause}
+              disabled={bulkPauseLoading || overdue.length === 0}
+            >
+              {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : allPaused ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
+              {allPaused ? "Retomar Todos" : "Pausar Todos"}
+            </Button>
+            <Select value={String(bulkPauseDays)} onValueChange={(v) => setBulkPauseDays(Number(v))}>
+              <SelectTrigger className="h-7 w-[80px] text-[11px] bg-transparent border-border/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[7, 15, 30, 60, 90].map(d => (
+                  <SelectItem key={d} value={String(d)} className="text-xs">{d} dias</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })()}
 
       {/* Follow-up info text */}
       {mainFilter === "status" && statusSubFilter === "followup" && (
