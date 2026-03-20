@@ -863,11 +863,11 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="max-w-[90vw]" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm max-w-[90vw]" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm w-full box-border" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
