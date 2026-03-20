@@ -506,7 +506,7 @@ async function recordMassBroadcastIncoming(
         .select("id, current_step, offer_template, campaign_id")
         .eq("campaign_id", (conversation as any).campaign_id)
         .eq("normalized_phone", normalizedPhone)
-        .in("current_step", ["awaiting_reply", "conversing", "done"])
+        .in("current_step", ["greeting", "awaiting_reply", "conversing", "done"])
         .maybeSingle();
 
       if (recipient) {
@@ -516,7 +516,8 @@ async function recordMassBroadcastIncoming(
           .eq("id", (conversation as any).campaign_id)
           .single();
 
-        const sellerInstructions = (campaign as any)?.seller_instructions || "";
+        const DEFAULT_SELLER_INSTRUCTIONS = "Você é um assistente de vendas educado. Seu objetivo é conversar com o cliente e apresentar a oferta da campanha de forma natural.";
+        const sellerInstructions = (campaign as any)?.seller_instructions?.trim() || DEFAULT_SELLER_INSTRUCTIONS;
 
         // Build conversation history
         const { data: history } = await supabase
@@ -530,7 +531,7 @@ async function recordMassBroadcastIncoming(
           .map((m: any) => `${m.direction === "outbound" ? "Vendedor" : "Cliente"}: ${m.message}`)
           .join("\n");
 
-        if ((recipient as any).current_step === "awaiting_reply") {
+        if ((recipient as any).current_step === "awaiting_reply" || (recipient as any).current_step === "greeting") {
           // Client replied to greeting → AI generates response + offer
           const offerText = (recipient as any).offer_template || "";
           const aiResponse = await callAISeller(sellerInstructions, payload.message, offerText, historyText);
@@ -603,6 +604,15 @@ async function recordMassBroadcastIncoming(
                 .update({ last_attempt_at: sentAt, next_action_at: nextAction })
                 .eq("id", (recipient as any).id);
             }
+
+            // Log AI follow-up response
+            await supabase.from("mass_broadcast_logs").insert({
+              campaign_id: (conversation as any).campaign_id,
+              recipient_id: (recipient as any).id,
+              company_id: payload.companyId, phone: normalizedPhone,
+              step: "ai_offer_reply", status: "success",
+              message: aiReply, error_message: null,
+            });
 
             aiHandled = true;
           }
