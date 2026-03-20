@@ -1416,11 +1416,11 @@ export default function MassBroadcast() {
                             <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("audio", e)} />
                             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("image", e)} />
                             <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
-                              <Button variant="outline" onClick={() => audioInputRef.current?.click()} disabled={mediaSending !== null} className="gap-2 border-border/40">
+                              <Button variant="outline" onClick={() => audioInputRef.current?.click()} disabled={mediaSending !== null} className="w-full sm:w-auto my-[5px] gap-2 border-border/40">
                                 {mediaSending === "audio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                                 Áudio
                               </Button>
-                              <Button variant="outline" onClick={() => imageInputRef.current?.click()} disabled={mediaSending !== null} className="gap-2 border-border/40">
+                              <Button variant="outline" onClick={() => imageInputRef.current?.click()} disabled={mediaSending !== null} className="w-full sm:w-auto my-[5px] gap-2 border-border/40">
                                 {mediaSending === "image" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                                 Imagem
                               </Button>
@@ -1428,7 +1428,7 @@ export default function MassBroadcast() {
                                 variant={activeConversation.conversation_status === "human_takeover" ? "secondary" : "default"}
                                 onClick={() => void handleAssumeConversation()}
                                 disabled={takingOverConversationId === activeConversation.id || activeConversation.conversation_status === "human_takeover"}
-                                className="gap-2"
+                                className="w-full sm:w-auto my-[5px] gap-2"
                               >
                                 {takingOverConversationId === activeConversation.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PauseCircle className="h-4 w-4" />}
                                 {activeConversation.conversation_status === "human_takeover" ? "Assumida" : "Assumir"}
