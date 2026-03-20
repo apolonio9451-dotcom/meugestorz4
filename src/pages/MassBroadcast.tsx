@@ -262,15 +262,12 @@ export default function MassBroadcast() {
       }).select("id").single();
       if (cErr) throw cErr;
       // Random template assignment (shuffled order per recipient)
-      const recs = cleanedPhones.map((p, i) => {
-        const shuffled = shuffleArray(savedTemplates);
-        return {
+      const shuffled = shuffleArray(savedTemplates);
+      const recs = cleanedPhones.map((p, i) => ({
         campaign_id: (c as any).id, company_id: companyId, phone: p, normalized_phone: p,
         offer_template: shuffled[i % shuffled.length], status: "pending",
         current_step: "offer", next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       }));
-      };
-      });
       await supabase.from("mass_broadcast_recipients" as any).insert(recs);
       toast({ title: "Campanha criada!", description: `${cleanedPhones.length} contatos.` });
       setCampaignName(""); setPhoneInput(""); await loadData();
