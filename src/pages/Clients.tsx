@@ -2024,6 +2024,44 @@ export default function Clients() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Renewal Thanks Dialog */}
+      <Dialog open={!!renewSuccess} onOpenChange={(open) => !open && setRenewSuccess(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 className="h-5 w-5" />
+              Renovação Confirmada!
+            </DialogTitle>
+            <DialogDescription className="text-sm pt-1">
+              Deseja enviar a mensagem de agradecimento para <strong>{renewSuccess?.clientName}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button className="w-full gap-2" onClick={() => {
+              if (!renewSuccess) return;
+              const template = messageTemplates.renovacao || defaultMessageTemplates.renovacao;
+              const msg = template
+                .replace(/\{nome\}/g, renewSuccess.clientName)
+                .replace(/\{primeiro_nome\}/g, renewSuccess.clientName.split(" ")[0])
+                .replace(/\{vencimento\}/g, renewSuccess.newEndDate);
+              const phone = renewSuccess.whatsapp.replace(/\D/g, "");
+              const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+              const encoded = encodeURIComponent(msg.normalize("NFC"));
+              const url = isMobile
+                ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encoded}`
+                : `https://web.whatsapp.com/send?phone=55${phone}&text=${encoded}`;
+              window.open(url, "_blank");
+              setRenewSuccess(null);
+            }}>
+              <Send className="w-4 h-4" />
+              Enviar Agradecimento
+            </Button>
+            <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setRenewSuccess(null)}>
+              Pular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Duplicate WhatsApp confirmation */}
       {duplicateWarning && pendingSubmitEvent && (
         <Dialog open={!!pendingSubmitEvent} onOpenChange={(open) => { if (!open) { setPendingSubmitEvent(null); } }}>
