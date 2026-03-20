@@ -951,13 +951,19 @@ export default function MassBroadcast() {
                         activeLogs.map((log) => {
                           const time = new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                           const stepDesc = logStepLabel[log.step] || log.step;
-                          const isError = log.status !== "success";
-                          const phoneMasked = log.phone.length > 5 ? `${log.phone.slice(0, 5)}...` : log.phone;
+                          const isProcessing = log.status === "processing" || log.step === "ai_processing";
+                          const isError = log.status === "error" || Boolean(log.error_message);
+                          const fallbackMessage = isProcessing
+                            ? `🤖 Robô processando resposta para ${log.phone}...`
+                            : isError
+                              ? `❌ Falha ao responder ${log.phone}.`
+                              : `✅ ${stepDesc} para ${log.phone}`;
+                          const displayMessage = log.message?.trim() || fallbackMessage;
                           return (
-                            <div key={log.id} className={`flex gap-2 ${isError ? "text-red-400" : "text-emerald-400"}`}>
+                            <div key={log.id} className={`flex gap-2 ${isError ? "text-destructive" : isProcessing ? "text-warning" : "text-primary"}`}>
                               <span className="text-muted-foreground/50 shrink-0">[{time}]</span>
-                              <span>{isError ? "❌" : "✅"} {stepDesc} para {phoneMasked}</span>
-                              {log.error_message && <span className="text-red-500/70 truncate">— {log.error_message}</span>}
+                              <span className="truncate">{displayMessage}</span>
+                              {log.error_message && <span className="text-destructive/80 truncate">— {log.error_message}</span>}
                             </div>
                           );
                         })
