@@ -605,6 +605,15 @@ async function recordMassBroadcastIncoming(
                 .eq("id", (recipient as any).id);
             }
 
+            // Log AI follow-up response
+            await supabase.from("mass_broadcast_logs").insert({
+              campaign_id: (conversation as any).campaign_id,
+              recipient_id: (recipient as any).id,
+              company_id: payload.companyId, phone: normalizedPhone,
+              step: "ai_offer_reply", status: "success",
+              message: aiReply, error_message: null,
+            });
+
             aiHandled = true;
           }
         }
