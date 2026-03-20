@@ -863,21 +863,21 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border mb-4" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm w-full box-border" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="w-full box-border mb-4 min-h-[8.75rem] font-mono text-sm" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                     </p>
                     <div className="flex flex-col gap-3 w-full sm:flex-row sm:flex-wrap">
-                      <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="w-full sm:w-auto sm:min-w-[200px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
+                      <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="w-full sm:w-auto sm:min-w-[200px] my-[5px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
                         Criar Campanha
                       </Button>
-                      <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto gap-2">
+                      <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto my-[5px] gap-2">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                         Atualizar
                       </Button>
