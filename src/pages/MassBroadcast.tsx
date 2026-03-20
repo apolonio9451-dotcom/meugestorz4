@@ -964,15 +964,24 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
-          <TabsContent value="library" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Biblioteca de Campanhas</h2>
-                <p className="text-sm text-muted-foreground">Gerencie todas as suas campanhas salvas.</p>
+          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden">
+            {/* Sticky API toggle + title */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 -mx-1 px-1 border-b border-border/20">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 rounded-lg border border-border/30 bg-muted/20 px-3 py-1.5">
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${globalEnabled ? "bg-primary animate-pulse" : "bg-muted-foreground/30"}`} />
+                    <Label htmlFor="master-switch-lib" className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">Disparo</Label>
+                    <Switch id="master-switch-lib" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} />
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-8 w-8">
+                    <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                  </Button>
+                </div>
               </div>
-              <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="gap-2">
-                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              </Button>
             </div>
 
             <Card className="border-border/30 bg-card/80 backdrop-blur">
