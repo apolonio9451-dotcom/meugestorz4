@@ -7,6 +7,7 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  ImagePlus,
   Info,
   Loader2,
   MessageSquareMore,
