@@ -343,6 +343,21 @@ async function detectNegativeIntent(message: string): Promise<boolean> {
   return negativePatterns.some((p) => p.test(lower));
 }
 
+const ACTIVE_MASS_BROADCAST_STATUSES = ["queued", "running"];
+const DEFAULT_MASS_BROADCAST_SELLER_INSTRUCTIONS = "Vendedor Max da TV Max, simpático e focado em oferecer teste grátis";
+const MASS_BROADCAST_CLOSING_MESSAGE = "Gostaria de fazer um teste totalmente grátis do nosso serviço agora?";
+
+function nonEmptyList(values: string[] | null | undefined, fallback: string[] = []): string[] {
+  const parsed = Array.isArray(values)
+    ? values.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  return parsed.length > 0 ? parsed : fallback;
+}
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 async function callAISeller(
   sellerInstructions: string,
   clientMessage: string,
@@ -351,6 +366,8 @@ async function callAISeller(
 ): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) return offerText;
+
+  const safeInstructions = sellerInstructions?.trim() || DEFAULT_MASS_BROADCAST_SELLER_INSTRUCTIONS;
 
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -361,15 +378,19 @@ async function callAISeller(
         messages: [
           {
             role: "system",
-            content: `Você é um vendedor via WhatsApp. ${sellerInstructions || "Seja simpático e natural."}\n\nRegras:\n- O cliente acabou de responder à sua saudação.\n- Responda de forma breve e natural (2-4 linhas), reconhecendo a resposta do cliente.\n- Em seguida, apresente a oferta de forma fluida e convincente.\n- NÃO use emojis excessivos. Seja humano e direto.\n- Se o cliente fez uma pergunta, responda brevemente antes da oferta.\n- Responda APENAS com a mensagem final. Nada mais.\n\nHistórico:\n${conversationHistory}\n\nOferta para incluir:\n${offerText}`,
+            content: `Você é um vendedor via WhatsApp. ${safeInstructions}\n\nRegras:\n- O cliente acabou de responder à sua saudação.\n- Responda em no máximo 1 frase curta, natural e humana.\n- Depois dessa frase, cole a OFERTA exatamente como recebida, sem alterar nenhuma palavra.\n- Não use emojis em excesso.\n- Responda APENAS com o texto final.\n\nHistórico:\n${conversationHistory}\n\nOFERTA (copiar literalmente no final):\n${offerText}`,
           },
-          { role: "user", content: `O cliente respondeu: "${clientMessage}"\n\nGere a resposta do vendedor incluindo a oferta.` },
+          {
+            role: "user",
+            content: `Cliente respondeu: "${clientMessage}". Gere uma resposta curta + oferta literal.`,
+          },
         ],
       }),
     });
     if (!resp.ok) return offerText;
     const data = await resp.json();
-    return data?.choices?.[0]?.message?.content?.trim() || offerText;
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    return content || offerText;
   } catch {
     return offerText;
   }
@@ -383,6 +404,8 @@ async function callAIFollowUp(
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) return null;
 
+  const safeInstructions = sellerInstructions?.trim() || DEFAULT_MASS_BROADCAST_SELLER_INSTRUCTIONS;
+
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -392,7 +415,7 @@ async function callAIFollowUp(
         messages: [
           {
             role: "system",
-            content: `Você é um vendedor via WhatsApp. ${sellerInstructions || "Seja simpático e natural."}\n\nRegras:\n- O cliente está fazendo perguntas após receber sua oferta.\n- Responda de forma breve e útil (2-3 linhas).\n- Seja persuasivo mas natural.\n- Se for uma dúvida sobre preço/funcionamento, responda e reforce a oferta.\n- NÃO repita a oferta inteira.\n- Responda APENAS com a mensagem. Nada mais.\n\nHistórico:\n${conversationHistory}`,
+            content: `Você é um vendedor via WhatsApp. ${safeInstructions}\n\nRegras:\n- O cliente já recebeu a oferta e pode estar tirando dúvidas.\n- Responda de forma breve e objetiva (máximo 2 linhas).\n- Reforce de forma sutil o teste grátis quando fizer sentido.\n- Não repita textão completo da oferta.\n- Responda APENAS com a mensagem final.\n\nHistórico:\n${conversationHistory}`,
           },
           { role: "user", content: clientMessage },
         ],
@@ -404,6 +427,44 @@ async function callAIFollowUp(
   } catch {
     return null;
   }
+}
+
+async function ensureCampaignConversation(
+  supabase: ReturnType<typeof createClient>,
+  payload: { companyId: string; campaignId: string; recipientId: string; normalizedPhone: string; timestamp: string },
+): Promise<{ id: string; conversation_status: string }> {
+  const { data: existingConversation } = await supabase
+    .from("mass_broadcast_conversations")
+    .select("id, conversation_status")
+    .eq("company_id", payload.companyId)
+    .eq("campaign_id", payload.campaignId)
+    .eq("normalized_phone", payload.normalizedPhone)
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; conversation_status: string }>();
+
+  if (existingConversation?.id) {
+    return existingConversation;
+  }
+
+  const { data: createdConversation } = await supabase
+    .from("mass_broadcast_conversations")
+    .insert({
+      company_id: payload.companyId,
+      campaign_id: payload.campaignId,
+      recipient_id: payload.recipientId,
+      phone: payload.normalizedPhone,
+      normalized_phone: payload.normalizedPhone,
+      contact_name: payload.normalizedPhone,
+      conversation_status: "bot_active",
+      has_reply: false,
+      last_message_at: payload.timestamp,
+      last_outgoing_at: payload.timestamp,
+    })
+    .select("id, conversation_status")
+    .single<{ id: string; conversation_status: string }>();
+
+  return createdConversation as { id: string; conversation_status: string };
 }
 
 async function recordMassBroadcastIncoming(
@@ -420,26 +481,52 @@ async function recordMassBroadcastIncoming(
   const normalizedPhone = normalizePhone(payload.phone);
   if (!payload.companyId || !normalizedPhone) return null;
 
-  const { data: conversation } = await supabase
-    .from("mass_broadcast_conversations")
-    .select("id, campaign_id, recipient_id, conversation_status")
+  const nowIso = new Date().toISOString();
+
+  const { data: activeCampaigns } = await supabase
+    .from("mass_broadcast_campaigns")
+    .select("id, seller_instructions, offer_templates")
+    .eq("company_id", payload.companyId)
+    .in("status", ACTIVE_MASS_BROADCAST_STATUSES)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (!activeCampaigns?.length) return null;
+
+  const activeCampaignIds = activeCampaigns.map((campaign: any) => campaign.id);
+  const campaignById = new Map(activeCampaigns.map((campaign: any) => [campaign.id, campaign]));
+
+  const { data: recipient } = await supabase
+    .from("mass_broadcast_recipients")
+    .select("id, campaign_id, company_id, phone, normalized_phone, offer_template, status, current_step")
     .eq("company_id", payload.companyId)
     .eq("normalized_phone", normalizedPhone)
-    .order("last_message_at", { ascending: false })
+    .in("campaign_id", activeCampaignIds)
+    .order("updated_at", { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<any>();
 
-  if (!conversation) return null;
+  if (!recipient?.id) return null;
 
-  const nowIso = new Date().toISOString();
-  const isHumanTakeover = (conversation as any).conversation_status === "human_takeover";
+  const campaign = campaignById.get(recipient.campaign_id);
+  if (!campaign) return null;
+
+  const conversation = await ensureCampaignConversation(supabase, {
+    companyId: payload.companyId,
+    campaignId: recipient.campaign_id,
+    recipientId: recipient.id,
+    normalizedPhone,
+    timestamp: nowIso,
+  });
+
+  const isHumanTakeover = conversation.conversation_status === "human_takeover";
   const nextStatus = isHumanTakeover ? "human_takeover" : "awaiting_human";
 
   await supabase.from("mass_broadcast_conversation_messages").insert({
     company_id: payload.companyId,
-    campaign_id: (conversation as any).campaign_id,
-    conversation_id: (conversation as any).id,
-    recipient_id: (conversation as any).recipient_id,
+    campaign_id: recipient.campaign_id,
+    conversation_id: conversation.id,
+    recipient_id: recipient.id,
     phone: normalizedPhone,
     normalized_phone: normalizedPhone,
     direction: "inbound",
@@ -453,178 +540,250 @@ async function recordMassBroadcastIncoming(
 
   await supabase
     .from("mass_broadcast_conversations")
-    .update({ conversation_status: nextStatus, has_reply: true, last_message_at: nowIso, last_incoming_at: nowIso })
-    .eq("id", (conversation as any).id);
+    .update({
+      conversation_status: nextStatus,
+      has_reply: true,
+      last_message_at: nowIso,
+      last_incoming_at: nowIso,
+      recipient_id: recipient.id,
+    })
+    .eq("id", conversation.id);
+
+  if (isHumanTakeover || !apiUrl || !apiToken || payload.messageType !== "text" || !payload.message.trim()) {
+    return { conversation_status: nextStatus, ai_handled: false };
+  }
 
   let aiHandled = false;
 
-  // ═══ AI SELLER LOGIC ═══
-  if (!isHumanTakeover && apiUrl && apiToken && payload.messageType === "text" && payload.message.trim()) {
-    try {
-      // Check for negative sentiment first
-      const isNegative = await detectNegativeIntent(payload.message);
-      if (isNegative) {
-        // Client doesn't want to be contacted → send apology and mark as paused
-        const apologyMsg = "Peço desculpas pelo incômodo! Não vou mais enviar mensagens. Tenha um ótimo dia! 🙏";
-        await sendText(apiUrl, apiToken, normalizedPhone, apologyMsg);
+  try {
+    await supabase.from("mass_broadcast_logs").insert({
+      campaign_id: recipient.campaign_id,
+      recipient_id: recipient.id,
+      company_id: payload.companyId,
+      phone: normalizedPhone,
+      step: "ai_processing",
+      status: "processing",
+      message: `🤖 Robô processando resposta para ${normalizedPhone}...`,
+      error_message: null,
+    });
+
+    const isNegative = await detectNegativeIntent(payload.message);
+    if (isNegative) {
+      const apologyMsg = "Peço desculpas pelo incômodo! Não vou mais enviar mensagens. Tenha um ótimo dia! 🙏";
+      await sendText(apiUrl, apiToken, normalizedPhone, apologyMsg);
+
+      const sentAt = new Date().toISOString();
+      await supabase.from("mass_broadcast_conversation_messages").insert({
+        company_id: payload.companyId,
+        campaign_id: recipient.campaign_id,
+        conversation_id: conversation.id,
+        recipient_id: recipient.id,
+        phone: normalizedPhone,
+        normalized_phone: normalizedPhone,
+        direction: "outbound",
+        sender_type: "bot",
+        source: "ai_seller",
+        message_type: "text",
+        message: apologyMsg,
+        delivery_status: "sent",
+        created_at: sentAt,
+      });
+
+      await supabase
+        .from("mass_broadcast_recipients")
+        .update({ status: "failed", current_step: "not_interested", error_message: "Cliente não interessado", last_attempt_at: sentAt })
+        .eq("id", recipient.id);
+
+      await supabase
+        .from("mass_broadcast_conversations")
+        .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt })
+        .eq("id", conversation.id);
+
+      await supabase.from("mass_broadcast_logs").insert({
+        campaign_id: recipient.campaign_id,
+        recipient_id: recipient.id,
+        company_id: payload.companyId,
+        phone: normalizedPhone,
+        step: "not_interested",
+        status: "success",
+        message: apologyMsg,
+        error_message: "Cliente sinalizou desinteresse",
+      });
+
+      return { conversation_status: "not_interested", ai_handled: true };
+    }
+
+    const sellerInstructions = String(campaign.seller_instructions || "").trim() || DEFAULT_MASS_BROADCAST_SELLER_INSTRUCTIONS;
+
+    const { data: history } = await supabase
+      .from("mass_broadcast_conversation_messages")
+      .select("direction, message")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true })
+      .limit(20);
+
+    const historyText = (history || [])
+      .map((item: any) => `${item.direction === "outbound" ? "Vendedor" : "Cliente"}: ${item.message}`)
+      .join("\n");
+
+    const currentStep = String(recipient.current_step || "greeting");
+
+    if (currentStep === "greeting" || currentStep === "awaiting_reply") {
+      const offerCandidates = nonEmptyList(campaign.offer_templates, [recipient.offer_template]);
+      const selectedOffer = offerCandidates.length > 0 ? pickRandom(offerCandidates) : String(recipient.offer_template || "").trim();
+      if (!selectedOffer) throw new Error("Nenhum textão de oferta disponível para este contato.");
+
+      const immediateReply = await callAISeller(sellerInstructions, payload.message, selectedOffer, historyText);
+      await sendText(apiUrl, apiToken, normalizedPhone, immediateReply);
+
+      const offerSentAt = new Date().toISOString();
+      await supabase.from("mass_broadcast_conversation_messages").insert({
+        company_id: payload.companyId,
+        campaign_id: recipient.campaign_id,
+        conversation_id: conversation.id,
+        recipient_id: recipient.id,
+        phone: normalizedPhone,
+        normalized_phone: normalizedPhone,
+        direction: "outbound",
+        sender_type: "bot",
+        source: "ai_seller",
+        message_type: "text",
+        message: immediateReply,
+        delivery_status: "sent",
+        created_at: offerSentAt,
+      });
+
+      await sleep(5000);
+      await sendText(apiUrl, apiToken, normalizedPhone, MASS_BROADCAST_CLOSING_MESSAGE);
+
+      const closingSentAt = new Date().toISOString();
+      await supabase.from("mass_broadcast_conversation_messages").insert({
+        company_id: payload.companyId,
+        campaign_id: recipient.campaign_id,
+        conversation_id: conversation.id,
+        recipient_id: recipient.id,
+        phone: normalizedPhone,
+        normalized_phone: normalizedPhone,
+        direction: "outbound",
+        sender_type: "bot",
+        source: "ai_seller",
+        message_type: "text",
+        message: MASS_BROADCAST_CLOSING_MESSAGE,
+        delivery_status: "sent",
+        created_at: closingSentAt,
+      });
+
+      const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      await supabase
+        .from("mass_broadcast_recipients")
+        .update({
+          status: "processing",
+          current_step: "conversing",
+          sent_offer_at: offerSentAt,
+          last_attempt_at: closingSentAt,
+          next_action_at: nextActionAt,
+          error_message: null,
+        })
+        .eq("id", recipient.id);
+
+      await supabase
+        .from("mass_broadcast_conversations")
+        .update({
+          conversation_status: "bot_active",
+          has_reply: true,
+          last_outgoing_at: closingSentAt,
+          last_message_at: closingSentAt,
+        })
+        .eq("id", conversation.id);
+
+      await supabase.from("mass_broadcast_logs").insert({
+        campaign_id: recipient.campaign_id,
+        recipient_id: recipient.id,
+        company_id: payload.companyId,
+        phone: normalizedPhone,
+        step: "ai_offer_reply",
+        status: "success",
+        message: `✅ Resposta enviada com sucesso para ${normalizedPhone} via IA.`,
+        error_message: null,
+      });
+
+      aiHandled = true;
+    } else if (currentStep === "conversing" || currentStep === "done") {
+      const aiReply = await callAIFollowUp(sellerInstructions, payload.message, historyText);
+
+      if (aiReply) {
+        await sendText(apiUrl, apiToken, normalizedPhone, aiReply);
 
         const sentAt = new Date().toISOString();
         await supabase.from("mass_broadcast_conversation_messages").insert({
           company_id: payload.companyId,
-          campaign_id: (conversation as any).campaign_id,
-          conversation_id: (conversation as any).id,
-          recipient_id: (conversation as any).recipient_id,
-          phone: normalizedPhone, normalized_phone: normalizedPhone,
-          direction: "outbound", sender_type: "bot", source: "ai_seller",
-          message_type: "text", message: apologyMsg,
-          delivery_status: "sent", created_at: sentAt,
+          campaign_id: recipient.campaign_id,
+          conversation_id: conversation.id,
+          recipient_id: recipient.id,
+          phone: normalizedPhone,
+          normalized_phone: normalizedPhone,
+          direction: "outbound",
+          sender_type: "bot",
+          source: "ai_seller",
+          message_type: "text",
+          message: aiReply,
+          delivery_status: "sent",
+          created_at: sentAt,
         });
 
-        // Mark recipient as not_interested
-        await supabase.from("mass_broadcast_recipients")
-          .update({ status: "failed", current_step: "not_interested", error_message: "Cliente não interessado", last_attempt_at: sentAt })
-          .eq("id", (conversation as any).recipient_id);
+        const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        await supabase
+          .from("mass_broadcast_recipients")
+          .update({
+            status: "processing",
+            current_step: "conversing",
+            last_attempt_at: sentAt,
+            next_action_at: nextActionAt,
+            error_message: null,
+          })
+          .eq("id", recipient.id);
 
-        await supabase.from("mass_broadcast_conversations")
-          .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt })
-          .eq("id", (conversation as any).id);
+        await supabase
+          .from("mass_broadcast_conversations")
+          .update({
+            conversation_status: "bot_active",
+            has_reply: true,
+            last_outgoing_at: sentAt,
+            last_message_at: sentAt,
+          })
+          .eq("id", conversation.id);
 
         await supabase.from("mass_broadcast_logs").insert({
-          campaign_id: (conversation as any).campaign_id,
-          recipient_id: (conversation as any).recipient_id,
-          company_id: payload.companyId, phone: normalizedPhone,
-          step: "not_interested", status: "success",
-          message: apologyMsg, error_message: "Cliente sinalizou desinteresse",
+          campaign_id: recipient.campaign_id,
+          recipient_id: recipient.id,
+          company_id: payload.companyId,
+          phone: normalizedPhone,
+          step: "ai_offer_reply",
+          status: "success",
+          message: `✅ Resposta enviada com sucesso para ${normalizedPhone} via IA.`,
+          error_message: null,
         });
 
         aiHandled = true;
-        return { conversation_status: "not_interested", ai_handled: aiHandled };
       }
-
-      const { data: recipient } = await supabase
-        .from("mass_broadcast_recipients")
-        .select("id, current_step, offer_template, campaign_id")
-        .eq("campaign_id", (conversation as any).campaign_id)
-        .eq("normalized_phone", normalizedPhone)
-        .in("current_step", ["greeting", "awaiting_reply", "conversing", "done"])
-        .maybeSingle();
-
-      if (recipient) {
-        const { data: campaign } = await supabase
-          .from("mass_broadcast_campaigns")
-          .select("seller_instructions, offer_templates")
-          .eq("id", (conversation as any).campaign_id)
-          .single();
-
-        const DEFAULT_SELLER_INSTRUCTIONS = "Você é um assistente de vendas educado. Seu objetivo é conversar com o cliente e apresentar a oferta da campanha de forma natural.";
-        const sellerInstructions = (campaign as any)?.seller_instructions?.trim() || DEFAULT_SELLER_INSTRUCTIONS;
-
-        // Build conversation history
-        const { data: history } = await supabase
-          .from("mass_broadcast_conversation_messages")
-          .select("direction, message, sender_type")
-          .eq("conversation_id", (conversation as any).id)
-          .order("created_at", { ascending: true })
-          .limit(20);
-
-        const historyText = (history || [])
-          .map((m: any) => `${m.direction === "outbound" ? "Vendedor" : "Cliente"}: ${m.message}`)
-          .join("\n");
-
-        if ((recipient as any).current_step === "awaiting_reply" || (recipient as any).current_step === "greeting") {
-          // Client replied to greeting → AI generates response + offer
-          const offerText = (recipient as any).offer_template || "";
-          const aiResponse = await callAISeller(sellerInstructions, payload.message, offerText, historyText);
-
-          await sendText(apiUrl, apiToken, normalizedPhone, aiResponse);
-
-          const sentAt = new Date().toISOString();
-          await supabase.from("mass_broadcast_conversation_messages").insert({
-            company_id: payload.companyId,
-            campaign_id: (conversation as any).campaign_id,
-            conversation_id: (conversation as any).id,
-            recipient_id: (conversation as any).recipient_id,
-            phone: normalizedPhone, normalized_phone: normalizedPhone,
-            direction: "outbound", sender_type: "bot", source: "ai_seller",
-            message_type: "text", message: aiResponse,
-            delivery_status: "sent", created_at: sentAt,
-          });
-
-          // Move to "conversing" step
-          const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-          await supabase.from("mass_broadcast_recipients")
-            .update({ current_step: "conversing", sent_offer_at: sentAt, last_attempt_at: sentAt, next_action_at: nextAction, error_message: null })
-            .eq("id", (recipient as any).id);
-
-          await supabase.from("mass_broadcast_conversations")
-            .update({ conversation_status: "bot_active", last_outgoing_at: sentAt, last_message_at: sentAt })
-            .eq("id", (conversation as any).id);
-
-          await supabase.from("mass_broadcast_logs").insert({
-            campaign_id: (conversation as any).campaign_id,
-            recipient_id: (recipient as any).id,
-            company_id: payload.companyId, phone: normalizedPhone,
-            step: "ai_offer_reply", status: "success",
-            message: aiResponse, error_message: null,
-          });
-
-          aiHandled = true;
-        } else if ((recipient as any).current_step === "conversing" || (recipient as any).current_step === "done") {
-          // Follow-up question or post-offer reply → AI responds to keep conversation alive
-          const aiReply = await callAIFollowUp(sellerInstructions, payload.message, historyText);
-
-          if (aiReply) {
-            await sendText(apiUrl, apiToken, normalizedPhone, aiReply);
-
-            const sentAt = new Date().toISOString();
-            await supabase.from("mass_broadcast_conversation_messages").insert({
-              company_id: payload.companyId,
-              campaign_id: (conversation as any).campaign_id,
-              conversation_id: (conversation as any).id,
-              recipient_id: (conversation as any).recipient_id,
-              phone: normalizedPhone, normalized_phone: normalizedPhone,
-              direction: "outbound", sender_type: "bot", source: "ai_seller",
-              message_type: "text", message: aiReply,
-              delivery_status: "sent", created_at: sentAt,
-            });
-
-            await supabase.from("mass_broadcast_conversations")
-              .update({ conversation_status: "bot_active", last_outgoing_at: sentAt, last_message_at: sentAt })
-              .eq("id", (conversation as any).id);
-
-            // If was "done", reactivate to "conversing" so bot keeps responding
-            if ((recipient as any).current_step === "done") {
-              await supabase.from("mass_broadcast_recipients")
-                .update({ current_step: "conversing", status: "processing", last_attempt_at: sentAt, next_action_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
-                .eq("id", (recipient as any).id);
-            } else {
-              // Extend timeout
-              const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-              await supabase.from("mass_broadcast_recipients")
-                .update({ last_attempt_at: sentAt, next_action_at: nextAction })
-                .eq("id", (recipient as any).id);
-            }
-
-            // Log AI follow-up response
-            await supabase.from("mass_broadcast_logs").insert({
-              campaign_id: (conversation as any).campaign_id,
-              recipient_id: (recipient as any).id,
-              company_id: payload.companyId, phone: normalizedPhone,
-              step: "ai_offer_reply", status: "success",
-              message: aiReply, error_message: null,
-            });
-
-            aiHandled = true;
-          }
-        }
-      }
-    } catch (e) {
-      console.error("AI seller error:", e);
     }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await supabase.from("mass_broadcast_logs").insert({
+      campaign_id: recipient.campaign_id,
+      recipient_id: recipient.id,
+      company_id: payload.companyId,
+      phone: normalizedPhone,
+      step: "ai_error",
+      status: "error",
+      message: `❌ Erro ao responder ${normalizedPhone} via IA.`,
+      error_message: errorMessage,
+    });
+    console.error("AI seller error:", error);
   }
 
   return {
-    conversation_status: isHumanTakeover ? "human_takeover" : aiHandled ? "bot_active" : nextStatus,
+    conversation_status: aiHandled ? "bot_active" : nextStatus,
     ai_handled: aiHandled,
   };
 }
