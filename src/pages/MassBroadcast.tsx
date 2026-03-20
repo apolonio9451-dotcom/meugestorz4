@@ -1376,13 +1376,13 @@ export default function MassBroadcast() {
                                   max={campaign.total_recipients - campaign.processed_recipients}
                                   value={batchLimits[campaign.id] ?? Math.min(50, campaign.total_recipients - campaign.processed_recipients)}
                                   onChange={(e) => setBatchLimits((prev) => ({ ...prev, [campaign.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                                  className="w-full box-border font-mono"
+                                  className="w-full box-border mb-[15px] sm:mb-0 font-mono"
                                   placeholder="50"
                                 />
                               </div>
                               {campaign.status === "queued" || campaign.status === "running" ? (
                                 <Button
-                                  className="w-full sm:w-auto gap-2 bg-warning/90 hover:bg-warning text-warning-foreground shadow-[0_0_16px_-6px_hsl(var(--warning)/0.6)]"
+                                  className="w-full sm:w-auto my-[5px] gap-2 bg-warning/90 hover:bg-warning text-warning-foreground shadow-[0_0_16px_-6px_hsl(var(--warning)/0.6)]"
                                   onClick={() => void handlePauseCampaign(campaign.id)}
                                 >
                                   <PauseCircle className="h-4 w-4" />
@@ -1390,7 +1390,7 @@ export default function MassBroadcast() {
                                 </Button>
                               ) : (
                                 <Button
-                                  className="w-full sm:w-auto gap-2 bg-[hsl(140,80%,45%)] hover:bg-[hsl(140,80%,40%)] text-white shadow-[0_0_20px_-6px_hsl(140,80%,45%,0.7)]"
+                                  className="w-full sm:w-auto my-[5px] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_20px_-6px_hsl(var(--success)/0.7)]"
                                   disabled={startingCampaignId === campaign.id || campaign.processed_recipients >= campaign.total_recipients}
                                   onClick={() => void handleStartBatch(campaign.id)}
                                 >
@@ -1401,7 +1401,7 @@ export default function MassBroadcast() {
                             </div>
                             {/* Session counter */}
                             {sessionStartCounts[campaign.id] !== undefined && (
-                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex items-center justify-between gap-2">
+                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between">
                                 <span className="text-xs text-muted-foreground">Enviados nesta sessão:</span>
                                 <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-sm">
                                   {Math.max(0, campaign.processed_recipients - (sessionStartCounts[campaign.id] || 0))} / {batchLimits[campaign.id] ?? 50}
