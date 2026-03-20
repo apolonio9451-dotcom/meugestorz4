@@ -691,7 +691,7 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-[100vw] overflow-x-hidden space-y-4 px-3 sm:px-4 box-border">
+      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
           <div className="flex items-center gap-2">
@@ -790,7 +790,7 @@ export default function MassBroadcast() {
                         value={sellerInstructions}
                         onChange={(e) => setSellerInstructions(e.target.value)}
                         placeholder="Ex: Você é um vendedor simpático da Meu Gestor, focado em planos de streaming. Seja direto e convincente."
-                        className="min-h-[100px] border-primary/20 focus:border-primary/40"
+                        className="w-full box-border mb-4 min-h-[6.25rem] border-primary/20 focus:border-primary/40"
                       />
                       <p className="text-[10px] text-muted-foreground">A IA usará estas instruções para gerar respostas naturais e fechar vendas.</p>
                     </div>
@@ -839,8 +839,8 @@ export default function MassBroadcast() {
                         )}
                         {savedTemplates.length < MAX_TEMPLATES && (
                           <div className="space-y-2">
-                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="min-h-[100px] border-dashed border-primary/20 focus:border-primary/40" />
-                            <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="gap-2 border-primary/30 hover:bg-primary/10">
+                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="w-full box-border mb-4 min-h-[6.25rem] border-dashed border-primary/20 focus:border-primary/40" />
+                            <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="w-full sm:w-auto my-[5px] gap-2 border-primary/30 hover:bg-primary/10">
                               <Plus className="h-4 w-4" />
                               Salvar Modelo ({savedTemplates.length + 1}/{MAX_TEMPLATES})
                             </Button>
@@ -863,21 +863,21 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border mb-4" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm w-full box-border" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="w-full box-border mb-4 min-h-[8.75rem] font-mono text-sm" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                     </p>
                     <div className="flex flex-col gap-3 w-full sm:flex-row sm:flex-wrap">
-                      <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="w-full sm:w-auto sm:min-w-[200px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
+                      <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="w-full sm:w-auto sm:min-w-[200px] my-[5px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
                         Criar Campanha
                       </Button>
-                      <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto gap-2">
+                      <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto my-[5px] gap-2">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                         Atualizar
                       </Button>
@@ -889,15 +889,14 @@ export default function MassBroadcast() {
               {/* Right Column: Dashboard */}
               <div className="space-y-6">
                 {/* Progress Stats (global) */}
-                <Card className="relative overflow-hidden border-primary/15 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
-                  <CardHeader className="relative pb-3">
+                <Card className="border-primary/15 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
+                  <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base text-foreground">
                       <Radio className="h-4 w-4 text-primary" />
                       Resumo Global
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="relative space-y-4">
+                  <CardContent className="space-y-4">
                     <div className="grid gap-3 grid-cols-2">
                       {[
                         { label: "Campanhas", value: campaigns.length, cls: "text-foreground" },
@@ -967,17 +966,22 @@ export default function MassBroadcast() {
           <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0">
             {/* Sticky API toggle + title */}
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 px-1 border-b border-border/20">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="flex items-center gap-2 rounded-lg border border-border/30 bg-muted/20 px-3 py-1.5">
-                    <div className={`h-2 w-2 rounded-full shrink-0 ${globalEnabled ? "bg-primary animate-pulse" : "bg-muted-foreground/30"}`} />
-                    <Label htmlFor="master-switch-lib" className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">Disparo</Label>
-                    <Switch id="master-switch-lib" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} />
-                  </div>
-                  <Button variant="outline" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-8 w-8">
+                <div className="flex w-full sm:w-auto items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={globalEnabled ? "default" : "outline"}
+                    onClick={() => void handleToggleGlobal(!globalEnabled)}
+                    disabled={savingToggle}
+                    className="w-full sm:w-auto my-[5px] gap-2"
+                  >
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${globalEnabled ? "bg-primary-foreground" : "bg-muted-foreground/60"}`} />
+                    {globalEnabled ? "Pausar API" : "Ativar API"}
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-8 w-8 shrink-0">
                     <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
                   </Button>
                 </div>
@@ -1052,18 +1056,18 @@ export default function MassBroadcast() {
                           if (!recipients) void loadCampaignRecipients(campaign.id);
                         }}
                       >
-                        <div className="flex flex-1 items-center gap-4 text-left">
+                        <div className="flex flex-1 flex-col items-start gap-3 text-left sm:flex-row sm:items-center sm:gap-4 min-w-0">
                           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/30 bg-muted/20 ${statusMeta.cls}`}>
                             <StatusIconComp className="h-5 w-5" />
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 w-full">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold text-foreground truncate">{campaign.name}</p>
                               <Badge variant="outline" className={`text-[10px] shrink-0 ${campaign.status === "completed" ? "border-primary/30 bg-primary/10 text-primary" : campaign.status === "running" ? "border-warning/30 bg-warning/10 text-warning" : "border-border/40 text-muted-foreground"}`}>
                                 {statusLabel[campaign.status] || campaign.status}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-3 mt-1.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 mt-1.5 w-full">
                               <span className="text-[11px] text-muted-foreground">
                                 {new Date(campaign.created_at).toLocaleDateString("pt-BR")}
                               </span>
@@ -1071,7 +1075,7 @@ export default function MassBroadcast() {
                               <span className="text-[11px] font-medium text-foreground">
                                 {campaign.processed_recipients}/{campaign.total_recipients} enviados
                               </span>
-                              <div className="flex-1 max-w-[120px]">
+                              <div className="w-full sm:max-w-[7.5rem]">
                                 <Progress value={progress} className="h-1.5" />
                               </div>
                             </div>
@@ -1129,7 +1133,7 @@ export default function MassBroadcast() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
                               onClick={() => {
                                 if (isEditing) {
                                   setEditingCampaignId(null);
@@ -1146,7 +1150,7 @@ export default function MassBroadcast() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
                               disabled={duplicatingCampaignId === campaign.id}
                               onClick={() => void handleDuplicateCampaign(campaign)}
                             >
@@ -1164,7 +1168,7 @@ export default function MassBroadcast() {
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2 border-warning/30 text-warning hover:bg-warning/10">
+                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-warning/30 text-warning hover:bg-warning/10">
                                   <RefreshCw className="h-3.5 w-3.5" />
                                   Resetar Fila
                                 </Button>
@@ -1186,7 +1190,7 @@ export default function MassBroadcast() {
                             </AlertDialog>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
+                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
                                   {deletingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                                   Excluir
                                 </Button>
@@ -1212,8 +1216,8 @@ export default function MassBroadcast() {
                           {isEditing && (
                             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                               <Label>Editar números (um por linha)</Label>
-                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="min-h-[120px] font-mono text-sm w-full box-border" />
-                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="gap-2 w-full sm:w-auto">
+                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="w-full box-border mb-4 min-h-[7.5rem] font-mono text-sm" />
+                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="w-full sm:w-auto my-[5px] gap-2">
                                 <Save className="h-4 w-4" />
                                 Salvar Alterações
                               </Button>
