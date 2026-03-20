@@ -1106,7 +1106,8 @@ export default function MassBroadcast() {
                             </div>
                           ) : recipients ? (
                             <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
-                              <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
+                              {/* Desktop table header */}
+                              <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
                                 <span>Status</span>
                                 <span>Modelo</span>
@@ -1120,38 +1121,75 @@ export default function MassBroadcast() {
                                 const isNotInterested = r.current_step === "not_interested";
                                 const isBotTyping = isHot && r.status === "processing";
                                 return (
-                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
-                                    <div className="min-w-0">
-                                      <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
-                                      {r.error_message && !isNotInterested && (
-                                        <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      {isHot && (
-                                        <span className="relative flex h-2.5 w-2.5 shrink-0">
-                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-                                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
-                                        </span>
-                                      )}
-                                      <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
-                                      <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
-                                      {isBotTyping && (
-                                        <span className="flex items-center gap-1 ml-1">
-                                          <span className="relative flex h-2 w-2 shrink-0">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                  <div key={r.id} className={`border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
+                                    {/* Mobile card layout */}
+                                    <div className="sm:hidden p-3 space-y-1.5">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-mono text-foreground">{r.phone}</span>
+                                        <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1">
+                                          <ExternalLink className="h-4 w-4" />
+                                        </a>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        {isHot && (
+                                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
                                           </span>
-                                          <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
-                                        </span>
+                                        )}
+                                        <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
+                                        <span className={`text-[11px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
+                                        {isBotTyping && (
+                                          <span className="flex items-center gap-1 ml-1">
+                                            <span className="relative flex h-2 w-2 shrink-0">
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                                              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                            </span>
+                                            <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] max-w-full truncate">
+                                        {r.offer_template?.substring(0, 40)}...
+                                      </Badge>
+                                      {r.error_message && !isNotInterested && (
+                                        <span className="text-[10px] text-destructive line-clamp-1 block" title={r.error_message}>❌ {r.error_message}</span>
                                       )}
                                     </div>
-                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
-                                      {r.offer_template?.substring(0, 25)}...
-                                    </Badge>
-                                    <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
-                                      <ExternalLink className="h-3.5 w-3.5" />
-                                    </a>
+                                    {/* Desktop grid layout */}
+                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5">
+                                      <div className="min-w-0">
+                                        <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
+                                        {r.error_message && !isNotInterested && (
+                                          <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        {isHot && (
+                                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
+                                          </span>
+                                        )}
+                                        <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
+                                        <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
+                                        {isBotTyping && (
+                                          <span className="flex items-center gap-1 ml-1">
+                                            <span className="relative flex h-2 w-2 shrink-0">
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                                              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                            </span>
+                                            <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
+                                        {r.offer_template?.substring(0, 25)}...
+                                      </Badge>
+                                      <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                      </a>
+                                    </div>
                                   </div>
                                 );
                               })}
