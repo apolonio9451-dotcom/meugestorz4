@@ -668,18 +668,18 @@ export default function MassBroadcast() {
         </div>
 
         <Tabs defaultValue="config" className="space-y-4">
-          <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl">
-            <TabsTrigger value="config" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)]">
-              <Rocket className="h-4 w-4" />
-              Nova Campanha
+          <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl w-full flex">
+            <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+              <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">Nova</span>
             </TabsTrigger>
-            <TabsTrigger value="library" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)]">
-              <Radio className="h-4 w-4" />
-              Campanhas ({campaigns.length})
+            <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+              <Radio className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">Campanhas ({campaigns.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="monitor" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)]">
-              <MessageSquareMore className="h-4 w-4" />
-              Monitor
+            <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+              <MessageSquareMore className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="truncate">Monitor</span>
             </TabsTrigger>
           </TabsList>
 
