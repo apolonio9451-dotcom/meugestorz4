@@ -184,7 +184,9 @@ const logStepLabel: Record<string, string> = {
   greeting: "Saudação enviada",
   offer: "Oferta enviada",
   offer_timeout: "Oferta (timeout)",
+  ai_processing: "IA processando",
   ai_offer_reply: "IA respondeu com oferta",
+  ai_error: "Erro da IA",
   not_interested: "Cliente não interessado",
 };
 
@@ -208,6 +210,7 @@ export default function MassBroadcast() {
   const { effectiveCompanyId: companyId, user } = useAuth();
   const audioInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
 
   // Global controls
   const [globalEnabled, setGlobalEnabled] = useState(false);
@@ -270,6 +273,11 @@ export default function MassBroadcast() {
 
   const activeLogs = useMemo(
     () => logs.slice(0, 20),
+    [logs],
+  );
+
+  const campaignRealtimeLogs = useMemo(
+    () => logs.filter((log) => ["ai_processing", "ai_offer_reply", "ai_error"].includes(log.step)).slice(0, 12),
     [logs],
   );
 
@@ -353,6 +361,22 @@ export default function MassBroadcast() {
     }
   }, [companyId]);
 
+  const scheduleRealtimeSync = useCallback((options?: { withMonitor?: boolean; withRecipients?: boolean }) => {
+    if (realtimeRefreshTimerRef.current !== null) {
+      window.clearTimeout(realtimeRefreshTimerRef.current);
+    }
+
+    realtimeRefreshTimerRef.current = window.setTimeout(() => {
+      void loadData();
+      if (options?.withMonitor) {
+        void loadConversationMonitor();
+      }
+      if (options?.withRecipients) {
+        Object.keys(expandedCampaignRecipients).forEach((campaignId) => void loadCampaignRecipients(campaignId));
+      }
+    }, 180);
+  }, [expandedCampaignRecipients, loadCampaignRecipients, loadConversationMonitor, loadData]);
+
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void loadConversationMonitor(); }, [loadConversationMonitor]);
 
@@ -360,19 +384,21 @@ export default function MassBroadcast() {
     if (!companyId) return;
     const channel = supabase
       .channel(`mass-broadcast-${companyId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => { void loadData(); void loadConversationMonitor(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_recipients", filter: `company_id=eq.${companyId}` }, () => {
-        void loadData();
-        // Refresh expanded recipients in library tab
-        Object.keys(expandedCampaignRecipients).forEach((cid) => void loadCampaignRecipients(cid));
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversations", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
+      .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withMonitor: true }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_recipients", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withRecipients: true }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversations", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withMonitor: true }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withMonitor: true }))
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [companyId, loadConversationMonitor, loadData, expandedCampaignRecipients, loadCampaignRecipients]);
+
+    return () => {
+      if (realtimeRefreshTimerRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimerRef.current);
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [companyId, scheduleRealtimeSync]);
 
   /* ─── Handlers ─── */
   const handleToggleGlobal = async (checked: boolean) => {
@@ -925,13 +951,19 @@ export default function MassBroadcast() {
                         activeLogs.map((log) => {
                           const time = new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                           const stepDesc = logStepLabel[log.step] || log.step;
-                          const isError = log.status !== "success";
-                          const phoneMasked = log.phone.length > 5 ? `${log.phone.slice(0, 5)}...` : log.phone;
+                          const isProcessing = log.status === "processing" || log.step === "ai_processing";
+                          const isError = log.status === "error" || Boolean(log.error_message);
+                          const fallbackMessage = isProcessing
+                            ? `🤖 Robô processando resposta para ${log.phone}...`
+                            : isError
+                              ? `❌ Falha ao responder ${log.phone}.`
+                              : `✅ ${stepDesc} para ${log.phone}`;
+                          const displayMessage = log.message?.trim() || fallbackMessage;
                           return (
-                            <div key={log.id} className={`flex gap-2 ${isError ? "text-red-400" : "text-emerald-400"}`}>
+                            <div key={log.id} className={`flex gap-2 ${isError ? "text-destructive" : isProcessing ? "text-warning" : "text-primary"}`}>
                               <span className="text-muted-foreground/50 shrink-0">[{time}]</span>
-                              <span>{isError ? "❌" : "✅"} {stepDesc} para {phoneMasked}</span>
-                              {log.error_message && <span className="text-red-500/70 truncate">— {log.error_message}</span>}
+                              <span className="truncate">{displayMessage}</span>
+                              {log.error_message && <span className="text-destructive/80 truncate">— {log.error_message}</span>}
                             </div>
                           );
                         })
@@ -954,6 +986,40 @@ export default function MassBroadcast() {
                 <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               </Button>
             </div>
+
+            <Card className="border-border/30 bg-card/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm text-foreground">
+                  <Bot className="h-4 w-4 text-primary" />
+                  Status em tempo real da IA
+                </CardTitle>
+                <CardDescription>Monitoramento instantâneo da resposta automática por contato.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-xl border border-border/30 bg-muted/20 p-3 max-h-[220px] overflow-y-auto font-mono text-[11px] space-y-1">
+                  {campaignRealtimeLogs.length === 0 ? (
+                    <p className="text-muted-foreground/70">Aguardando atividade da IA...</p>
+                  ) : (
+                    campaignRealtimeLogs.map((log) => {
+                      const isProcessing = log.status === "processing" || log.step === "ai_processing";
+                      const isError = log.status === "error" || Boolean(log.error_message);
+                      const lineMessage = log.message?.trim() || (isProcessing
+                        ? `🤖 Robô processando resposta para ${log.phone}...`
+                        : isError
+                          ? `❌ Falha ao responder ${log.phone}`
+                          : `✅ Resposta enviada com sucesso para ${log.phone}`);
+
+                      return (
+                        <div key={log.id} className={`flex items-start gap-2 ${isError ? "text-destructive" : isProcessing ? "text-warning" : "text-primary"}`}>
+                          <span className="text-muted-foreground/60 shrink-0">[{new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}]</span>
+                          <span className="break-words">{lineMessage}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {campaigns.length === 0 ? (
               <Card className="border-dashed border-border/40 bg-muted/10">
