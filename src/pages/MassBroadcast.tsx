@@ -1291,7 +1291,7 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: MONITOR DE CONVERSAS ═══ */}
-          <TabsContent value="monitor" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
+          <TabsContent value="monitor" className="space-y-6 w-full max-w-full overflow-x-hidden px-0 min-w-0">
             <Card className="border-border/30 bg-card/80 backdrop-blur">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
