@@ -134,47 +134,6 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             </p>
           </div>
 
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-[0_0_24px_-12px_hsl(var(--primary)/0.65)] space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="overdue-charge-pause" className="text-sm font-semibold text-foreground">
-                  Ativar Pausa Automática
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Interrompe a cobrança diária de clientes vencidos há muito tempo sem alterar a categoria deles.
-                </p>
-              </div>
-              <Switch
-                id="overdue-charge-pause"
-                checked={overdueChargePauseEnabled}
-                onCheckedChange={setOverdueChargePauseEnabled}
-                aria-label="Ativar pausa automática"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="overdue-charge-pause-days" className="text-sm font-semibold text-foreground">
-                Pausar após (dias)
-              </Label>
-              <Input
-                id="overdue-charge-pause-days"
-                type="number"
-                min={1}
-                max={90}
-                step={1}
-                value={overdueChargePauseDays}
-                disabled={!overdueChargePauseEnabled}
-                onChange={(e) => setOverdueChargePauseDays(clampPauseDays(Number(e.target.value || 10)))}
-                placeholder="10"
-                className="max-w-[180px] bg-background/70 border-border"
-              />
-              <p className="text-xs text-muted-foreground">
-                {overdueChargePauseEnabled
-                  ? `Clientes vencidos há mais de ${overdueChargePauseDays} dias ficarão com a cobrança automática pausada.`
-                  : "A pausa automática está desativada; clientes vencidos continuarão elegíveis para cobrança diária."}
-              </p>
-            </div>
-          </div>
 
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving}>
