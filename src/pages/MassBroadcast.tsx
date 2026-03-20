@@ -236,6 +236,9 @@ export default function MassBroadcast() {
   const [editPhoneInput, setEditPhoneInput] = useState("");
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | null>(null);
+  const [batchLimits, setBatchLimits] = useState<Record<string, number>>({});
+  const [sessionStartCounts, setSessionStartCounts] = useState<Record<string, number>>({});
+  const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
 
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
