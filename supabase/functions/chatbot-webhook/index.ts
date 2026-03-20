@@ -506,7 +506,7 @@ async function recordMassBroadcastIncoming(
         .select("id, current_step, offer_template, campaign_id")
         .eq("campaign_id", (conversation as any).campaign_id)
         .eq("normalized_phone", normalizedPhone)
-        .in("current_step", ["awaiting_reply", "conversing", "done"])
+        .in("current_step", ["greeting", "awaiting_reply", "conversing", "done"])
         .maybeSingle();
 
       if (recipient) {
@@ -516,7 +516,8 @@ async function recordMassBroadcastIncoming(
           .eq("id", (conversation as any).campaign_id)
           .single();
 
-        const sellerInstructions = (campaign as any)?.seller_instructions || "";
+        const DEFAULT_SELLER_INSTRUCTIONS = "Você é um assistente de vendas educado. Seu objetivo é conversar com o cliente e apresentar a oferta da campanha de forma natural.";
+        const sellerInstructions = (campaign as any)?.seller_instructions?.trim() || DEFAULT_SELLER_INSTRUCTIONS;
 
         // Build conversation history
         const { data: history } = await supabase
