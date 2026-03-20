@@ -844,33 +844,33 @@ export default function MassBroadcast() {
                             </div>
                           </div>
 
-                          {/* START + BATCH */}
-                          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-3">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                                <Rocket className="h-3.5 w-3.5 text-primary" /> Enviar agora (Qtd)
-                              </Label>
-                              <Input type="number" min={1} max={camp.total_recipients - camp.processed_recipients}
-                                value={batchLimits[camp.id] ?? Math.min(50, camp.total_recipients - camp.processed_recipients)}
-                                onChange={e => setBatchLimits(p => ({ ...p, [camp.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                                className="w-full font-mono" placeholder="50" />
+                          {/* START + BATCH — compact: Qtd + button on same row */}
+                          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <Label className="text-[10px] font-semibold text-muted-foreground">Qtd</Label>
+                                <Input type="number" min={1} max={camp.total_recipients - camp.processed_recipients}
+                                  value={batchLimits[camp.id] ?? Math.min(50, camp.total_recipients - camp.processed_recipients)}
+                                  onChange={e => setBatchLimits(p => ({ ...p, [camp.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                  className="w-full font-mono h-[3rem]" placeholder="50" />
+                              </div>
+                              {isActive ? (
+                                <Button className="shrink-0 min-h-[3rem] gap-2 bg-warning/90 hover:bg-warning text-warning-foreground px-4" onClick={() => void handlePause(camp.id)}>
+                                  <PauseCircle className="h-4 w-4" /> ⏸️ Pausar
+                                </Button>
+                              ) : (
+                                <Button className="shrink-0 min-h-[3rem] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)] px-4"
+                                  disabled={startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
+                                  onClick={() => void handleStartBatch(camp.id)}>
+                                  {startingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? <Play className="h-4 w-4" /> : <Rocket className="h-4 w-4" />}
+                                  {camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? "▶️ Continuar" : "🚀 Iniciar"}
+                                </Button>
+                              )}
                             </div>
-                            {isActive ? (
-                              <Button className="w-full min-h-[3rem] gap-2 bg-warning/90 hover:bg-warning text-warning-foreground" onClick={() => void handlePause(camp.id)}>
-                                <PauseCircle className="h-4 w-4" /> Pausar Disparos
-                              </Button>
-                            ) : (
-                              <Button className="w-full min-h-[3rem] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)]"
-                                disabled={startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
-                                onClick={() => void handleStartBatch(camp.id)}>
-                                {startingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-                                🚀 Iniciar Disparos
-                              </Button>
-                            )}
                             {sessionStarts[camp.id] !== undefined && (
-                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex items-center justify-between gap-2">
-                                <span className="text-xs text-muted-foreground">Sessão:</span>
-                                <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-sm">
+                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-1.5 flex items-center justify-between gap-2">
+                                <span className="text-[10px] text-muted-foreground">Sessão:</span>
+                                <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-xs">
                                   {Math.max(0, camp.processed_recipients - (sessionStarts[camp.id] || 0))} / {batchLimits[camp.id] ?? 50}
                                 </Badge>
                               </div>
