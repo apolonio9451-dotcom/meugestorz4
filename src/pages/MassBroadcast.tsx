@@ -867,7 +867,7 @@ export default function MassBroadcast() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm max-w-[90vw]" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
