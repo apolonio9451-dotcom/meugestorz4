@@ -506,7 +506,7 @@ async function recordMassBroadcastIncoming(
         .select("id, current_step, offer_template, campaign_id")
         .eq("campaign_id", (conversation as any).campaign_id)
         .eq("normalized_phone", normalizedPhone)
-        .in("current_step", ["awaiting_reply", "conversing"])
+        .in("current_step", ["awaiting_reply", "conversing", "done"])
         .maybeSingle();
 
       if (recipient) {

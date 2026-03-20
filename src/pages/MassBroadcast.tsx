@@ -1127,6 +1127,15 @@ export default function MassBroadcast() {
                                       )}
                                       <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
                                       <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
+                                      {isBotTyping && (
+                                        <span className="flex items-center gap-1 ml-1">
+                                          <span className="relative flex h-2 w-2 shrink-0">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                          </span>
+                                          <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
+                                        </span>
+                                      )}
                                     </div>
                                     <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
                                       {r.offer_template?.substring(0, 25)}...
