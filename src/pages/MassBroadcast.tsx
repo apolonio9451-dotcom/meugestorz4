@@ -458,7 +458,7 @@ export default function MassBroadcast() {
           company_id: companyId,
           created_by: user.id,
           name,
-          status: "queued",
+          status: "paused",
           total_recipients: cleanedPhones.length,
           offer_templates: savedTemplates,
           greeting_templates: ["Olá!", "Tudo bem?", "Bom dia, como vai?"],
