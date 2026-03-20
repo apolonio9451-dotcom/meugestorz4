@@ -792,6 +792,9 @@ export default function Clients() {
       const client = clients.find(c => c.id === clientId);
       await logActivity("renovação", client?.name || "", clientId, `Renovado para dia ${dayOfMonth}${!paid ? " (pgto pendente)" : ""}`);
       toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); fetchActivityLogs();
+      if (client?.whatsapp) {
+        setRenewSuccess({ clientId, clientName: client.name, whatsapp: client.whatsapp, newEndDate: format(newEnd, "dd/MM/yyyy") });
+      }
     }
   };
 
