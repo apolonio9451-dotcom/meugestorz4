@@ -691,7 +691,7 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border">
+      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border min-w-0">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
           <div className="flex items-center gap-2">
@@ -750,24 +750,24 @@ export default function MassBroadcast() {
           </DialogContent>
         </Dialog>
 
-        <Tabs defaultValue="config" className="space-y-4">
-          <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl w-full flex overflow-x-auto max-w-full">
-            <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+        <Tabs defaultValue="config" className="space-y-4 min-w-0">
+          <TabsList className="grid h-auto w-full max-w-full grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-1 backdrop-blur">
+            <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Nova</span>
             </TabsTrigger>
-            <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+            <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <Radio className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Campanhas ({campaigns.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+            <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <MessageSquareMore className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Monitor</span>
             </TabsTrigger>
           </TabsList>
 
           {/* ═══ TAB: NOVA CAMPANHA ═══ */}
-          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
+          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden px-0 min-w-0">
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] w-full max-w-full min-w-0">
               {/* Left Column: Config */}
               <div className="space-y-6">
@@ -790,7 +790,7 @@ export default function MassBroadcast() {
                         value={sellerInstructions}
                         onChange={(e) => setSellerInstructions(e.target.value)}
                         placeholder="Ex: Você é um vendedor simpático da Meu Gestor, focado em planos de streaming. Seja direto e convincente."
-                        className="w-full box-border mb-4 min-h-[6.25rem] border-primary/20 focus:border-primary/40"
+                        className="w-full box-border mb-[15px] min-h-[6.25rem] border-primary/20 focus:border-primary/40"
                       />
                       <p className="text-[10px] text-muted-foreground">A IA usará estas instruções para gerar respostas naturais e fechar vendas.</p>
                     </div>
@@ -839,7 +839,7 @@ export default function MassBroadcast() {
                         )}
                         {savedTemplates.length < MAX_TEMPLATES && (
                           <div className="space-y-2">
-                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="w-full box-border mb-4 min-h-[6.25rem] border-dashed border-primary/20 focus:border-primary/40" />
+                            <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="w-full box-border mb-[15px] min-h-[6.25rem] border-dashed border-primary/20 focus:border-primary/40" />
                             <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="w-full sm:w-auto my-[5px] gap-2 border-primary/30 hover:bg-primary/10">
                               <Plus className="h-4 w-4" />
                               Salvar Modelo ({savedTemplates.length + 1}/{MAX_TEMPLATES})
@@ -851,7 +851,6 @@ export default function MassBroadcast() {
                   </Collapsible>
                 </Card>
 
-                {/* Contact List */}
                 <Card className="border-border/30 bg-card/80 backdrop-blur">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base text-foreground">
@@ -863,11 +862,11 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border mb-4" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border mb-[15px]" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="w-full box-border mb-4 min-h-[8.75rem] font-mono text-sm" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="w-full box-border mb-[15px] min-h-[8.75rem] font-mono text-sm" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
@@ -963,14 +962,14 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
-          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0">
+          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0 min-w-0">
             {/* Sticky API toggle + title */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 px-1 border-b border-border/20">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="sticky top-0 z-10 border-b border-border/20 bg-background/95 px-2.5 py-2.5 backdrop-blur">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
                 </div>
-                <div className="flex w-full sm:w-auto items-center gap-2">
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
                   <Button
                     type="button"
                     variant={globalEnabled ? "default" : "outline"}
@@ -981,8 +980,9 @@ export default function MassBroadcast() {
                     <div className={`h-2 w-2 rounded-full shrink-0 ${globalEnabled ? "bg-primary-foreground" : "bg-muted-foreground/60"}`} />
                     {globalEnabled ? "Pausar API" : "Ativar API"}
                   </Button>
-                  <Button variant="outline" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-8 w-8 shrink-0">
+                  <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto my-[5px] gap-2">
                     <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                    Atualizar
                   </Button>
                 </div>
               </div>
@@ -1071,7 +1071,7 @@ export default function MassBroadcast() {
                               <span className="text-[11px] text-muted-foreground">
                                 {new Date(campaign.created_at).toLocaleDateString("pt-BR")}
                               </span>
-                              <span className="text-[11px] text-muted-foreground">·</span>
+                              <span className="hidden sm:inline text-[11px] text-muted-foreground">·</span>
                               <span className="text-[11px] font-medium text-foreground">
                                 {campaign.processed_recipients}/{campaign.total_recipients} enviados
                               </span>
@@ -1160,7 +1160,7 @@ export default function MassBroadcast() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-2 border-border/40 hover:bg-primary/5"
+                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
                               onClick={() => { setMonitorCampaignId(campaign.id); }}
                             >
                               <MessageSquareMore className="h-3.5 w-3.5" />
@@ -1211,12 +1211,10 @@ export default function MassBroadcast() {
                               </AlertDialogContent>
                             </AlertDialog>
                           </div>
-
-                          {/* Edit mode */}
                           {isEditing && (
                             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                               <Label>Editar números (um por linha)</Label>
-                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="w-full box-border mb-4 min-h-[7.5rem] font-mono text-sm" />
+                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="w-full box-border mb-[15px] min-h-[7.5rem] font-mono text-sm" />
                               <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="w-full sm:w-auto my-[5px] gap-2">
                                 <Save className="h-4 w-4" />
                                 Salvar Alterações
@@ -1230,7 +1228,7 @@ export default function MassBroadcast() {
                               <Loader2 className="h-5 w-5 animate-spin text-primary" />
                             </div>
                           ) : recipients ? (
-                            <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
+                            <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto overflow-x-hidden p-1.5 sm:p-0">
                               {/* Desktop table header */}
                               <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
@@ -1243,9 +1241,9 @@ export default function MassBroadcast() {
                                 const SiComp = si.icon;
                                 const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
                                 return (
-                                  <div key={r.id} className={`border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                  <div key={r.id} className={`transition-colors sm:border-b sm:border-border/20 sm:last:border-0 sm:hover:bg-primary/5 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                     {/* Mobile card layout */}
-                                    <div className="sm:hidden p-3 space-y-1.5 w-full min-w-0">
+                                    <div className="sm:hidden rounded-xl border border-border/20 bg-background/70 p-3 space-y-1.5 w-full min-w-0">
                                       <div className="flex items-center justify-between gap-2 min-w-0">
                                         <span className="text-sm font-mono text-foreground truncate">{r.phone}</span>
                                         <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1 shrink-0">
@@ -1293,7 +1291,7 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: MONITOR DE CONVERSAS ═══ */}
-          <TabsContent value="monitor" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
+          <TabsContent value="monitor" className="space-y-6 w-full max-w-full overflow-x-hidden px-0 min-w-0">
             <Card className="border-border/30 bg-card/80 backdrop-blur">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
@@ -1418,11 +1416,11 @@ export default function MassBroadcast() {
                             <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("audio", e)} />
                             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("image", e)} />
                             <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
-                              <Button variant="outline" onClick={() => audioInputRef.current?.click()} disabled={mediaSending !== null} className="gap-2 border-border/40">
+                              <Button variant="outline" onClick={() => audioInputRef.current?.click()} disabled={mediaSending !== null} className="w-full sm:w-auto my-[5px] gap-2 border-border/40">
                                 {mediaSending === "audio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                                 Áudio
                               </Button>
-                              <Button variant="outline" onClick={() => imageInputRef.current?.click()} disabled={mediaSending !== null} className="gap-2 border-border/40">
+                              <Button variant="outline" onClick={() => imageInputRef.current?.click()} disabled={mediaSending !== null} className="w-full sm:w-auto my-[5px] gap-2 border-border/40">
                                 {mediaSending === "image" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                                 Imagem
                               </Button>
@@ -1430,7 +1428,7 @@ export default function MassBroadcast() {
                                 variant={activeConversation.conversation_status === "human_takeover" ? "secondary" : "default"}
                                 onClick={() => void handleAssumeConversation()}
                                 disabled={takingOverConversationId === activeConversation.id || activeConversation.conversation_status === "human_takeover"}
-                                className="gap-2"
+                                className="w-full sm:w-auto my-[5px] gap-2"
                               >
                                 {takingOverConversationId === activeConversation.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PauseCircle className="h-4 w-4" />}
                                 {activeConversation.conversation_status === "human_takeover" ? "Assumida" : "Assumir"}
