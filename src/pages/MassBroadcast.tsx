@@ -868,33 +868,32 @@ export default function MassBroadcast() {
                   </CardContent>
                 </Card>
 
-                {/* Real-time Log */}
+                {/* Audit Log Console */}
                 <Card className="border-border/30 bg-card/80 backdrop-blur">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base text-foreground">Log em Tempo Real</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                      <Terminal className="h-4 w-4 text-primary" />
+                      Console de Auditoria
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                    <div className="rounded-xl border border-border/30 bg-black/80 p-3 max-h-[320px] overflow-y-auto font-mono text-[11px] leading-relaxed space-y-0.5">
                       {activeLogs.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Sem eventos ainda.</p>
+                        <p className="text-muted-foreground/60">Aguardando eventos...</p>
                       ) : (
-                        activeLogs.map((log) => (
-                          <div key={log.id} className="rounded-xl border border-border/30 bg-muted/15 p-3 hover:border-primary/15 transition-colors">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-foreground font-mono">{log.phone}</p>
-                                <p className="text-[11px] text-muted-foreground">
-                                  {log.step === "greeting" ? "Saudação" : "Modelo"} · {new Date(log.created_at).toLocaleString("pt-BR")}
-                                </p>
-                              </div>
-                              <Badge variant="outline" className={log.status === "success" ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}>
-                                {log.status === "success" ? "✓" : "✗"}
-                              </Badge>
+                        activeLogs.map((log) => {
+                          const time = new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                          const stepDesc = logStepLabel[log.step] || log.step;
+                          const isError = log.status !== "success";
+                          const phoneMasked = log.phone.length > 5 ? `${log.phone.slice(0, 5)}...` : log.phone;
+                          return (
+                            <div key={log.id} className={`flex gap-2 ${isError ? "text-red-400" : "text-emerald-400"}`}>
+                              <span className="text-muted-foreground/50 shrink-0">[{time}]</span>
+                              <span>{isError ? "❌" : "✅"} {stepDesc} para {phoneMasked}</span>
+                              {log.error_message && <span className="text-red-500/70 truncate">— {log.error_message}</span>}
                             </div>
-                            <p className="mt-1.5 line-clamp-2 text-xs text-foreground/80">{log.message}</p>
-                            {log.error_message && <p className="mt-1 text-[11px] text-destructive">{log.error_message}</p>}
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </CardContent>
