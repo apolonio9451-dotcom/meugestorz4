@@ -1154,9 +1154,17 @@ export default function MassBroadcast() {
                                 className={`w-full rounded-xl border p-3 text-left transition-all ${isSel ? "border-primary/30 bg-primary/10 shadow-[0_0_14px_-8px_hsl(var(--primary)/0.6)]" : "border-border/30 bg-background/60 hover:border-primary/15 hover:bg-primary/5"}`}
                               >
                                 <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-foreground">{conv.contact_name || conv.phone}</p>
-                                    <p className="text-[10px] text-muted-foreground font-mono">{conv.phone}</p>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {meta.pulse && conv.has_reply && (
+                                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
+                                      </span>
+                                    )}
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-semibold text-foreground">{conv.contact_name || conv.phone}</p>
+                                      <p className="text-[10px] text-muted-foreground font-mono">{conv.phone}</p>
+                                    </div>
                                   </div>
                                   <Badge variant="outline" className={`${meta.className} text-[10px] shrink-0`}>{meta.label}</Badge>
                                 </div>
