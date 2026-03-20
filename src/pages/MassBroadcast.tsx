@@ -730,6 +730,10 @@ export default function MassBroadcast() {
 
   const handleStartBatch = async (campaignId: string) => {
     if (!companyId) return;
+    if (!broadcastConnected) {
+      toast({ title: "⚠️ Instância de Disparo não conectada!", description: "Por favor, conecte o WhatsApp de disparos primeiro na aba Campanhas.", variant: "destructive" });
+      return;
+    }
     const limit = batchLimits[campaignId] || 50;
     const campaign = campaigns.find((c) => c.id === campaignId);
     if (!campaign) return;
