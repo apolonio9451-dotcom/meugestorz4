@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
           if (!message) throw new Error("Mensagem vazia para este contato.");
 
           const sentAt = new Date().toISOString();
-          await sendText(settings.api_url, settings.api_token, phone, message);
+          await sendText(effectiveUrl, effectiveToken, phone, message);
 
           // Calculate delay for the NEXT recipient in queue
           const delay = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);
