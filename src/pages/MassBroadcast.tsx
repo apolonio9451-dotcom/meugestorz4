@@ -367,8 +367,54 @@ export default function MassBroadcast() {
     try {
       await supabase.from("mass_broadcast_campaigns" as any).update({ status: "paused" }).eq("id", cid);
       await supabase.from("mass_broadcast_recipients" as any).update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() }).eq("campaign_id", cid).eq("status", "pending");
-      toast({ title: "Campanha pausada" }); await loadData();
+      toast({ title: "⏸️ Campanha pausada", description: "Retome de onde parou a qualquer momento." }); await loadData();
     } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
+  };
+
+  const [manualSendingId, setManualSendingId] = useState<string | null>(null);
+
+  const handleManualSend = async (recipient: Recipient, camp: Campaign) => {
+    if (!companyId || manualSendingId) return;
+    if (!bcConnected) { toast({ title: "⚠️ Conecte a instância de disparo primeiro!", variant: "destructive" }); return; }
+    setManualSendingId(recipient.id);
+    try {
+      // Pick a random template from campaign
+      const templates = camp.offer_templates?.length ? camp.offer_templates : savedTemplates;
+      const msg = templates[Math.floor(Math.random() * templates.length)] || recipient.offer_template;
+      if (!msg?.trim()) { toast({ title: "Sem mensagem", variant: "destructive" }); return; }
+
+      // Call the runner-style send via edge function
+      const { data: apiS } = await supabase.from("api_settings" as any).select("api_url, api_token, broadcast_api_url, broadcast_api_token").eq("company_id", companyId).maybeSingle();
+      const settings = apiS as any;
+      const apiUrl = settings?.broadcast_api_url?.trim() || settings?.api_url || "";
+      const apiToken = settings?.broadcast_api_token?.trim() || settings?.api_token || "";
+      if (!apiUrl || !apiToken) { toast({ title: "API não configurada", variant: "destructive" }); return; }
+
+      // Send via whatsapp-send function
+      const phone = recipient.normalized_phone || recipient.phone.replace(/\D/g, "");
+      await supabase.functions.invoke("whatsapp-send", { body: { api_url: apiUrl, api_token: apiToken, phone, message: msg } });
+
+      // Mark as sent
+      await supabase.from("mass_broadcast_recipients" as any).update({
+        status: "sent", current_step: "done", sent_offer_at: new Date().toISOString(),
+        last_attempt_at: new Date().toISOString(), error_message: null,
+        offer_template: msg,
+      }).eq("id", recipient.id);
+
+      await supabase.from("mass_broadcast_campaigns" as any).update({
+        processed_recipients: camp.processed_recipients + 1,
+        success_count: camp.success_count + 1,
+      }).eq("id", camp.id);
+
+      // Update local state
+      setExpandedRecipients(p => ({
+        ...p, [camp.id]: (p[camp.id] || []).map(r => r.id === recipient.id ? { ...r, status: "sent", offer_template: msg } : r),
+      }));
+
+      toast({ title: "✅ Enviado manualmente!" });
+      await loadData();
+    } catch (e: any) { toast({ title: "Erro no envio manual", description: e?.message, variant: "destructive" }); }
+    finally { setManualSendingId(null); }
   };
 
   // Broadcast instance handlers
