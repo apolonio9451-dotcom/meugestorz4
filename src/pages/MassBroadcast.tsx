@@ -691,7 +691,7 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-[100vw] overflow-x-hidden space-y-4 px-3 sm:px-4 box-border">
+      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
           <div className="flex items-center gap-2">
