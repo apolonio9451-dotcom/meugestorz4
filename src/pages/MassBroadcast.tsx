@@ -468,11 +468,8 @@ export default function MassBroadcast() {
         .single();
       if (campaignError) throw campaignError;
 
-      let lastIndex = -1;
-      const recipients = cleanedPhones.map((phone) => {
-        let idx = (lastIndex + 1) % savedTemplates.length;
-        if (savedTemplates.length > 1 && idx === lastIndex) idx = (idx + 1) % savedTemplates.length;
-        lastIndex = idx;
+      const recipients = cleanedPhones.map((phone, index) => {
+        const idx = index % savedTemplates.length;
         return {
           campaign_id: (campaign as any).id,
           company_id: companyId,
