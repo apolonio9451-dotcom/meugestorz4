@@ -696,34 +696,6 @@ export default function MassBroadcast() {
                   </CardContent>
                 </Card>
 
-                {/* Time & Delay Selectors */}
-                <Card className="border-border/30 bg-card/80 backdrop-blur">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
-                      <Clock className="h-4 w-4 text-primary" />
-                      Horário e Delay
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="start-hour">Horário de início</Label>
-                        <Input id="start-hour" type="time" value={startHour} onChange={(e) => setStartHour(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Delay entre mensagens</Label>
-                        <div className="pt-2">
-                          <Slider min={30} max={300} step={5} value={delayRange} onValueChange={(v) => setDelayRange(v as [number, number])} />
-                          <div className="flex justify-between mt-2">
-                            <span className="text-xs text-muted-foreground">Mín: {delayRange[0]}s</span>
-                            <span className="text-xs text-muted-foreground">Máx: {delayRange[1]}s</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* AI Seller Config */}
                 <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
