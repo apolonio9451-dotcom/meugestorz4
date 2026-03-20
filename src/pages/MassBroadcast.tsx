@@ -58,8 +58,12 @@ type MediaKind = "audio" | "image";
 const normalizePhone = (v: string) => v.replace(/\D/g, "");
 const STORAGE_KEY = "mass_broadcast_saved_templates";
 const MAX_TEMPLATES = 10;
+const BATCH_PAUSE_EVERY = 20;
+const BATCH_PAUSE_SECONDS = 300;
 const loadSavedTemplates = (): string[] => { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r).slice(0, MAX_TEMPLATES) : []; } catch { return []; } };
 const saveSavedTemplates = (t: string[]) => localStorage.setItem(STORAGE_KEY, JSON.stringify(t.slice(0, MAX_TEMPLATES)));
+/** Shuffle array (Fisher-Yates) */
+const shuffleArray = <T,>(arr: T[]): T[] => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 const STATUS_LABEL: Record<string, string> = { queued: "Na fila", running: "Rodando", completed: "Concluída", paused: "Aguardando Início" };
 const STATUS_COLOR: Record<string, string> = { queued: "border-warning/30 bg-warning/10 text-warning", running: "border-warning/30 bg-warning/10 text-warning", completed: "border-primary/30 bg-primary/10 text-primary", paused: "border-muted-foreground/30 bg-muted/20 text-muted-foreground" };
