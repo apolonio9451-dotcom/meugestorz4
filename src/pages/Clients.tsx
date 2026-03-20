@@ -13,7 +13,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send, PauseCircle, PlayCircle, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -302,6 +302,43 @@ export default function Clients() {
       openDialog(); // This will restore draft from localStorage
     }
   }, [companyId]); // Only on mount / companyId change
+
+  const [bulkPauseLoading, setBulkPauseLoading] = useState(false);
+
+  const handleBulkPauseAll = async () => {
+    const overdueClients = clients.filter(c => {
+      const d = getClientDays(c.id);
+      return d !== null && d < 0 && !isManualChargePaused(c.charge_pause_until);
+    });
+    if (overdueClients.length === 0) { toast.info("Nenhum cliente vencido para pausar."); return; }
+    setBulkPauseLoading(true);
+    try {
+      const pauseUntil = format(addDays(new Date(), 29), "yyyy-MM-dd");
+      const ids = overdueClients.map(c => c.id);
+      const { error } = await supabase.from("clients").update({ charge_pause_until: pauseUntil, charge_pause_note: "manual:30" } as any).in("id", ids);
+      if (error) throw error;
+      toast.success(`${ids.length} cliente(s) pausados por 30 dias.`);
+      fetchClients();
+    } catch (e: any) { toast.error(e?.message || "Erro ao pausar todos"); }
+    finally { setBulkPauseLoading(false); }
+  };
+
+  const handleBulkResumeAll = async () => {
+    const pausedOverdue = clients.filter(c => {
+      const d = getClientDays(c.id);
+      return d !== null && d < 0 && isManualChargePaused(c.charge_pause_until);
+    });
+    if (pausedOverdue.length === 0) { toast.info("Nenhum cliente pausado para retomar."); return; }
+    setBulkPauseLoading(true);
+    try {
+      const ids = pausedOverdue.map(c => c.id);
+      const { error } = await supabase.from("clients").update({ charge_pause_until: null, charge_pause_note: "resumed:auto", ultimo_envio_auto: null } as any).in("id", ids);
+      if (error) throw error;
+      toast.success(`${ids.length} cliente(s) retomados.`);
+      fetchClients();
+    } catch (e: any) { toast.error(e?.message || "Erro ao retomar todos"); }
+    finally { setBulkPauseLoading(false); }
+  };
 
 
   useEffect(() => {
@@ -1421,6 +1458,32 @@ export default function Clients() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Bulk pause/resume for Vencidos */}
+      {mainFilter === "vencidos" && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={handleBulkPauseAll}
+            disabled={bulkPauseLoading}
+          >
+            {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PauseCircle className="h-3.5 w-3.5" />}
+            Pausar Todos
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={handleBulkResumeAll}
+            disabled={bulkPauseLoading}
+          >
+            {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
+            Retomar Todos
+          </Button>
         </div>
       )}
 
