@@ -613,11 +613,11 @@ export default function MassBroadcast() {
     if (!companyId) return;
     try {
       const { error } = await supabase.from("mass_broadcast_recipients" as any)
-        .update({ status: "pending", current_step: "offer", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date().toISOString() })
+        .update({ status: "pending", current_step: "offer", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() })
         .eq("campaign_id", campaignId);
       if (error) throw error;
       await supabase.from("mass_broadcast_campaigns" as any)
-        .update({ status: "queued", processed_recipients: 0, success_count: 0, failure_count: 0, started_at: null, completed_at: null })
+        .update({ status: "paused", processed_recipients: 0, success_count: 0, failure_count: 0, started_at: null, completed_at: null })
         .eq("id", campaignId);
       toast({ title: "Fila resetada", description: "Todos os contatos voltaram para 'Pendente'." });
       await loadData();
