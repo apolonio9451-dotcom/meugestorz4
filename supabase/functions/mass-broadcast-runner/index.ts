@@ -8,6 +8,7 @@ const corsHeaders = {
 const MAX_PER_RUN = 12;
 const BATCH_PAUSE_EVERY = 20;
 const BATCH_PAUSE_SECONDS = 300;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 type CampaignRow = {
   id: string;
