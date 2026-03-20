@@ -323,6 +323,26 @@ function parseAiCommands(text: string): AiCommandResult {
   return { cleanText, commands };
 }
 
+async function detectNegativeIntent(message: string): Promise<boolean> {
+  const negativePatterns = [
+    /\bn[aã]o\s+(quero|preciso|obrigad|interess)/i,
+    /\bpar[ea]m?\b/i,
+    /\bpare\s+de\b/i,
+    /\bparem\s+de\b/i,
+    /\bn[aã]o\s+me\s+(mandem?|envie|mande)/i,
+    /\bbloque/i,
+    /\bdesinscreve/i,
+    /\bsair\s+da\s+lista/i,
+    /\bremov[ea]/i,
+    /\bn[aã]o\s+tenho\s+interesse/i,
+    /\bchato/i,
+    /\bspam/i,
+    /\bincomod/i,
+  ];
+  const lower = message.toLowerCase().trim();
+  return negativePatterns.some((p) => p.test(lower));
+}
+
 async function callAISeller(
   sellerInstructions: string,
   clientMessage: string,
