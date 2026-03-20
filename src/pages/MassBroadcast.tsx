@@ -351,11 +351,16 @@ export default function MassBroadcast() {
       .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => void loadData())
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => { void loadData(); void loadConversationMonitor(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => void loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_recipients", filter: `company_id=eq.${companyId}` }, () => {
+        void loadData();
+        // Refresh expanded recipients in library tab
+        Object.keys(expandedCampaignRecipients).forEach((cid) => void loadCampaignRecipients(cid));
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversations", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [companyId, loadConversationMonitor, loadData]);
+  }, [companyId, loadConversationMonitor, loadData, expandedCampaignRecipients, loadCampaignRecipients]);
 
   /* ─── Handlers ─── */
   const handleToggleGlobal = async (checked: boolean) => {
