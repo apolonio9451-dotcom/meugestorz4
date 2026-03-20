@@ -889,15 +889,14 @@ export default function MassBroadcast() {
               {/* Right Column: Dashboard */}
               <div className="space-y-6">
                 {/* Progress Stats (global) */}
-                <Card className="relative overflow-hidden border-primary/15 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
-                  <CardHeader className="relative pb-3">
+                <Card className="border-primary/15 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
+                  <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base text-foreground">
                       <Radio className="h-4 w-4 text-primary" />
                       Resumo Global
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="relative space-y-4">
+                  <CardContent className="space-y-4">
                     <div className="grid gap-3 grid-cols-2">
                       {[
                         { label: "Campanhas", value: campaigns.length, cls: "text-foreground" },
