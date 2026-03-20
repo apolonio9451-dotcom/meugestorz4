@@ -98,7 +98,7 @@ export default function MassBroadcast() {
   const [refreshing, setRefreshing] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
-  const [delayRange, setDelayRange] = useState<[number, number]>([60, 120]);
+  const [delayRange, setDelayRange] = useState<[number, number]>([15, 45]);
   const [savedTemplates, setSavedTemplates] = useState<string[]>(loadSavedTemplates);
   const [editingTemplate, setEditingTemplate] = useState("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
