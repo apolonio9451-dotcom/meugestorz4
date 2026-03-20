@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Rocket,
   Save,
+  Smartphone,
   Terminal,
   Timer,
   Trash2,
