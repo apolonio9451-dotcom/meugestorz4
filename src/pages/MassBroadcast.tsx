@@ -872,24 +872,24 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border min-w-0">
+      <div className="w-full max-w-[100vw] min-w-0 overflow-x-hidden p-[10px] sm:p-4 box-border space-y-4">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-foreground">SPECIAL · Disparo</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-xl font-bold text-foreground truncate">SPECIAL · Disparo</h1>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="rounded-full p-1.5 hover:bg-muted/40 transition-colors">
                   <Info className="h-4 w-4 text-muted-foreground" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="bottom" align="start" className="max-w-[300px] text-xs text-muted-foreground">
+              <PopoverContent side="bottom" align="start" className="max-w-[18.75rem] text-xs text-muted-foreground">
                 <p className="font-semibold text-foreground mb-1">Disparo em Massa</p>
                 <p>Simulação humana com rotação inteligente de mensagens. Atendimento IA automático quando o cliente responde. Use com moderação.</p>
               </PopoverContent>
             </Popover>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${globalEnabled ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-muted-foreground/30"}`} />
             <Label htmlFor="master-switch-top" className="text-xs font-medium text-muted-foreground hidden sm:inline">API</Label>
             <Switch id="master-switch-top" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} />
@@ -939,7 +939,8 @@ export default function MassBroadcast() {
             </TabsTrigger>
             <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <Radio className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-              <span className="truncate">Campanhas ({campaigns.length})</span>
+              <span className="truncate sm:hidden">Campanhas</span>
+              <span className="hidden sm:inline truncate">Campanhas ({campaigns.length})</span>
             </TabsTrigger>
             <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <MessageSquareMore className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
@@ -1139,32 +1140,32 @@ export default function MassBroadcast() {
             </div>
 
             {/* ═══ BROADCAST INSTANCE CONNECTION ═══ */}
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="broadcast-connection" className="rounded-xl border border-border/30 bg-card/80 backdrop-blur overflow-hidden">
+            <Accordion type="single" collapsible className="w-full min-w-0">
+              <AccordionItem value="broadcast-connection" className="min-w-0 rounded-xl border border-border/30 bg-card/80 backdrop-blur overflow-hidden">
                 <AccordionTrigger className="px-3.5 py-3 hover:no-underline hover:bg-primary/5 transition-colors">
-                  <div className="flex items-center gap-3 w-full">
+                  <div className="flex w-full min-w-0 items-center gap-2 pr-2">
                     <div className={`h-3 w-3 rounded-full shrink-0 ${broadcastConnected ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-destructive shadow-[0_0_8px_hsl(var(--destructive)/0.5)]"}`} />
                     <Smartphone className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-foreground">Instância de Disparo</span>
-                    <Badge variant="outline" className={`ml-auto mr-2 text-[10px] ${broadcastConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                    <span className="truncate text-sm font-semibold text-foreground">Instância de Disparo</span>
+                    <Badge variant="outline" className={`ml-auto shrink-0 whitespace-nowrap text-[10px] ${broadcastConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
                       {broadcastConnected ? "🟢 Pronta" : "🔴 Desconectado"}
                     </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-3.5 pb-4">
-                  <div className="space-y-3">
+                  <div className="space-y-3 min-w-0">
                     <p className="text-xs text-muted-foreground">
                       Esta instância é exclusiva para disparos em massa. O chip principal do sistema não será afetado.
                     </p>
 
                     {broadcastConnected && broadcastProfileName && (
                       <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                           <Smartphone className="h-4 w-4 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{broadcastProfileName}</p>
-                          {broadcastOwner && <p className="text-[10px] text-muted-foreground">{broadcastOwner.split(":")[0]}</p>}
+                          {broadcastOwner && <p className="truncate text-[10px] text-muted-foreground">{broadcastOwner.split(":")[0]}</p>}
                         </div>
                       </div>
                     )}
@@ -1172,7 +1173,7 @@ export default function MassBroadcast() {
                     {broadcastQrCode && !broadcastConnected && (
                       <div className="rounded-xl border border-primary/20 bg-background p-4 text-center">
                         <p className="text-xs text-muted-foreground mb-3">Escaneie com o WhatsApp do chip de disparos:</p>
-                        <img src={broadcastQrCode} alt="QR Code" className="mx-auto max-w-[200px] rounded-lg" />
+                        <img src={broadcastQrCode} alt="QR Code" className="mx-auto w-full max-w-[12.5rem] rounded-lg" />
                       </div>
                     )}
 
@@ -1181,21 +1182,21 @@ export default function MassBroadcast() {
                         <Button
                           onClick={handleCreateBroadcastInstance}
                           disabled={broadcastCreating}
-                          className="w-full gap-2"
+                          className="w-full my-[5px] gap-2"
                         >
                           {broadcastCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                           Gerar QR Code para Disparos
                         </Button>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Ou cole um token existente:</Label>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
                             <Input
                               value={broadcastTokenInput}
                               onChange={(e) => setBroadcastTokenInput(e.target.value)}
                               placeholder="Token da instância de disparo"
-                              className="flex-1 font-mono text-xs"
+                              className="w-full box-border mb-[15px] sm:mb-0 font-mono text-xs"
                             />
-                            <Button size="sm" onClick={handleSaveBroadcastToken} disabled={broadcastSaving || !broadcastTokenInput.trim()}>
+                            <Button size="sm" onClick={handleSaveBroadcastToken} disabled={broadcastSaving || !broadcastTokenInput.trim()} className="w-full sm:w-auto my-[5px] gap-2 shrink-0">
                               {broadcastSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                             </Button>
                           </div>
@@ -1208,14 +1209,14 @@ export default function MassBroadcast() {
                           size="sm"
                           onClick={() => void checkBroadcastInstance()}
                           disabled={broadcastChecking}
-                          className="w-full sm:w-auto gap-2"
+                          className="w-full sm:w-auto my-[5px] gap-2"
                         >
                           <RefreshCw className={`h-3.5 w-3.5 ${broadcastChecking ? "animate-spin" : ""}`} />
                           Verificar Status
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
                               <Trash2 className="h-3.5 w-3.5" />
                               Remover Instância
                             </Button>
@@ -1400,13 +1401,13 @@ export default function MassBroadcast() {
                                   max={campaign.total_recipients - campaign.processed_recipients}
                                   value={batchLimits[campaign.id] ?? Math.min(50, campaign.total_recipients - campaign.processed_recipients)}
                                   onChange={(e) => setBatchLimits((prev) => ({ ...prev, [campaign.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                                  className="w-full box-border font-mono"
+                                  className="w-full box-border mb-[15px] sm:mb-0 font-mono"
                                   placeholder="50"
                                 />
                               </div>
                               {campaign.status === "queued" || campaign.status === "running" ? (
                                 <Button
-                                  className="w-full sm:w-auto gap-2 bg-warning/90 hover:bg-warning text-warning-foreground shadow-[0_0_16px_-6px_hsl(var(--warning)/0.6)]"
+                                  className="w-full sm:w-auto my-[5px] gap-2 bg-warning/90 hover:bg-warning text-warning-foreground shadow-[0_0_16px_-6px_hsl(var(--warning)/0.6)]"
                                   onClick={() => void handlePauseCampaign(campaign.id)}
                                 >
                                   <PauseCircle className="h-4 w-4" />
@@ -1414,7 +1415,7 @@ export default function MassBroadcast() {
                                 </Button>
                               ) : (
                                 <Button
-                                  className="w-full sm:w-auto gap-2 bg-[hsl(140,80%,45%)] hover:bg-[hsl(140,80%,40%)] text-white shadow-[0_0_20px_-6px_hsl(140,80%,45%,0.7)]"
+                                  className="w-full sm:w-auto my-[5px] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_20px_-6px_hsl(var(--success)/0.7)]"
                                   disabled={startingCampaignId === campaign.id || campaign.processed_recipients >= campaign.total_recipients}
                                   onClick={() => void handleStartBatch(campaign.id)}
                                 >
@@ -1425,7 +1426,7 @@ export default function MassBroadcast() {
                             </div>
                             {/* Session counter */}
                             {sessionStartCounts[campaign.id] !== undefined && (
-                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex items-center justify-between gap-2">
+                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between">
                                 <span className="text-xs text-muted-foreground">Enviados nesta sessão:</span>
                                 <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-sm">
                                   {Math.max(0, campaign.processed_recipients - (sessionStartCounts[campaign.id] || 0))} / {batchLimits[campaign.id] ?? 50}
