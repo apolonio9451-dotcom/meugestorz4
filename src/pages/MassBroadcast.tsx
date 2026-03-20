@@ -1357,7 +1357,7 @@ export default function MassBroadcast() {
                     Nenhuma campanha disponível.
                   </div>
                 ) : (
-                  <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+                  <div className="grid gap-4 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] w-full max-w-full overflow-x-hidden">
                     {/* Chat List */}
                     <div className="rounded-2xl border border-border/30 bg-muted/10 p-3">
                       <div className="mb-3 flex items-center justify-between">
