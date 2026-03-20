@@ -63,6 +63,8 @@ type Campaign = {
   greeting_templates: string[];
   message_delay_min_seconds: number;
   message_delay_max_seconds: number;
+  seller_instructions: string;
+  offer_timeout_minutes: number;
 };
 
 type Recipient = {
