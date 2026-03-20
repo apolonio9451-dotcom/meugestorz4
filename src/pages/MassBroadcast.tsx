@@ -167,11 +167,19 @@ const recipientStepText: Record<string, string> = {
   not_interested: "🚫 Não Interessado",
 };
 
-const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean }> = {
-  bot_active: { label: "🤖 Bot Ativo", className: "border-primary/40 bg-primary/10 text-primary", pulse: true },
-  awaiting_human: { label: "🔥 Cliente Respondeu", className: "border-orange-500/30 bg-orange-500/15 text-orange-400", pulse: true },
-  human_takeover: { label: "👤 Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
-  not_interested: { label: "🚫 Não Interessado", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean; icon: string }> = {
+  bot_active: { label: "🤖 Bot Ativo", className: "border-primary/40 bg-primary/10 text-primary", pulse: true, icon: "⚡" },
+  awaiting_human: { label: "🔥 Cliente Respondeu", className: "border-orange-500/30 bg-orange-500/15 text-orange-400", pulse: true, icon: "💬" },
+  human_takeover: { label: "👤 Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning", icon: "👤" },
+  not_interested: { label: "🚫 Não Interessado", className: "border-destructive/30 bg-destructive/10 text-destructive", icon: "🚫" },
+};
+
+const logStepLabel: Record<string, string> = {
+  greeting: "Saudação enviada",
+  offer: "Oferta enviada",
+  offer_timeout: "Oferta (timeout)",
+  ai_offer_reply: "IA respondeu com oferta",
+  not_interested: "Cliente não interessado",
 };
 
 /* ─── Countdown Hook ─── */
