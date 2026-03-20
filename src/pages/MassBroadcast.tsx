@@ -905,7 +905,32 @@ export default function MassBroadcast() {
                 Histórico · {historyPhone}
               </DialogTitle>
             </DialogHeader>
-...
+            {historyLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : historyMessages.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma mensagem registrada.</p>
+            ) : (
+              <div className="space-y-3">
+                {historyMessages.map((msg) => {
+                  const isOut = msg.direction === "outbound";
+                  return (
+                    <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[85%] rounded-2xl border px-3 py-2 ${isOut ? "border-primary/20 bg-primary/10" : "border-border/30 bg-muted/20"}`}>
+                        <div className="flex items-center gap-1.5 text-[10px] font-medium mb-1">
+                          {isOut ? <Bot className="h-3 w-3 text-primary" /> : <User className="h-3 w-3 text-muted-foreground" />}
+                          <span className={isOut ? "text-primary" : "text-muted-foreground"}>{isOut ? "Robô" : "Cliente"}</span>
+                          <span className="text-muted-foreground/60">· {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap break-words text-sm text-foreground">{msg.message}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <Tabs defaultValue="config" className="space-y-4 min-w-0">
           <TabsList className="grid h-auto w-full max-w-full grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-1 backdrop-blur">
             <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
