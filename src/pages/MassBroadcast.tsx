@@ -475,6 +475,7 @@ export default function MassBroadcast() {
   }, [expandedCampaignRecipients, loadCampaignRecipients, loadConversationMonitor, loadData]);
 
   useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => { void checkBroadcastInstance(true); }, [checkBroadcastInstance]);
   useEffect(() => { void loadConversationMonitor(); }, [loadConversationMonitor]);
 
   useEffect(() => {
