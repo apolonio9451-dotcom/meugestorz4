@@ -621,11 +621,23 @@ export default function MassBroadcast() {
                   ))}
                 </div>
                 {countdown.seconds > 0 && (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-0.5">
-                      <Timer className="h-3 w-3 text-primary" /> Próximo envio em
-                    </div>
-                    <p className="text-xl font-bold text-primary font-mono">{countdown.display}</p>
+                  <div className={`rounded-xl border p-3 text-center ${countdown.seconds >= BATCH_PAUSE_SECONDS - 10 ? "border-warning/30 bg-warning/10" : "border-primary/20 bg-primary/5"}`}>
+                    {countdown.seconds >= BATCH_PAUSE_SECONDS - 10 ? (
+                      <>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-warning mb-0.5">
+                          <Shield className="h-3.5 w-3.5" /> ☕ Pausa de segurança ativa
+                        </div>
+                        <p className="text-xl font-bold text-warning font-mono">{countdown.display}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Retomando automaticamente...</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-0.5">
+                          <Timer className="h-3 w-3 text-primary" /> Próximo envio em
+                        </div>
+                        <p className="text-xl font-bold text-primary font-mono">{countdown.display}</p>
+                      </>
+                    )}
                   </div>
                 )}
               </CardContent>
