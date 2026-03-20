@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Clock,
   Copy,
+  Eye,
   ExternalLink,
   ImagePlus,
   Info,
@@ -47,7 +48,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /* ─── Types ─── */
 type Campaign = {
