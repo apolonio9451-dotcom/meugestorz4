@@ -691,7 +691,7 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-full overflow-x-hidden space-y-4 px-1 sm:px-0">
+      <div className="w-full max-w-[100vw] overflow-x-hidden space-y-4 px-3 sm:px-4 box-border">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
           <div className="flex items-center gap-2">
@@ -751,7 +751,7 @@ export default function MassBroadcast() {
         </Dialog>
 
         <Tabs defaultValue="config" className="space-y-4">
-          <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl w-full flex overflow-x-auto">
+          <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl w-full flex overflow-x-auto max-w-full">
             <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
               <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Nova</span>
@@ -767,8 +767,8 @@ export default function MassBroadcast() {
           </TabsList>
 
           {/* ═══ TAB: NOVA CAMPANHA ═══ */}
-          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden">
-            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] w-full max-w-full">
+          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
+            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] w-full max-w-full min-w-0">
               {/* Left Column: Config */}
               <div className="space-y-6">
 
@@ -863,21 +863,21 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="max-w-[90vw]" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm max-w-[90vw]" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm w-full box-border" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                     </p>
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full">
+                    <div className="flex flex-col gap-3 w-full sm:flex-row sm:flex-wrap">
                       <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="w-full sm:w-auto sm:min-w-[200px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
                         Criar Campanha
                       </Button>
-                      <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="gap-2">
+                      <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto gap-2">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                         Atualizar
                       </Button>
@@ -964,9 +964,9 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
-          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden">
+          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0">
             {/* Sticky API toggle + title */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 -mx-1 px-1 border-b border-border/20">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 px-1 border-b border-border/20">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
@@ -1125,7 +1125,7 @@ export default function MassBroadcast() {
                         </div>
 
                         {/* Action buttons */}
-                          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-2 border-t border-border/20 w-full">
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 pt-2 border-t border-border/20 w-full">
                             <Button
                               variant="outline"
                               size="sm"
@@ -1212,8 +1212,8 @@ export default function MassBroadcast() {
                           {isEditing && (
                             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                               <Label>Editar números (um por linha)</Label>
-                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="min-h-[120px] font-mono text-sm" />
-                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="gap-2">
+                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="min-h-[120px] font-mono text-sm w-full box-border" />
+                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="gap-2 w-full sm:w-auto">
                                 <Save className="h-4 w-4" />
                                 Salvar Alterações
                               </Button>
@@ -1289,7 +1289,7 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: MONITOR DE CONVERSAS ═══ */}
-          <TabsContent value="monitor" className="space-y-6">
+          <TabsContent value="monitor" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
             <Card className="border-border/30 bg-card/80 backdrop-blur">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
@@ -1306,7 +1306,7 @@ export default function MassBroadcast() {
                     Nenhuma campanha disponível.
                   </div>
                 ) : (
-                  <div className="grid gap-4 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] w-full max-w-full overflow-x-hidden">
+                  <div className="flex flex-col lg:grid lg:grid-cols-[280px_minmax(0,1fr)] gap-4 w-full max-w-full overflow-x-hidden min-w-0">
                     {/* Chat List */}
                     <div className="rounded-2xl border border-border/30 bg-muted/10 p-3">
                       <div className="mb-3 flex items-center justify-between">
@@ -1413,7 +1413,7 @@ export default function MassBroadcast() {
                           <div className="mt-3 rounded-xl border border-border/30 bg-background/60 p-3">
                             <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("audio", e)} />
                             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleQuickMediaUpload("image", e)} />
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
                               <Button variant="outline" onClick={() => audioInputRef.current?.click()} disabled={mediaSending !== null} className="gap-2 border-border/40">
                                 {mediaSending === "audio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
                                 Áudio
