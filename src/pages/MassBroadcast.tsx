@@ -787,7 +787,7 @@ export default function MassBroadcast() {
                           {/* Delay control */}
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary" /> Delay</Label>
-                            <Slider min={30} max={300} step={5} value={[camp.message_delay_min_seconds, camp.message_delay_max_seconds]} onValueChange={async v => {
+                            <Slider min={15} max={300} step={5} value={[camp.message_delay_min_seconds, camp.message_delay_max_seconds]} onValueChange={async v => {
                               setCampaigns(p => p.map(c => c.id === camp.id ? { ...c, message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] } : c));
                               await supabase.from("mass_broadcast_campaigns" as any).update({ message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] }).eq("id", camp.id);
                             }} />
