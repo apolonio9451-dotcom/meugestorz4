@@ -481,7 +481,7 @@ export default function MassBroadcast() {
           offer_template: savedTemplates[idx],
           status: "pending",
           current_step: "offer",
-          next_action_at: new Date().toISOString(),
+          next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         };
       });
 
