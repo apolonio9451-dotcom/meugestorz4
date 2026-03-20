@@ -63,6 +63,8 @@ type Campaign = {
   greeting_templates: string[];
   message_delay_min_seconds: number;
   message_delay_max_seconds: number;
+  seller_instructions: string;
+  offer_timeout_minutes: number;
 };
 
 type Recipient = {
@@ -285,7 +287,7 @@ export default function MassBroadcast() {
       const [settingsRes, campaignsRes, logsRes, nextActionRes] = await Promise.all([
         supabase.from("api_settings" as any).select("id, bulk_send_enabled").eq("company_id", companyId).maybeSingle(),
         supabase.from("mass_broadcast_campaigns" as any)
-          .select("id, name, status, total_recipients, processed_recipients, success_count, failure_count, created_at, started_at, completed_at, offer_templates, greeting_templates, message_delay_min_seconds, message_delay_max_seconds")
+          .select("id, name, status, total_recipients, processed_recipients, success_count, failure_count, created_at, started_at, completed_at, offer_templates, greeting_templates, message_delay_min_seconds, message_delay_max_seconds, seller_instructions, offer_timeout_minutes")
           .eq("company_id", companyId).order("created_at", { ascending: false }).limit(20),
         supabase.from("mass_broadcast_logs" as any)
           .select("id, campaign_id, phone, step, status, message, error_message, created_at")
@@ -694,34 +696,6 @@ export default function MassBroadcast() {
                   </CardContent>
                 </Card>
 
-                {/* Time & Delay Selectors */}
-                <Card className="border-border/30 bg-card/80 backdrop-blur">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
-                      <Clock className="h-4 w-4 text-primary" />
-                      Horário e Delay
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="start-hour">Horário de início</Label>
-                        <Input id="start-hour" type="time" value={startHour} onChange={(e) => setStartHour(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Delay entre mensagens</Label>
-                        <div className="pt-2">
-                          <Slider min={30} max={300} step={5} value={delayRange} onValueChange={(v) => setDelayRange(v as [number, number])} />
-                          <div className="flex justify-between mt-2">
-                            <span className="text-xs text-muted-foreground">Mín: {delayRange[0]}s</span>
-                            <span className="text-xs text-muted-foreground">Máx: {delayRange[1]}s</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* AI Seller Config */}
                 <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
@@ -976,7 +950,51 @@ export default function MassBroadcast() {
                       </AccordionTrigger>
                       <AccordionContent className="px-5 pb-5">
                         <div className="space-y-4">
-                          {/* Action buttons */}
+                        {/* Per-campaign Delay & Timeout controls */}
+                        <div className="space-y-4 pt-2 border-t border-border/20">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-primary" />
+                                Delay entre mensagens
+                              </Label>
+                              <div className="pt-1">
+                                <Slider
+                                  min={30} max={300} step={5}
+                                  value={[campaign.message_delay_min_seconds, campaign.message_delay_max_seconds]}
+                                  onValueChange={async (v) => {
+                                    setCampaigns((prev) => prev.map((c) => c.id === campaign.id ? { ...c, message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] } : c));
+                                    await supabase.from("mass_broadcast_campaigns" as any).update({ message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] }).eq("id", campaign.id);
+                                  }}
+                                />
+                                <div className="flex justify-between mt-1.5">
+                                  <span className="text-[10px] text-muted-foreground">Mín: {campaign.message_delay_min_seconds}s</span>
+                                  <span className="text-[10px] text-muted-foreground">Máx: {campaign.message_delay_max_seconds}s</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Timer className="h-3.5 w-3.5 text-primary" />
+                                Timeout p/ oferta (min)
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Slider
+                                  min={1} max={30} step={1}
+                                  value={[campaign.offer_timeout_minutes]}
+                                  onValueChange={async (v) => {
+                                    setCampaigns((prev) => prev.map((c) => c.id === campaign.id ? { ...c, offer_timeout_minutes: v[0] } : c));
+                                    await supabase.from("mass_broadcast_campaigns" as any).update({ offer_timeout_minutes: v[0] }).eq("id", campaign.id);
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary shrink-0 min-w-[40px] justify-center text-[10px]">{campaign.offer_timeout_minutes}m</Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
                           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20">
                             <Button
                               variant="outline"
@@ -1091,6 +1109,7 @@ export default function MassBroadcast() {
                                 const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
                                 const isHot = r.current_step === "conversing" || r.current_step === "awaiting_reply";
                                 const isNotInterested = r.current_step === "not_interested";
+                                const isBotTyping = isHot && r.status === "processing";
                                 return (
                                   <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
                                     <div className="min-w-0">
@@ -1108,6 +1127,15 @@ export default function MassBroadcast() {
                                       )}
                                       <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
                                       <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
+                                      {isBotTyping && (
+                                        <span className="flex items-center gap-1 ml-1">
+                                          <span className="relative flex h-2 w-2 shrink-0">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                          </span>
+                                          <span className="text-[9px] text-primary font-medium animate-pulse">🤖 Robô respondendo...</span>
+                                        </span>
+                                      )}
                                     </div>
                                     <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
                                       {r.offer_template?.substring(0, 25)}...
