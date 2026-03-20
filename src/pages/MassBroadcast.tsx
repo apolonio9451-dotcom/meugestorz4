@@ -1130,7 +1130,33 @@ export default function MassBroadcast() {
 
                         {/* Action buttons */}
                           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 pt-2 border-t border-border/20 w-full">
-...
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
+                              onClick={() => {
+                                if (isEditing) {
+                                  setEditingCampaignId(null);
+                                  setEditPhoneInput("");
+                                } else {
+                                  setEditingCampaignId(campaign.id);
+                                  setEditPhoneInput(recipients?.map((r) => r.phone).join("\n") || "");
+                                }
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {isEditing ? "Cancelar" : "Editar Lista"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
+                              disabled={duplicatingCampaignId === campaign.id}
+                              onClick={() => void handleDuplicateCampaign(campaign)}
+                            >
+                              {duplicatingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+                              Duplicar
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -1140,7 +1166,51 @@ export default function MassBroadcast() {
                               <MessageSquareMore className="h-3.5 w-3.5" />
                               Monitor
                             </Button>
-...
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-warning/30 text-warning hover:bg-warning/10">
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  Resetar Fila
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Resetar fila?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Todos os contatos voltarão para o status "Pendente". Isso permite reenviar para toda a lista.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => void handleResetQueue(campaign.id)} className="bg-warning text-warning-foreground hover:bg-warning/90">
+                                    Resetar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
+                                  {deletingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                  Excluir
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Todos os contatos, logs e conversas desta campanha serão removidos permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => void handleDeleteCampaign(campaign.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                           {isEditing && (
                             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                               <Label>Editar números (um por linha)</Label>
