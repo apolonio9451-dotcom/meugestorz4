@@ -1159,12 +1159,18 @@ export default function MassBroadcast() {
                             const latestMsg = latestMessageByConversation.get(conv.id);
                             const meta = conversationStatusMeta[conv.conversation_status] || conversationStatusMeta.bot_active;
                             const isSel = conv.id === selectedConversationId;
+                            const isTyping = conv.conversation_status === "bot_active" && conv.has_reply;
+                            const lastSnippet = latestMsg
+                              ? `${latestMsg.direction === "inbound" ? "Cliente" : "Bot"}: ${latestMsg.message?.slice(0, 50)}${(latestMsg.message?.length || 0) > 50 ? "…" : ""}`
+                              : "...";
                             return (
                               <button key={conv.id} type="button" onClick={() => setSelectedConversationId(conv.id)}
                                 className={`w-full rounded-xl border p-3 text-left transition-all ${isSel ? "border-primary/30 bg-primary/10 shadow-[0_0_14px_-8px_hsl(var(--primary)/0.6)]" : "border-border/30 bg-background/60 hover:border-primary/15 hover:bg-primary/5"}`}
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-2 min-w-0">
+                                    {/* Animated status icon */}
+                                    <span className="text-lg shrink-0">{meta.icon}</span>
                                     {meta.pulse && conv.has_reply && (
                                       <span className="relative flex h-2.5 w-2.5 shrink-0">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
@@ -1178,7 +1184,18 @@ export default function MassBroadcast() {
                                   </div>
                                   <Badge variant="outline" className={`${meta.className} text-[10px] shrink-0`}>{meta.label}</Badge>
                                 </div>
-                                <p className="mt-1.5 line-clamp-1 text-[11px] text-muted-foreground">{latestMsg?.message || "..."}</p>
+                                {/* Last interaction snippet */}
+                                <p className="mt-1.5 line-clamp-1 text-[11px] text-muted-foreground italic">{lastSnippet}</p>
+                                {/* Typing indicator */}
+                                {isTyping && (
+                                  <div className="mt-1 flex items-center gap-1.5">
+                                    <span className="relative flex h-2 w-2 shrink-0">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                    </span>
+                                    <span className="text-[10px] text-primary font-medium animate-pulse">IA digitando...</span>
+                                  </div>
+                                )}
                               </button>
                             );
                           })
