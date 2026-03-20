@@ -1,5 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Bot,
   Check,
   ChevronDown,
   ChevronUp,
