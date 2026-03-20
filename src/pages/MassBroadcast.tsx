@@ -1056,18 +1056,18 @@ export default function MassBroadcast() {
                           if (!recipients) void loadCampaignRecipients(campaign.id);
                         }}
                       >
-                        <div className="flex flex-1 items-center gap-4 text-left">
+                        <div className="flex flex-1 flex-col items-start gap-3 text-left sm:flex-row sm:items-center sm:gap-4 min-w-0">
                           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/30 bg-muted/20 ${statusMeta.cls}`}>
                             <StatusIconComp className="h-5 w-5" />
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 w-full">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold text-foreground truncate">{campaign.name}</p>
                               <Badge variant="outline" className={`text-[10px] shrink-0 ${campaign.status === "completed" ? "border-primary/30 bg-primary/10 text-primary" : campaign.status === "running" ? "border-warning/30 bg-warning/10 text-warning" : "border-border/40 text-muted-foreground"}`}>
                                 {statusLabel[campaign.status] || campaign.status}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-3 mt-1.5">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 mt-1.5 w-full">
                               <span className="text-[11px] text-muted-foreground">
                                 {new Date(campaign.created_at).toLocaleDateString("pt-BR")}
                               </span>
@@ -1075,7 +1075,7 @@ export default function MassBroadcast() {
                               <span className="text-[11px] font-medium text-foreground">
                                 {campaign.processed_recipients}/{campaign.total_recipients} enviados
                               </span>
-                              <div className="flex-1 max-w-[120px]">
+                              <div className="w-full sm:max-w-[7.5rem]">
                                 <Progress value={progress} className="h-1.5" />
                               </div>
                             </div>
