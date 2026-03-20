@@ -1,8 +1,8 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, ImagePlus,
-  Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Plus, Radio,
-  RefreshCw, Rocket, Save, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
+  Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Play, Plus, Radio,
+  RefreshCw, Rocket, Save, Send, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
@@ -367,8 +367,54 @@ export default function MassBroadcast() {
     try {
       await supabase.from("mass_broadcast_campaigns" as any).update({ status: "paused" }).eq("id", cid);
       await supabase.from("mass_broadcast_recipients" as any).update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() }).eq("campaign_id", cid).eq("status", "pending");
-      toast({ title: "Campanha pausada" }); await loadData();
+      toast({ title: "⏸️ Campanha pausada", description: "Retome de onde parou a qualquer momento." }); await loadData();
     } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
+  };
+
+  const [manualSendingId, setManualSendingId] = useState<string | null>(null);
+
+  const handleManualSend = async (recipient: Recipient, camp: Campaign) => {
+    if (!companyId || manualSendingId) return;
+    if (!bcConnected) { toast({ title: "⚠️ Conecte a instância de disparo primeiro!", variant: "destructive" }); return; }
+    setManualSendingId(recipient.id);
+    try {
+      // Pick a random template from campaign
+      const templates = camp.offer_templates?.length ? camp.offer_templates : savedTemplates;
+      const msg = templates[Math.floor(Math.random() * templates.length)] || recipient.offer_template;
+      if (!msg?.trim()) { toast({ title: "Sem mensagem", variant: "destructive" }); return; }
+
+      // Call the runner-style send via edge function
+      const { data: apiS } = await supabase.from("api_settings" as any).select("api_url, api_token, broadcast_api_url, broadcast_api_token").eq("company_id", companyId).maybeSingle();
+      const settings = apiS as any;
+      const apiUrl = settings?.broadcast_api_url?.trim() || settings?.api_url || "";
+      const apiToken = settings?.broadcast_api_token?.trim() || settings?.api_token || "";
+      if (!apiUrl || !apiToken) { toast({ title: "API não configurada", variant: "destructive" }); return; }
+
+      // Send via whatsapp-send function
+      const phone = recipient.normalized_phone || recipient.phone.replace(/\D/g, "");
+      await supabase.functions.invoke("whatsapp-send", { body: { token: apiToken, phone, message: msg } });
+
+      // Mark as sent
+      await supabase.from("mass_broadcast_recipients" as any).update({
+        status: "sent", current_step: "done", sent_offer_at: new Date().toISOString(),
+        last_attempt_at: new Date().toISOString(), error_message: null,
+        offer_template: msg,
+      }).eq("id", recipient.id);
+
+      await supabase.from("mass_broadcast_campaigns" as any).update({
+        processed_recipients: camp.processed_recipients + 1,
+        success_count: camp.success_count + 1,
+      }).eq("id", camp.id);
+
+      // Update local state
+      setExpandedRecipients(p => ({
+        ...p, [camp.id]: (p[camp.id] || []).map(r => r.id === recipient.id ? { ...r, status: "sent", offer_template: msg } : r),
+      }));
+
+      toast({ title: "✅ Enviado manualmente!" });
+      await loadData();
+    } catch (e: any) { toast({ title: "Erro no envio manual", description: e?.message, variant: "destructive" }); }
+    finally { setManualSendingId(null); }
   };
 
   // Broadcast instance handlers
@@ -798,33 +844,33 @@ export default function MassBroadcast() {
                             </div>
                           </div>
 
-                          {/* START + BATCH */}
-                          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-3">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                                <Rocket className="h-3.5 w-3.5 text-primary" /> Enviar agora (Qtd)
-                              </Label>
-                              <Input type="number" min={1} max={camp.total_recipients - camp.processed_recipients}
-                                value={batchLimits[camp.id] ?? Math.min(50, camp.total_recipients - camp.processed_recipients)}
-                                onChange={e => setBatchLimits(p => ({ ...p, [camp.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                                className="w-full font-mono" placeholder="50" />
+                          {/* START + BATCH — compact: Qtd + button on same row */}
+                          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <Label className="text-[10px] font-semibold text-muted-foreground">Qtd</Label>
+                                <Input type="number" min={1} max={camp.total_recipients - camp.processed_recipients}
+                                  value={batchLimits[camp.id] ?? Math.min(50, camp.total_recipients - camp.processed_recipients)}
+                                  onChange={e => setBatchLimits(p => ({ ...p, [camp.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                  className="w-full font-mono h-[3rem]" placeholder="50" />
+                              </div>
+                              {isActive ? (
+                                <Button className="shrink-0 min-h-[3rem] gap-2 bg-warning/90 hover:bg-warning text-warning-foreground px-4" onClick={() => void handlePause(camp.id)}>
+                                  <PauseCircle className="h-4 w-4" /> ⏸️ Pausar
+                                </Button>
+                              ) : (
+                                <Button className="shrink-0 min-h-[3rem] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)] px-4"
+                                  disabled={startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
+                                  onClick={() => void handleStartBatch(camp.id)}>
+                                  {startingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? <Play className="h-4 w-4" /> : <Rocket className="h-4 w-4" />}
+                                  {camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? "▶️ Continuar" : "🚀 Iniciar"}
+                                </Button>
+                              )}
                             </div>
-                            {isActive ? (
-                              <Button className="w-full min-h-[3rem] gap-2 bg-warning/90 hover:bg-warning text-warning-foreground" onClick={() => void handlePause(camp.id)}>
-                                <PauseCircle className="h-4 w-4" /> Pausar Disparos
-                              </Button>
-                            ) : (
-                              <Button className="w-full min-h-[3rem] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)]"
-                                disabled={startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
-                                onClick={() => void handleStartBatch(camp.id)}>
-                                {startingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-                                🚀 Iniciar Disparos
-                              </Button>
-                            )}
                             {sessionStarts[camp.id] !== undefined && (
-                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex items-center justify-between gap-2">
-                                <span className="text-xs text-muted-foreground">Sessão:</span>
-                                <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-sm">
+                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-1.5 flex items-center justify-between gap-2">
+                                <span className="text-[10px] text-muted-foreground">Sessão:</span>
+                                <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-xs">
                                   {Math.max(0, camp.processed_recipients - (sessionStarts[camp.id] || 0))} / {batchLimits[camp.id] ?? 50}
                                 </Badge>
                               </div>
@@ -876,17 +922,27 @@ export default function MassBroadcast() {
                           ) : recs?.length ? (
                             <div className="max-h-[20rem] space-y-2 overflow-y-auto rounded-xl border border-border/30 bg-muted/10 p-2">
                               {recs.map(r => (
-                                <div key={r.id} className={`w-full rounded-xl border border-border/20 bg-background/70 p-3 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                <div key={r.id} className={`w-full rounded-xl border border-border/20 bg-background/70 p-2.5 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                   <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="truncate font-mono text-sm text-foreground">{r.phone}</p>
                                       <span className={`text-[11px] font-medium ${r.status === "sent" ? "text-primary" : r.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
                                         {r.status === "sent" ? "✅ Enviado" : r.status === "failed" ? "❌ Erro" : "⏳ Pendente"}
                                       </span>
                                     </div>
-                                    <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[11px] text-primary hover:bg-primary/10">
-                                      <ExternalLink className="h-3 w-3" /> Abrir
-                                    </a>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {r.status === "pending" && (
+                                        <button type="button" title="Enviar manual"
+                                          disabled={manualSendingId === r.id}
+                                          onClick={() => void handleManualSend(r, camp)}
+                                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
+                                          {manualSendingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                        </button>
+                                      )}
+                                      <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border/30 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    </div>
                                   </div>
                                   <p className="mt-1 break-words text-[10px] text-muted-foreground line-clamp-2">{r.offer_template}</p>
                                   {r.error_message && <p className="mt-0.5 text-[10px] text-destructive break-words">❌ {r.error_message}</p>}
