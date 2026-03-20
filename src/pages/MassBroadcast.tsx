@@ -2,7 +2,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "
 import {
   Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, ImagePlus,
   Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Plus, Radio,
-  RefreshCw, Rocket, Save, Smartphone, Terminal, Timer, Trash2, User, X,
+  RefreshCw, Rocket, Save, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
