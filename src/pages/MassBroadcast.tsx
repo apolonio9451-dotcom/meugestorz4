@@ -240,6 +240,17 @@ export default function MassBroadcast() {
   const [sessionStartCounts, setSessionStartCounts] = useState<Record<string, number>>({});
   const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
 
+  // Broadcast instance connection
+  const [broadcastConnected, setBroadcastConnected] = useState(false);
+  const [broadcastHasInstance, setBroadcastHasInstance] = useState(false);
+  const [broadcastQrCode, setBroadcastQrCode] = useState<string | null>(null);
+  const [broadcastProfileName, setBroadcastProfileName] = useState("");
+  const [broadcastOwner, setBroadcastOwner] = useState("");
+  const [broadcastChecking, setBroadcastChecking] = useState(false);
+  const [broadcastTokenInput, setBroadcastTokenInput] = useState("");
+  const [broadcastSaving, setBroadcastSaving] = useState(false);
+  const [broadcastCreating, setBroadcastCreating] = useState(false);
+
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
