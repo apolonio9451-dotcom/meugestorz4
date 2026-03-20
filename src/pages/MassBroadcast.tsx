@@ -691,7 +691,7 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border">
+      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border min-w-0">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
           <div className="flex items-center gap-2">
@@ -750,24 +750,24 @@ export default function MassBroadcast() {
           </DialogContent>
         </Dialog>
 
-        <Tabs defaultValue="config" className="space-y-4">
-          <TabsList className="h-auto gap-1 bg-muted/30 p-1 backdrop-blur border border-border/40 rounded-xl w-full flex overflow-x-auto max-w-full">
-            <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+        <Tabs defaultValue="config" className="space-y-4 min-w-0">
+          <TabsList className="grid h-auto w-full max-w-full grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-1 backdrop-blur">
+            <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Nova</span>
             </TabsTrigger>
-            <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+            <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <Radio className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Campanhas ({campaigns.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] flex-1 min-w-0 px-2 sm:px-3">
+            <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <MessageSquareMore className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="truncate">Monitor</span>
             </TabsTrigger>
           </TabsList>
 
           {/* ═══ TAB: NOVA CAMPANHA ═══ */}
-          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
+          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden px-0 min-w-0">
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] w-full max-w-full min-w-0">
               {/* Left Column: Config */}
               <div className="space-y-6">
