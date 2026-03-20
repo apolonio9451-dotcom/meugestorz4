@@ -20,11 +20,14 @@ import {
   RefreshCw,
   Rocket,
   Save,
+  Send,
   ShieldAlert,
+  Terminal,
   Timer,
   Trash2,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
@@ -164,11 +167,19 @@ const recipientStepText: Record<string, string> = {
   not_interested: "🚫 Não Interessado",
 };
 
-const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean }> = {
-  bot_active: { label: "🤖 Bot Ativo", className: "border-primary/40 bg-primary/10 text-primary", pulse: true },
-  awaiting_human: { label: "🔥 Cliente Respondeu", className: "border-orange-500/30 bg-orange-500/15 text-orange-400", pulse: true },
-  human_takeover: { label: "👤 Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
-  not_interested: { label: "🚫 Não Interessado", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean; icon: string }> = {
+  bot_active: { label: "🤖 Bot Ativo", className: "border-primary/40 bg-primary/10 text-primary", pulse: true, icon: "⚡" },
+  awaiting_human: { label: "🔥 Cliente Respondeu", className: "border-orange-500/30 bg-orange-500/15 text-orange-400", pulse: true, icon: "💬" },
+  human_takeover: { label: "👤 Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning", icon: "👤" },
+  not_interested: { label: "🚫 Não Interessado", className: "border-destructive/30 bg-destructive/10 text-destructive", icon: "🚫" },
+};
+
+const logStepLabel: Record<string, string> = {
+  greeting: "Saudação enviada",
+  offer: "Oferta enviada",
+  offer_timeout: "Oferta (timeout)",
+  ai_offer_reply: "IA respondeu com oferta",
+  not_interested: "Cliente não interessado",
 };
 
 /* ─── Countdown Hook ─── */
@@ -340,11 +351,16 @@ export default function MassBroadcast() {
       .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => void loadData())
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => { void loadData(); void loadConversationMonitor(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => void loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_recipients", filter: `company_id=eq.${companyId}` }, () => {
+        void loadData();
+        // Refresh expanded recipients in library tab
+        Object.keys(expandedCampaignRecipients).forEach((cid) => void loadCampaignRecipients(cid));
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversations", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [companyId, loadConversationMonitor, loadData]);
+  }, [companyId, loadConversationMonitor, loadData, expandedCampaignRecipients, loadCampaignRecipients]);
 
   /* ─── Handlers ─── */
   const handleToggleGlobal = async (checked: boolean) => {
@@ -857,33 +873,32 @@ export default function MassBroadcast() {
                   </CardContent>
                 </Card>
 
-                {/* Real-time Log */}
+                {/* Audit Log Console */}
                 <Card className="border-border/30 bg-card/80 backdrop-blur">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base text-foreground">Log em Tempo Real</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                      <Terminal className="h-4 w-4 text-primary" />
+                      Console de Auditoria
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                    <div className="rounded-xl border border-border/30 bg-black/80 p-3 max-h-[320px] overflow-y-auto font-mono text-[11px] leading-relaxed space-y-0.5">
                       {activeLogs.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Sem eventos ainda.</p>
+                        <p className="text-muted-foreground/60">Aguardando eventos...</p>
                       ) : (
-                        activeLogs.map((log) => (
-                          <div key={log.id} className="rounded-xl border border-border/30 bg-muted/15 p-3 hover:border-primary/15 transition-colors">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-foreground font-mono">{log.phone}</p>
-                                <p className="text-[11px] text-muted-foreground">
-                                  {log.step === "greeting" ? "Saudação" : "Modelo"} · {new Date(log.created_at).toLocaleString("pt-BR")}
-                                </p>
-                              </div>
-                              <Badge variant="outline" className={log.status === "success" ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}>
-                                {log.status === "success" ? "✓" : "✗"}
-                              </Badge>
+                        activeLogs.map((log) => {
+                          const time = new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                          const stepDesc = logStepLabel[log.step] || log.step;
+                          const isError = log.status !== "success";
+                          const phoneMasked = log.phone.length > 5 ? `${log.phone.slice(0, 5)}...` : log.phone;
+                          return (
+                            <div key={log.id} className={`flex gap-2 ${isError ? "text-red-400" : "text-emerald-400"}`}>
+                              <span className="text-muted-foreground/50 shrink-0">[{time}]</span>
+                              <span>{isError ? "❌" : "✅"} {stepDesc} para {phoneMasked}</span>
+                              {log.error_message && <span className="text-red-500/70 truncate">— {log.error_message}</span>}
                             </div>
-                            <p className="mt-1.5 line-clamp-2 text-xs text-foreground/80">{log.message}</p>
-                            {log.error_message && <p className="mt-1 text-[11px] text-destructive">{log.error_message}</p>}
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </CardContent>
@@ -1149,12 +1164,18 @@ export default function MassBroadcast() {
                             const latestMsg = latestMessageByConversation.get(conv.id);
                             const meta = conversationStatusMeta[conv.conversation_status] || conversationStatusMeta.bot_active;
                             const isSel = conv.id === selectedConversationId;
+                            const isTyping = conv.conversation_status === "bot_active" && conv.has_reply;
+                            const lastSnippet = latestMsg
+                              ? `${latestMsg.direction === "inbound" ? "Cliente" : "Bot"}: ${latestMsg.message?.slice(0, 50)}${(latestMsg.message?.length || 0) > 50 ? "…" : ""}`
+                              : "...";
                             return (
                               <button key={conv.id} type="button" onClick={() => setSelectedConversationId(conv.id)}
                                 className={`w-full rounded-xl border p-3 text-left transition-all ${isSel ? "border-primary/30 bg-primary/10 shadow-[0_0_14px_-8px_hsl(var(--primary)/0.6)]" : "border-border/30 bg-background/60 hover:border-primary/15 hover:bg-primary/5"}`}
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-2 min-w-0">
+                                    {/* Animated status icon */}
+                                    <span className="text-lg shrink-0">{meta.icon}</span>
                                     {meta.pulse && conv.has_reply && (
                                       <span className="relative flex h-2.5 w-2.5 shrink-0">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
@@ -1168,7 +1189,18 @@ export default function MassBroadcast() {
                                   </div>
                                   <Badge variant="outline" className={`${meta.className} text-[10px] shrink-0`}>{meta.label}</Badge>
                                 </div>
-                                <p className="mt-1.5 line-clamp-1 text-[11px] text-muted-foreground">{latestMsg?.message || "..."}</p>
+                                {/* Last interaction snippet */}
+                                <p className="mt-1.5 line-clamp-1 text-[11px] text-muted-foreground italic">{lastSnippet}</p>
+                                {/* Typing indicator */}
+                                {isTyping && (
+                                  <div className="mt-1 flex items-center gap-1.5">
+                                    <span className="relative flex h-2 w-2 shrink-0">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                    </span>
+                                    <span className="text-[10px] text-primary font-medium animate-pulse">IA digitando...</span>
+                                  </div>
+                                )}
                               </button>
                             );
                           })
