@@ -1461,6 +1461,31 @@ export default function Clients() {
         </div>
       )}
 
+      {/* Bulk pause/resume for Vencidos */}
+      {mainFilter === "vencidos" && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={handleBulkPauseAll}
+            disabled={bulkPauseLoading}
+          >
+            {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PauseCircle className="h-3.5 w-3.5" />}
+            Pausar Todos
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[11px] h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={handleBulkResumeAll}
+            disabled={bulkPauseLoading}
+          >
+            {bulkPauseLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
+            Retomar Todos
+          </Button>
+        </div>
+      )
       {/* Follow-up info text */}
       {mainFilter === "status" && statusSubFilter === "followup" && (
         <p className="text-xs text-muted-foreground bg-cyan-400/5 border border-cyan-400/20 rounded-lg px-3 py-2">
