@@ -144,7 +144,20 @@ export default function MassBroadcast() {
 
   const cleanedPhones = useMemo(() => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter(p => p.length >= 10))), [phoneInput]);
   const monitorCampaign = useMemo(() => campaigns.find(c => c.id === monitorCampaignId) ?? campaigns.find(c => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null, [campaigns, monitorCampaignId]);
-  const activeLogs = useMemo(() => logs.slice(0, 20), [logs]);
+  // Deduplicate error logs: show only the latest log per phone (errors), keep all success logs
+  const activeLogs = useMemo(() => {
+    const seen = new Set<string>();
+    const deduped: LogRow[] = [];
+    for (const log of logs) {
+      if (log.status === "error" && log.phone) {
+        const key = `${log.campaign_id}:${log.phone}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+      deduped.push(log);
+    }
+    return deduped.slice(0, 20);
+  }, [logs]);
   const activeConv = useMemo(() => conversations.find(c => c.id === selectedConvId) ?? null, [conversations, selectedConvId]);
   const activeConvMsgs = useMemo(() => convMessages.filter(m => m.conversation_id === selectedConvId), [convMessages, selectedConvId]);
   const latestMsgMap = useMemo(() => { const m = new Map<string, ConversationMessage>(); for (const msg of convMessages) m.set(msg.conversation_id, msg); return m; }, [convMessages]);
