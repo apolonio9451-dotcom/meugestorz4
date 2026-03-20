@@ -707,17 +707,11 @@ export default function MassBroadcast() {
           {/* ═══ TAB: CAMPANHAS ═══ */}
           <TabsContent value="library" className="space-y-4 min-w-0">
             {/* Top bar */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/20 bg-background/95 p-3 backdrop-blur">
+            <div className="flex items-center justify-between rounded-xl border border-border/20 bg-background/95 p-3 backdrop-blur">
               <h2 className="text-base font-bold text-foreground">Campanhas</h2>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button variant={globalEnabled ? "default" : "outline"} onClick={() => void handleToggle(!globalEnabled)} disabled={savingToggle} className="w-full sm:w-auto min-h-[3rem] gap-2">
-                  <div className={`h-2 w-2 rounded-full ${globalEnabled ? "bg-primary-foreground" : "bg-muted-foreground/60"}`} />
-                  {globalEnabled ? "Pausar API" : "Ativar API"}
-                </Button>
-                <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto min-h-[3rem] gap-2">
-                  <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Atualizar
-                </Button>
-              </div>
+              <Button variant="ghost" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-9 w-9 shrink-0">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              </Button>
             </div>
 
             {/* Broadcast Instance Accordion */}
