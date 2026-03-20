@@ -638,14 +638,9 @@ export default function MassBroadcast() {
                 <p className="text-xs text-muted-foreground">
                   Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                 </p>
-                <div className="flex flex-col gap-2">
-                  <Button onClick={handleCreate} disabled={submitting || !cleanedPhones.length || !savedTemplates.length} className="w-full min-h-[3rem] gap-2">
+                <Button onClick={handleCreate} disabled={submitting || !cleanedPhones.length || !savedTemplates.length} className="w-full min-h-[3rem] gap-2">
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} Criar Campanha
                   </Button>
-                  <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full min-h-[3rem] gap-2">
-                    <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Atualizar
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 
@@ -712,17 +707,11 @@ export default function MassBroadcast() {
           {/* ═══ TAB: CAMPANHAS ═══ */}
           <TabsContent value="library" className="space-y-4 min-w-0">
             {/* Top bar */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/20 bg-background/95 p-3 backdrop-blur">
+            <div className="flex items-center justify-between rounded-xl border border-border/20 bg-background/95 p-3 backdrop-blur">
               <h2 className="text-base font-bold text-foreground">Campanhas</h2>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button variant={globalEnabled ? "default" : "outline"} onClick={() => void handleToggle(!globalEnabled)} disabled={savingToggle} className="w-full sm:w-auto min-h-[3rem] gap-2">
-                  <div className={`h-2 w-2 rounded-full ${globalEnabled ? "bg-primary-foreground" : "bg-muted-foreground/60"}`} />
-                  {globalEnabled ? "Pausar API" : "Ativar API"}
-                </Button>
-                <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto min-h-[3rem] gap-2">
-                  <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Atualizar
-                </Button>
-              </div>
+              <Button variant="ghost" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-9 w-9 shrink-0">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              </Button>
             </div>
 
             {/* Broadcast Instance Accordion */}
@@ -880,31 +869,36 @@ export default function MassBroadcast() {
                             )}
                           </div>
 
-                          {/* Action buttons */}
-                          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                            <Button variant="outline" size="sm" className="min-h-[3rem] gap-1.5" onClick={() => { if (isEditing) { setEditingCampaignId(null); setEditPhoneInput(""); } else { setEditingCampaignId(camp.id); setEditPhoneInput(recs?.map(r => r.phone).join("\n") || ""); } }}>
-                              <Pencil className="h-3.5 w-3.5" /> {isEditing ? "Cancelar" : "Editar"}
+                          {/* Action buttons — icon-only compact row */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Editar contatos"
+                              onClick={() => { if (isEditing) { setEditingCampaignId(null); setEditPhoneInput(""); } else { setEditingCampaignId(camp.id); setEditPhoneInput(recs?.map(r => r.phone).join("\n") || ""); } }}>
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="sm" className="min-h-[3rem] gap-1.5" disabled={duplicatingId === camp.id} onClick={() => void handleDuplicate(camp)}>
-                              {duplicatingId === camp.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />} Duplicar
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Duplicar" disabled={duplicatingId === camp.id}
+                              onClick={() => void handleDuplicate(camp)}>
+                              {duplicatingId === camp.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
                             </Button>
-                            <Button variant="outline" size="sm" className="min-h-[3rem] gap-1.5" onClick={() => setMonitorCampaignId(camp.id)}>
-                              <MessageSquareMore className="h-3.5 w-3.5" /> Monitor
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Monitor"
+                              onClick={() => setMonitorCampaignId(camp.id)}>
+                              <MessageSquareMore className="h-3.5 w-3.5" />
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="min-h-[3rem] gap-1.5 border-warning/30 text-warning"><RefreshCw className="h-3.5 w-3.5" /> Resetar</Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-warning hover:text-warning" title="Resetar"><RefreshCw className="h-3.5 w-3.5" /></Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Resetar fila?</AlertDialogTitle><AlertDialogDescription>Todos voltarão para "Pendente".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => void handleReset(camp.id)} className="bg-warning text-warning-foreground">Resetar</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                             </AlertDialog>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="min-h-[3rem] gap-1.5 border-destructive/30 text-destructive col-span-2 sm:col-span-1" disabled={deletingId === camp.id}>
-                                  {deletingId === camp.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Excluir
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir campanha?</AlertDialogTitle><AlertDialogDescription>Ação permanente.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => void handleDelete(camp.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                            </AlertDialog>
+                            <div className="ml-auto">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/60 hover:text-destructive" title="Excluir" disabled={deletingId === camp.id}>
+                                    {deletingId === camp.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir campanha?</AlertDialogTitle><AlertDialogDescription>Ação permanente.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => void handleDelete(camp.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </div>
 
                           {/* Edit recipients */}
