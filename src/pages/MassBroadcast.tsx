@@ -333,6 +333,95 @@ export default function MassBroadcast() {
     }
   }, [companyId]);
 
+  const checkBroadcastInstance = useCallback(async (silent = false) => {
+    if (!companyId) return;
+    if (!silent) setBroadcastChecking(true);
+    try {
+      const resp = await supabase.functions.invoke("manage-instance", {
+        body: { action: "status", company_id: companyId, scope: "broadcast" },
+      });
+      if (resp.data?.success) {
+        setBroadcastHasInstance(resp.data.has_instance);
+        setBroadcastConnected(resp.data.connected);
+        setBroadcastProfileName(resp.data.profile_name || "");
+        setBroadcastOwner(resp.data.owner || "");
+        if (resp.data.qrcode) setBroadcastQrCode(resp.data.qrcode);
+        else setBroadcastQrCode(null);
+      }
+    } finally {
+      if (!silent) setBroadcastChecking(false);
+    }
+  }, [companyId]);
+
+  const handleSaveBroadcastToken = async () => {
+    if (!companyId || !broadcastTokenInput.trim()) return;
+    setBroadcastSaving(true);
+    try {
+      const resp = await supabase.functions.invoke("manage-instance", {
+        body: { action: "save", company_id: companyId, instance_token: broadcastTokenInput.trim(), scope: "broadcast" },
+      });
+      if (resp.data?.success) {
+        setBroadcastConnected(resp.data.connected);
+        setBroadcastHasInstance(true);
+        if (resp.data.qrcode) setBroadcastQrCode(resp.data.qrcode);
+        setBroadcastProfileName(resp.data.profile_name || "");
+        setBroadcastOwner(resp.data.owner || "");
+        toast({ title: "Token de disparo salvo!", description: resp.data.connected ? "Instância conectada." : "Escaneie o QR Code." });
+      } else {
+        toast({ title: "Erro", description: resp.data?.error || "Falha ao salvar.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    } finally {
+      setBroadcastSaving(false);
+    }
+  };
+
+  const handleCreateBroadcastInstance = async () => {
+    if (!companyId) return;
+    setBroadcastCreating(true);
+    try {
+      const resp = await supabase.functions.invoke("whatsapp-connect", {
+        body: { userName: "Disparo em Massa", company_id: companyId },
+      });
+      if (resp.data?.success && resp.data?.token) {
+        const saveResp = await supabase.functions.invoke("manage-instance", {
+          body: { action: "save", company_id: companyId, instance_token: resp.data.token, instance_name: "Disparo", scope: "broadcast" },
+        });
+        setBroadcastHasInstance(true);
+        if (resp.data.qrCode) setBroadcastQrCode(resp.data.qrCode);
+        if (saveResp.data?.connected) setBroadcastConnected(true);
+        toast({ title: "Instância de disparo criada!", description: "Escaneie o QR Code para conectar." });
+      } else {
+        toast({ title: "Erro", description: resp.data?.error || "Falha ao criar instância.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    } finally {
+      setBroadcastCreating(false);
+    }
+  };
+
+  const handleDeleteBroadcastInstance = async () => {
+    if (!companyId) return;
+    try {
+      await supabase.functions.invoke("manage-instance", {
+        body: { action: "disconnect", company_id: companyId, scope: "broadcast" },
+      });
+      await supabase.functions.invoke("manage-instance", {
+        body: { action: "delete", company_id: companyId, scope: "broadcast" },
+      });
+      setBroadcastConnected(false);
+      setBroadcastHasInstance(false);
+      setBroadcastQrCode(null);
+      setBroadcastProfileName("");
+      setBroadcastOwner("");
+      toast({ title: "Instância de disparo removida" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    }
+  };
+
   const loadConversationMonitor = useCallback(async () => {
     if (!companyId || !monitorCampaign?.id) {
       setConversations([]); setConversationMessages([]); setSelectedConversationId(null);
