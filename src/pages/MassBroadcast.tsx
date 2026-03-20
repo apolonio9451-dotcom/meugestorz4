@@ -160,17 +160,15 @@ const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
 
 const recipientStatusText: Record<string, string> = {
   pending: "Pendente",
-  processing: "💬 Em Conversa",
-  sent: "Finalizado",
-  failed: "Erro",
+  processing: "Enviando...",
+  sent: "Enviado ✅",
+  failed: "Erro ❌",
 };
 
 const recipientStepText: Record<string, string> = {
-  greeting: "⏳ Aguardando envio",
-  awaiting_reply: "📩 Saudação Enviada",
-  conversing: "🔥 Cliente Interessado",
-  done: "✅ Finalizado",
-  not_interested: "🚫 Não Interessado",
+  greeting: "⏳ Na fila",
+  offer: "⏳ Na fila",
+  done: "✅ Enviado",
 };
 
 const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean; icon: string }> = {
