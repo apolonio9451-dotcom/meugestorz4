@@ -767,8 +767,8 @@ export default function MassBroadcast() {
           </TabsList>
 
           {/* ═══ TAB: NOVA CAMPANHA ═══ */}
-          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden">
-            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] w-full max-w-full">
+          <TabsContent value="config" className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
+            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] w-full max-w-full min-w-0">
               {/* Left Column: Config */}
               <div className="space-y-6">
 
