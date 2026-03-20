@@ -1241,7 +1241,7 @@ export default function MassBroadcast() {
               </AccordionItem>
             </Accordion>
 
-
+            <Card className="border-border/30 bg-card/80 backdrop-blur">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm text-foreground">
                   <Bot className="h-4 w-4 text-primary" />
