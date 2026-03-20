@@ -792,12 +792,74 @@ export default function MassBroadcast() {
                         placeholder="Ex: Você é um vendedor simpático da Meu Gestor, focado em planos de streaming. Seja direto e convincente."
                         className="w-full box-border mb-[15px] min-h-[6.25rem] border-primary/20 focus:border-primary/40"
                       />
-...
+                      <p className="text-[10px] text-muted-foreground">A IA usará estas instruções para gerar respostas naturais e fechar vendas.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tempo de espera para oferta (min)</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider min={1} max={30} step={1} value={[offerTimeout]} onValueChange={(v) => setOfferTimeout(v[0])} className="flex-1" />
+                        <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary shrink-0 min-w-[50px] justify-center">{offerTimeout}m</Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Se o cliente não responder à saudação, a oferta será enviada após este tempo com uma transição natural gerada pela IA.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/30 bg-card/80 backdrop-blur">
+                  <Collapsible open={templatesOpen} onOpenChange={setTemplatesOpen}>
+                    <CardHeader className="pb-3">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
+                        <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                          <MessageSquareMore className="h-4 w-4 text-primary" />
+                          Modelos de Mensagem
+                          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary ml-2">{savedTemplates.length}/{MAX_TEMPLATES}</Badge>
+                        </CardTitle>
+                        {templatesOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </CollapsibleTrigger>
+                      <CardDescription>Gerencie até {MAX_TEMPLATES} variações com rotação automática.</CardDescription>
+                    </CardHeader>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-4">
+                        {savedTemplates.length > 0 && (
+                          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                            {savedTemplates.map((tmpl, i) => (
+                              <div key={i} className="group relative rounded-xl border border-border/40 bg-muted/20 p-3 hover:border-primary/20 transition-colors">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary mb-2">M{i + 1}</Badge>
+                                    <p className="text-sm text-foreground whitespace-pre-wrap break-words line-clamp-4">{tmpl}</p>
+                                  </div>
+                                  <Button size="icon" variant="ghost" className="shrink-0 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive transition-opacity" onClick={() => handleRemoveTemplate(i)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {savedTemplates.length < MAX_TEMPLATES && (
                           <div className="space-y-2">
                             <Textarea value={editingTemplate} onChange={(e) => setEditingTemplate(e.target.value)} placeholder="Digite o texto do novo modelo..." className="w-full box-border mb-[15px] min-h-[6.25rem] border-dashed border-primary/20 focus:border-primary/40" />
                             <Button onClick={handleAddTemplate} disabled={!editingTemplate.trim()} variant="outline" className="w-full sm:w-auto my-[5px] gap-2 border-primary/30 hover:bg-primary/10">
-...
+                              <Plus className="h-4 w-4" />
+                              Salvar Modelo ({savedTemplates.length + 1}/{MAX_TEMPLATES})
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+
+                <Card className="border-border/30 bg-card/80 backdrop-blur">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                      <Radio className="h-4 w-4 text-primary" />
+                      Lista de Contatos
+                    </CardTitle>
+                    <CardDescription>Cole números e nomeie a campanha.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
                       <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="w-full box-border mb-[15px]" />
