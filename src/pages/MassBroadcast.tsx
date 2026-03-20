@@ -1168,7 +1168,7 @@ export default function MassBroadcast() {
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2 border-warning/30 text-warning hover:bg-warning/10">
+                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-warning/30 text-warning hover:bg-warning/10">
                                   <RefreshCw className="h-3.5 w-3.5" />
                                   Resetar Fila
                                 </Button>
