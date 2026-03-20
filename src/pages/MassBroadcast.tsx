@@ -464,6 +464,8 @@ export default function MassBroadcast() {
               <PopoverContent side="bottom" align="start" className="max-w-[17rem] text-xs text-muted-foreground">
                 <p className="font-semibold text-foreground mb-1">Disparo em Massa</p>
                 <p>Rotação inteligente de até 10 mensagens por campanha. Atendimento IA automático quando o cliente responde.</p>
+                <p className="mt-1.5 font-semibold text-foreground">🛡️ Anti-Ban</p>
+                <p>• Delay variável {`15-45s`} entre msgs<br/>• Pausa de 5min a cada 20 envios<br/>• Simulação de "Digitando..." 3-5s<br/>• Ordem aleatória de mensagens</p>
               </PopoverContent>
             </Popover>
           </div>
