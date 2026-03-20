@@ -622,7 +622,7 @@ export default function MassBroadcast() {
     if (!companyId) return;
     try {
       const { error } = await supabase.from("mass_broadcast_recipients" as any)
-        .update({ status: "pending", current_step: "greeting", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date().toISOString() })
+        .update({ status: "pending", current_step: "offer", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date().toISOString() })
         .eq("campaign_id", campaignId);
       if (error) throw error;
       await supabase.from("mass_broadcast_campaigns" as any)
