@@ -140,7 +140,7 @@ const statusLabel: Record<string, string> = {
   queued: "Na fila",
   running: "Rodando",
   completed: "Concluída",
-  paused: "Pausada",
+  paused: "Aguardando Início",
 };
 
 const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
