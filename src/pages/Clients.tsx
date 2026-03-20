@@ -304,39 +304,37 @@ export default function Clients() {
   }, [companyId]); // Only on mount / companyId change
 
   const [bulkPauseLoading, setBulkPauseLoading] = useState(false);
+  const [bulkPauseDays, setBulkPauseDays] = useState(30);
 
-  const handleBulkPauseAll = async () => {
-    const overdueClients = clients.filter(c => {
-      const d = getClientDays(c.id);
-      return d !== null && d < 0 && !isManualChargePaused(c.charge_pause_until);
-    });
-    if (overdueClients.length === 0) { toast.info("Nenhum cliente vencido para pausar."); return; }
+  const handleBulkTogglePause = async () => {
+    // Check if there are any paused overdue clients to decide action
+    const overdue = clients.filter(c => { const d = getClientDays(c.id); return d !== null && d < 0; });
+    const pausedCount = overdue.filter(c => isManualChargePaused(c.charge_pause_until)).length;
+    const unpausedCount = overdue.length - pausedCount;
+
+    // If most are unpaused, pause all. Otherwise resume all.
+    const shouldPause = unpausedCount > 0;
+
+    if (overdue.length === 0) { toast.info("Nenhum cliente vencido."); return; }
     setBulkPauseLoading(true);
     try {
-      const pauseUntil = format(addDays(new Date(), 29), "yyyy-MM-dd");
-      const ids = overdueClients.map(c => c.id);
-      const { error } = await supabase.from("clients").update({ charge_pause_until: pauseUntil, charge_pause_note: "manual:30" } as any).in("id", ids);
-      if (error) throw error;
-      toast.success(`${ids.length} cliente(s) pausados por 30 dias.`);
+      if (shouldPause) {
+        const ids = overdue.filter(c => !isManualChargePaused(c.charge_pause_until)).map(c => c.id);
+        if (ids.length === 0) { toast.info("Todos já estão pausados."); setBulkPauseLoading(false); return; }
+        const safeDays = clampClientPauseDays(bulkPauseDays);
+        const pauseUntil = format(addDays(new Date(), safeDays - 1), "yyyy-MM-dd");
+        const { error } = await supabase.from("clients").update({ charge_pause_until: pauseUntil, charge_pause_note: `manual:${safeDays}` } as any).in("id", ids);
+        if (error) throw error;
+        toast.success(`${ids.length} cliente(s) pausados por ${safeDays} dias.`);
+      } else {
+        const ids = overdue.filter(c => isManualChargePaused(c.charge_pause_until)).map(c => c.id);
+        if (ids.length === 0) { toast.info("Nenhum pausado para retomar."); setBulkPauseLoading(false); return; }
+        const { error } = await supabase.from("clients").update({ charge_pause_until: null, charge_pause_note: "resumed:auto", ultimo_envio_auto: null } as any).in("id", ids);
+        if (error) throw error;
+        toast.success(`${ids.length} cliente(s) retomados.`);
+      }
       fetchClients();
-    } catch (e: any) { toast.error(e?.message || "Erro ao pausar todos"); }
-    finally { setBulkPauseLoading(false); }
-  };
-
-  const handleBulkResumeAll = async () => {
-    const pausedOverdue = clients.filter(c => {
-      const d = getClientDays(c.id);
-      return d !== null && d < 0 && isManualChargePaused(c.charge_pause_until);
-    });
-    if (pausedOverdue.length === 0) { toast.info("Nenhum cliente pausado para retomar."); return; }
-    setBulkPauseLoading(true);
-    try {
-      const ids = pausedOverdue.map(c => c.id);
-      const { error } = await supabase.from("clients").update({ charge_pause_until: null, charge_pause_note: "resumed:auto", ultimo_envio_auto: null } as any).in("id", ids);
-      if (error) throw error;
-      toast.success(`${ids.length} cliente(s) retomados.`);
-      fetchClients();
-    } catch (e: any) { toast.error(e?.message || "Erro ao retomar todos"); }
+    } catch (e: any) { toast.error(e?.message || "Erro na operação"); }
     finally { setBulkPauseLoading(false); }
   };
 
