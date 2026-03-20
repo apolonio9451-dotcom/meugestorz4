@@ -790,7 +790,7 @@ export default function MassBroadcast() {
                         value={sellerInstructions}
                         onChange={(e) => setSellerInstructions(e.target.value)}
                         placeholder="Ex: Você é um vendedor simpático da Meu Gestor, focado em planos de streaming. Seja direto e convincente."
-                        className="min-h-[100px] border-primary/20 focus:border-primary/40"
+                        className="w-full box-border mb-4 min-h-[6.25rem] border-primary/20 focus:border-primary/40"
                       />
                       <p className="text-[10px] text-muted-foreground">A IA usará estas instruções para gerar respostas naturais e fechar vendas.</p>
                     </div>
