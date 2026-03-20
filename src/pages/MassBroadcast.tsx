@@ -697,6 +697,7 @@ export default function MassBroadcast() {
     } catch (error: any) {
       toast({ title: "Erro", description: error?.message, variant: "destructive" });
     }
+  };
 
   const handleAssumeConversation = async () => {
     if (!activeConversation) return;
