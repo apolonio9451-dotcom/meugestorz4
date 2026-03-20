@@ -248,6 +248,12 @@ export default function MassBroadcast() {
   const [takingOverConversationId, setTakingOverConversationId] = useState<string | null>(null);
   const [monitorCampaignId, setMonitorCampaignId] = useState<string | null>(null);
 
+  // Chat history modal
+  const [historyPhone, setHistoryPhone] = useState<string | null>(null);
+  const [historyCampaignId, setHistoryCampaignId] = useState<string | null>(null);
+  const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // Next action countdown
   const [nextActionAt, setNextActionAt] = useState<string | null>(null);
   const countdown = useCountdown(nextActionAt);
