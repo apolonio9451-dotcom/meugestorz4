@@ -600,7 +600,7 @@ export default function MassBroadcast() {
           normalized_phone: phone,
           offer_template: templates[idx] || "",
           status: "pending",
-          current_step: "greeting",
+          current_step: "offer",
           next_action_at: new Date().toISOString(),
         };
       });
