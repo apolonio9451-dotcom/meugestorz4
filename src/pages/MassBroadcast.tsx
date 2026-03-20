@@ -151,15 +151,24 @@ const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
 
 const recipientStatusText: Record<string, string> = {
   pending: "Pendente",
-  processing: "Conversando",
+  processing: "💬 Em Conversa",
   sent: "Finalizado",
   failed: "Erro",
 };
 
-const conversationStatusMeta: Record<string, { label: string; className: string }> = {
-  bot_active: { label: "Gerenciada pelo bot", className: "border-primary/40 bg-primary/10 text-primary" },
-  awaiting_human: { label: "Aguardando humano", className: "border-warning/30 bg-warning/15 text-warning" },
-  human_takeover: { label: "Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
+const recipientStepText: Record<string, string> = {
+  greeting: "⏳ Aguardando envio",
+  awaiting_reply: "📩 Saudação Enviada",
+  conversing: "🔥 Cliente Interessado",
+  done: "✅ Finalizado",
+  not_interested: "🚫 Não Interessado",
+};
+
+const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean }> = {
+  bot_active: { label: "🤖 Bot Ativo", className: "border-primary/40 bg-primary/10 text-primary", pulse: true },
+  awaiting_human: { label: "🔥 Cliente Respondeu", className: "border-orange-500/30 bg-orange-500/15 text-orange-400", pulse: true },
+  human_takeover: { label: "👤 Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
+  not_interested: { label: "🚫 Não Interessado", className: "border-destructive/30 bg-destructive/10 text-destructive" },
 };
 
 /* ─── Countdown Hook ─── */
@@ -1064,18 +1073,26 @@ export default function MassBroadcast() {
                               {recipients.map((r) => {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
-                                const statusText = recipientStatusText[r.status] || "Pendente";
+                                const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
+                                const isHot = r.current_step === "conversing" || r.current_step === "awaiting_reply";
+                                const isNotInterested = r.current_step === "not_interested";
                                 return (
-                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
                                     <div className="min-w-0">
                                       <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
-                                      {r.error_message && (
+                                      {r.error_message && !isNotInterested && (
                                         <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                      <SiComp className={`h-4 w-4 ${si.cls}`} />
-                                      <span className={`text-[10px] font-medium ${si.cls}`}>{statusText}</span>
+                                      {isHot && (
+                                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
+                                        </span>
+                                      )}
+                                      <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
+                                      <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
                                     </div>
                                     <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
                                       {r.offer_template?.substring(0, 25)}...
@@ -1137,9 +1154,17 @@ export default function MassBroadcast() {
                                 className={`w-full rounded-xl border p-3 text-left transition-all ${isSel ? "border-primary/30 bg-primary/10 shadow-[0_0_14px_-8px_hsl(var(--primary)/0.6)]" : "border-border/30 bg-background/60 hover:border-primary/15 hover:bg-primary/5"}`}
                               >
                                 <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-foreground">{conv.contact_name || conv.phone}</p>
-                                    <p className="text-[10px] text-muted-foreground font-mono">{conv.phone}</p>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {meta.pulse && conv.has_reply && (
+                                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
+                                      </span>
+                                    )}
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-semibold text-foreground">{conv.contact_name || conv.phone}</p>
+                                      <p className="text-[10px] text-muted-foreground font-mono">{conv.phone}</p>
+                                    </div>
                                   </div>
                                   <Badge variant="outline" className={`${meta.className} text-[10px] shrink-0`}>{meta.label}</Badge>
                                 </div>

@@ -323,6 +323,26 @@ function parseAiCommands(text: string): AiCommandResult {
   return { cleanText, commands };
 }
 
+async function detectNegativeIntent(message: string): Promise<boolean> {
+  const negativePatterns = [
+    /\bn[aã]o\s+(quero|preciso|obrigad|interess)/i,
+    /\bpar[ea]m?\b/i,
+    /\bpare\s+de\b/i,
+    /\bparem\s+de\b/i,
+    /\bn[aã]o\s+me\s+(mandem?|envie|mande)/i,
+    /\bbloque/i,
+    /\bdesinscreve/i,
+    /\bsair\s+da\s+lista/i,
+    /\bremov[ea]/i,
+    /\bn[aã]o\s+tenho\s+interesse/i,
+    /\bchato/i,
+    /\bspam/i,
+    /\bincomod/i,
+  ];
+  const lower = message.toLowerCase().trim();
+  return negativePatterns.some((p) => p.test(lower));
+}
+
 async function callAISeller(
   sellerInstructions: string,
   clientMessage: string,
@@ -396,7 +416,7 @@ async function recordMassBroadcastIncoming(
     message: string;
     messageType: string;
   },
-) {
+): Promise<{ conversation_status: string; ai_handled: boolean } | null> {
   const normalizedPhone = normalizePhone(payload.phone);
   if (!payload.companyId || !normalizedPhone) return null;
 
@@ -436,10 +456,51 @@ async function recordMassBroadcastIncoming(
     .update({ conversation_status: nextStatus, has_reply: true, last_message_at: nowIso, last_incoming_at: nowIso })
     .eq("id", (conversation as any).id);
 
+  let aiHandled = false;
+
   // ═══ AI SELLER LOGIC ═══
-  // If not human takeover and we have API credentials, check if recipient is in awaiting_reply or conversing
   if (!isHumanTakeover && apiUrl && apiToken && payload.messageType === "text" && payload.message.trim()) {
     try {
+      // Check for negative sentiment first
+      const isNegative = await detectNegativeIntent(payload.message);
+      if (isNegative) {
+        // Client doesn't want to be contacted → send apology and mark as paused
+        const apologyMsg = "Peço desculpas pelo incômodo! Não vou mais enviar mensagens. Tenha um ótimo dia! 🙏";
+        await sendText(apiUrl, apiToken, normalizedPhone, apologyMsg);
+
+        const sentAt = new Date().toISOString();
+        await supabase.from("mass_broadcast_conversation_messages").insert({
+          company_id: payload.companyId,
+          campaign_id: (conversation as any).campaign_id,
+          conversation_id: (conversation as any).id,
+          recipient_id: (conversation as any).recipient_id,
+          phone: normalizedPhone, normalized_phone: normalizedPhone,
+          direction: "outbound", sender_type: "bot", source: "ai_seller",
+          message_type: "text", message: apologyMsg,
+          delivery_status: "sent", created_at: sentAt,
+        });
+
+        // Mark recipient as not_interested
+        await supabase.from("mass_broadcast_recipients")
+          .update({ status: "failed", current_step: "not_interested", error_message: "Cliente não interessado", last_attempt_at: sentAt })
+          .eq("id", (conversation as any).recipient_id);
+
+        await supabase.from("mass_broadcast_conversations")
+          .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt })
+          .eq("id", (conversation as any).id);
+
+        await supabase.from("mass_broadcast_logs").insert({
+          campaign_id: (conversation as any).campaign_id,
+          recipient_id: (conversation as any).recipient_id,
+          company_id: payload.companyId, phone: normalizedPhone,
+          step: "not_interested", status: "success",
+          message: apologyMsg, error_message: "Cliente sinalizou desinteresse",
+        });
+
+        aiHandled = true;
+        return { conversation_status: "not_interested", ai_handled: aiHandled };
+      }
+
       const { data: recipient } = await supabase
         .from("mass_broadcast_recipients")
         .select("id, current_step, offer_template, campaign_id")
@@ -488,8 +549,8 @@ async function recordMassBroadcastIncoming(
             delivery_status: "sent", created_at: sentAt,
           });
 
-          // Move to "conversing" step, set next_action_at far in the future (AI handles replies)
-          const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min timeout for follow-ups
+          // Move to "conversing" step
+          const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString();
           await supabase.from("mass_broadcast_recipients")
             .update({ current_step: "conversing", sent_offer_at: sentAt, last_attempt_at: sentAt, next_action_at: nextAction, error_message: null })
             .eq("id", (recipient as any).id);
@@ -505,6 +566,8 @@ async function recordMassBroadcastIncoming(
             step: "ai_offer_reply", status: "success",
             message: aiResponse, error_message: null,
           });
+
+          aiHandled = true;
         } else if ((recipient as any).current_step === "conversing") {
           // Follow-up question → AI responds
           const aiReply = await callAIFollowUp(sellerInstructions, payload.message, historyText);
@@ -533,6 +596,8 @@ async function recordMassBroadcastIncoming(
             await supabase.from("mass_broadcast_recipients")
               .update({ last_attempt_at: sentAt, next_action_at: nextAction })
               .eq("id", (recipient as any).id);
+
+            aiHandled = true;
           }
         }
       }
@@ -542,8 +607,8 @@ async function recordMassBroadcastIncoming(
   }
 
   return {
-    ...(conversation as any),
-    conversation_status: nextStatus,
+    conversation_status: isHumanTakeover ? "human_takeover" : aiHandled ? "bot_active" : nextStatus,
+    ai_handled: aiHandled,
   };
 }
 
@@ -687,6 +752,13 @@ Deno.serve(async (req: Request) => {
     });
     if ((massBroadcastConversation as any)?.conversation_status === "human_takeover") {
       return new Response(JSON.stringify({ status: "ok", reason: "human_takeover" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // If AI seller already handled this message, don't let the regular chatbot also reply
+    if ((massBroadcastConversation as any)?.ai_handled === true) {
+      console.log(`AI seller handled message from ${phone}, skipping chatbot.`);
+      return new Response(JSON.stringify({ status: "ok", reason: "ai_seller_handled" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
