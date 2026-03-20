@@ -705,9 +705,9 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="space-y-4">
+      <div className="w-full max-w-full overflow-x-hidden space-y-4 px-1 sm:px-0">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-foreground">SPECIAL · Disparo</h1>
             <Popover>
