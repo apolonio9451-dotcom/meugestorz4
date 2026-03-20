@@ -1245,6 +1245,9 @@ export default function MassBroadcast() {
                                       <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
                                         {r.offer_template?.substring(0, 25)}...
                                       </Badge>
+                                      <button type="button" onClick={() => void handleViewHistory(r.phone, campaign.id)} className="text-muted-foreground hover:text-primary transition-colors" title="Ver histórico">
+                                        <Eye className="h-3.5 w-3.5" />
+                                      </button>
                                       <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
                                         <ExternalLink className="h-3.5 w-3.5" />
                                       </a>
