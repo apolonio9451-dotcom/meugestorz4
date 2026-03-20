@@ -184,7 +184,9 @@ const logStepLabel: Record<string, string> = {
   greeting: "Saudação enviada",
   offer: "Oferta enviada",
   offer_timeout: "Oferta (timeout)",
+  ai_processing: "IA processando",
   ai_offer_reply: "IA respondeu com oferta",
+  ai_error: "Erro da IA",
   not_interested: "Cliente não interessado",
 };
 
@@ -208,6 +210,7 @@ export default function MassBroadcast() {
   const { effectiveCompanyId: companyId, user } = useAuth();
   const audioInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
 
   // Global controls
   const [globalEnabled, setGlobalEnabled] = useState(false);
@@ -270,6 +273,11 @@ export default function MassBroadcast() {
 
   const activeLogs = useMemo(
     () => logs.slice(0, 20),
+    [logs],
+  );
+
+  const campaignRealtimeLogs = useMemo(
+    () => logs.filter((log) => ["ai_processing", "ai_offer_reply", "ai_error"].includes(log.step)).slice(0, 12),
     [logs],
   );
 
@@ -353,6 +361,22 @@ export default function MassBroadcast() {
     }
   }, [companyId]);
 
+  const scheduleRealtimeSync = useCallback((options?: { withMonitor?: boolean; withRecipients?: boolean }) => {
+    if (realtimeRefreshTimerRef.current !== null) {
+      window.clearTimeout(realtimeRefreshTimerRef.current);
+    }
+
+    realtimeRefreshTimerRef.current = window.setTimeout(() => {
+      void loadData();
+      if (options?.withMonitor) {
+        void loadConversationMonitor();
+      }
+      if (options?.withRecipients) {
+        Object.keys(expandedCampaignRecipients).forEach((campaignId) => void loadCampaignRecipients(campaignId));
+      }
+    }, 180);
+  }, [expandedCampaignRecipients, loadCampaignRecipients, loadConversationMonitor, loadData]);
+
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void loadConversationMonitor(); }, [loadConversationMonitor]);
 
@@ -360,19 +384,21 @@ export default function MassBroadcast() {
     if (!companyId) return;
     const channel = supabase
       .channel(`mass-broadcast-${companyId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => { void loadData(); void loadConversationMonitor(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_recipients", filter: `company_id=eq.${companyId}` }, () => {
-        void loadData();
-        // Refresh expanded recipients in library tab
-        Object.keys(expandedCampaignRecipients).forEach((cid) => void loadCampaignRecipients(cid));
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversations", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
-      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => void loadConversationMonitor())
+      .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withMonitor: true }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync())
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_recipients", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withRecipients: true }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversations", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withMonitor: true }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => scheduleRealtimeSync({ withMonitor: true }))
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [companyId, loadConversationMonitor, loadData, expandedCampaignRecipients, loadCampaignRecipients]);
+
+    return () => {
+      if (realtimeRefreshTimerRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimerRef.current);
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [companyId, scheduleRealtimeSync]);
 
   /* ─── Handlers ─── */
   const handleToggleGlobal = async (checked: boolean) => {
