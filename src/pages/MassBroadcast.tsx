@@ -1071,7 +1071,7 @@ export default function MassBroadcast() {
                               <span className="text-[11px] text-muted-foreground">
                                 {new Date(campaign.created_at).toLocaleDateString("pt-BR")}
                               </span>
-                              <span className="text-[11px] text-muted-foreground">·</span>
+                              <span className="hidden sm:inline text-[11px] text-muted-foreground">·</span>
                               <span className="text-[11px] font-medium text-foreground">
                                 {campaign.processed_recipients}/{campaign.total_recipients} enviados
                               </span>
