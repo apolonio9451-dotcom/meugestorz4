@@ -9,6 +9,7 @@ import {
   Copy,
   ExternalLink,
   ImagePlus,
+  Info,
   Loader2,
   MessageSquareMore,
   Mic,
