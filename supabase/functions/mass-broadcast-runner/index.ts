@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
           .eq("id", recipient.campaign_id)
           .single<CampaignRow>();
 
-        if (!campaign || campaign.status === "completed") continue;
+        if (!campaign || campaign.status === "completed" || campaign.status === "paused") continue;
 
         // Mark campaign as running if queued
         if (campaign.status === "queued") {

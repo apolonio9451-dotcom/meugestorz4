@@ -140,7 +140,7 @@ const statusLabel: Record<string, string> = {
   queued: "Na fila",
   running: "Rodando",
   completed: "Concluída",
-  paused: "Pausada",
+  paused: "Aguardando Início",
 };
 
 const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
@@ -236,6 +236,9 @@ export default function MassBroadcast() {
   const [editPhoneInput, setEditPhoneInput] = useState("");
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | null>(null);
+  const [batchLimits, setBatchLimits] = useState<Record<string, number>>({});
+  const [sessionStartCounts, setSessionStartCounts] = useState<Record<string, number>>({});
+  const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
 
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -455,7 +458,7 @@ export default function MassBroadcast() {
           company_id: companyId,
           created_by: user.id,
           name,
-          status: "queued",
+          status: "paused",
           total_recipients: cleanedPhones.length,
           offer_templates: savedTemplates,
           greeting_templates: ["Olá!", "Tudo bem?", "Bom dia, como vai?"],
@@ -478,7 +481,7 @@ export default function MassBroadcast() {
           offer_template: savedTemplates[idx],
           status: "pending",
           current_step: "offer",
-          next_action_at: new Date().toISOString(),
+          next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         };
       });
 
@@ -610,17 +613,89 @@ export default function MassBroadcast() {
     if (!companyId) return;
     try {
       const { error } = await supabase.from("mass_broadcast_recipients" as any)
-        .update({ status: "pending", current_step: "offer", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date().toISOString() })
+        .update({ status: "pending", current_step: "offer", error_message: null, sent_greeting_at: null, sent_offer_at: null, last_attempt_at: null, next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() })
         .eq("campaign_id", campaignId);
       if (error) throw error;
       await supabase.from("mass_broadcast_campaigns" as any)
-        .update({ status: "queued", processed_recipients: 0, success_count: 0, failure_count: 0, started_at: null, completed_at: null })
+        .update({ status: "paused", processed_recipients: 0, success_count: 0, failure_count: 0, started_at: null, completed_at: null })
         .eq("id", campaignId);
       toast({ title: "Fila resetada", description: "Todos os contatos voltaram para 'Pendente'." });
       await loadData();
       await loadCampaignRecipients(campaignId);
     } catch (error: any) {
       toast({ title: "Erro ao resetar", description: error?.message, variant: "destructive" });
+    }
+  };
+
+  const handleStartBatch = async (campaignId: string) => {
+    if (!companyId) return;
+    const limit = batchLimits[campaignId] || 50;
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) return;
+    setStartingCampaignId(campaignId);
+    try {
+      // Record session start point
+      setSessionStartCounts((prev) => ({ ...prev, [campaignId]: campaign.processed_recipients }));
+
+      // Get the first N pending recipients and set their next_action_at to now
+      const { data: pendingRecipients } = await supabase
+        .from("mass_broadcast_recipients" as any)
+        .select("id")
+        .eq("campaign_id", campaignId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true })
+        .limit(limit);
+
+      if (!pendingRecipients?.length) {
+        toast({ title: "Sem contatos pendentes", description: "Todos os contatos já foram processados.", variant: "destructive" });
+        return;
+      }
+
+      const ids = (pendingRecipients as any[]).map((r) => r.id);
+      // Stagger next_action_at for each recipient
+      const delayMin = campaign.message_delay_min_seconds;
+      const delayMax = campaign.message_delay_max_seconds;
+      for (let i = 0; i < ids.length; i++) {
+        const delaySeconds = i === 0 ? 0 : Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
+        const nextAt = new Date(Date.now() + (i === 0 ? 0 : delaySeconds * 1000 * i)).toISOString();
+        await supabase
+          .from("mass_broadcast_recipients" as any)
+          .update({ next_action_at: nextAt })
+          .eq("id", ids[i]);
+      }
+
+      // Set campaign to queued so runner picks it up
+      await supabase
+        .from("mass_broadcast_campaigns" as any)
+        .update({ status: "queued", started_at: new Date().toISOString() })
+        .eq("id", campaignId);
+
+      toast({ title: "🚀 Disparos iniciados!", description: `Enviando para ${ids.length} contatos.` });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Erro ao iniciar", description: error?.message, variant: "destructive" });
+    } finally {
+      setStartingCampaignId(null);
+    }
+  };
+
+  const handlePauseCampaign = async (campaignId: string) => {
+    if (!companyId) return;
+    try {
+      await supabase
+        .from("mass_broadcast_campaigns" as any)
+        .update({ status: "paused" })
+        .eq("id", campaignId);
+      // Set remaining pending recipients to far future
+      await supabase
+        .from("mass_broadcast_recipients" as any)
+        .update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() })
+        .eq("campaign_id", campaignId)
+        .eq("status", "pending");
+      toast({ title: "Campanha pausada" });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
     }
   };
 
@@ -1130,6 +1205,57 @@ export default function MassBroadcast() {
                                 </div>
                               </div>
                             </div>
+                          </div>
+
+                          {/* ═══ START DISPARO + BATCH CONTROL ═══ */}
+                          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3.5 space-y-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                              <div className="flex-1 space-y-1.5 min-w-0">
+                                <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                  <Rocket className="h-3.5 w-3.5 text-primary" />
+                                  Qtd. Enviar
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={campaign.total_recipients - campaign.processed_recipients}
+                                  value={batchLimits[campaign.id] ?? Math.min(50, campaign.total_recipients - campaign.processed_recipients)}
+                                  onChange={(e) => setBatchLimits((prev) => ({ ...prev, [campaign.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                  className="w-full box-border font-mono"
+                                  placeholder="50"
+                                />
+                              </div>
+                              {campaign.status === "queued" || campaign.status === "running" ? (
+                                <Button
+                                  className="w-full sm:w-auto gap-2 bg-warning/90 hover:bg-warning text-warning-foreground shadow-[0_0_16px_-6px_hsl(var(--warning)/0.6)]"
+                                  onClick={() => void handlePauseCampaign(campaign.id)}
+                                >
+                                  <PauseCircle className="h-4 w-4" />
+                                  Pausar Disparos
+                                </Button>
+                              ) : (
+                                <Button
+                                  className="w-full sm:w-auto gap-2 bg-[hsl(140,80%,45%)] hover:bg-[hsl(140,80%,40%)] text-white shadow-[0_0_20px_-6px_hsl(140,80%,45%,0.7)]"
+                                  disabled={startingCampaignId === campaign.id || campaign.processed_recipients >= campaign.total_recipients}
+                                  onClick={() => void handleStartBatch(campaign.id)}
+                                >
+                                  {startingCampaignId === campaign.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                                  🚀 Iniciar Disparos
+                                </Button>
+                              )}
+                            </div>
+                            {/* Session counter */}
+                            {sessionStartCounts[campaign.id] !== undefined && (
+                              <div className="rounded-lg border border-primary/20 bg-background/60 px-3 py-2 flex items-center justify-between gap-2">
+                                <span className="text-xs text-muted-foreground">Enviados nesta sessão:</span>
+                                <Badge className="bg-primary/15 text-primary border-primary/30 font-mono text-sm">
+                                  {Math.max(0, campaign.processed_recipients - (sessionStartCounts[campaign.id] || 0))} / {batchLimits[campaign.id] ?? 50}
+                                </Badge>
+                              </div>
+                            )}
+                            {campaign.processed_recipients >= campaign.total_recipients && campaign.total_recipients > 0 && (
+                              <p className="text-xs text-primary font-medium text-center">✅ Todos os contatos já foram processados.</p>
+                            )}
                           </div>
 
                           {/* Action buttons */}
