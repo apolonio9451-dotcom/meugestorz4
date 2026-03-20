@@ -1212,8 +1212,8 @@ export default function MassBroadcast() {
                           {isEditing && (
                             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                               <Label>Editar números (um por linha)</Label>
-                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="min-h-[120px] font-mono text-sm" />
-                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="gap-2">
+                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="min-h-[120px] font-mono text-sm w-full box-border" />
+                              <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="gap-2 w-full sm:w-auto">
                                 <Save className="h-4 w-4" />
                                 Salvar Alterações
                               </Button>
