@@ -757,22 +757,6 @@ export default function MassBroadcast() {
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
               {/* Left Column: Config */}
               <div className="space-y-6">
-                {/* Master Switch */}
-                <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_30px_-18px_hsl(var(--primary)/0.5)]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3 pointer-events-none" />
-                  <CardContent className="relative p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <div className={`h-3 w-3 rounded-full ${globalEnabled ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-muted-foreground/30"}`} />
-                          <Label htmlFor="master-switch" className="text-base font-bold text-foreground">Ativar/Pausar Disparos API</Label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Se desligado, toda a fila congela imediatamente.</p>
-                      </div>
-                      <Switch id="master-switch" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} className="scale-125" />
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {/* AI Seller Config */}
                 <Card className="relative overflow-hidden border-primary/20 bg-card/80 backdrop-blur shadow-[0_0_24px_-16px_hsl(var(--primary)/0.4)]">
