@@ -209,6 +209,75 @@ function useCountdown(targetIso: string | null) {
 
 /* ─── Component ─── */
 export default function MassBroadcast() {
+  const { effectiveCompanyId: companyId, user } = useAuth();
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
+
+  // Global controls
+  const [globalEnabled, setGlobalEnabled] = useState(false);
+  const [savingToggle, setSavingToggle] = useState(false);
+
+  // Campaign creation
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [campaignName, setCampaignName] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [delayRange, setDelayRange] = useState<[number, number]>([60, 120]);
+  const [startHour, setStartHour] = useState("08:00");
+  const [sellerInstructions, setSellerInstructions] = useState("");
+  const [offerTimeout, setOfferTimeout] = useState(5);
+
+  // Template management
+  const [savedTemplates, setSavedTemplates] = useState<string[]>(loadSavedTemplates);
+  const [editingTemplate, setEditingTemplate] = useState<string>("");
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+
+  // Data
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [logs, setLogs] = useState<LogRow[]>([]);
+
+  // Campaign library: expanded campaign recipients
+  const [expandedCampaignRecipients, setExpandedCampaignRecipients] = useState<Record<string, Recipient[]>>({});
+  const [loadingRecipients, setLoadingRecipients] = useState<string | null>(null);
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+  const [editPhoneInput, setEditPhoneInput] = useState("");
+  const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
+  const [duplicatingCampaignId, setDuplicatingCampaignId] = useState<string | null>(null);
+
+  // Monitor
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
+  const [takingOverConversationId, setTakingOverConversationId] = useState<string | null>(null);
+  const [monitorCampaignId, setMonitorCampaignId] = useState<string | null>(null);
+
+  // Chat history modal
+  const [historyPhone, setHistoryPhone] = useState<string | null>(null);
+  const [historyCampaignId, setHistoryCampaignId] = useState<string | null>(null);
+  const [historyMessages, setHistoryMessages] = useState<ConversationMessage[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Next action countdown
+  const [nextActionAt, setNextActionAt] = useState<string | null>(null);
+  const countdown = useCountdown(nextActionAt);
+
+  const cleanedPhones = useMemo(
+    () => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter((p) => p.length >= 10))),
+    [phoneInput],
+  );
+
+  const monitorCampaign = useMemo(
+    () => campaigns.find((c) => c.id === monitorCampaignId) ?? campaigns.find((c) => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null,
+    [campaigns, monitorCampaignId],
+  );
+
+  const activeLogs = useMemo(
+    () => logs.slice(0, 20),
+    [logs],
+  );
+
   const campaignRealtimeLogs = useMemo(
     () => logs.filter((log) => ["incoming_message", "ai_processing", "ai_offer_cta_sent", "ai_offer_reply", "ai_error"].includes(log.step)).slice(0, 20),
     [logs],
