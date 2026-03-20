@@ -184,8 +184,10 @@ const logStepLabel: Record<string, string> = {
   greeting: "Saudação enviada",
   offer: "Oferta enviada",
   offer_timeout: "Oferta (timeout)",
+  incoming_message: "Mensagem recebida",
   ai_processing: "IA processando",
-  ai_offer_reply: "IA respondeu com oferta",
+  ai_offer_cta_sent: "Oferta + CTA enviados",
+  ai_offer_reply: "IA respondeu",
   ai_error: "Erro da IA",
   not_interested: "Cliente não interessado",
 };
@@ -277,7 +279,7 @@ export default function MassBroadcast() {
   );
 
   const campaignRealtimeLogs = useMemo(
-    () => logs.filter((log) => ["ai_processing", "ai_offer_reply", "ai_error"].includes(log.step)).slice(0, 12),
+    () => logs.filter((log) => ["incoming_message", "ai_processing", "ai_offer_cta_sent", "ai_offer_reply", "ai_error"].includes(log.step)).slice(0, 20),
     [logs],
   );
 
@@ -1003,11 +1005,16 @@ export default function MassBroadcast() {
                     campaignRealtimeLogs.map((log) => {
                       const isProcessing = log.status === "processing" || log.step === "ai_processing";
                       const isError = log.status === "error" || Boolean(log.error_message);
-                      const lineMessage = log.message?.trim() || (isProcessing
-                        ? `🤖 Robô processando resposta para ${log.phone}...`
-                        : isError
-                          ? `❌ Falha ao responder ${log.phone}`
-                          : `✅ Resposta enviada com sucesso para ${log.phone}`);
+                      const fallbackByStep = log.step === "incoming_message"
+                        ? `[LOG] Mensagem recebida de ${log.phone}`
+                        : log.step === "ai_processing"
+                          ? "[LOG] Processando resposta via IA..."
+                          : log.step === "ai_offer_cta_sent"
+                            ? "[LOG] Oferta e CTA de Teste Grátis enviados."
+                            : isError
+                              ? `[LOG] Erro na IA para ${log.phone}`
+                              : `[LOG] Resposta enviada para ${log.phone}`;
+                      const lineMessage = log.message?.trim() || fallbackByStep;
 
                       return (
                         <div key={log.id} className={`flex items-start gap-2 ${isError ? "text-destructive" : isProcessing ? "text-warning" : "text-primary"}`}>

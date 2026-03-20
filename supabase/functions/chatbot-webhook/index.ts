@@ -344,8 +344,9 @@ async function detectNegativeIntent(message: string): Promise<boolean> {
 }
 
 const ACTIVE_MASS_BROADCAST_STATUSES = ["queued", "running"];
+const ELIGIBLE_MASS_BROADCAST_STATUSES = ["queued", "running", "completed", "paused"];
 const DEFAULT_MASS_BROADCAST_SELLER_INSTRUCTIONS = "Vendedor Max da TV Max, simpático e focado em oferecer teste grátis";
-const MASS_BROADCAST_CLOSING_MESSAGE = "Gostaria de fazer um teste totalmente grátis do nosso serviço agora?";
+const MASS_BROADCAST_CLOSING_MESSAGE = "Gostaria de fazer um teste totalmente grátis agora mesmo para ver a qualidade?";
 
 function nonEmptyList(values: string[] | null | undefined, fallback: string[] = []): string[] {
   const parsed = Array.isArray(values)
@@ -356,6 +357,27 @@ function nonEmptyList(values: string[] | null | undefined, fallback: string[] = 
 
 function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function toTimestamp(value: string | null | undefined): number {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function campaignStatusPriority(status: string): number {
+  if (ACTIVE_MASS_BROADCAST_STATUSES.includes(status)) return 0;
+  if (status === "completed") return 1;
+  if (status === "paused") return 2;
+  return 3;
+}
+
+function recipientStepPriority(step: string): number {
+  if (step === "awaiting_reply") return 0;
+  if (step === "greeting") return 1;
+  if (step === "conversing") return 2;
+  if (step === "done") return 3;
+  return 4;
 }
 
 async function callAISeller(
@@ -467,6 +489,60 @@ async function ensureCampaignConversation(
   return createdConversation as { id: string; conversation_status: string };
 }
 
+async function resolveMassBroadcastContext(
+  supabase: ReturnType<typeof createClient>,
+  payload: { companyId: string; normalizedPhone: string },
+): Promise<{ recipient: any; campaign: any } | null> {
+  const { data: recipientRows } = await supabase
+    .from("mass_broadcast_recipients")
+    .select("id, campaign_id, company_id, phone, normalized_phone, offer_template, status, current_step, updated_at")
+    .eq("company_id", payload.companyId)
+    .eq("normalized_phone", payload.normalizedPhone)
+    .order("updated_at", { ascending: false })
+    .limit(60);
+
+  if (!recipientRows?.length) return null;
+
+  const eligibleRecipients = recipientRows.filter((row: any) => String(row.current_step || "") !== "not_interested");
+  if (!eligibleRecipients.length) return null;
+
+  const campaignIds = [...new Set(eligibleRecipients.map((row: any) => row.campaign_id).filter(Boolean))];
+  if (!campaignIds.length) return null;
+
+  const { data: campaigns } = await supabase
+    .from("mass_broadcast_campaigns")
+    .select("id, status, seller_instructions, offer_templates, updated_at")
+    .eq("company_id", payload.companyId)
+    .in("id", campaignIds)
+    .limit(campaignIds.length);
+
+  if (!campaigns?.length) return null;
+
+  const campaignById = new Map(
+    campaigns
+      .filter((campaign: any) => ELIGIBLE_MASS_BROADCAST_STATUSES.includes(String(campaign.status || "")))
+      .map((campaign: any) => [campaign.id, campaign]),
+  );
+
+  const candidatePairs = eligibleRecipients
+    .map((recipient: any) => ({ recipient, campaign: campaignById.get(recipient.campaign_id) }))
+    .filter((pair: any) => Boolean(pair.campaign));
+
+  if (!candidatePairs.length) return null;
+
+  candidatePairs.sort((a: any, b: any) => {
+    const statusDiff = campaignStatusPriority(String(a.campaign.status || "")) - campaignStatusPriority(String(b.campaign.status || ""));
+    if (statusDiff !== 0) return statusDiff;
+
+    const stepDiff = recipientStepPriority(String(a.recipient.current_step || "")) - recipientStepPriority(String(b.recipient.current_step || ""));
+    if (stepDiff !== 0) return stepDiff;
+
+    return toTimestamp(String(b.recipient.updated_at || "")) - toTimestamp(String(a.recipient.updated_at || ""));
+  });
+
+  return candidatePairs[0] || null;
+}
+
 async function recordMassBroadcastIncoming(
   supabase: ReturnType<typeof createClient>,
   apiUrl: string | null,
@@ -482,34 +558,14 @@ async function recordMassBroadcastIncoming(
   if (!payload.companyId || !normalizedPhone) return null;
 
   const nowIso = new Date().toISOString();
+  const context = await resolveMassBroadcastContext(supabase, {
+    companyId: payload.companyId,
+    normalizedPhone,
+  });
 
-  const { data: activeCampaigns } = await supabase
-    .from("mass_broadcast_campaigns")
-    .select("id, seller_instructions, offer_templates")
-    .eq("company_id", payload.companyId)
-    .in("status", ACTIVE_MASS_BROADCAST_STATUSES)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  if (!context) return null;
 
-  if (!activeCampaigns?.length) return null;
-
-  const activeCampaignIds = activeCampaigns.map((campaign: any) => campaign.id);
-  const campaignById = new Map(activeCampaigns.map((campaign: any) => [campaign.id, campaign]));
-
-  const { data: recipient } = await supabase
-    .from("mass_broadcast_recipients")
-    .select("id, campaign_id, company_id, phone, normalized_phone, offer_template, status, current_step")
-    .eq("company_id", payload.companyId)
-    .eq("normalized_phone", normalizedPhone)
-    .in("campaign_id", activeCampaignIds)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<any>();
-
-  if (!recipient?.id) return null;
-
-  const campaign = campaignById.get(recipient.campaign_id);
-  if (!campaign) return null;
+  const { recipient, campaign } = context;
 
   const conversation = await ensureCampaignConversation(supabase, {
     companyId: payload.companyId,
@@ -549,6 +605,17 @@ async function recordMassBroadcastIncoming(
     })
     .eq("id", conversation.id);
 
+  await supabase.from("mass_broadcast_logs").insert({
+    campaign_id: recipient.campaign_id,
+    recipient_id: recipient.id,
+    company_id: payload.companyId,
+    phone: normalizedPhone,
+    step: "incoming_message",
+    status: "success",
+    message: `[LOG] Mensagem recebida de ${normalizedPhone}`,
+    error_message: null,
+  });
+
   if (isHumanTakeover || !apiUrl || !apiToken || payload.messageType !== "text" || !payload.message.trim()) {
     return { conversation_status: nextStatus, ai_handled: false };
   }
@@ -563,7 +630,7 @@ async function recordMassBroadcastIncoming(
       phone: normalizedPhone,
       step: "ai_processing",
       status: "processing",
-      message: `🤖 Robô processando resposta para ${normalizedPhone}...`,
+      message: "[LOG] Processando resposta via IA...",
       error_message: null,
     });
 
@@ -620,15 +687,25 @@ async function recordMassBroadcastIncoming(
       .select("direction, message")
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true })
-      .limit(20);
+      .limit(30);
 
     const historyText = (history || [])
       .map((item: any) => `${item.direction === "outbound" ? "Vendedor" : "Cliente"}: ${item.message}`)
       .join("\n");
 
-    const currentStep = String(recipient.current_step || "greeting");
+    const { data: offerFlowAlreadyExecuted } = await supabase
+      .from("mass_broadcast_logs")
+      .select("id")
+      .eq("recipient_id", recipient.id)
+      .in("step", ["ai_offer_cta_sent", "ai_offer_reply"])
+      .eq("status", "success")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (currentStep === "greeting" || currentStep === "awaiting_reply") {
+    const mustTriggerOfferFlow = !offerFlowAlreadyExecuted;
+
+    if (mustTriggerOfferFlow) {
       const offerCandidates = nonEmptyList(campaign.offer_templates, [recipient.offer_template]);
       const selectedOffer = offerCandidates.length > 0 ? pickRandom(offerCandidates) : String(recipient.offer_template || "").trim();
       if (!selectedOffer) throw new Error("Nenhum textão de oferta disponível para este contato.");
@@ -656,7 +733,7 @@ async function recordMassBroadcastIncoming(
       await sleep(5000);
       await sendText(apiUrl, apiToken, normalizedPhone, MASS_BROADCAST_CLOSING_MESSAGE);
 
-      const closingSentAt = new Date().toISOString();
+      const ctaSentAt = new Date().toISOString();
       await supabase.from("mass_broadcast_conversation_messages").insert({
         company_id: payload.companyId,
         campaign_id: recipient.campaign_id,
@@ -670,7 +747,7 @@ async function recordMassBroadcastIncoming(
         message_type: "text",
         message: MASS_BROADCAST_CLOSING_MESSAGE,
         delivery_status: "sent",
-        created_at: closingSentAt,
+        created_at: ctaSentAt,
       });
 
       const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
@@ -680,7 +757,7 @@ async function recordMassBroadcastIncoming(
           status: "processing",
           current_step: "conversing",
           sent_offer_at: offerSentAt,
-          last_attempt_at: closingSentAt,
+          last_attempt_at: ctaSentAt,
           next_action_at: nextActionAt,
           error_message: null,
         })
@@ -691,8 +768,8 @@ async function recordMassBroadcastIncoming(
         .update({
           conversation_status: "bot_active",
           has_reply: true,
-          last_outgoing_at: closingSentAt,
-          last_message_at: closingSentAt,
+          last_outgoing_at: ctaSentAt,
+          last_message_at: ctaSentAt,
         })
         .eq("id", conversation.id);
 
@@ -701,18 +778,19 @@ async function recordMassBroadcastIncoming(
         recipient_id: recipient.id,
         company_id: payload.companyId,
         phone: normalizedPhone,
-        step: "ai_offer_reply",
+        step: "ai_offer_cta_sent",
         status: "success",
-        message: `✅ Resposta enviada com sucesso para ${normalizedPhone} via IA.`,
+        message: "[LOG] Oferta e CTA de Teste Grátis enviados.",
         error_message: null,
       });
 
       aiHandled = true;
-    } else if (currentStep === "conversing" || currentStep === "done") {
+    } else {
       const aiReply = await callAIFollowUp(sellerInstructions, payload.message, historyText);
+      const followUpReply = aiReply?.trim();
 
-      if (aiReply) {
-        await sendText(apiUrl, apiToken, normalizedPhone, aiReply);
+      if (followUpReply) {
+        await sendText(apiUrl, apiToken, normalizedPhone, followUpReply);
 
         const sentAt = new Date().toISOString();
         await supabase.from("mass_broadcast_conversation_messages").insert({
@@ -726,7 +804,7 @@ async function recordMassBroadcastIncoming(
           sender_type: "bot",
           source: "ai_seller",
           message_type: "text",
-          message: aiReply,
+          message: followUpReply,
           delivery_status: "sent",
           created_at: sentAt,
         });
@@ -776,7 +854,7 @@ async function recordMassBroadcastIncoming(
       phone: normalizedPhone,
       step: "ai_error",
       status: "error",
-      message: `❌ Erro ao responder ${normalizedPhone} via IA.`,
+      message: `[LOG] Erro na IA para ${normalizedPhone}`,
       error_message: errorMessage,
     });
     console.error("AI seller error:", error);
