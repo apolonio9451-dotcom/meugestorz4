@@ -468,11 +468,8 @@ export default function MassBroadcast() {
         .single();
       if (campaignError) throw campaignError;
 
-      let lastIndex = -1;
-      const recipients = cleanedPhones.map((phone) => {
-        let idx = (lastIndex + 1) % savedTemplates.length;
-        if (savedTemplates.length > 1 && idx === lastIndex) idx = (idx + 1) % savedTemplates.length;
-        lastIndex = idx;
+      const recipients = cleanedPhones.map((phone, index) => {
+        const idx = index % savedTemplates.length;
         return {
           campaign_id: (campaign as any).id,
           company_id: companyId,
@@ -581,12 +578,9 @@ export default function MassBroadcast() {
     try {
       // Delete old recipients & re-insert
       await supabase.from("mass_broadcast_recipients" as any).delete().eq("campaign_id", campaignId);
-      let lastIndex = -1;
       const templates = campaign.offer_templates?.length > 0 ? campaign.offer_templates : savedTemplates;
-      const recipients = newPhones.map((phone) => {
-        let idx = templates.length > 0 ? (lastIndex + 1) % templates.length : 0;
-        if (templates.length > 1 && idx === lastIndex) idx = (idx + 1) % templates.length;
-        lastIndex = idx;
+      const recipients = newPhones.map((phone, index) => {
+        const idx = templates.length > 0 ? index % templates.length : 0;
         return {
           campaign_id: campaignId,
           company_id: companyId,
@@ -869,11 +863,11 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="max-w-[90vw]" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
-                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm" />
+                      <Textarea id="phones" value={phoneInput} onChange={(e) => setPhoneInput(e.target.value)} placeholder={"5511999999999\n(11) 98888-7777"} className="min-h-[140px] font-mono text-sm max-w-[90vw]" />
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
@@ -970,15 +964,24 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
-          <TabsContent value="library" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Biblioteca de Campanhas</h2>
-                <p className="text-sm text-muted-foreground">Gerencie todas as suas campanhas salvas.</p>
+          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden">
+            {/* Sticky API toggle + title */}
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 -mx-1 px-1 border-b border-border/20">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 rounded-lg border border-border/30 bg-muted/20 px-3 py-1.5">
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${globalEnabled ? "bg-primary animate-pulse" : "bg-muted-foreground/30"}`} />
+                    <Label htmlFor="master-switch-lib" className="text-[11px] font-medium text-muted-foreground whitespace-nowrap">Disparo</Label>
+                    <Switch id="master-switch-lib" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} />
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-8 w-8">
+                    <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                  </Button>
+                </div>
               </div>
-              <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="gap-2">
-                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              </Button>
             </div>
 
             <Card className="border-border/30 bg-card/80 backdrop-blur">
@@ -1122,7 +1125,7 @@ export default function MassBroadcast() {
                         </div>
 
                         {/* Action buttons */}
-                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20 w-full overflow-x-auto">
+                          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-2 border-t border-border/20 w-full">
                             <Button
                               variant="outline"
                               size="sm"
