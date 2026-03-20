@@ -1231,11 +1231,10 @@ export default function MassBroadcast() {
                           ) : recipients ? (
                             <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
                               {/* Desktop table header */}
-                              <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
+                              <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
                                 <span>Status</span>
-                                <span>Modelo</span>
-                                <span>Chat</span>
+                                <span>Mensagem</span>
                                 <span>Link</span>
                               </div>
                               {recipients.map((r) => {
