@@ -8,6 +8,7 @@ const corsHeaders = {
 const MAX_PER_RUN = 12;
 const BATCH_PAUSE_EVERY = 20;
 const BATCH_PAUSE_SECONDS = 300;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 type CampaignRow = {
   id: string;
@@ -146,6 +147,9 @@ Deno.serve(async (req) => {
     let success = 0;
     let failed = 0;
 
+    // ═══ SKIP-ON-ERROR: Track consecutive errors per campaign ═══
+    const consecutiveErrors: Record<string, number> = {};
+
     for (const settings of apiSettings) {
       if (processed >= MAX_PER_RUN) break;
       // Use broadcast credentials if available, fallback to main
@@ -176,6 +180,28 @@ Deno.serve(async (req) => {
 
         if (!campaign || campaign.status === "completed" || campaign.status === "paused") continue;
 
+        // ═══ AUTO-PAUSE: If 5 consecutive errors, pause campaign ═══
+        if ((consecutiveErrors[campaign.id] || 0) >= MAX_CONSECUTIVE_ERRORS) {
+          await supabase
+            .from("mass_broadcast_campaigns")
+            .update({ status: "paused" })
+            .eq("id", campaign.id);
+          // Push remaining pending recipients to far future
+          await supabase
+            .from("mass_broadcast_recipients")
+            .update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() })
+            .eq("campaign_id", campaign.id)
+            .eq("status", "pending");
+          await insertLog(supabase, {
+            campaign_id: campaign.id, recipient_id: recipient.id,
+            company_id: recipient.company_id, phone: "", step: "auto_pause",
+            status: "error",
+            message: `⛔ Disparo pausado: ${MAX_CONSECUTIVE_ERRORS} erros seguidos. Verifique sua conexão ou instância.`,
+            error_message: null,
+          });
+          continue;
+        }
+
         // Mark campaign as running if queued
         if (campaign.status === "queued") {
           await supabase
@@ -200,6 +226,7 @@ Deno.serve(async (req) => {
             processed_recipients: c.processed_recipients + 1,
             failure_count: c.failure_count + 1,
           }));
+          consecutiveErrors[campaign.id] = (consecutiveErrors[campaign.id] || 0) + 1;
           failed += 1;
           processed += 1;
           continue;
@@ -269,11 +296,14 @@ Deno.serve(async (req) => {
             success_count: c.success_count + 1,
           }));
 
+          // ═══ Reset consecutive error counter on success ═══
+          consecutiveErrors[campaign.id] = 0;
           success += 1;
           processed += 1;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
 
+          // ═══ SINGLE ATTEMPT: Mark as failed permanently, skip immediately ═══
           await supabase
             .from("mass_broadcast_recipients")
             .update({ status: "failed", error_message: errorMessage, last_attempt_at: new Date().toISOString() })
@@ -291,6 +321,8 @@ Deno.serve(async (req) => {
             failure_count: c.failure_count + 1,
           }));
 
+          // ═══ Track consecutive errors ═══
+          consecutiveErrors[campaign.id] = (consecutiveErrors[campaign.id] || 0) + 1;
           failed += 1;
           processed += 1;
         }
