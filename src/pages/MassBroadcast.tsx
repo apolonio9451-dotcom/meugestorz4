@@ -950,7 +950,51 @@ export default function MassBroadcast() {
                       </AccordionTrigger>
                       <AccordionContent className="px-5 pb-5">
                         <div className="space-y-4">
-                          {/* Action buttons */}
+                        {/* Per-campaign Delay & Timeout controls */}
+                        <div className="space-y-4 pt-2 border-t border-border/20">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-primary" />
+                                Delay entre mensagens
+                              </Label>
+                              <div className="pt-1">
+                                <Slider
+                                  min={30} max={300} step={5}
+                                  value={[campaign.message_delay_min_seconds, campaign.message_delay_max_seconds]}
+                                  onValueChange={async (v) => {
+                                    setCampaigns((prev) => prev.map((c) => c.id === campaign.id ? { ...c, message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] } : c));
+                                    await supabase.from("mass_broadcast_campaigns" as any).update({ message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] }).eq("id", campaign.id);
+                                  }}
+                                />
+                                <div className="flex justify-between mt-1.5">
+                                  <span className="text-[10px] text-muted-foreground">Mín: {campaign.message_delay_min_seconds}s</span>
+                                  <span className="text-[10px] text-muted-foreground">Máx: {campaign.message_delay_max_seconds}s</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Timer className="h-3.5 w-3.5 text-primary" />
+                                Timeout p/ oferta (min)
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Slider
+                                  min={1} max={30} step={1}
+                                  value={[campaign.offer_timeout_minutes]}
+                                  onValueChange={async (v) => {
+                                    setCampaigns((prev) => prev.map((c) => c.id === campaign.id ? { ...c, offer_timeout_minutes: v[0] } : c));
+                                    await supabase.from("mass_broadcast_campaigns" as any).update({ offer_timeout_minutes: v[0] }).eq("id", campaign.id);
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary shrink-0 min-w-[40px] justify-center text-[10px]">{campaign.offer_timeout_minutes}m</Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
                           <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/20">
                             <Button
                               variant="outline"
