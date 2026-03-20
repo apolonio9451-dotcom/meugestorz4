@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     // Only process companies with bulk_send_enabled
     const { data: apiSettings } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, bulk_send_enabled")
+      .select("company_id, api_url, api_token, broadcast_api_url, broadcast_api_token, bulk_send_enabled")
       .eq("bulk_send_enabled", true);
 
     if (!apiSettings?.length) {
@@ -121,7 +121,12 @@ Deno.serve(async (req) => {
 
     for (const settings of apiSettings) {
       if (processed >= MAX_PER_RUN) break;
-      if (!settings.api_url || !settings.api_token) continue;
+      // Use broadcast credentials if available, fallback to main
+      const broadcastUrl = settings.broadcast_api_url?.trim();
+      const broadcastToken = settings.broadcast_api_token?.trim();
+      const effectiveUrl = broadcastUrl || settings.api_url;
+      const effectiveToken = broadcastToken || settings.api_token;
+      if (!effectiveUrl || !effectiveToken) continue;
 
       const nowIso = new Date().toISOString();
       const { data: recipients } = await supabase
@@ -179,7 +184,7 @@ Deno.serve(async (req) => {
           if (!message) throw new Error("Mensagem vazia para este contato.");
 
           const sentAt = new Date().toISOString();
-          await sendText(settings.api_url, settings.api_token, phone, message);
+          await sendText(effectiveUrl, effectiveToken, phone, message);
 
           // Calculate delay for the NEXT recipient in queue
           const delay = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);

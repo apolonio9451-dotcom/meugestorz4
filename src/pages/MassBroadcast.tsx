@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Rocket,
   Save,
+  Smartphone,
   Terminal,
   Timer,
   Trash2,
@@ -240,6 +241,17 @@ export default function MassBroadcast() {
   const [sessionStartCounts, setSessionStartCounts] = useState<Record<string, number>>({});
   const [startingCampaignId, setStartingCampaignId] = useState<string | null>(null);
 
+  // Broadcast instance connection
+  const [broadcastConnected, setBroadcastConnected] = useState(false);
+  const [broadcastHasInstance, setBroadcastHasInstance] = useState(false);
+  const [broadcastQrCode, setBroadcastQrCode] = useState<string | null>(null);
+  const [broadcastProfileName, setBroadcastProfileName] = useState("");
+  const [broadcastOwner, setBroadcastOwner] = useState("");
+  const [broadcastChecking, setBroadcastChecking] = useState(false);
+  const [broadcastTokenInput, setBroadcastTokenInput] = useState("");
+  const [broadcastSaving, setBroadcastSaving] = useState(false);
+  const [broadcastCreating, setBroadcastCreating] = useState(false);
+
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
@@ -322,6 +334,95 @@ export default function MassBroadcast() {
     }
   }, [companyId]);
 
+  const checkBroadcastInstance = useCallback(async (silent = false) => {
+    if (!companyId) return;
+    if (!silent) setBroadcastChecking(true);
+    try {
+      const resp = await supabase.functions.invoke("manage-instance", {
+        body: { action: "status", company_id: companyId, scope: "broadcast" },
+      });
+      if (resp.data?.success) {
+        setBroadcastHasInstance(resp.data.has_instance);
+        setBroadcastConnected(resp.data.connected);
+        setBroadcastProfileName(resp.data.profile_name || "");
+        setBroadcastOwner(resp.data.owner || "");
+        if (resp.data.qrcode) setBroadcastQrCode(resp.data.qrcode);
+        else setBroadcastQrCode(null);
+      }
+    } finally {
+      if (!silent) setBroadcastChecking(false);
+    }
+  }, [companyId]);
+
+  const handleSaveBroadcastToken = async () => {
+    if (!companyId || !broadcastTokenInput.trim()) return;
+    setBroadcastSaving(true);
+    try {
+      const resp = await supabase.functions.invoke("manage-instance", {
+        body: { action: "save", company_id: companyId, instance_token: broadcastTokenInput.trim(), scope: "broadcast" },
+      });
+      if (resp.data?.success) {
+        setBroadcastConnected(resp.data.connected);
+        setBroadcastHasInstance(true);
+        if (resp.data.qrcode) setBroadcastQrCode(resp.data.qrcode);
+        setBroadcastProfileName(resp.data.profile_name || "");
+        setBroadcastOwner(resp.data.owner || "");
+        toast({ title: "Token de disparo salvo!", description: resp.data.connected ? "Instância conectada." : "Escaneie o QR Code." });
+      } else {
+        toast({ title: "Erro", description: resp.data?.error || "Falha ao salvar.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    } finally {
+      setBroadcastSaving(false);
+    }
+  };
+
+  const handleCreateBroadcastInstance = async () => {
+    if (!companyId) return;
+    setBroadcastCreating(true);
+    try {
+      const resp = await supabase.functions.invoke("whatsapp-connect", {
+        body: { userName: "Disparo em Massa", company_id: companyId },
+      });
+      if (resp.data?.success && resp.data?.token) {
+        const saveResp = await supabase.functions.invoke("manage-instance", {
+          body: { action: "save", company_id: companyId, instance_token: resp.data.token, instance_name: "Disparo", scope: "broadcast" },
+        });
+        setBroadcastHasInstance(true);
+        if (resp.data.qrCode) setBroadcastQrCode(resp.data.qrCode);
+        if (saveResp.data?.connected) setBroadcastConnected(true);
+        toast({ title: "Instância de disparo criada!", description: "Escaneie o QR Code para conectar." });
+      } else {
+        toast({ title: "Erro", description: resp.data?.error || "Falha ao criar instância.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    } finally {
+      setBroadcastCreating(false);
+    }
+  };
+
+  const handleDeleteBroadcastInstance = async () => {
+    if (!companyId) return;
+    try {
+      await supabase.functions.invoke("manage-instance", {
+        body: { action: "disconnect", company_id: companyId, scope: "broadcast" },
+      });
+      await supabase.functions.invoke("manage-instance", {
+        body: { action: "delete", company_id: companyId, scope: "broadcast" },
+      });
+      setBroadcastConnected(false);
+      setBroadcastHasInstance(false);
+      setBroadcastQrCode(null);
+      setBroadcastProfileName("");
+      setBroadcastOwner("");
+      toast({ title: "Instância de disparo removida" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    }
+  };
+
   const loadConversationMonitor = useCallback(async () => {
     if (!companyId || !monitorCampaign?.id) {
       setConversations([]); setConversationMessages([]); setSelectedConversationId(null);
@@ -375,6 +476,7 @@ export default function MassBroadcast() {
   }, [expandedCampaignRecipients, loadCampaignRecipients, loadConversationMonitor, loadData]);
 
   useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => { void checkBroadcastInstance(true); }, [checkBroadcastInstance]);
   useEffect(() => { void loadConversationMonitor(); }, [loadConversationMonitor]);
 
   useEffect(() => {
@@ -629,6 +731,10 @@ export default function MassBroadcast() {
 
   const handleStartBatch = async (campaignId: string) => {
     if (!companyId) return;
+    if (!broadcastConnected) {
+      toast({ title: "⚠️ Instância de Disparo não conectada!", description: "Por favor, conecte o WhatsApp de disparos primeiro na aba Campanhas.", variant: "destructive" });
+      return;
+    }
     const limit = batchLimits[campaignId] || 50;
     const campaign = campaigns.find((c) => c.id === campaignId);
     if (!campaign) return;
@@ -1031,6 +1137,110 @@ export default function MassBroadcast() {
                 </div>
               </div>
             </div>
+
+            {/* ═══ BROADCAST INSTANCE CONNECTION ═══ */}
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="broadcast-connection" className="rounded-xl border border-border/30 bg-card/80 backdrop-blur overflow-hidden">
+                <AccordionTrigger className="px-3.5 py-3 hover:no-underline hover:bg-primary/5 transition-colors">
+                  <div className="flex items-center gap-3 w-full">
+                    <div className={`h-3 w-3 rounded-full shrink-0 ${broadcastConnected ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-destructive shadow-[0_0_8px_hsl(var(--destructive)/0.5)]"}`} />
+                    <Smartphone className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-semibold text-foreground">Instância de Disparo</span>
+                    <Badge variant="outline" className={`ml-auto mr-2 text-[10px] ${broadcastConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                      {broadcastConnected ? "🟢 Pronta" : "🔴 Desconectado"}
+                    </Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-3.5 pb-4">
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Esta instância é exclusiva para disparos em massa. O chip principal do sistema não será afetado.
+                    </p>
+
+                    {broadcastConnected && broadcastProfileName && (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Smartphone className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{broadcastProfileName}</p>
+                          {broadcastOwner && <p className="text-[10px] text-muted-foreground">{broadcastOwner.split(":")[0]}</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {broadcastQrCode && !broadcastConnected && (
+                      <div className="rounded-xl border border-primary/20 bg-background p-4 text-center">
+                        <p className="text-xs text-muted-foreground mb-3">Escaneie com o WhatsApp do chip de disparos:</p>
+                        <img src={broadcastQrCode} alt="QR Code" className="mx-auto max-w-[200px] rounded-lg" />
+                      </div>
+                    )}
+
+                    {!broadcastHasInstance ? (
+                      <div className="space-y-3">
+                        <Button
+                          onClick={handleCreateBroadcastInstance}
+                          disabled={broadcastCreating}
+                          className="w-full gap-2"
+                        >
+                          {broadcastCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                          Gerar QR Code para Disparos
+                        </Button>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Ou cole um token existente:</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={broadcastTokenInput}
+                              onChange={(e) => setBroadcastTokenInput(e.target.value)}
+                              placeholder="Token da instância de disparo"
+                              className="flex-1 font-mono text-xs"
+                            />
+                            <Button size="sm" onClick={handleSaveBroadcastToken} disabled={broadcastSaving || !broadcastTokenInput.trim()}>
+                              {broadcastSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void checkBroadcastInstance()}
+                          disabled={broadcastChecking}
+                          className="w-full sm:w-auto gap-2"
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${broadcastChecking ? "animate-spin" : ""}`} />
+                          Verificar Status
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Remover Instância
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remover instância de disparo?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                A conexão será desfeita e os disparos não poderão ser enviados até reconectar.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteBroadcastInstance} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Remover
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
             <Card className="border-border/30 bg-card/80 backdrop-blur">
               <CardHeader className="pb-3">
