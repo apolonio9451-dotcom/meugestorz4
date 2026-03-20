@@ -638,14 +638,9 @@ export default function MassBroadcast() {
                 <p className="text-xs text-muted-foreground">
                   Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                 </p>
-                <div className="flex flex-col gap-2">
-                  <Button onClick={handleCreate} disabled={submitting || !cleanedPhones.length || !savedTemplates.length} className="w-full min-h-[3rem] gap-2">
+                <Button onClick={handleCreate} disabled={submitting || !cleanedPhones.length || !savedTemplates.length} className="w-full min-h-[3rem] gap-2">
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} Criar Campanha
                   </Button>
-                  <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full min-h-[3rem] gap-2">
-                    <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Atualizar
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 
