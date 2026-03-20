@@ -2,7 +2,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "
 import {
   Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, ImagePlus,
   Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Plus, Radio,
-  RefreshCw, Rocket, Save, Smartphone, Terminal, Timer, Trash2, User, X,
+  RefreshCw, Rocket, Save, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,8 +58,12 @@ type MediaKind = "audio" | "image";
 const normalizePhone = (v: string) => v.replace(/\D/g, "");
 const STORAGE_KEY = "mass_broadcast_saved_templates";
 const MAX_TEMPLATES = 10;
+const BATCH_PAUSE_EVERY = 20;
+const BATCH_PAUSE_SECONDS = 300;
 const loadSavedTemplates = (): string[] => { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r).slice(0, MAX_TEMPLATES) : []; } catch { return []; } };
 const saveSavedTemplates = (t: string[]) => localStorage.setItem(STORAGE_KEY, JSON.stringify(t.slice(0, MAX_TEMPLATES)));
+/** Shuffle array (Fisher-Yates) */
+const shuffleArray = <T,>(arr: T[]): T[] => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 const STATUS_LABEL: Record<string, string> = { queued: "Na fila", running: "Rodando", completed: "Concluída", paused: "Aguardando Início" };
 const STATUS_COLOR: Record<string, string> = { queued: "border-warning/30 bg-warning/10 text-warning", running: "border-warning/30 bg-warning/10 text-warning", completed: "border-primary/30 bg-primary/10 text-primary", paused: "border-muted-foreground/30 bg-muted/20 text-muted-foreground" };
@@ -94,7 +98,7 @@ export default function MassBroadcast() {
   const [refreshing, setRefreshing] = useState(false);
   const [campaignName, setCampaignName] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
-  const [delayRange, setDelayRange] = useState<[number, number]>([60, 120]);
+  const [delayRange, setDelayRange] = useState<[number, number]>([15, 45]);
   const [savedTemplates, setSavedTemplates] = useState<string[]>(loadSavedTemplates);
   const [editingTemplate, setEditingTemplate] = useState("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -257,9 +261,11 @@ export default function MassBroadcast() {
         message_delay_min_seconds: delayRange[0], message_delay_max_seconds: delayRange[1],
       }).select("id").single();
       if (cErr) throw cErr;
+      // Random template assignment (shuffled order per recipient)
+      const shuffled = shuffleArray(savedTemplates);
       const recs = cleanedPhones.map((p, i) => ({
         campaign_id: (c as any).id, company_id: companyId, phone: p, normalized_phone: p,
-        offer_template: savedTemplates[i % savedTemplates.length], status: "pending",
+        offer_template: shuffled[i % shuffled.length], status: "pending",
         current_step: "offer", next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       }));
       await supabase.from("mass_broadcast_recipients" as any).insert(recs);
@@ -458,6 +464,8 @@ export default function MassBroadcast() {
               <PopoverContent side="bottom" align="start" className="max-w-[17rem] text-xs text-muted-foreground">
                 <p className="font-semibold text-foreground mb-1">Disparo em Massa</p>
                 <p>Rotação inteligente de até 10 mensagens por campanha. Atendimento IA automático quando o cliente responde.</p>
+                <p className="mt-1.5 font-semibold text-foreground">🛡️ Anti-Ban</p>
+                <p>• Delay variável {`15-45s`} entre msgs<br/>• Pausa de 5min a cada 20 envios<br/>• Simulação de "Digitando..." 3-5s<br/>• Ordem aleatória de mensagens</p>
               </PopoverContent>
             </Popover>
           </div>
@@ -615,11 +623,23 @@ export default function MassBroadcast() {
                   ))}
                 </div>
                 {countdown.seconds > 0 && (
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-0.5">
-                      <Timer className="h-3 w-3 text-primary" /> Próximo envio em
-                    </div>
-                    <p className="text-xl font-bold text-primary font-mono">{countdown.display}</p>
+                  <div className={`rounded-xl border p-3 text-center ${countdown.seconds >= BATCH_PAUSE_SECONDS - 10 ? "border-warning/30 bg-warning/10" : "border-primary/20 bg-primary/5"}`}>
+                    {countdown.seconds >= BATCH_PAUSE_SECONDS - 10 ? (
+                      <>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-warning mb-0.5">
+                          <Shield className="h-3.5 w-3.5" /> ☕ Pausa de segurança ativa
+                        </div>
+                        <p className="text-xl font-bold text-warning font-mono">{countdown.display}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Retomando automaticamente...</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-0.5">
+                          <Timer className="h-3 w-3 text-primary" /> Próximo envio em
+                        </div>
+                        <p className="text-xl font-bold text-primary font-mono">{countdown.display}</p>
+                      </>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -769,7 +789,7 @@ export default function MassBroadcast() {
                           {/* Delay control */}
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary" /> Delay</Label>
-                            <Slider min={30} max={300} step={5} value={[camp.message_delay_min_seconds, camp.message_delay_max_seconds]} onValueChange={async v => {
+                            <Slider min={15} max={300} step={5} value={[camp.message_delay_min_seconds, camp.message_delay_max_seconds]} onValueChange={async v => {
                               setCampaigns(p => p.map(c => c.id === camp.id ? { ...c, message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] } : c));
                               await supabase.from("mass_broadcast_campaigns" as any).update({ message_delay_min_seconds: v[0], message_delay_max_seconds: v[1] }).eq("id", camp.id);
                             }} />
