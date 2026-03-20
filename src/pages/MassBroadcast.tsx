@@ -886,8 +886,8 @@ export default function MassBroadcast() {
                     <p className="text-xs text-muted-foreground">
                       Válidos: <span className="font-semibold text-foreground">{cleanedPhones.length}</span> · Modelos: <span className="font-semibold text-foreground">{savedTemplates.length}</span>
                     </p>
-                    <div className="flex flex-wrap gap-3">
-                      <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="min-w-[200px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full">
+                      <Button onClick={handleCreateCampaign} disabled={submitting || cleanedPhones.length === 0 || savedTemplates.length === 0} className="w-full sm:w-auto sm:min-w-[200px] gap-2 shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)]">
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
                         Criar Campanha
                       </Button>
