@@ -1215,7 +1215,7 @@ export default function MassBroadcast() {
                                       )}
                                     </div>
                                     {/* Desktop grid layout */}
-                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5">
+                                    <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto_auto] gap-2 items-center p-2.5">
                                       <div className="min-w-0">
                                         <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
                                         {r.error_message && !isNotInterested && (
