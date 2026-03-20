@@ -900,14 +900,14 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
-          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0">
+          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0 min-w-0">
             {/* Sticky API toggle + title */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 px-1 border-b border-border/20">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="sticky top-0 z-10 border-b border-border/20 bg-background/95 px-2.5 py-2.5 backdrop-blur">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
                 </div>
-                <div className="flex w-full sm:w-auto items-center gap-2">
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
                   <Button
                     type="button"
                     variant={globalEnabled ? "default" : "outline"}
@@ -918,8 +918,9 @@ export default function MassBroadcast() {
                     <div className={`h-2 w-2 rounded-full shrink-0 ${globalEnabled ? "bg-primary-foreground" : "bg-muted-foreground/60"}`} />
                     {globalEnabled ? "Pausar API" : "Ativar API"}
                   </Button>
-                  <Button variant="outline" size="icon" onClick={() => void loadData(true)} disabled={refreshing} className="h-8 w-8 shrink-0">
+                  <Button variant="outline" onClick={() => void loadData(true)} disabled={refreshing} className="w-full sm:w-auto my-[5px] gap-2">
                     <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                    Atualizar
                   </Button>
                 </div>
               </div>
