@@ -703,13 +703,22 @@ export default function MassBroadcast() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm text-foreground"><Terminal className="h-4 w-4 text-primary" /> Console</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
+                {/* Auto-pause alert */}
+                {activeLogs.some(l => l.step === "auto_pause") && (
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <p className="text-xs text-destructive font-medium">
+                      ⛔ Disparo pausado automaticamente devido a múltiplos erros seguidos. Verifique sua conexão ou instância e clique em "Continuar".
+                    </p>
+                  </div>
+                )}
                 <div className="rounded-xl border border-border/30 bg-background/80 p-2.5 max-h-[15rem] overflow-y-auto font-mono text-[11px] leading-relaxed space-y-0.5">
                   {activeLogs.length === 0 ? <p className="text-muted-foreground/60">Aguardando eventos...</p>
                   : activeLogs.map(log => (
-                    <div key={log.id} className={`flex gap-2 ${log.status === "error" || log.error_message ? "text-destructive" : "text-primary"}`}>
+                    <div key={log.id} className={`flex gap-2 ${log.status === "error" || log.error_message ? "text-destructive" : log.step === "auto_pause" ? "text-destructive font-semibold" : "text-primary"}`}>
                       <span className="text-muted-foreground/50 shrink-0">[{new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}]</span>
-                      <span className="break-words min-w-0">{log.message?.trim() || log.step}</span>
+                      <span className="break-words min-w-0">{log.error_message ? `❌ ${log.phone}: ${log.error_message}` : log.message?.trim() || log.step}</span>
                     </div>
                   ))}
                 </div>
