@@ -1068,93 +1068,21 @@ export default function MassBroadcast() {
 
                         {/* Action buttons */}
                           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 pt-2 border-t border-border/20 w-full">
+...
                             <Button
                               variant="outline"
                               size="sm"
                               className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
-                              onClick={() => {
-                                if (isEditing) {
-                                  setEditingCampaignId(null);
-                                  setEditPhoneInput("");
-                                } else {
-                                  setEditingCampaignId(campaign.id);
-                                  setEditPhoneInput(recipients?.map((r) => r.phone).join("\n") || "");
-                                }
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {isEditing ? "Cancelar" : "Editar Lista"}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full sm:w-auto my-[5px] gap-2 border-border/40 hover:bg-primary/5"
-                              disabled={duplicatingCampaignId === campaign.id}
-                              onClick={() => void handleDuplicateCampaign(campaign)}
-                            >
-                              {duplicatingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
-                              Duplicar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-2 border-border/40 hover:bg-primary/5"
                               onClick={() => { setMonitorCampaignId(campaign.id); }}
                             >
                               <MessageSquareMore className="h-3.5 w-3.5" />
                               Monitor
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-warning/30 text-warning hover:bg-warning/10">
-                                  <RefreshCw className="h-3.5 w-3.5" />
-                                  Resetar Fila
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Resetar fila?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Todos os contatos voltarão para o status "Pendente". Isso permite reenviar para toda a lista.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => void handleResetQueue(campaign.id)} className="bg-warning text-warning-foreground hover:bg-warning/90">
-                                    Resetar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full sm:w-auto my-[5px] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={deletingCampaignId === campaign.id}>
-                                  {deletingCampaignId === campaign.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                  Excluir
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Todos os contatos, logs e conversas desta campanha serão removidos permanentemente.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => void handleDeleteCampaign(campaign.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Excluir
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-
-                          {/* Edit mode */}
+...
                           {isEditing && (
                             <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                               <Label>Editar números (um por linha)</Label>
-                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="w-full box-border mb-4 min-h-[7.5rem] font-mono text-sm" />
+                              <Textarea value={editPhoneInput} onChange={(e) => setEditPhoneInput(e.target.value)} className="w-full box-border mb-[15px] min-h-[7.5rem] font-mono text-sm" />
                               <Button onClick={() => void handleEditCampaignRecipients(campaign.id)} className="w-full sm:w-auto my-[5px] gap-2">
                                 <Save className="h-4 w-4" />
                                 Salvar Alterações
@@ -1168,7 +1096,7 @@ export default function MassBroadcast() {
                               <Loader2 className="h-5 w-5 animate-spin text-primary" />
                             </div>
                           ) : recipients ? (
-                            <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto">
+                            <div className="rounded-xl border border-border/30 bg-muted/10 max-h-[360px] overflow-y-auto overflow-x-hidden p-1.5 sm:p-0">
                               {/* Desktop table header */}
                               <div className="hidden sm:grid grid-cols-[1fr_auto_1fr_auto] gap-2 p-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 sticky top-0 bg-card/95 backdrop-blur">
                                 <span>Número</span>
@@ -1181,9 +1109,9 @@ export default function MassBroadcast() {
                                 const SiComp = si.icon;
                                 const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
                                 return (
-                                  <div key={r.id} className={`border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                  <div key={r.id} className={`transition-colors sm:border-b sm:border-border/20 sm:last:border-0 sm:hover:bg-primary/5 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                     {/* Mobile card layout */}
-                                    <div className="sm:hidden p-3 space-y-1.5 w-full min-w-0">
+                                    <div className="sm:hidden rounded-xl border border-border/20 bg-background/70 p-3 space-y-1.5 w-full min-w-0">
                                       <div className="flex items-center justify-between gap-2 min-w-0">
                                         <span className="text-sm font-mono text-foreground truncate">{r.phone}</span>
                                         <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 p-1 shrink-0">
