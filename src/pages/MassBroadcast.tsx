@@ -964,9 +964,9 @@ export default function MassBroadcast() {
           </TabsContent>
 
           {/* ═══ TAB: BIBLIOTECA DE CAMPANHAS ═══ */}
-          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden">
+          <TabsContent value="library" className="space-y-4 w-full max-w-full overflow-x-hidden px-0">
             {/* Sticky API toggle + title */}
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 -mx-1 px-1 border-b border-border/20">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 px-1 border-b border-border/20">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="min-w-0">
                   <h2 className="text-base sm:text-lg font-bold text-foreground truncate">Campanhas</h2>
