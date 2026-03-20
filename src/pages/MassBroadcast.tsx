@@ -11,6 +11,8 @@ import {
   Info,
   Loader2,
   MessageSquareMore,
+  Mic,
+  PauseCircle,
   Pencil,
   Plus,
   Radio,
