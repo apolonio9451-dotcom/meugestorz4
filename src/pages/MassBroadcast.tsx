@@ -987,6 +987,40 @@ export default function MassBroadcast() {
               </Button>
             </div>
 
+            <Card className="border-border/30 bg-card/80 backdrop-blur">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm text-foreground">
+                  <Bot className="h-4 w-4 text-primary" />
+                  Status em tempo real da IA
+                </CardTitle>
+                <CardDescription>Monitoramento instantâneo da resposta automática por contato.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-xl border border-border/30 bg-muted/20 p-3 max-h-[220px] overflow-y-auto font-mono text-[11px] space-y-1">
+                  {campaignRealtimeLogs.length === 0 ? (
+                    <p className="text-muted-foreground/70">Aguardando atividade da IA...</p>
+                  ) : (
+                    campaignRealtimeLogs.map((log) => {
+                      const isProcessing = log.status === "processing" || log.step === "ai_processing";
+                      const isError = log.status === "error" || Boolean(log.error_message);
+                      const lineMessage = log.message?.trim() || (isProcessing
+                        ? `🤖 Robô processando resposta para ${log.phone}...`
+                        : isError
+                          ? `❌ Falha ao responder ${log.phone}`
+                          : `✅ Resposta enviada com sucesso para ${log.phone}`);
+
+                      return (
+                        <div key={log.id} className={`flex items-start gap-2 ${isError ? "text-destructive" : isProcessing ? "text-warning" : "text-primary"}`}>
+                          <span className="text-muted-foreground/60 shrink-0">[{new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}]</span>
+                          <span className="break-words">{lineMessage}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {campaigns.length === 0 ? (
               <Card className="border-dashed border-border/40 bg-muted/10">
                 <CardContent className="p-8 text-center text-sm text-muted-foreground">
