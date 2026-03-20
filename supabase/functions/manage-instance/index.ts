@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const UAZAPI_BASE_URL = "https://ipazua.uazapi.com";
 
+/** Returns the correct DB column names based on scope */
+function scopeColumns(scope: string) {
+  if (scope === "broadcast") {
+    return { url: "broadcast_api_url", token: "broadcast_api_token", name: "broadcast_instance_name" };
+  }
+  return { url: "api_url", token: "api_token", name: "instance_name" };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
@@ -29,9 +37,9 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
 
-  const token = authHeader.replace("Bearer ", "");
+  const jwtToken = authHeader.replace("Bearer ", "");
   const { data: claimsData, error: claimsError } =
-    await supabaseAuth.auth.getClaims(token);
+    await supabaseAuth.auth.getClaims(jwtToken);
   if (claimsError || !claimsData?.claims) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
@@ -43,7 +51,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { action, company_id, instance_token } = body;
+    const { action, company_id, instance_token, scope: rawScope } = body;
+    const scope = rawScope === "broadcast" ? "broadcast" : "main";
+    const cols = scopeColumns(scope);
 
     if (!company_id) {
       return new Response(
@@ -56,11 +66,11 @@ Deno.serve(async (req: Request) => {
     if (action === "status") {
       const { data: apiSettings } = await supabaseAdmin
         .from("api_settings")
-        .select("api_token, instance_name")
+        .select(`${cols.token}, ${cols.name}`)
         .eq("company_id", company_id)
         .maybeSingle();
 
-      const tkn = apiSettings?.api_token;
+      const tkn = apiSettings?.[cols.token];
       if (!tkn) {
         return new Response(
           JSON.stringify({ success: true, has_instance: false, connected: false, qrcode: null }),
@@ -94,7 +104,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           success: true, has_instance: true, connected,
           qrcode: qrcode || null,
-          instance_name: instance.name || apiSettings.instance_name || "",
+          instance_name: instance.name || apiSettings[cols.name] || "",
           profile_name: instance.profileName || "",
           profile_pic: instance.profilePicUrl || "",
           owner: instance.owner || "",
@@ -120,13 +130,16 @@ Deno.serve(async (req: Request) => {
         .eq("company_id", company_id)
         .maybeSingle();
 
-      const payload = {
+      const payload: Record<string, string> = {
         company_id,
-        api_url: UAZAPI_BASE_URL,
-        api_token: instance_token,
-        instance_name: instanceName,
-        uazapi_base_url: UAZAPI_BASE_URL,
+        [cols.url]: UAZAPI_BASE_URL,
+        [cols.token]: instance_token,
+        [cols.name]: instanceName,
       };
+      // For main scope, also set uazapi_base_url
+      if (scope === "main") {
+        payload.uazapi_base_url = UAZAPI_BASE_URL;
+      }
 
       if (existing) {
         await supabaseAdmin.from("api_settings").update(payload).eq("id", existing.id);
@@ -134,23 +147,25 @@ Deno.serve(async (req: Request) => {
         await supabaseAdmin.from("api_settings").insert(payload);
       }
 
-      // Auto-configure webhook
-      const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${company_id}`;
-      console.log(`Setting webhook: ${webhookUrl}`);
-
-      try {
-        const whResp = await fetch(`${UAZAPI_BASE_URL}/webhook`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", token: instance_token },
-          body: JSON.stringify({ url: webhookUrl, enabled: true }),
-        });
-        if (!whResp.ok) {
-          console.error("Webhook setup failed:", await whResp.text());
-        } else {
-          console.log("Webhook configured:", JSON.stringify(await whResp.json()));
+      // Auto-configure webhook (only for main scope)
+      let webhookUrl = "";
+      if (scope === "main") {
+        webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${company_id}`;
+        console.log(`Setting webhook: ${webhookUrl}`);
+        try {
+          const whResp = await fetch(`${UAZAPI_BASE_URL}/webhook`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", token: instance_token },
+            body: JSON.stringify({ url: webhookUrl, enabled: true }),
+          });
+          if (!whResp.ok) {
+            console.error("Webhook setup failed:", await whResp.text());
+          } else {
+            console.log("Webhook configured:", JSON.stringify(await whResp.json()));
+          }
+        } catch (whErr) {
+          console.error("Webhook setup error:", whErr);
         }
-      } catch (whErr) {
-        console.error("Webhook setup error:", whErr);
       }
 
       let connected = false;
@@ -191,15 +206,16 @@ Deno.serve(async (req: Request) => {
     if (action === "disconnect") {
       const { data: apiSettings } = await supabaseAdmin
         .from("api_settings")
-        .select("api_token")
+        .select(cols.token)
         .eq("company_id", company_id)
         .maybeSingle();
 
-      if (apiSettings?.api_token) {
+      const tkn = apiSettings?.[cols.token];
+      if (tkn) {
         try {
           await fetch(`${UAZAPI_BASE_URL}/instance/logout`, {
             method: "DELETE",
-            headers: { token: apiSettings.api_token },
+            headers: { token: tkn },
           });
         } catch (e) {
           console.error("Logout failed:", e);
@@ -223,7 +239,7 @@ Deno.serve(async (req: Request) => {
       if (apiSettings) {
         await supabaseAdmin
           .from("api_settings")
-          .update({ api_token: "", instance_name: "" })
+          .update({ [cols.token]: "", [cols.name]: "" })
           .eq("id", apiSettings.id);
       }
 
