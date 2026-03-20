@@ -863,7 +863,7 @@ export default function MassBroadcast() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="campaign-name">Nome da campanha</Label>
-                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" />
+                      <Input id="campaign-name" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex: Clientes Janeiro, Leads Facebook" className="max-w-[90vw]" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phones">Números (um por linha)</Label>
