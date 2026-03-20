@@ -392,7 +392,7 @@ export default function MassBroadcast() {
 
       // Send via whatsapp-send function
       const phone = recipient.normalized_phone || recipient.phone.replace(/\D/g, "");
-      await supabase.functions.invoke("whatsapp-send", { body: { api_url: apiUrl, api_token: apiToken, phone, message: msg } });
+      await supabase.functions.invoke("whatsapp-send", { body: { token: apiToken, phone, message: msg } });
 
       // Mark as sent
       await supabase.from("mass_broadcast_recipients" as any).update({
