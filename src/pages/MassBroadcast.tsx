@@ -1,8 +1,8 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, ImagePlus,
-  Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Plus, Radio,
-  RefreshCw, Rocket, Save, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
+  Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Play, Plus, Radio,
+  RefreshCw, Rocket, Save, Send, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
