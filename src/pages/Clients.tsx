@@ -109,6 +109,7 @@ export default function Clients() {
     chargePauseUntil: string | null;
   } | null>(null);
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
+  const [renewSuccess, setRenewSuccess] = useState<{ clientId: string; clientName: string; whatsapp: string; newEndDate: string } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
   const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
   const formRef = useState<HTMLFormElement | null>(null);
