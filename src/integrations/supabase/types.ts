@@ -20,6 +20,9 @@ export type Database = {
           api_url: string
           auto_send_hour: number
           auto_send_minute: number
+          broadcast_api_token: string
+          broadcast_api_url: string
+          broadcast_instance_name: string
           bulk_send_enabled: boolean
           company_id: string
           created_at: string
@@ -38,6 +41,9 @@ export type Database = {
           api_url?: string
           auto_send_hour?: number
           auto_send_minute?: number
+          broadcast_api_token?: string
+          broadcast_api_url?: string
+          broadcast_instance_name?: string
           bulk_send_enabled?: boolean
           company_id: string
           created_at?: string
@@ -56,6 +62,9 @@ export type Database = {
           api_url?: string
           auto_send_hour?: number
           auto_send_minute?: number
+          broadcast_api_token?: string
+          broadcast_api_url?: string
+          broadcast_instance_name?: string
           bulk_send_enabled?: boolean
           company_id?: string
           created_at?: string
