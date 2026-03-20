@@ -22,6 +22,7 @@ import {
   Terminal,
   Timer,
   Trash2,
+  User,
   X,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
