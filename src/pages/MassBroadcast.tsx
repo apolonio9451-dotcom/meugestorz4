@@ -20,11 +20,14 @@ import {
   RefreshCw,
   Rocket,
   Save,
+  Send,
   ShieldAlert,
+  Terminal,
   Timer,
   Trash2,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
