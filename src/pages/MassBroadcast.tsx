@@ -1109,6 +1109,7 @@ export default function MassBroadcast() {
                                 const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
                                 const isHot = r.current_step === "conversing" || r.current_step === "awaiting_reply";
                                 const isNotInterested = r.current_step === "not_interested";
+                                const isBotTyping = isHot && r.status === "processing";
                                 return (
                                   <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
                                     <div className="min-w-0">
