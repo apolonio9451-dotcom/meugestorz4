@@ -922,17 +922,27 @@ export default function MassBroadcast() {
                           ) : recs?.length ? (
                             <div className="max-h-[20rem] space-y-2 overflow-y-auto rounded-xl border border-border/30 bg-muted/10 p-2">
                               {recs.map(r => (
-                                <div key={r.id} className={`w-full rounded-xl border border-border/20 bg-background/70 p-3 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                <div key={r.id} className={`w-full rounded-xl border border-border/20 bg-background/70 p-2.5 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
                                   <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                       <p className="truncate font-mono text-sm text-foreground">{r.phone}</p>
                                       <span className={`text-[11px] font-medium ${r.status === "sent" ? "text-primary" : r.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
                                         {r.status === "sent" ? "✅ Enviado" : r.status === "failed" ? "❌ Erro" : "⏳ Pendente"}
                                       </span>
                                     </div>
-                                    <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[11px] text-primary hover:bg-primary/10">
-                                      <ExternalLink className="h-3 w-3" /> Abrir
-                                    </a>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {r.status === "pending" && (
+                                        <button type="button" title="Enviar manual"
+                                          disabled={manualSendingId === r.id}
+                                          onClick={() => void handleManualSend(r, camp)}
+                                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
+                                          {manualSendingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                        </button>
+                                      )}
+                                      <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border/30 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    </div>
                                   </div>
                                   <p className="mt-1 break-words text-[10px] text-muted-foreground line-clamp-2">{r.offer_template}</p>
                                   {r.error_message && <p className="mt-0.5 text-[10px] text-destructive break-words">❌ {r.error_message}</p>}
