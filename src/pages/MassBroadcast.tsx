@@ -1073,18 +1073,26 @@ export default function MassBroadcast() {
                               {recipients.map((r) => {
                                 const si = statusIcon[r.status] || statusIcon.pending;
                                 const SiComp = si.icon;
-                                const statusText = recipientStatusText[r.status] || "Pendente";
+                                const stepText = recipientStepText[r.current_step] || recipientStatusText[r.status] || "Pendente";
+                                const isHot = r.current_step === "conversing" || r.current_step === "awaiting_reply";
+                                const isNotInterested = r.current_step === "not_interested";
                                 return (
-                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
+                                  <div key={r.id} className={`grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center p-2.5 border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${r.status === "failed" && !isNotInterested ? "bg-destructive/5" : isHot ? "bg-orange-500/5" : isNotInterested ? "bg-muted/20" : ""}`}>
                                     <div className="min-w-0">
                                       <span className="text-sm font-mono text-foreground truncate block">{r.phone}</span>
-                                      {r.error_message && (
+                                      {r.error_message && !isNotInterested && (
                                         <span className="text-[10px] text-destructive line-clamp-1" title={r.error_message}>❌ {r.error_message}</span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                      <SiComp className={`h-4 w-4 ${si.cls}`} />
-                                      <span className={`text-[10px] font-medium ${si.cls}`}>{statusText}</span>
+                                      {isHot && (
+                                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
+                                        </span>
+                                      )}
+                                      <SiComp className={`h-4 w-4 ${isHot ? "text-orange-400" : si.cls}`} />
+                                      <span className={`text-[10px] font-medium ${isHot ? "text-orange-400" : isNotInterested ? "text-muted-foreground" : si.cls}`}>{stepText}</span>
                                     </div>
                                     <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[9px] truncate max-w-[160px]">
                                       {r.offer_template?.substring(0, 25)}...
