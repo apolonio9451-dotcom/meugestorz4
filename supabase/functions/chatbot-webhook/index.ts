@@ -568,8 +568,8 @@ async function recordMassBroadcastIncoming(
           });
 
           aiHandled = true;
-        } else if ((recipient as any).current_step === "conversing") {
-          // Follow-up question → AI responds
+        } else if ((recipient as any).current_step === "conversing" || (recipient as any).current_step === "done") {
+          // Follow-up question or post-offer reply → AI responds to keep conversation alive
           const aiReply = await callAIFollowUp(sellerInstructions, payload.message, historyText);
 
           if (aiReply) {
@@ -591,11 +591,18 @@ async function recordMassBroadcastIncoming(
               .update({ conversation_status: "bot_active", last_outgoing_at: sentAt, last_message_at: sentAt })
               .eq("id", (conversation as any).id);
 
-            // Extend timeout
-            const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-            await supabase.from("mass_broadcast_recipients")
-              .update({ last_attempt_at: sentAt, next_action_at: nextAction })
-              .eq("id", (recipient as any).id);
+            // If was "done", reactivate to "conversing" so bot keeps responding
+            if ((recipient as any).current_step === "done") {
+              await supabase.from("mass_broadcast_recipients")
+                .update({ current_step: "conversing", status: "processing", last_attempt_at: sentAt, next_action_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
+                .eq("id", (recipient as any).id);
+            } else {
+              // Extend timeout
+              const nextAction = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+              await supabase.from("mass_broadcast_recipients")
+                .update({ last_attempt_at: sentAt, next_action_at: nextAction })
+                .eq("id", (recipient as any).id);
+            }
 
             aiHandled = true;
           }
