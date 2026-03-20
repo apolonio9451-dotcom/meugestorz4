@@ -872,24 +872,24 @@ export default function MassBroadcast() {
   /* ─── Render ─── */
   return (
     <AnimatedPage>
-      <div className="w-full max-w-[100vw] overflow-x-hidden p-2.5 sm:p-4 space-y-4 box-border min-w-0">
+      <div className="w-full max-w-[100vw] min-w-0 overflow-x-hidden p-[10px] sm:p-4 box-border space-y-4">
         {/* Ultra-clean Header: Title + Info Popover + Master Switch */}
         <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-foreground">SPECIAL · Disparo</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-xl font-bold text-foreground truncate">SPECIAL · Disparo</h1>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="rounded-full p-1.5 hover:bg-muted/40 transition-colors">
                   <Info className="h-4 w-4 text-muted-foreground" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="bottom" align="start" className="max-w-[300px] text-xs text-muted-foreground">
+              <PopoverContent side="bottom" align="start" className="max-w-[18.75rem] text-xs text-muted-foreground">
                 <p className="font-semibold text-foreground mb-1">Disparo em Massa</p>
                 <p>Simulação humana com rotação inteligente de mensagens. Atendimento IA automático quando o cliente responde. Use com moderação.</p>
               </PopoverContent>
             </Popover>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${globalEnabled ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-muted-foreground/30"}`} />
             <Label htmlFor="master-switch-top" className="text-xs font-medium text-muted-foreground hidden sm:inline">API</Label>
             <Switch id="master-switch-top" checked={globalEnabled} onCheckedChange={handleToggleGlobal} disabled={savingToggle} />
@@ -905,32 +905,7 @@ export default function MassBroadcast() {
                 Histórico · {historyPhone}
               </DialogTitle>
             </DialogHeader>
-            {historyLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-            ) : historyMessages.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma mensagem registrada.</p>
-            ) : (
-              <div className="space-y-3">
-                {historyMessages.map((msg) => {
-                  const isOut = msg.direction === "outbound";
-                  return (
-                    <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[85%] rounded-2xl border px-3 py-2 ${isOut ? "border-primary/20 bg-primary/10" : "border-border/30 bg-muted/20"}`}>
-                        <div className="flex items-center gap-1.5 text-[10px] font-medium mb-1">
-                          {isOut ? <Bot className="h-3 w-3 text-primary" /> : <User className="h-3 w-3 text-muted-foreground" />}
-                          <span className={isOut ? "text-primary" : "text-muted-foreground"}>{isOut ? "Robô" : "Cliente"}</span>
-                          <span className="text-muted-foreground/60">· {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                        <p className="whitespace-pre-wrap break-words text-sm text-foreground">{msg.message}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
+...
         <Tabs defaultValue="config" className="space-y-4 min-w-0">
           <TabsList className="grid h-auto w-full max-w-full grid-cols-3 gap-1 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-1 backdrop-blur">
             <TabsTrigger value="config" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
@@ -939,7 +914,8 @@ export default function MassBroadcast() {
             </TabsTrigger>
             <TabsTrigger value="library" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <Radio className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-              <span className="truncate">Campanhas ({campaigns.length})</span>
+              <span className="truncate sm:hidden">Campanhas</span>
+              <span className="hidden sm:inline truncate">Campanhas ({campaigns.length})</span>
             </TabsTrigger>
             <TabsTrigger value="monitor" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_12px_-6px_hsl(var(--primary)/0.6)] min-w-0 px-2 sm:px-3">
               <MessageSquareMore className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
