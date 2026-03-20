@@ -269,6 +269,8 @@ export default function MassBroadcast() {
         offer_template: shuffled[i % shuffled.length], status: "pending",
         current_step: "offer", next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       }));
+      };
+      });
       await supabase.from("mass_broadcast_recipients" as any).insert(recs);
       toast({ title: "Campanha criada!", description: `${cleanedPhones.length} contatos.` });
       setCampaignName(""); setPhoneInput(""); await loadData();
