@@ -627,6 +627,77 @@ export default function MassBroadcast() {
     }
   };
 
+  const handleStartBatch = async (campaignId: string) => {
+    if (!companyId) return;
+    const limit = batchLimits[campaignId] || 50;
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) return;
+    setStartingCampaignId(campaignId);
+    try {
+      // Record session start point
+      setSessionStartCounts((prev) => ({ ...prev, [campaignId]: campaign.processed_recipients }));
+
+      // Get the first N pending recipients and set their next_action_at to now
+      const { data: pendingRecipients } = await supabase
+        .from("mass_broadcast_recipients" as any)
+        .select("id")
+        .eq("campaign_id", campaignId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true })
+        .limit(limit);
+
+      if (!pendingRecipients?.length) {
+        toast({ title: "Sem contatos pendentes", description: "Todos os contatos já foram processados.", variant: "destructive" });
+        return;
+      }
+
+      const ids = (pendingRecipients as any[]).map((r) => r.id);
+      // Stagger next_action_at for each recipient
+      const delayMin = campaign.message_delay_min_seconds;
+      const delayMax = campaign.message_delay_max_seconds;
+      for (let i = 0; i < ids.length; i++) {
+        const delaySeconds = i === 0 ? 0 : Math.floor(Math.random() * (delayMax - delayMin + 1)) + delayMin;
+        const nextAt = new Date(Date.now() + (i === 0 ? 0 : delaySeconds * 1000 * i)).toISOString();
+        await supabase
+          .from("mass_broadcast_recipients" as any)
+          .update({ next_action_at: nextAt })
+          .eq("id", ids[i]);
+      }
+
+      // Set campaign to queued so runner picks it up
+      await supabase
+        .from("mass_broadcast_campaigns" as any)
+        .update({ status: "queued", started_at: new Date().toISOString() })
+        .eq("id", campaignId);
+
+      toast({ title: "🚀 Disparos iniciados!", description: `Enviando para ${ids.length} contatos.` });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Erro ao iniciar", description: error?.message, variant: "destructive" });
+    } finally {
+      setStartingCampaignId(null);
+    }
+  };
+
+  const handlePauseCampaign = async (campaignId: string) => {
+    if (!companyId) return;
+    try {
+      await supabase
+        .from("mass_broadcast_campaigns" as any)
+        .update({ status: "paused" })
+        .eq("id", campaignId);
+      // Set remaining pending recipients to far future
+      await supabase
+        .from("mass_broadcast_recipients" as any)
+        .update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() })
+        .eq("campaign_id", campaignId)
+        .eq("status", "pending");
+      toast({ title: "Campanha pausada" });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+    }
+
   const handleAssumeConversation = async () => {
     if (!activeConversation) return;
     setTakingOverConversationId(activeConversation.id);
