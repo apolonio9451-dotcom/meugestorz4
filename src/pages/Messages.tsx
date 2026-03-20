@@ -203,39 +203,38 @@ export default function Messages() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 px-3 sm:px-0">
       {/* Compact Pix Key field */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-muted/30 border border-border/50 rounded-lg px-4 py-3">
-        <Label className="text-sm font-semibold text-foreground whitespace-nowrap">Sua Chave Pix</Label>
-        <Input
-          value={pixKey}
-          onChange={(e) => setPixKey(e.target.value)}
-          placeholder="email@exemplo.com ou CPF/CNPJ"
-          className="bg-secondary/50 border-border max-w-[300px]"
-        />
-        <Button size="sm" onClick={handleSavePixKey} disabled={savingPix} className="shrink-0">
-          {savingPix ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-          Salvar
-        </Button>
-        <p className="text-muted-foreground text-[11px] sm:ml-auto">
-          Usada na variável <code className="bg-muted px-1 rounded text-[10px]">{'{sua_chave_pix}'}</code>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 bg-muted/30 border border-border/50 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Input
+            value={pixKey}
+            onChange={(e) => setPixKey(e.target.value)}
+            placeholder="Chave Pix (email, CPF...)"
+            className="bg-secondary/50 border-border h-8 text-sm max-w-[260px]"
+          />
+          <Button size="sm" onClick={handleSavePixKey} disabled={savingPix} className="shrink-0 h-8 px-2.5">
+            {savingPix ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-[10px] sm:ml-auto">
+          Variável <code className="bg-muted px-1 rounded text-[10px]">{'{sua_chave_pix}'}</code>
         </p>
       </div>
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Mensagens de Cobrança</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Configure as mensagens enviadas ao clicar em "Cobrar".
+          <h1 className="text-lg font-display font-bold text-foreground">Mensagens de Cobrança</h1>
+          <p className="text-muted-foreground text-xs">
+            Templates enviados ao clicar em "Cobrar".
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <TestSendButton companyId={companyId} />
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Info className="w-4 h-4" />
-                Variáveis
+              <Button variant="outline" size="icon" className="h-8 w-8">
+                <Info className="w-3.5 h-3.5" />
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md rounded-2xl">
@@ -259,10 +258,10 @@ export default function Messages() {
       </div>
 
       <Tabs defaultValue="vence_hoje" className="w-full" onValueChange={(v) => setActiveTab(v)}>
-        <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+        <TabsList className="flex flex-wrap h-auto gap-0.5 bg-muted/50 p-0.5">
           {categories.map((cat) => (
-            <TabsTrigger key={cat.key} value={cat.key} className="text-xs data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-              <Badge variant="outline" className={`border text-xs transition-colors ${activeTab === cat.key ? cat.color : "bg-muted/50 text-muted-foreground border-border"}`}>
+            <TabsTrigger key={cat.key} value={cat.key} className="text-[11px] px-1.5 py-1 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              <Badge variant="outline" className={`border text-[11px] transition-colors ${activeTab === cat.key ? cat.color : "bg-muted/50 text-muted-foreground border-border"}`}>
                 {cat.label}
               </Badge>
             </TabsTrigger>
@@ -270,24 +269,24 @@ export default function Messages() {
         </TabsList>
 
         {categories.map((cat) => (
-          <TabsContent key={cat.key} value={cat.key}>
+          <TabsContent key={cat.key} value={cat.key} className="mt-2">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Badge variant="outline" className={`${cat.color} border`}>
+              <CardHeader className="px-3 py-2 pb-1.5">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className={`${cat.color} border text-xs`}>
                     {cat.label}
                   </Badge>
-                </CardTitle>
-                <CardDescription className="text-xs">{cat.description}</CardDescription>
+                </div>
+                <CardDescription className="text-[11px] mt-0.5">{cat.description}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-1.5">
+              <CardContent className="px-3 pb-3 pt-1 space-y-2">
+                <div className="flex flex-wrap gap-1">
                   {variables.map((v) => (
                     <Button
                       key={v.tag}
                       variant="outline"
                       size="sm"
-                      className="text-xs h-7"
+                      className="text-[10px] h-6 px-1.5"
                       onClick={() => insertVariable(cat.key, v.tag)}
                     >
                       {v.tag}
@@ -299,24 +298,26 @@ export default function Messages() {
                   onChange={(e) =>
                     setTemplates((prev) => ({ ...prev, [cat.key]: e.target.value }))
                   }
-                  rows={8}
-                  className="font-mono text-sm"
+                  rows={4}
+                  className="font-mono text-xs min-h-[80px]"
                   placeholder="Digite a mensagem..."
                 />
                 <div className="flex justify-between items-center">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-muted-foreground"
+                    className="text-[11px] h-7 text-muted-foreground"
                     onClick={() => handleRestoreDefault(cat.key)}
                   >
                     Restaurar padrão
                   </Button>
                   <Button
+                    size="sm"
+                    className="h-8"
                     onClick={() => handleSave(cat.key)}
                     disabled={saving === cat.key}
                   >
-                    <Save className="w-4 h-4 mr-2" />
+                    <Save className="w-3.5 h-3.5 mr-1.5" />
                     {saving === cat.key ? "Salvando..." : "Salvar"}
                   </Button>
                 </div>
