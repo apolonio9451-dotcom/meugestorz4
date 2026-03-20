@@ -1005,11 +1005,16 @@ export default function MassBroadcast() {
                     campaignRealtimeLogs.map((log) => {
                       const isProcessing = log.status === "processing" || log.step === "ai_processing";
                       const isError = log.status === "error" || Boolean(log.error_message);
-                      const lineMessage = log.message?.trim() || (isProcessing
-                        ? `🤖 Robô processando resposta para ${log.phone}...`
-                        : isError
-                          ? `❌ Falha ao responder ${log.phone}`
-                          : `✅ Resposta enviada com sucesso para ${log.phone}`);
+                      const fallbackByStep = log.step === "incoming_message"
+                        ? `[LOG] Mensagem recebida de ${log.phone}`
+                        : log.step === "ai_processing"
+                          ? "[LOG] Processando resposta via IA..."
+                          : log.step === "ai_offer_cta_sent"
+                            ? "[LOG] Oferta e CTA de Teste Grátis enviados."
+                            : isError
+                              ? `[LOG] Erro na IA para ${log.phone}`
+                              : `[LOG] Resposta enviada para ${log.phone}`;
+                      const lineMessage = log.message?.trim() || fallbackByStep;
 
                       return (
                         <div key={log.id} className={`flex items-start gap-2 ${isError ? "text-destructive" : isProcessing ? "text-warning" : "text-primary"}`}>
