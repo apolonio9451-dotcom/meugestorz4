@@ -287,7 +287,7 @@ export default function MassBroadcast() {
       const [settingsRes, campaignsRes, logsRes, nextActionRes] = await Promise.all([
         supabase.from("api_settings" as any).select("id, bulk_send_enabled").eq("company_id", companyId).maybeSingle(),
         supabase.from("mass_broadcast_campaigns" as any)
-          .select("id, name, status, total_recipients, processed_recipients, success_count, failure_count, created_at, started_at, completed_at, offer_templates, greeting_templates, message_delay_min_seconds, message_delay_max_seconds")
+          .select("id, name, status, total_recipients, processed_recipients, success_count, failure_count, created_at, started_at, completed_at, offer_templates, greeting_templates, message_delay_min_seconds, message_delay_max_seconds, seller_instructions, offer_timeout_minutes")
           .eq("company_id", companyId).order("created_at", { ascending: false }).limit(20),
         supabase.from("mass_broadcast_logs" as any)
           .select("id, campaign_id, phone, step, status, message, error_message, created_at")
