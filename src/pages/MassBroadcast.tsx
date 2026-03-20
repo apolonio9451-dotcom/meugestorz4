@@ -1286,11 +1286,11 @@ export default function MassBroadcast() {
                     {/* Chat Viewer */}
                     <div className="rounded-2xl border border-border/30 bg-muted/10 p-3">
                       {!activeConversation ? (
-                        <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-dashed border-border/30 p-6 text-center text-sm text-muted-foreground">
+                        <div className="flex min-h-[360px] sm:min-h-[560px] items-center justify-center rounded-xl border border-dashed border-border/30 p-6 text-center text-sm text-muted-foreground">
                           Selecione um chat.
                         </div>
                       ) : (
-                        <div className="flex min-h-[560px] flex-col">
+                        <div className="flex min-h-[360px] sm:min-h-[560px] flex-col">
                           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/30 bg-background/60 px-4 py-3">
                             <div>
                               <p className="text-sm font-semibold text-foreground">{activeConversation.contact_name || activeConversation.phone}</p>
