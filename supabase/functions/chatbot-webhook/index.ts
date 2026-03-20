@@ -755,6 +755,13 @@ Deno.serve(async (req: Request) => {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // If AI seller already handled this message, don't let the regular chatbot also reply
+    if ((massBroadcastConversation as any)?.ai_handled === true) {
+      console.log(`AI seller handled message from ${phone}, skipping chatbot.`);
+      return new Response(JSON.stringify({ status: "ok", reason: "ai_seller_handled" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
     decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
 

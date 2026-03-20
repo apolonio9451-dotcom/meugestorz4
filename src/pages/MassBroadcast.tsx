@@ -151,15 +151,24 @@ const statusIcon: Record<string, { icon: typeof Check; cls: string }> = {
 
 const recipientStatusText: Record<string, string> = {
   pending: "Pendente",
-  processing: "Conversando",
+  processing: "💬 Em Conversa",
   sent: "Finalizado",
   failed: "Erro",
 };
 
-const conversationStatusMeta: Record<string, { label: string; className: string }> = {
-  bot_active: { label: "Gerenciada pelo bot", className: "border-primary/40 bg-primary/10 text-primary" },
-  awaiting_human: { label: "Aguardando humano", className: "border-warning/30 bg-warning/15 text-warning" },
-  human_takeover: { label: "Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
+const recipientStepText: Record<string, string> = {
+  greeting: "⏳ Aguardando envio",
+  awaiting_reply: "📩 Saudação Enviada",
+  conversing: "🔥 Cliente Interessado",
+  done: "✅ Finalizado",
+  not_interested: "🚫 Não Interessado",
+};
+
+const conversationStatusMeta: Record<string, { label: string; className: string; pulse?: boolean }> = {
+  bot_active: { label: "🤖 Bot Ativo", className: "border-primary/40 bg-primary/10 text-primary", pulse: true },
+  awaiting_human: { label: "🔥 Cliente Respondeu", className: "border-orange-500/30 bg-orange-500/15 text-orange-400", pulse: true },
+  human_takeover: { label: "👤 Assumida por humano", className: "border-warning/30 bg-warning/15 text-warning" },
+  not_interested: { label: "🚫 Não Interessado", className: "border-destructive/30 bg-destructive/10 text-destructive" },
 };
 
 /* ─── Countdown Hook ─── */
