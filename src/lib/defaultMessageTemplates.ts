@@ -11,4 +11,6 @@ export const defaultMessageTemplates: Record<string, string> = {
     "Olá, {primeiro_nome}! 👋\n\nGostaríamos de expressar nossa gratidão pela confiança depositada em nossos serviços. Completamos hoje {dias} dias de parceria, e é uma satisfação tê-lo como cliente.\n\nNossa prioridade é oferecer uma experiência de excelência e, para isso, sua percepção é fundamental. Poderia nos informar como tem sido sua experiência com nossa plataforma até o momento? Seu feedback é uma ferramenta essencial para o aprimoramento contínuo de nossas operações.\n\n📋 Resumo da Sua Assinatura:\n\nPlano: {plano}\nValor: R$ {valor}\nVencimento: {vencimento}\n\n🔑 Seus Dados:\n\n👤 Usuário: {usuario}\n🖥️ MAC: {mac}\n🌐 Servidor: {servidor}",
   suporte:
     "Olá, *{primeiro_nome}*, {saudacao}! 👋\n\nEstamos entrando em contato para saber como ficou o seu sinal após o nosso último suporte. Como está a sua experiência hoje? 🌟\n\nPassando apenas para confirmar se ficou tudo 100% resolvido, pois sua satisfação é nossa prioridade e queremos garantir que o serviço esteja funcional. 🤝\natt, suporte 24h!",
+  renovacao:
+    "Olá, *{nome}*! 🎉\n\nSua renovação foi confirmada com sucesso! ✅\n\nSeu novo vencimento é: *{vencimento}*\n\nAgradecemos pela confiança e por continuar conosco. Qualquer dúvida, estamos à disposição! 🤝",
 };

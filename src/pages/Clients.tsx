@@ -13,7 +13,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -109,6 +109,7 @@ export default function Clients() {
     chargePauseUntil: string | null;
   } | null>(null);
   const [renewConfirm, setRenewConfirm] = useState<{ clientId: string; type: "same" | "days" | "months"; days?: number; label: string } | null>(null);
+  const [renewSuccess, setRenewSuccess] = useState<{ clientId: string; clientName: string; whatsapp: string; newEndDate: string } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<{ name: string; whatsapp: string } | null>(null);
   const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent<HTMLFormElement> | null>(null);
   const formRef = useState<HTMLFormElement | null>(null);
@@ -753,15 +754,19 @@ export default function Clients() {
     const currentEnd = parseISO(sub.end_date);
     const baseDate = currentEnd > new Date() ? currentEnd : new Date();
     const newEnd = addMonths(baseDate, months);
+    const newEndFormatted = format(newEnd, "yyyy-MM-dd");
     const { error } = await supabase
       .from("client_subscriptions")
-      .update({ end_date: format(newEnd, "yyyy-MM-dd"), payment_status: paid ? "paid" : "pending", updated_at: new Date().toISOString() })
+      .update({ end_date: newEndFormatted, payment_status: paid ? "paid" : "pending", updated_at: new Date().toISOString() })
       .eq("id", sub.id);
     if (error) toast.error(error.message);
     else {
       const client = clients.find(c => c.id === clientId);
       await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)${!paid ? " (pgto pendente)" : ""}`);
       toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs();
+      if (client?.whatsapp) {
+        setRenewSuccess({ clientId, clientName: client.name, whatsapp: client.whatsapp, newEndDate: format(newEnd, "dd/MM/yyyy") });
+      }
     }
   };
 
@@ -787,6 +792,9 @@ export default function Clients() {
       const client = clients.find(c => c.id === clientId);
       await logActivity("renovação", client?.name || "", clientId, `Renovado para dia ${dayOfMonth}${!paid ? " (pgto pendente)" : ""}`);
       toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); fetchActivityLogs();
+      if (client?.whatsapp) {
+        setRenewSuccess({ clientId, clientName: client.name, whatsapp: client.whatsapp, newEndDate: format(newEnd, "dd/MM/yyyy") });
+      }
     }
   };
 
@@ -2012,6 +2020,44 @@ export default function Clients() {
             </Button>
             <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setRenewConfirm(null)}>
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Renewal Thanks Dialog */}
+      <Dialog open={!!renewSuccess} onOpenChange={(open) => !open && setRenewSuccess(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 className="h-5 w-5" />
+              Renovação Confirmada!
+            </DialogTitle>
+            <DialogDescription className="text-sm pt-1">
+              Deseja enviar a mensagem de agradecimento para <strong>{renewSuccess?.clientName}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button className="w-full gap-2" onClick={() => {
+              if (!renewSuccess) return;
+              const template = messageTemplates.renovacao || defaultMessageTemplates.renovacao;
+              const msg = template
+                .replace(/\{nome\}/g, renewSuccess.clientName)
+                .replace(/\{primeiro_nome\}/g, renewSuccess.clientName.split(" ")[0])
+                .replace(/\{vencimento\}/g, renewSuccess.newEndDate);
+              const phone = renewSuccess.whatsapp.replace(/\D/g, "");
+              const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+              const encoded = encodeURIComponent(msg.normalize("NFC"));
+              const url = isMobile
+                ? `https://api.whatsapp.com/send?phone=55${phone}&text=${encoded}`
+                : `https://web.whatsapp.com/send?phone=55${phone}&text=${encoded}`;
+              window.open(url, "_blank");
+              setRenewSuccess(null);
+            }}>
+              <Send className="w-4 h-4" />
+              Enviar Agradecimento
+            </Button>
+            <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setRenewSuccess(null)}>
+              Pular
             </Button>
           </DialogFooter>
         </DialogContent>

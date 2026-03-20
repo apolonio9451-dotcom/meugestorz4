@@ -66,6 +66,13 @@ const categories = [
     description: "Mensagem de check-up de satisfação enviada após suporte técnico.",
     defaultMessage: defaultMessageTemplates.suporte,
   },
+  {
+    key: "renovacao",
+    label: "Renovação",
+    color: "bg-emerald-400/20 text-emerald-400 border-emerald-400/50",
+    description: "Mensagem de agradecimento enviada após a renovação do plano do cliente.",
+    defaultMessage: defaultMessageTemplates.renovacao,
+  },
 ];
 
 const variables = [
