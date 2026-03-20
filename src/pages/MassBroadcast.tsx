@@ -1125,7 +1125,7 @@ export default function MassBroadcast() {
                         </div>
 
                         {/* Action buttons */}
-                          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 pt-2 border-t border-border/20 w-full">
+                          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 pt-2 border-t border-border/20 w-full">
                             <Button
                               variant="outline"
                               size="sm"
