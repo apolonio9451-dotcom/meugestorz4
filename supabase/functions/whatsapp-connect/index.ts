@@ -10,12 +10,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { userName, webhookUrl, company_id } = await req.json();
+    const { userName, webhookUrl, company_id, scope } = await req.json();
+    const isBroadcast = scope === "broadcast";
+    const tokenColumn = isBroadcast ? "broadcast_api_token" : "api_token";
+
     const API_KEY = "10c3ab83-17ba-4921-ae88-c096ed1d0144";
     const SUPABASE_FUNCTIONS_URL = "https://xukeukdwhelyttifzveb.supabase.co/functions/v1";
     const UAZAPI_URL = "https://ipazua.uazapi.com";
 
-    // Backend protection: check if company already has an instance
+    // Backend protection: check if company already has an instance for this scope
     if (company_id) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -23,11 +26,11 @@ serve(async (req) => {
 
       const { data: existing } = await supabaseAdmin
         .from("api_settings")
-        .select("api_token")
+        .select(tokenColumn)
         .eq("company_id", company_id)
         .maybeSingle();
 
-      if (existing?.api_token && existing.api_token.trim() !== "") {
+      if (existing?.[tokenColumn] && existing[tokenColumn].trim() !== "") {
         return new Response(
           JSON.stringify({ error: "Você já possui uma instância ativa. Remova a anterior antes de criar uma nova." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
