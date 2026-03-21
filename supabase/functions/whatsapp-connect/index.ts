@@ -14,9 +14,20 @@ serve(async (req) => {
     const isBroadcast = scope === "broadcast";
     const tokenColumn = isBroadcast ? "broadcast_api_token" : "api_token";
 
-    const API_KEY = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "10c3ab83-17ba-4921-ae88-c096ed1d0144";
     const SUPABASE_FUNCTIONS_URL = "https://xukeukdwhelyttifzveb.supabase.co/functions/v1";
     const UAZAPI_URL = "https://ipazua.uazapi.com";
+
+    const candidateApiKeys = Array.from(
+      new Set([
+        Deno.env.get("UAZAPI_ADMIN_TOKEN")?.trim(),
+        Deno.env.get("EVOLUTI_TOKEN")?.trim(),
+        "10c3ab83-17ba-4921-ae88-c096ed1d0144",
+      ].filter((key): key is string => Boolean(key && key.length > 0)))
+    );
+
+    if (candidateApiKeys.length === 0) {
+      throw new Error("Nenhuma chave de API configurada para criar instância");
+    }
 
     // Backend protection: check if company already has an instance for this scope
     if (company_id) {
@@ -38,21 +49,38 @@ serve(async (req) => {
       }
     }
 
-    // 1. Criar instância
-    const createRes = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-instance-external`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: API_KEY,
-        name: userName || "Minha Instância",
-        webhookUrl: webhookUrl || undefined,
-        webhookName: webhookUrl ? "webhook-principal" : undefined,
-        events: ["messages"],
-      }),
-    });
+    // 1. Criar instância (fallback automático entre chaves)
+    let createData: any = null;
+    let lastCreateError = "Erro ao criar instância";
 
-    const createData = await createRes.json();
-    if (!createRes.ok) throw new Error(createData.error || "Erro ao criar instância");
+    for (const apiKey of candidateApiKeys) {
+      const createRes = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-instance-external`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: apiKey,
+          name: userName || "Minha Instância",
+          webhookUrl: webhookUrl || undefined,
+          webhookName: webhookUrl ? "webhook-principal" : undefined,
+          events: ["messages"],
+        }),
+      });
+
+      const payload = await createRes.json();
+      if (createRes.ok) {
+        createData = payload;
+        break;
+      }
+
+      lastCreateError = payload?.error || "Erro ao criar instância";
+      if (!String(lastCreateError).toLowerCase().includes("invalid api key")) {
+        break;
+      }
+    }
+
+    if (!createData) {
+      throw new Error(lastCreateError);
+    }
 
     const { token, instanceId } = createData;
 
