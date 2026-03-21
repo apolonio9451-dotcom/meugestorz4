@@ -239,6 +239,12 @@ export default function MassBroadcast() {
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void checkBc(true); }, [checkBc]);
   useEffect(() => { void loadMonitor(); }, [loadMonitor]);
+  // Auto-refresh for QR code scanning
+  useEffect(() => {
+    if (!bcAutoRefresh || bcConnected) return;
+    const interval = setInterval(() => checkBc(true), 12000);
+    return () => clearInterval(interval);
+  }, [bcAutoRefresh, bcConnected, checkBc]);
 
   useEffect(() => {
     if (!companyId) return;
