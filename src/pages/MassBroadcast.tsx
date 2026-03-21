@@ -194,7 +194,14 @@ export default function MassBroadcast() {
       if (r.data?.success) {
         setBcHasInstance(r.data.has_instance); setBcConnected(r.data.connected);
         setBcProfile(r.data.profile_name || ""); setBcOwner(r.data.owner || "");
-        setBcQr(r.data.qrcode || null);
+        if (r.data.qrcode) {
+          const qr = r.data.qrcode;
+          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
+          if (!r.data.connected) setBcAutoRefresh(true);
+        } else {
+          setBcQr(null);
+          if (r.data.connected) setBcAutoRefresh(false);
+        }
       }
     } finally { if (!silent) setBcChecking(false); }
   }, [companyId]);
