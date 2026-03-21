@@ -53,7 +53,12 @@ serve(async (req) => {
     let createData: any = null;
     let lastCreateError = "Erro ao criar instância";
 
-    for (const apiKey of candidateApiKeys) {
+    console.log(`[whatsapp-connect] Tentando ${candidateApiKeys.length} chave(s). Scope: ${scope || "main"}`);
+
+    for (let ki = 0; ki < candidateApiKeys.length; ki++) {
+      const apiKey = candidateApiKeys[ki];
+      console.log(`[whatsapp-connect] Tentativa ${ki + 1}/${candidateApiKeys.length} — chave: ${apiKey.substring(0, 8)}...`);
+
       const createRes = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-instance-external`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,6 +72,8 @@ serve(async (req) => {
       });
 
       const payload = await createRes.json();
+      console.log(`[whatsapp-connect] Resposta ${createRes.status}:`, JSON.stringify(payload).substring(0, 200));
+
       if (createRes.ok) {
         createData = payload;
         break;
