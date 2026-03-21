@@ -14,7 +14,7 @@ serve(async (req) => {
     const isBroadcast = scope === "broadcast";
     const tokenColumn = isBroadcast ? "broadcast_api_token" : "api_token";
 
-    const API_KEY = "10c3ab83-17ba-4921-ae88-c096ed1d0144";
+    const API_KEY = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "10c3ab83-17ba-4921-ae88-c096ed1d0144";
     const SUPABASE_FUNCTIONS_URL = "https://xukeukdwhelyttifzveb.supabase.co/functions/v1";
     const UAZAPI_URL = "https://ipazua.uazapi.com";
 
