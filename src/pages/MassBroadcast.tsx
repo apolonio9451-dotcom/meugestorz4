@@ -471,7 +471,7 @@ export default function MassBroadcast() {
   const handleCreateBcInstance = async () => {
     if (!companyId) return; setBcCreating(true);
     try {
-      const r = await supabase.functions.invoke("whatsapp-connect", { body: { userName: "Disparo em Massa", company_id: companyId } });
+      const r = await supabase.functions.invoke("whatsapp-connect", { body: { userName: "Disparo em Massa", company_id: companyId, scope: "broadcast" } });
       if (r.data?.success && r.data?.token) {
         const sr = await supabase.functions.invoke("manage-instance", { body: { action: "save", company_id: companyId, instance_token: r.data.token, instance_name: "Disparo", scope: "broadcast" } });
         setBcHasInstance(true);
