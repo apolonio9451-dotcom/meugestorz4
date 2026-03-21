@@ -128,6 +128,8 @@ export default function MassBroadcast() {
   const [bcToken, setBcToken] = useState("");
   const [bcSaving, setBcSaving] = useState(false);
   const [bcCreating, setBcCreating] = useState(false);
+  const [bcAutoRefresh, setBcAutoRefresh] = useState(false);
+  const [bcDisconnecting, setBcDisconnecting] = useState(false);
 
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
