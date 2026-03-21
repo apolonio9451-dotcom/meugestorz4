@@ -78,7 +78,11 @@ function useCountdown(iso: string | null) {
   const [s, setS] = useState(0);
   useEffect(() => {
     if (!iso) { setS(0); return; }
-    const calc = () => setS(Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000)));
+    const calc = () => {
+      const raw = Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000));
+      // Cap at 600s (10min) — anything beyond means the campaign is paused/stopped, not a real countdown
+      setS(raw > 600 ? 0 : raw);
+    };
     calc(); const i = setInterval(calc, 1000); return () => clearInterval(i);
   }, [iso]);
   return { seconds: s, display: `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` };
