@@ -802,22 +802,42 @@ export default function MassBroadcast() {
                 <AccordionContent className="px-4 pb-4">
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">Instância exclusiva para disparos. O chip principal não será afetado.</p>
+
+                    {/* Connected profile */}
                     {bcConnected && bcProfile && (
                       <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0"><Smartphone className="h-4 w-4 text-primary" /></div>
-                        <div className="min-w-0"><p className="text-sm font-medium text-foreground truncate">{bcProfile}</p></div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{bcProfile}</p>
+                          {bcOwner && <p className="text-xs text-muted-foreground">+{bcOwner}</p>}
+                        </div>
                       </div>
                     )}
+
+                    {/* QR Code display */}
                     {bcQr && !bcConnected && (
-                      <div className="rounded-xl border border-primary/20 bg-background p-4 text-center">
+                      <div className="rounded-xl border border-primary/20 bg-white p-3 text-center">
                         <p className="text-xs text-muted-foreground mb-2">Escaneie com o WhatsApp de disparos:</p>
                         <img src={bcQr} alt="QR Code" className="mx-auto w-full max-w-[12rem] rounded-lg" />
+                        <p className="text-muted-foreground/50 text-[10px] flex items-center justify-center gap-1 mt-2">
+                          <RefreshCw className="w-3 h-3 animate-spin" /> Atualizando automaticamente...
+                        </p>
                       </div>
                     )}
+
+                    {/* Disconnected warning (has instance but no QR and not connected) */}
+                    {bcHasInstance && !bcConnected && !bcQr && (
+                      <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-center">
+                        <p className="text-sm text-warning font-medium">Instância desconectada</p>
+                        <p className="text-xs text-muted-foreground mt-1">Clique em "Verificar" para obter um novo QR Code.</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
                     {!bcHasInstance ? (
                       <div className="space-y-3">
                         <Button onClick={handleCreateBcInstance} disabled={bcCreating} className="w-full min-h-[3rem] gap-2">
-                          {bcCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Gerar QR Code
+                          {bcCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Criar Instância
                         </Button>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Ou cole um token:</Label>
@@ -834,14 +854,21 @@ export default function MassBroadcast() {
                         <Button variant="outline" onClick={() => void checkBc()} disabled={bcChecking} className="w-full sm:w-auto min-h-[3rem] gap-2">
                           <RefreshCw className={`h-3.5 w-3.5 ${bcChecking ? "animate-spin" : ""}`} /> Verificar
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" className="w-full sm:w-auto min-h-[3rem] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
-                              <Trash2 className="h-3.5 w-3.5" /> Remover
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remover instância?</AlertDialogTitle><AlertDialogDescription>Os disparos não poderão ser enviados até reconectar.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeleteBcInstance} className="bg-destructive text-destructive-foreground">Remover</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                        </AlertDialog>
+                        {bcConnected && (
+                          <Button variant="outline" onClick={handleDisconnectBc} disabled={bcDisconnecting} className="w-full sm:w-auto min-h-[3rem] gap-2 border-warning/30 text-warning hover:bg-warning/10">
+                            {bcDisconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Desconectar
+                          </Button>
+                        )}
+                        {!bcConnected && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" className="w-full sm:w-auto min-h-[3rem] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
+                                <Trash2 className="h-3.5 w-3.5" /> Remover
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remover instância?</AlertDialogTitle><AlertDialogDescription>Os disparos não poderão ser enviados até reconectar.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeleteBcInstance} className="bg-destructive text-destructive-foreground">Remover</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     )}
                   </div>
