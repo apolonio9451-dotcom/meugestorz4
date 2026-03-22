@@ -877,10 +877,10 @@ export default function MassBroadcast() {
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
                                       {r.status === "pending" && (
-                                        <button type="button" title="Enviar manual"
-                                          disabled={manualSendingId === r.id}
+                                        <button type="button" title={!canDispatch ? (!globalEnabled ? "Ative a API no topo" : "Conecte o WhatsApp") : "Enviar manual"}
+                                          disabled={!canDispatch || manualSendingId === r.id}
                                           onClick={() => void handleManualSend(r, camp)}
-                                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
+                                          className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors disabled:opacity-50 ${canDispatch ? "border-primary/30 text-primary hover:bg-primary/10" : "border-muted text-muted-foreground cursor-not-allowed"}`}>
                                           {manualSendingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                                         </button>
                                       )}
