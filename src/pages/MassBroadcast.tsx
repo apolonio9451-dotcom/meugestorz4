@@ -140,6 +140,7 @@ export default function MassBroadcast() {
   const countdown = useCountdown(nextActionAt);
 
   const canDispatch = globalEnabled && bcConnected;
+  const cleanedPhones = useMemo(() => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter(p => p.length >= 10))), [phoneInput]);
   const monitorCampaign = useMemo(() => campaigns.find(c => c.id === monitorCampaignId) ?? campaigns.find(c => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null, [campaigns, monitorCampaignId]);
   // Deduplicate error logs: show only the latest log per phone (errors), keep all success logs
   const activeLogs = useMemo(() => {
@@ -365,6 +366,7 @@ export default function MassBroadcast() {
     if (!companyId) return;
     if (!globalEnabled) { toast({ title: "⚠️ Ative a API no topo para iniciar!", variant: "destructive" }); return; }
     if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
+    const limit = batchLimits[cid] || 50;
     const camp = campaigns.find(c => c.id === cid); if (!camp) return;
     setStartingId(cid);
     try {
