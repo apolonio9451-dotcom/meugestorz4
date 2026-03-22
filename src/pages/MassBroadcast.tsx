@@ -446,6 +446,34 @@ export default function MassBroadcast() {
     finally { setManualSendingId(null); }
   };
 
+  const handleSaveCampaignMessages = async (cid: string) => {
+    if (!companyId) return;
+    setSavingMsgs(true);
+    try {
+      const filtered = editMsgsText.filter(t => t.trim());
+      if (!filtered.length) { toast({ title: "Adicione ao menos 1 mensagem", variant: "destructive" }); return; }
+      await supabase.from("mass_broadcast_campaigns" as any).update({ offer_templates: filtered }).eq("id", cid);
+      // Re-assign templates to pending recipients
+      const { data: pending } = await supabase.from("mass_broadcast_recipients" as any).select("id").eq("campaign_id", cid).eq("status", "pending").order("created_at", { ascending: true }).limit(500);
+      if (pending?.length) {
+        for (let i = 0; i < pending.length; i++) {
+          await supabase.from("mass_broadcast_recipients" as any).update({ offer_template: filtered[i % filtered.length] }).eq("id", (pending as any)[i].id);
+        }
+      }
+      setCampaigns(p => p.map(c => c.id === cid ? { ...c, offer_templates: filtered } : c));
+      toast({ title: "Mensagens atualizadas!" });
+      setEditingMsgsId(null);
+      if (expandedRecipients[cid]) void loadRecipients(cid);
+    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
+    finally { setSavingMsgs(false); }
+  };
+
+  const handleLoadTemplateIntoCampaign = (template: string) => {
+    setEditMsgsText(prev => [...prev, template]);
+    setLoadTemplateOpen(false);
+    toast({ title: "Template carregado!" });
+  };
+
   // (broadcast instance handlers removed — uses global instance from Settings)
 
   // Monitor handlers
