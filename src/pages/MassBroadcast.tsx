@@ -118,18 +118,10 @@ export default function MassBroadcast() {
   const [sessionStarts, setSessionStarts] = useState<Record<string, number>>({});
   const [startingId, setStartingId] = useState<string | null>(null);
 
-  // Broadcast instance
+  // Main instance status (from Settings > Instância)
   const [bcConnected, setBcConnected] = useState(false);
-  const [bcHasInstance, setBcHasInstance] = useState(false);
-  const [bcQr, setBcQr] = useState<string | null>(null);
   const [bcProfile, setBcProfile] = useState("");
-  const [bcOwner, setBcOwner] = useState("");
   const [bcChecking, setBcChecking] = useState(false);
-  const [bcToken, setBcToken] = useState("");
-  const [bcSaving, setBcSaving] = useState(false);
-  const [bcCreating, setBcCreating] = useState(false);
-  const [bcAutoRefresh, setBcAutoRefresh] = useState(false);
-  const [bcDisconnecting, setBcDisconnecting] = useState(false);
 
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -190,18 +182,10 @@ export default function MassBroadcast() {
     if (!companyId) return;
     if (!silent) setBcChecking(true);
     try {
-      const r = await supabase.functions.invoke("manage-instance", { body: { action: "status", company_id: companyId, scope: "broadcast" } });
+      const r = await supabase.functions.invoke("manage-instance", { body: { action: "status", company_id: companyId } });
       if (r.data?.success) {
-        setBcHasInstance(r.data.has_instance); setBcConnected(r.data.connected);
-        setBcProfile(r.data.profile_name || ""); setBcOwner(r.data.owner || "");
-        if (r.data.qrcode) {
-          const qr = r.data.qrcode;
-          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-          if (!r.data.connected) setBcAutoRefresh(true);
-        } else {
-          setBcQr(null);
-          if (r.data.connected) setBcAutoRefresh(false);
-        }
+        setBcConnected(r.data.connected);
+        setBcProfile(r.data.profile_name || "");
       }
     } finally { if (!silent) setBcChecking(false); }
   }, [companyId]);
@@ -239,12 +223,6 @@ export default function MassBroadcast() {
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void checkBc(true); }, [checkBc]);
   useEffect(() => { void loadMonitor(); }, [loadMonitor]);
-  // Auto-refresh for QR code scanning
-  useEffect(() => {
-    if (!bcAutoRefresh || bcConnected) return;
-    const interval = setInterval(() => checkBc(true), 12000);
-    return () => clearInterval(interval);
-  }, [bcAutoRefresh, bcConnected, checkBc]);
 
   useEffect(() => {
     if (!companyId) return;
