@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, ImagePlus,
+  Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, FileText, ImagePlus,
   Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Play, Plus, Radio,
   RefreshCw, Rocket, Save, Send, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
