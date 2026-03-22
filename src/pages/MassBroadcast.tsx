@@ -351,7 +351,7 @@ export default function MassBroadcast() {
 
   const handleStartBatch = async (cid: string) => {
     if (!companyId) return;
-    if (!bcConnected) { toast({ title: "⚠️ Conecte a instância de disparo primeiro!", variant: "destructive" }); return; }
+    if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     const limit = batchLimits[cid] || 50;
     const camp = campaigns.find(c => c.id === cid); if (!camp) return;
     setStartingId(cid);
