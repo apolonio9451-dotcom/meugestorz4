@@ -701,95 +701,13 @@ export default function MassBroadcast() {
               </Button>
             </div>
 
-            {/* Broadcast Instance Accordion */}
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="bc" className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-primary/5">
-                  <div className="flex w-full items-center gap-2 min-w-0 pr-2">
-                    <div className={`h-3 w-3 rounded-full shrink-0 ${bcConnected ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-destructive shadow-[0_0_6px_hsl(var(--destructive)/0.5)]"}`} />
-                    <Smartphone className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-foreground truncate">Instância de Disparo</span>
-                    <Badge variant="outline" className={`ml-auto shrink-0 text-[10px] whitespace-nowrap ${bcConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
-                      {bcConnected ? "🟢 Pronta" : "🔴 Desconectado"}
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">Instância exclusiva para disparos. O chip principal não será afetado.</p>
-
-                    {/* Connected profile */}
-                    {bcConnected && bcProfile && (
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0"><Smartphone className="h-4 w-4 text-primary" /></div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{bcProfile}</p>
-                          {bcOwner && <p className="text-xs text-muted-foreground">+{bcOwner}</p>}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* QR Code display */}
-                    {bcQr && !bcConnected && (
-                      <div className="rounded-xl border border-primary/20 bg-white p-3 text-center">
-                        <p className="text-xs text-muted-foreground mb-2">Escaneie com o WhatsApp de disparos:</p>
-                        <img src={bcQr} alt="QR Code" className="mx-auto w-full max-w-[12rem] rounded-lg" />
-                        <p className="text-muted-foreground/50 text-[10px] flex items-center justify-center gap-1 mt-2">
-                          <RefreshCw className="w-3 h-3 animate-spin" /> Atualizando automaticamente...
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Disconnected warning (has instance but no QR and not connected) */}
-                    {bcHasInstance && !bcConnected && !bcQr && (
-                      <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-center">
-                        <p className="text-sm text-warning font-medium">Instância desconectada</p>
-                        <p className="text-xs text-muted-foreground mt-1">Clique em "Verificar" para obter um novo QR Code.</p>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    {!bcHasInstance ? (
-                      <div className="space-y-3">
-                        <Button onClick={handleCreateBcInstance} disabled={bcCreating} className="w-full min-h-[3rem] gap-2">
-                          {bcCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Criar Instância
-                        </Button>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Ou cole um token:</Label>
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <Input value={bcToken} onChange={e => setBcToken(e.target.value)} placeholder="Token da instância" className="w-full font-mono text-xs" />
-                            <Button onClick={handleSaveBcToken} disabled={bcSaving || !bcToken.trim()} className="w-full sm:w-auto min-h-[3rem] shrink-0 gap-2">
-                              {bcSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" onClick={() => void checkBc()} disabled={bcChecking} className="w-full sm:w-auto min-h-[3rem] gap-2">
-                          <RefreshCw className={`h-3.5 w-3.5 ${bcChecking ? "animate-spin" : ""}`} /> Verificar
-                        </Button>
-                        {bcConnected && (
-                          <Button variant="outline" onClick={handleDisconnectBc} disabled={bcDisconnecting} className="w-full sm:w-auto min-h-[3rem] gap-2 border-warning/30 text-warning hover:bg-warning/10">
-                            {bcDisconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Desconectar
-                          </Button>
-                        )}
-                        {!bcConnected && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" className="w-full sm:w-auto min-h-[3rem] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
-                                <Trash2 className="h-3.5 w-3.5" /> Remover
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remover instância?</AlertDialogTitle><AlertDialogDescription>Os disparos não poderão ser enviados até reconectar.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeleteBcInstance} className="bg-destructive text-destructive-foreground">Remover</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            {/* WhatsApp status indicator */}
+            {!bcConnected && (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-destructive shrink-0" />
+                <p className="text-xs text-destructive">WhatsApp desconectado. Conecte no menu <strong>Configurações &gt; Instância</strong> para disparar.</p>
+              </div>
+            )}
 
             {/* Campaign Cards */}
             {campaigns.length === 0 ? (
