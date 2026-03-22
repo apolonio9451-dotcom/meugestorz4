@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, ImagePlus,
+  Bot, Check, ChevronDown, ChevronUp, Clock, Copy, ExternalLink, FileText, ImagePlus,
   Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Play, Plus, Radio,
   RefreshCw, Rocket, Save, Send, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
@@ -128,6 +128,11 @@ export default function MassBroadcast() {
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
   const [takingOverId, setTakingOverId] = useState<string | null>(null);
+  const [editingMsgsId, setEditingMsgsId] = useState<string | null>(null);
+  const [editMsgsText, setEditMsgsText] = useState<string[]>([]);
+  const [savingMsgs, setSavingMsgs] = useState(false);
+  const [loadTemplateOpen, setLoadTemplateOpen] = useState(false);
+  const activeRecipientRef = useRef<HTMLDivElement>(null);
   const [monitorCampaignId, setMonitorCampaignId] = useState<string | null>(null);
 
   // History modal
@@ -219,6 +224,13 @@ export default function MassBroadcast() {
       if (opts?.withRecipients) Object.keys(expandedRecipients).forEach(id => void loadRecipients(id));
     }, 180);
   }, [expandedRecipients, loadRecipients, loadMonitor, loadData]);
+
+  // Auto-scroll to active recipient
+  useEffect(() => {
+    if (activeRecipientRef.current) {
+      activeRecipientRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
 
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void checkBc(true); }, [checkBc]);
@@ -439,6 +451,34 @@ export default function MassBroadcast() {
       await loadData();
     } catch (e: any) { toast({ title: "Erro no envio manual", description: e?.message, variant: "destructive" }); }
     finally { setManualSendingId(null); }
+  };
+
+  const handleSaveCampaignMessages = async (cid: string) => {
+    if (!companyId) return;
+    setSavingMsgs(true);
+    try {
+      const filtered = editMsgsText.filter(t => t.trim());
+      if (!filtered.length) { toast({ title: "Adicione ao menos 1 mensagem", variant: "destructive" }); return; }
+      await supabase.from("mass_broadcast_campaigns" as any).update({ offer_templates: filtered }).eq("id", cid);
+      // Re-assign templates to pending recipients
+      const { data: pending } = await supabase.from("mass_broadcast_recipients" as any).select("id").eq("campaign_id", cid).eq("status", "pending").order("created_at", { ascending: true }).limit(500);
+      if (pending?.length) {
+        for (let i = 0; i < pending.length; i++) {
+          await supabase.from("mass_broadcast_recipients" as any).update({ offer_template: filtered[i % filtered.length] }).eq("id", (pending as any)[i].id);
+        }
+      }
+      setCampaigns(p => p.map(c => c.id === cid ? { ...c, offer_templates: filtered } : c));
+      toast({ title: "Mensagens atualizadas!" });
+      setEditingMsgsId(null);
+      if (expandedRecipients[cid]) void loadRecipients(cid);
+    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
+    finally { setSavingMsgs(false); }
+  };
+
+  const handleLoadTemplateIntoCampaign = (template: string) => {
+    setEditMsgsText(prev => [...prev, template]);
+    setLoadTemplateOpen(false);
+    toast({ title: "Template carregado!" });
   };
 
   // (broadcast instance handlers removed — uses global instance from Settings)
@@ -740,6 +780,12 @@ export default function MassBroadcast() {
                   const recs = expandedRecipients[camp.id];
                   const isEditing = editingCampaignId === camp.id;
                   const isActive = camp.status === "queued" || camp.status === "running";
+                  const isMsgEditing = editingMsgsId === camp.id;
+                  const remaining = camp.total_recipients - camp.processed_recipients;
+                  const avgDelay = (camp.message_delay_min_seconds + camp.message_delay_max_seconds) / 2;
+                  const etaSeconds = remaining * avgDelay;
+                  const etaMin = Math.ceil(etaSeconds / 60);
+                  const etaDisplay = etaMin >= 60 ? `~${Math.floor(etaMin / 60)}h${etaMin % 60}min` : `~${etaMin}min`;
 
                   return (
                     <Card key={camp.id} className="border-border/30 bg-card/80 overflow-hidden">
@@ -768,7 +814,11 @@ export default function MassBroadcast() {
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] font-medium text-foreground">{camp.processed_recipients}/{camp.total_recipients}</span>
                                 <Progress value={pct} className="h-1.5 flex-1" />
+                                <span className="text-[10px] font-bold text-primary">{pct}%</span>
                               </div>
+                              {isActive && remaining > 0 && (
+                                <p className="text-[10px] text-muted-foreground">⏱ Estimativa: {etaDisplay}</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -833,6 +883,10 @@ export default function MassBroadcast() {
                               onClick={() => { if (isEditing) { setEditingCampaignId(null); setEditPhoneInput(""); } else { setEditingCampaignId(camp.id); setEditPhoneInput(recs?.map(r => r.phone).join("\n") || ""); } }}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
+                            <Button variant="ghost" size="icon" className={`h-8 w-8 ${isMsgEditing ? "text-primary" : "text-muted-foreground hover:text-foreground"}`} title="Editar mensagens"
+                              onClick={() => { if (isMsgEditing) { setEditingMsgsId(null); } else { setEditingMsgsId(camp.id); setEditMsgsText([...(camp.offer_templates || [])]); } }}>
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Duplicar" disabled={duplicatingId === camp.id}
                               onClick={() => void handleDuplicate(camp)}>
                               {duplicatingId === camp.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
@@ -859,6 +913,64 @@ export default function MassBroadcast() {
                             </div>
                           </div>
 
+                          {/* Edit messages (templates) */}
+                          {isMsgEditing && (
+                            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-semibold">Editar Mensagens ({editMsgsText.length})</Label>
+                                <Button variant="ghost" size="sm" className="text-xs h-7 gap-1 text-primary" onClick={() => setLoadTemplateOpen(true)}>
+                                  📂 Carregar Template
+                                </Button>
+                              </div>
+                              {editMsgsText.map((msg, idx) => (
+                                <div key={idx} className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[10px]">M{idx + 1}</Badge>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setEditMsgsText(p => p.filter((_, i) => i !== idx))}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <Textarea value={msg} onChange={e => setEditMsgsText(p => p.map((t, i) => i === idx ? e.target.value : t))} className="w-full min-h-[4rem] font-mono text-sm border-dashed border-primary/20" />
+                                  <Button variant="ghost" size="sm" className="text-[10px] h-6 gap-1 text-muted-foreground" onClick={() => {
+                                    if (savedTemplates.length >= MAX_TEMPLATES) { toast({ title: "Limite atingido", variant: "destructive" }); return; }
+                                    const next = [...savedTemplates, msg]; setSavedTemplates(next); saveSavedTemplates(next);
+                                    toast({ title: "💾 Salvo como template!" });
+                                  }}>💾 Salvar como Template</Button>
+                                </div>
+                              ))}
+                              {editMsgsText.length < MAX_TEMPLATES && (
+                                <Button variant="outline" size="sm" className="w-full gap-1 border-dashed border-primary/20" onClick={() => setEditMsgsText(p => [...p, ""])}>
+                                  <Plus className="h-3.5 w-3.5" /> Adicionar mensagem
+                                </Button>
+                              )}
+                              <Button onClick={() => void handleSaveCampaignMessages(camp.id)} disabled={savingMsgs} className="w-full min-h-[3rem] gap-2">
+                                {savingMsgs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar Mensagens
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Load Template Dialog */}
+                          <Dialog open={loadTemplateOpen && isMsgEditing} onOpenChange={setLoadTemplateOpen}>
+                            <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[70vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-foreground">📂 Seus Templates Salvos</DialogTitle>
+                              </DialogHeader>
+                              {savedTemplates.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-6">Nenhum template salvo. Salve modelos na aba "Nova".</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {savedTemplates.map((t, i) => (
+                                    <button key={i} type="button" onClick={() => handleLoadTemplateIntoCampaign(t)}
+                                      className="w-full rounded-xl border border-border/30 bg-muted/10 p-3 text-left hover:bg-primary/5 transition-colors">
+                                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary mb-1 text-[10px]">M{i + 1}</Badge>
+                                      <p className="text-sm text-foreground whitespace-pre-wrap line-clamp-3">{t}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+
                           {/* Edit recipients */}
                           {isEditing && (
                             <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
@@ -873,33 +985,46 @@ export default function MassBroadcast() {
                             <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
                           ) : recs?.length ? (
                             <div className="max-h-[20rem] space-y-2 overflow-y-auto rounded-xl border border-border/30 bg-muted/10 p-2">
-                              {recs.map(r => (
-                                <div key={r.id} className={`w-full rounded-xl border border-border/20 bg-background/70 p-2.5 ${r.status === "failed" ? "bg-destructive/5" : ""}`}>
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate font-mono text-sm text-foreground">{r.phone}</p>
-                                      <span className={`text-[11px] font-medium ${r.status === "sent" ? "text-primary" : r.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
-                                        {r.status === "sent" ? "✅ Enviado" : r.status === "failed" ? "❌ Erro / Pulado" : "⏳ Pendente"}
-                                      </span>
+                              {recs.map((r, rIdx) => {
+                                // First pending = currently being processed when campaign is active
+                                const isProcessing = isActive && r.status === "pending" && recs.findIndex(x => x.status === "pending") === rIdx;
+                                return (
+                                  <div key={r.id}
+                                    ref={isProcessing ? activeRecipientRef : undefined}
+                                    className={`w-full rounded-xl border p-2.5 transition-all ${
+                                      isProcessing ? "border-primary bg-primary/10 shadow-[0_0_12px_-4px_hsl(var(--primary)/0.6)] animate-pulse" :
+                                      r.status === "failed" ? "border-destructive/30 bg-destructive/5" :
+                                      "border-border/20 bg-background/70"
+                                    }`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                          {isProcessing && <div className="h-2 w-2 rounded-full bg-primary animate-ping shrink-0" />}
+                                          <p className="truncate font-mono text-sm text-foreground">{r.phone}</p>
+                                        </div>
+                                        <span className={`text-[11px] font-medium ${r.status === "sent" ? "text-primary" : r.status === "failed" ? "text-destructive" : isProcessing ? "text-primary" : "text-muted-foreground"}`}>
+                                          {isProcessing ? "📡 Processando..." : r.status === "sent" ? "✅ Enviado" : r.status === "failed" ? "❌ Erro / Pulado" : "⏳ Pendente"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {r.status === "pending" && !isProcessing && (
+                                          <button type="button" title={!canDispatch ? (!globalEnabled ? "Ative a API no topo" : "Conecte o WhatsApp") : "Enviar manual"}
+                                            disabled={!canDispatch || manualSendingId === r.id}
+                                            onClick={() => void handleManualSend(r, camp)}
+                                            className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors disabled:opacity-50 ${canDispatch ? "border-primary/30 text-primary hover:bg-primary/10" : "border-muted text-muted-foreground cursor-not-allowed"}`}>
+                                            {manualSendingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                          </button>
+                                        )}
+                                        <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border/30 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                                          <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      {r.status === "pending" && (
-                                        <button type="button" title={!canDispatch ? (!globalEnabled ? "Ative a API no topo" : "Conecte o WhatsApp") : "Enviar manual"}
-                                          disabled={!canDispatch || manualSendingId === r.id}
-                                          onClick={() => void handleManualSend(r, camp)}
-                                          className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors disabled:opacity-50 ${canDispatch ? "border-primary/30 text-primary hover:bg-primary/10" : "border-muted text-muted-foreground cursor-not-allowed"}`}>
-                                          {manualSendingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                                        </button>
-                                      )}
-                                      <a href={`https://wa.me/${r.phone}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border/30 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-                                        <ExternalLink className="h-3 w-3" />
-                                      </a>
-                                    </div>
+                                    <p className="mt-1 break-words text-[10px] text-muted-foreground line-clamp-2">{r.offer_template}</p>
+                                    {r.error_message && <p className="mt-0.5 text-[10px] text-destructive break-words">❌ {r.error_message}</p>}
                                   </div>
-                                  <p className="mt-1 break-words text-[10px] text-muted-foreground line-clamp-2">{r.offer_template}</p>
-                                  {r.error_message && <p className="mt-0.5 text-[10px] text-destructive break-words">❌ {r.error_message}</p>}
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : null}
                         </div>
