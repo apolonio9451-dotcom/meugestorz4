@@ -139,7 +139,7 @@ export default function MassBroadcast() {
   const [nextActionAt, setNextActionAt] = useState<string | null>(null);
   const countdown = useCountdown(nextActionAt);
 
-  const cleanedPhones = useMemo(() => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter(p => p.length >= 10))), [phoneInput]);
+  const canDispatch = globalEnabled && bcConnected;
   const monitorCampaign = useMemo(() => campaigns.find(c => c.id === monitorCampaignId) ?? campaigns.find(c => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null, [campaigns, monitorCampaignId]);
   // Deduplicate error logs: show only the latest log per phone (errors), keep all success logs
   const activeLogs = useMemo(() => {
@@ -246,6 +246,19 @@ export default function MassBroadcast() {
       else { await supabase.from("api_settings" as any).insert({ company_id: companyId, bulk_send_enabled: checked }); }
       setGlobalEnabled(checked);
       toast({ title: checked ? "Disparos ativados" : "Disparos pausados" });
+
+      // Auto-pause all running campaigns when API is turned OFF
+      if (!checked) {
+        const running = campaigns.filter(c => c.status === "queued" || c.status === "running");
+        for (const c of running) {
+          await supabase.from("mass_broadcast_campaigns" as any).update({ status: "paused" }).eq("id", c.id);
+          await supabase.from("mass_broadcast_recipients" as any).update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() }).eq("campaign_id", c.id).eq("status", "pending");
+        }
+        if (running.length > 0) {
+          toast({ title: "⏸️ Campanhas pausadas automaticamente", description: `${running.length} campanha(s) pausada(s) ao desligar a API.` });
+          await loadData();
+        }
+      }
     } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
     finally { setSavingToggle(false); }
   };
@@ -350,8 +363,8 @@ export default function MassBroadcast() {
 
   const handleStartBatch = async (cid: string) => {
     if (!companyId) return;
+    if (!globalEnabled) { toast({ title: "⚠️ Ative a API no topo para iniciar!", variant: "destructive" }); return; }
     if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
-    const limit = batchLimits[cid] || 50;
     const camp = campaigns.find(c => c.id === cid); if (!camp) return;
     setStartingId(cid);
     try {
