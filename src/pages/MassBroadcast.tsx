@@ -797,8 +797,10 @@ export default function MassBroadcast() {
                                   <PauseCircle className="h-4 w-4" /> ⏸️ Pausar
                                 </Button>
                               ) : (
-                                <Button className="shrink-0 min-h-[3rem] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)] px-4"
-                                  disabled={startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
+                                <Button
+                                  className={`shrink-0 min-h-[3rem] gap-2 px-4 ${canDispatch ? "bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)]" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                                  disabled={!canDispatch || startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
+                                  title={!globalEnabled ? "Ative a API no topo para iniciar" : !bcConnected ? "Conecte o WhatsApp em Configurações > Instância" : undefined}
                                   onClick={() => void handleStartBatch(camp.id)}>
                                   {startingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? <Play className="h-4 w-4" /> : <Rocket className="h-4 w-4" />}
                                   {camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? "▶️ Continuar" : "🚀 Iniciar"}
