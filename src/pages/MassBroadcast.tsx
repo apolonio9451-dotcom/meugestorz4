@@ -128,6 +128,11 @@ export default function MassBroadcast() {
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [mediaSending, setMediaSending] = useState<MediaKind | null>(null);
   const [takingOverId, setTakingOverId] = useState<string | null>(null);
+  const [editingMsgsId, setEditingMsgsId] = useState<string | null>(null);
+  const [editMsgsText, setEditMsgsText] = useState<string[]>([]);
+  const [savingMsgs, setSavingMsgs] = useState(false);
+  const [loadTemplateOpen, setLoadTemplateOpen] = useState(false);
+  const activeRecipientRef = useRef<HTMLDivElement>(null);
   const [monitorCampaignId, setMonitorCampaignId] = useState<string | null>(null);
 
   // History modal
