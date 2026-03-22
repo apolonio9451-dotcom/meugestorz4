@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,7 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
+const UAZAPI_URL = "https://ipazua.uazapi.com";
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -14,14 +15,10 @@ serve(async (req) => {
     const isBroadcast = scope === "broadcast";
     const tokenColumn = isBroadcast ? "broadcast_api_token" : "api_token";
 
-    const SUPABASE_FUNCTIONS_URL = "https://xukeukdwhelyttifzveb.supabase.co/functions/v1";
-    const UAZAPI_URL = "https://ipazua.uazapi.com";
-
     const candidateApiKeys = Array.from(
       new Set([
         Deno.env.get("UAZAPI_ADMIN_TOKEN")?.trim(),
         Deno.env.get("EVOLUTI_TOKEN")?.trim(),
-        "10c3ab83-17ba-4921-ae88-c096ed1d0144",
       ].filter((key): key is string => Boolean(key && key.length > 0)))
     );
 
@@ -30,11 +27,11 @@ serve(async (req) => {
     }
 
     // Backend protection: check if company already has an instance for this scope
-    if (company_id) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+    if (company_id) {
       const { data: existing } = await supabaseAdmin
         .from("api_settings")
         .select(tokenColumn)
@@ -49,8 +46,9 @@ serve(async (req) => {
       }
     }
 
-    // 1. Criar instância (fallback automático entre chaves)
-    let createData: any = null;
+    // 1. Criar instância diretamente via UAZAPI (fallback entre chaves)
+    let instanceToken: string | null = null;
+    let instanceId: string | null = null;
     let lastCreateError = "Erro ao criar instância";
 
     console.log(`[whatsapp-connect] Tentando ${candidateApiKeys.length} chave(s). Scope: ${scope || "main"}`);
@@ -59,46 +57,65 @@ serve(async (req) => {
       const apiKey = candidateApiKeys[ki];
       console.log(`[whatsapp-connect] Tentativa ${ki + 1}/${candidateApiKeys.length} — chave: ${apiKey.substring(0, 8)}...`);
 
-      const createRes = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-instance-external`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          api_key: apiKey,
-          name: userName || "Minha Instância",
-          webhookUrl: webhookUrl || undefined,
-          webhookName: webhookUrl ? "webhook-principal" : undefined,
-          events: ["messages"],
-        }),
-      });
+      try {
+        const createRes = await fetch(`${UAZAPI_URL}/instance/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "AdminToken": apiKey },
+          body: JSON.stringify({
+            name: userName || "Minha Instância",
+          }),
+        });
 
-      const payload = await createRes.json();
-      console.log(`[whatsapp-connect] Resposta ${createRes.status}:`, JSON.stringify(payload).substring(0, 200));
+        const payload = await createRes.json();
+        console.log(`[whatsapp-connect] Resposta ${createRes.status}:`, JSON.stringify(payload).substring(0, 300));
 
-      if (createRes.ok) {
-        createData = payload;
-        break;
-      }
+        if (createRes.ok && payload.token) {
+          instanceToken = payload.token;
+          instanceId = payload.instanceId || payload.id || null;
+          break;
+        }
 
-      lastCreateError = payload?.error || "Erro ao criar instância";
-      if (!String(lastCreateError).toLowerCase().includes("invalid api key")) {
-        break;
+        lastCreateError = payload?.error || payload?.message || `Erro HTTP ${createRes.status}`;
+        if (!String(lastCreateError).toLowerCase().includes("invalid") &&
+            !String(lastCreateError).toLowerCase().includes("unauthorized")) {
+          break;
+        }
+      } catch (fetchErr: any) {
+        console.error(`[whatsapp-connect] Erro na tentativa ${ki + 1}:`, fetchErr.message);
+        lastCreateError = fetchErr.message || "Erro de conexão com a API";
       }
     }
 
-    if (!createData) {
+    if (!instanceToken) {
       throw new Error(lastCreateError);
     }
 
-    const { token, instanceId } = createData;
+    console.log(`[whatsapp-connect] Instância criada. Token: ${instanceToken.substring(0, 8)}...`);
+
+    // Set webhook if provided
+    if (webhookUrl) {
+      try {
+        const whRes = await fetch(`${UAZAPI_URL}/webhook`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", token: instanceToken },
+          body: JSON.stringify({ url: webhookUrl, enabled: true }),
+        });
+        const whBody = await whRes.text();
+        console.log(`[whatsapp-connect] Webhook config: ${whRes.status} - ${whBody.substring(0, 100)}`);
+      } catch (whErr: any) {
+        console.error("[whatsapp-connect] Webhook setup error:", whErr.message);
+      }
+    }
 
     // 2. Conectar para gerar QR Code
     const connectRes = await fetch(`${UAZAPI_URL}/instance/connect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", token },
+      headers: { "Content-Type": "application/json", token: instanceToken },
       body: JSON.stringify({}),
     });
 
     const connectData = await connectRes.json();
+    console.log(`[whatsapp-connect] Connect response:`, JSON.stringify(connectData).substring(0, 200));
 
     // 3. Polling: tenta até 5x buscar o QR Code
     let qrCode = connectData?.qrcode || null;
@@ -107,7 +124,7 @@ serve(async (req) => {
         await new Promise((r) => setTimeout(r, 3000));
         const statusRes = await fetch(`${UAZAPI_URL}/instance/status`, {
           method: "GET",
-          headers: { token },
+          headers: { token: instanceToken },
         });
         const statusData = await statusRes.json();
         const inst = statusData?.instance || statusData;
@@ -115,7 +132,7 @@ serve(async (req) => {
 
         if (statusData?.status === "connected" || inst?.status === "connected") {
           return new Response(
-            JSON.stringify({ success: true, instanceId, token, qrCode: null, status: "connected" }),
+            JSON.stringify({ success: true, instanceId, token: instanceToken, qrCode: null, status: "connected" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -125,12 +142,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: true, instanceId, token, qrCode,
+        success: true, instanceId, token: instanceToken, qrCode,
         status: qrCode ? "connecting" : "waiting_qr",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: any) {
+    console.error("[whatsapp-connect] Error:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
