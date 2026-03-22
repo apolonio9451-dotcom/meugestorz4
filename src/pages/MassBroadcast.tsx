@@ -479,6 +479,9 @@ export default function MassBroadcast() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-lg sm:text-xl font-bold text-foreground font-display truncate">Marketing Pro</h1>
+            <Badge variant="outline" className={`shrink-0 text-[10px] whitespace-nowrap ${bcConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+              {bcConnected ? `🟢 ${bcProfile || "Conectado"}` : "🔴 Desconectado"}
+            </Badge>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="shrink-0 rounded-full p-1.5 hover:bg-muted/40 transition-colors">
