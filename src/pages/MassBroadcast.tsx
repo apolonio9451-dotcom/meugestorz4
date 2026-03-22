@@ -427,70 +427,7 @@ export default function MassBroadcast() {
     finally { setManualSendingId(null); }
   };
 
-  // Broadcast instance handlers
-  const handleSaveBcToken = async () => {
-    if (!companyId || !bcToken.trim()) return; setBcSaving(true);
-    try {
-      const r = await supabase.functions.invoke("manage-instance", { body: { action: "save", company_id: companyId, instance_token: bcToken.trim(), scope: "broadcast" } });
-      if (r.data?.success) {
-        setBcConnected(r.data.connected); setBcHasInstance(true);
-        setBcProfile(r.data.profile_name || ""); setBcOwner(r.data.owner || "");
-        if (r.data.qrcode) {
-          const qr = r.data.qrcode;
-          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-          if (!r.data.connected) setBcAutoRefresh(true);
-        }
-        toast({ title: "Token salvo!" });
-      } else toast({ title: "Erro", description: r.data?.error, variant: "destructive" });
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-    finally { setBcSaving(false); }
-  };
-
-  const handleCreateBcInstance = async () => {
-    if (!companyId) return; setBcCreating(true);
-    try {
-      const r = await supabase.functions.invoke("whatsapp-connect", { body: { userName: "Disparo em Massa", company_id: companyId, scope: "broadcast" } });
-      if (r.data?.success && r.data?.token) {
-        const sr = await supabase.functions.invoke("manage-instance", { body: { action: "save", company_id: companyId, instance_token: r.data.token, instance_name: "Disparo", scope: "broadcast" } });
-        setBcHasInstance(true);
-        if (r.data.qrCode) {
-          const qr = r.data.qrCode;
-          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-          setBcAutoRefresh(true);
-          setBcConnected(false);
-        } else if (sr.data?.connected) {
-          setBcConnected(true);
-        } else {
-          setBcAutoRefresh(true);
-          setBcConnected(false);
-          setTimeout(() => checkBc(), 3000);
-        }
-        toast({ title: "Instância criada!", description: r.data.qrCode ? "Escaneie o QR Code." : "Aguardando QR Code..." });
-      } else toast({ title: "Erro", description: r.data?.error, variant: "destructive" });
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-    finally { setBcCreating(false); }
-  };
-
-  const handleDisconnectBc = async () => {
-    if (!companyId) return; setBcDisconnecting(true);
-    try {
-      await supabase.functions.invoke("manage-instance", { body: { action: "disconnect", company_id: companyId, scope: "broadcast" } });
-      setBcConnected(false); setBcQr(null);
-      toast({ title: "Instância desconectada", description: "Clique em 'Verificar' para reconectar via QR Code." });
-      setTimeout(() => checkBc(), 2000);
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-    finally { setBcDisconnecting(false); }
-  };
-
-  const handleDeleteBcInstance = async () => {
-    if (!companyId) return;
-    try {
-      await supabase.functions.invoke("manage-instance", { body: { action: "disconnect", company_id: companyId, scope: "broadcast" } });
-      await supabase.functions.invoke("manage-instance", { body: { action: "delete", company_id: companyId, scope: "broadcast" } });
-      setBcConnected(false); setBcHasInstance(false); setBcQr(null); setBcProfile(""); setBcOwner(""); setBcAutoRefresh(false);
-      toast({ title: "Instância removida" });
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-  };
+  // (broadcast instance handlers removed — uses global instance from Settings)
 
   // Monitor handlers
   const handleAssumeConv = async () => {
