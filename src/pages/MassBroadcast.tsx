@@ -773,6 +773,12 @@ export default function MassBroadcast() {
                   const recs = expandedRecipients[camp.id];
                   const isEditing = editingCampaignId === camp.id;
                   const isActive = camp.status === "queued" || camp.status === "running";
+                  const isMsgEditing = editingMsgsId === camp.id;
+                  const remaining = camp.total_recipients - camp.processed_recipients;
+                  const avgDelay = (camp.message_delay_min_seconds + camp.message_delay_max_seconds) / 2;
+                  const etaSeconds = remaining * avgDelay;
+                  const etaMin = Math.ceil(etaSeconds / 60);
+                  const etaDisplay = etaMin >= 60 ? `~${Math.floor(etaMin / 60)}h${etaMin % 60}min` : `~${etaMin}min`;
 
                   return (
                     <Card key={camp.id} className="border-border/30 bg-card/80 overflow-hidden">
