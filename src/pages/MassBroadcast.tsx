@@ -385,7 +385,7 @@ export default function MassBroadcast() {
 
   const handleManualSend = async (recipient: Recipient, camp: Campaign) => {
     if (!companyId || manualSendingId) return;
-    if (!bcConnected) { toast({ title: "⚠️ Conecte a instância de disparo primeiro!", variant: "destructive" }); return; }
+    if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     setManualSendingId(recipient.id);
     try {
       // Pick a random template from campaign
@@ -393,12 +393,11 @@ export default function MassBroadcast() {
       const msg = templates[Math.floor(Math.random() * templates.length)] || recipient.offer_template;
       if (!msg?.trim()) { toast({ title: "Sem mensagem", variant: "destructive" }); return; }
 
-      // Call the runner-style send via edge function
-      const { data: apiS } = await supabase.from("api_settings" as any).select("api_url, api_token, broadcast_api_url, broadcast_api_token").eq("company_id", companyId).maybeSingle();
+      const { data: apiS } = await supabase.from("api_settings" as any).select("api_url, api_token").eq("company_id", companyId).maybeSingle();
       const settings = apiS as any;
-      const apiUrl = settings?.broadcast_api_url?.trim() || settings?.api_url || "";
-      const apiToken = settings?.broadcast_api_token?.trim() || settings?.api_token || "";
-      if (!apiUrl || !apiToken) { toast({ title: "API não configurada", variant: "destructive" }); return; }
+      const apiUrl = settings?.api_url || "";
+      const apiToken = settings?.api_token || "";
+      if (!apiUrl || !apiToken) { toast({ title: "API não configurada. Vá em Configurações > Instância.", variant: "destructive" }); return; }
 
       // Send via whatsapp-send function
       const phone = recipient.normalized_phone || recipient.phone.replace(/\D/g, "");
