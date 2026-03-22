@@ -225,6 +225,13 @@ export default function MassBroadcast() {
     }, 180);
   }, [expandedRecipients, loadRecipients, loadMonitor, loadData]);
 
+  // Auto-scroll to active recipient
+  useEffect(() => {
+    if (activeRecipientRef.current) {
+      activeRecipientRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void checkBc(true); }, [checkBc]);
   useEffect(() => { void loadMonitor(); }, [loadMonitor]);
