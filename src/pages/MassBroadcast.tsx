@@ -19,7 +19,6 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Slider } from "@/components/ui/slider";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -118,18 +117,10 @@ export default function MassBroadcast() {
   const [sessionStarts, setSessionStarts] = useState<Record<string, number>>({});
   const [startingId, setStartingId] = useState<string | null>(null);
 
-  // Broadcast instance
+  // Main instance status (from Settings > Instância)
   const [bcConnected, setBcConnected] = useState(false);
-  const [bcHasInstance, setBcHasInstance] = useState(false);
-  const [bcQr, setBcQr] = useState<string | null>(null);
   const [bcProfile, setBcProfile] = useState("");
-  const [bcOwner, setBcOwner] = useState("");
   const [bcChecking, setBcChecking] = useState(false);
-  const [bcToken, setBcToken] = useState("");
-  const [bcSaving, setBcSaving] = useState(false);
-  const [bcCreating, setBcCreating] = useState(false);
-  const [bcAutoRefresh, setBcAutoRefresh] = useState(false);
-  const [bcDisconnecting, setBcDisconnecting] = useState(false);
 
   // Monitor
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -190,18 +181,10 @@ export default function MassBroadcast() {
     if (!companyId) return;
     if (!silent) setBcChecking(true);
     try {
-      const r = await supabase.functions.invoke("manage-instance", { body: { action: "status", company_id: companyId, scope: "broadcast" } });
+      const r = await supabase.functions.invoke("manage-instance", { body: { action: "status", company_id: companyId } });
       if (r.data?.success) {
-        setBcHasInstance(r.data.has_instance); setBcConnected(r.data.connected);
-        setBcProfile(r.data.profile_name || ""); setBcOwner(r.data.owner || "");
-        if (r.data.qrcode) {
-          const qr = r.data.qrcode;
-          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-          if (!r.data.connected) setBcAutoRefresh(true);
-        } else {
-          setBcQr(null);
-          if (r.data.connected) setBcAutoRefresh(false);
-        }
+        setBcConnected(r.data.connected);
+        setBcProfile(r.data.profile_name || "");
       }
     } finally { if (!silent) setBcChecking(false); }
   }, [companyId]);
@@ -239,12 +222,6 @@ export default function MassBroadcast() {
   useEffect(() => { void loadData(); }, [loadData]);
   useEffect(() => { void checkBc(true); }, [checkBc]);
   useEffect(() => { void loadMonitor(); }, [loadMonitor]);
-  // Auto-refresh for QR code scanning
-  useEffect(() => {
-    if (!bcAutoRefresh || bcConnected) return;
-    const interval = setInterval(() => checkBc(true), 12000);
-    return () => clearInterval(interval);
-  }, [bcAutoRefresh, bcConnected, checkBc]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -373,7 +350,7 @@ export default function MassBroadcast() {
 
   const handleStartBatch = async (cid: string) => {
     if (!companyId) return;
-    if (!bcConnected) { toast({ title: "⚠️ Conecte a instância de disparo primeiro!", variant: "destructive" }); return; }
+    if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     const limit = batchLimits[cid] || 50;
     const camp = campaigns.find(c => c.id === cid); if (!camp) return;
     setStartingId(cid);
@@ -407,7 +384,7 @@ export default function MassBroadcast() {
 
   const handleManualSend = async (recipient: Recipient, camp: Campaign) => {
     if (!companyId || manualSendingId) return;
-    if (!bcConnected) { toast({ title: "⚠️ Conecte a instância de disparo primeiro!", variant: "destructive" }); return; }
+    if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     setManualSendingId(recipient.id);
     try {
       // Pick a random template from campaign
@@ -415,12 +392,11 @@ export default function MassBroadcast() {
       const msg = templates[Math.floor(Math.random() * templates.length)] || recipient.offer_template;
       if (!msg?.trim()) { toast({ title: "Sem mensagem", variant: "destructive" }); return; }
 
-      // Call the runner-style send via edge function
-      const { data: apiS } = await supabase.from("api_settings" as any).select("api_url, api_token, broadcast_api_url, broadcast_api_token").eq("company_id", companyId).maybeSingle();
+      const { data: apiS } = await supabase.from("api_settings" as any).select("api_url, api_token").eq("company_id", companyId).maybeSingle();
       const settings = apiS as any;
-      const apiUrl = settings?.broadcast_api_url?.trim() || settings?.api_url || "";
-      const apiToken = settings?.broadcast_api_token?.trim() || settings?.api_token || "";
-      if (!apiUrl || !apiToken) { toast({ title: "API não configurada", variant: "destructive" }); return; }
+      const apiUrl = settings?.api_url || "";
+      const apiToken = settings?.api_token || "";
+      if (!apiUrl || !apiToken) { toast({ title: "API não configurada. Vá em Configurações > Instância.", variant: "destructive" }); return; }
 
       // Send via whatsapp-send function
       const phone = recipient.normalized_phone || recipient.phone.replace(/\D/g, "");
@@ -449,70 +425,7 @@ export default function MassBroadcast() {
     finally { setManualSendingId(null); }
   };
 
-  // Broadcast instance handlers
-  const handleSaveBcToken = async () => {
-    if (!companyId || !bcToken.trim()) return; setBcSaving(true);
-    try {
-      const r = await supabase.functions.invoke("manage-instance", { body: { action: "save", company_id: companyId, instance_token: bcToken.trim(), scope: "broadcast" } });
-      if (r.data?.success) {
-        setBcConnected(r.data.connected); setBcHasInstance(true);
-        setBcProfile(r.data.profile_name || ""); setBcOwner(r.data.owner || "");
-        if (r.data.qrcode) {
-          const qr = r.data.qrcode;
-          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-          if (!r.data.connected) setBcAutoRefresh(true);
-        }
-        toast({ title: "Token salvo!" });
-      } else toast({ title: "Erro", description: r.data?.error, variant: "destructive" });
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-    finally { setBcSaving(false); }
-  };
-
-  const handleCreateBcInstance = async () => {
-    if (!companyId) return; setBcCreating(true);
-    try {
-      const r = await supabase.functions.invoke("whatsapp-connect", { body: { userName: "Disparo em Massa", company_id: companyId, scope: "broadcast" } });
-      if (r.data?.success && r.data?.token) {
-        const sr = await supabase.functions.invoke("manage-instance", { body: { action: "save", company_id: companyId, instance_token: r.data.token, instance_name: "Disparo", scope: "broadcast" } });
-        setBcHasInstance(true);
-        if (r.data.qrCode) {
-          const qr = r.data.qrCode;
-          setBcQr(qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`);
-          setBcAutoRefresh(true);
-          setBcConnected(false);
-        } else if (sr.data?.connected) {
-          setBcConnected(true);
-        } else {
-          setBcAutoRefresh(true);
-          setBcConnected(false);
-          setTimeout(() => checkBc(), 3000);
-        }
-        toast({ title: "Instância criada!", description: r.data.qrCode ? "Escaneie o QR Code." : "Aguardando QR Code..." });
-      } else toast({ title: "Erro", description: r.data?.error, variant: "destructive" });
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-    finally { setBcCreating(false); }
-  };
-
-  const handleDisconnectBc = async () => {
-    if (!companyId) return; setBcDisconnecting(true);
-    try {
-      await supabase.functions.invoke("manage-instance", { body: { action: "disconnect", company_id: companyId, scope: "broadcast" } });
-      setBcConnected(false); setBcQr(null);
-      toast({ title: "Instância desconectada", description: "Clique em 'Verificar' para reconectar via QR Code." });
-      setTimeout(() => checkBc(), 2000);
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-    finally { setBcDisconnecting(false); }
-  };
-
-  const handleDeleteBcInstance = async () => {
-    if (!companyId) return;
-    try {
-      await supabase.functions.invoke("manage-instance", { body: { action: "disconnect", company_id: companyId, scope: "broadcast" } });
-      await supabase.functions.invoke("manage-instance", { body: { action: "delete", company_id: companyId, scope: "broadcast" } });
-      setBcConnected(false); setBcHasInstance(false); setBcQr(null); setBcProfile(""); setBcOwner(""); setBcAutoRefresh(false);
-      toast({ title: "Instância removida" });
-    } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
-  };
+  // (broadcast instance handlers removed — uses global instance from Settings)
 
   // Monitor handlers
   const handleAssumeConv = async () => {
@@ -564,6 +477,9 @@ export default function MassBroadcast() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="text-lg sm:text-xl font-bold text-foreground font-display truncate">Marketing Pro</h1>
+            <Badge variant="outline" className={`shrink-0 text-[10px] whitespace-nowrap ${bcConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+              {bcConnected ? `🟢 ${bcProfile || "Conectado"}` : "🔴 Desconectado"}
+            </Badge>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" className="shrink-0 rounded-full p-1.5 hover:bg-muted/40 transition-colors">
@@ -786,95 +702,13 @@ export default function MassBroadcast() {
               </Button>
             </div>
 
-            {/* Broadcast Instance Accordion */}
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="bc" className="rounded-xl border border-border/30 bg-card/80 overflow-hidden">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-primary/5">
-                  <div className="flex w-full items-center gap-2 min-w-0 pr-2">
-                    <div className={`h-3 w-3 rounded-full shrink-0 ${bcConnected ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.8)]" : "bg-destructive shadow-[0_0_6px_hsl(var(--destructive)/0.5)]"}`} />
-                    <Smartphone className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-foreground truncate">Instância de Disparo</span>
-                    <Badge variant="outline" className={`ml-auto shrink-0 text-[10px] whitespace-nowrap ${bcConnected ? "border-primary/30 bg-primary/10 text-primary" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
-                      {bcConnected ? "🟢 Pronta" : "🔴 Desconectado"}
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">Instância exclusiva para disparos. O chip principal não será afetado.</p>
-
-                    {/* Connected profile */}
-                    {bcConnected && bcProfile && (
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0"><Smartphone className="h-4 w-4 text-primary" /></div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{bcProfile}</p>
-                          {bcOwner && <p className="text-xs text-muted-foreground">+{bcOwner}</p>}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* QR Code display */}
-                    {bcQr && !bcConnected && (
-                      <div className="rounded-xl border border-primary/20 bg-white p-3 text-center">
-                        <p className="text-xs text-muted-foreground mb-2">Escaneie com o WhatsApp de disparos:</p>
-                        <img src={bcQr} alt="QR Code" className="mx-auto w-full max-w-[12rem] rounded-lg" />
-                        <p className="text-muted-foreground/50 text-[10px] flex items-center justify-center gap-1 mt-2">
-                          <RefreshCw className="w-3 h-3 animate-spin" /> Atualizando automaticamente...
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Disconnected warning (has instance but no QR and not connected) */}
-                    {bcHasInstance && !bcConnected && !bcQr && (
-                      <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-center">
-                        <p className="text-sm text-warning font-medium">Instância desconectada</p>
-                        <p className="text-xs text-muted-foreground mt-1">Clique em "Verificar" para obter um novo QR Code.</p>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    {!bcHasInstance ? (
-                      <div className="space-y-3">
-                        <Button onClick={handleCreateBcInstance} disabled={bcCreating} className="w-full min-h-[3rem] gap-2">
-                          {bcCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Criar Instância
-                        </Button>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Ou cole um token:</Label>
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <Input value={bcToken} onChange={e => setBcToken(e.target.value)} placeholder="Token da instância" className="w-full font-mono text-xs" />
-                            <Button onClick={handleSaveBcToken} disabled={bcSaving || !bcToken.trim()} className="w-full sm:w-auto min-h-[3rem] shrink-0 gap-2">
-                              {bcSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" onClick={() => void checkBc()} disabled={bcChecking} className="w-full sm:w-auto min-h-[3rem] gap-2">
-                          <RefreshCw className={`h-3.5 w-3.5 ${bcChecking ? "animate-spin" : ""}`} /> Verificar
-                        </Button>
-                        {bcConnected && (
-                          <Button variant="outline" onClick={handleDisconnectBc} disabled={bcDisconnecting} className="w-full sm:w-auto min-h-[3rem] gap-2 border-warning/30 text-warning hover:bg-warning/10">
-                            {bcDisconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Desconectar
-                          </Button>
-                        )}
-                        {!bcConnected && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" className="w-full sm:w-auto min-h-[3rem] gap-2 border-destructive/30 text-destructive hover:bg-destructive/10">
-                                <Trash2 className="h-3.5 w-3.5" /> Remover
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remover instância?</AlertDialogTitle><AlertDialogDescription>Os disparos não poderão ser enviados até reconectar.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeleteBcInstance} className="bg-destructive text-destructive-foreground">Remover</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                          </AlertDialog>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            {/* WhatsApp status indicator */}
+            {!bcConnected && (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-destructive shrink-0" />
+                <p className="text-xs text-destructive">WhatsApp desconectado. Conecte no menu <strong>Configurações &gt; Instância</strong> para disparar.</p>
+              </div>
+            )}
 
             {/* Campaign Cards */}
             {campaigns.length === 0 ? (
