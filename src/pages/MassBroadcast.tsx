@@ -876,6 +876,10 @@ export default function MassBroadcast() {
                               onClick={() => { if (isEditing) { setEditingCampaignId(null); setEditPhoneInput(""); } else { setEditingCampaignId(camp.id); setEditPhoneInput(recs?.map(r => r.phone).join("\n") || ""); } }}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
+                            <Button variant="ghost" size="icon" className={`h-8 w-8 ${isMsgEditing ? "text-primary" : "text-muted-foreground hover:text-foreground"}`} title="Editar mensagens"
+                              onClick={() => { if (isMsgEditing) { setEditingMsgsId(null); } else { setEditingMsgsId(camp.id); setEditMsgsText([...(camp.offer_templates || [])]); } }}>
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Duplicar" disabled={duplicatingId === camp.id}
                               onClick={() => void handleDuplicate(camp)}>
                               {duplicatingId === camp.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
@@ -901,6 +905,64 @@ export default function MassBroadcast() {
                               </AlertDialog>
                             </div>
                           </div>
+
+                          {/* Edit messages (templates) */}
+                          {isMsgEditing && (
+                            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-semibold">Editar Mensagens ({editMsgsText.length})</Label>
+                                <Button variant="ghost" size="sm" className="text-xs h-7 gap-1 text-primary" onClick={() => setLoadTemplateOpen(true)}>
+                                  📂 Carregar Template
+                                </Button>
+                              </div>
+                              {editMsgsText.map((msg, idx) => (
+                                <div key={idx} className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[10px]">M{idx + 1}</Badge>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setEditMsgsText(p => p.filter((_, i) => i !== idx))}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <Textarea value={msg} onChange={e => setEditMsgsText(p => p.map((t, i) => i === idx ? e.target.value : t))} className="w-full min-h-[4rem] font-mono text-sm border-dashed border-primary/20" />
+                                  <Button variant="ghost" size="sm" className="text-[10px] h-6 gap-1 text-muted-foreground" onClick={() => {
+                                    if (savedTemplates.length >= MAX_TEMPLATES) { toast({ title: "Limite atingido", variant: "destructive" }); return; }
+                                    const next = [...savedTemplates, msg]; setSavedTemplates(next); saveSavedTemplates(next);
+                                    toast({ title: "💾 Salvo como template!" });
+                                  }}>💾 Salvar como Template</Button>
+                                </div>
+                              ))}
+                              {editMsgsText.length < MAX_TEMPLATES && (
+                                <Button variant="outline" size="sm" className="w-full gap-1 border-dashed border-primary/20" onClick={() => setEditMsgsText(p => [...p, ""])}>
+                                  <Plus className="h-3.5 w-3.5" /> Adicionar mensagem
+                                </Button>
+                              )}
+                              <Button onClick={() => void handleSaveCampaignMessages(camp.id)} disabled={savingMsgs} className="w-full min-h-[3rem] gap-2">
+                                {savingMsgs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar Mensagens
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Load Template Dialog */}
+                          <Dialog open={loadTemplateOpen && isMsgEditing} onOpenChange={setLoadTemplateOpen}>
+                            <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[70vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-foreground">📂 Seus Templates Salvos</DialogTitle>
+                              </DialogHeader>
+                              {savedTemplates.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-6">Nenhum template salvo. Salve modelos na aba "Nova".</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {savedTemplates.map((t, i) => (
+                                    <button key={i} type="button" onClick={() => handleLoadTemplateIntoCampaign(t)}
+                                      className="w-full rounded-xl border border-border/30 bg-muted/10 p-3 text-left hover:bg-primary/5 transition-colors">
+                                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary mb-1 text-[10px]">M{i + 1}</Badge>
+                                      <p className="text-sm text-foreground whitespace-pre-wrap line-clamp-3">{t}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
 
                           {/* Edit recipients */}
                           {isEditing && (
