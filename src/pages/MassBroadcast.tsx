@@ -807,7 +807,11 @@ export default function MassBroadcast() {
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] font-medium text-foreground">{camp.processed_recipients}/{camp.total_recipients}</span>
                                 <Progress value={pct} className="h-1.5 flex-1" />
+                                <span className="text-[10px] font-bold text-primary">{pct}%</span>
                               </div>
+                              {isActive && remaining > 0 && (
+                                <p className="text-[10px] text-muted-foreground">⏱ Estimativa: {etaDisplay}</p>
+                              )}
                             </div>
                           </div>
                         </div>
