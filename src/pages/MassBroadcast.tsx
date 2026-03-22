@@ -399,6 +399,7 @@ export default function MassBroadcast() {
 
   const handleManualSend = async (recipient: Recipient, camp: Campaign) => {
     if (!companyId || manualSendingId) return;
+    if (!globalEnabled) { toast({ title: "⚠️ Ative a API no topo para iniciar!", variant: "destructive" }); return; }
     if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     setManualSendingId(recipient.id);
     try {
