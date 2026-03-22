@@ -139,6 +139,7 @@ export default function MassBroadcast() {
   const [nextActionAt, setNextActionAt] = useState<string | null>(null);
   const countdown = useCountdown(nextActionAt);
 
+  const canDispatch = globalEnabled && bcConnected;
   const cleanedPhones = useMemo(() => Array.from(new Set(phoneInput.split("\n").map(normalizePhone).filter(p => p.length >= 10))), [phoneInput]);
   const monitorCampaign = useMemo(() => campaigns.find(c => c.id === monitorCampaignId) ?? campaigns.find(c => c.status === "running" || c.status === "queued") ?? campaigns[0] ?? null, [campaigns, monitorCampaignId]);
   // Deduplicate error logs: show only the latest log per phone (errors), keep all success logs
@@ -246,6 +247,19 @@ export default function MassBroadcast() {
       else { await supabase.from("api_settings" as any).insert({ company_id: companyId, bulk_send_enabled: checked }); }
       setGlobalEnabled(checked);
       toast({ title: checked ? "Disparos ativados" : "Disparos pausados" });
+
+      // Auto-pause all running campaigns when API is turned OFF
+      if (!checked) {
+        const running = campaigns.filter(c => c.status === "queued" || c.status === "running");
+        for (const c of running) {
+          await supabase.from("mass_broadcast_campaigns" as any).update({ status: "paused" }).eq("id", c.id);
+          await supabase.from("mass_broadcast_recipients" as any).update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() }).eq("campaign_id", c.id).eq("status", "pending");
+        }
+        if (running.length > 0) {
+          toast({ title: "⏸️ Campanhas pausadas automaticamente", description: `${running.length} campanha(s) pausada(s) ao desligar a API.` });
+          await loadData();
+        }
+      }
     } catch (e: any) { toast({ title: "Erro", description: e?.message, variant: "destructive" }); }
     finally { setSavingToggle(false); }
   };
@@ -350,6 +364,7 @@ export default function MassBroadcast() {
 
   const handleStartBatch = async (cid: string) => {
     if (!companyId) return;
+    if (!globalEnabled) { toast({ title: "⚠️ Ative a API no topo para iniciar!", variant: "destructive" }); return; }
     if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     const limit = batchLimits[cid] || 50;
     const camp = campaigns.find(c => c.id === cid); if (!camp) return;
@@ -384,6 +399,7 @@ export default function MassBroadcast() {
 
   const handleManualSend = async (recipient: Recipient, camp: Campaign) => {
     if (!companyId || manualSendingId) return;
+    if (!globalEnabled) { toast({ title: "⚠️ Ative a API no topo para iniciar!", variant: "destructive" }); return; }
     if (!bcConnected) { toast({ title: "⚠️ Conecte o WhatsApp no menu Configurações > Instância!", variant: "destructive" }); return; }
     setManualSendingId(recipient.id);
     try {
@@ -781,8 +797,10 @@ export default function MassBroadcast() {
                                   <PauseCircle className="h-4 w-4" /> ⏸️ Pausar
                                 </Button>
                               ) : (
-                                <Button className="shrink-0 min-h-[3rem] gap-2 bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)] px-4"
-                                  disabled={startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
+                                <Button
+                                  className={`shrink-0 min-h-[3rem] gap-2 px-4 ${canDispatch ? "bg-success hover:bg-success/90 text-success-foreground shadow-[0_0_16px_-6px_hsl(var(--success)/0.7)]" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                                  disabled={!canDispatch || startingId === camp.id || camp.processed_recipients >= camp.total_recipients}
+                                  title={!globalEnabled ? "Ative a API no topo para iniciar" : !bcConnected ? "Conecte o WhatsApp em Configurações > Instância" : undefined}
                                   onClick={() => void handleStartBatch(camp.id)}>
                                   {startingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? <Play className="h-4 w-4" /> : <Rocket className="h-4 w-4" />}
                                   {camp.processed_recipients > 0 && camp.processed_recipients < camp.total_recipients ? "▶️ Continuar" : "🚀 Iniciar"}
@@ -859,10 +877,10 @@ export default function MassBroadcast() {
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
                                       {r.status === "pending" && (
-                                        <button type="button" title="Enviar manual"
-                                          disabled={manualSendingId === r.id}
+                                        <button type="button" title={!canDispatch ? (!globalEnabled ? "Ative a API no topo" : "Conecte o WhatsApp") : "Enviar manual"}
+                                          disabled={!canDispatch || manualSendingId === r.id}
                                           onClick={() => void handleManualSend(r, camp)}
-                                          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
+                                          className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors disabled:opacity-50 ${canDispatch ? "border-primary/30 text-primary hover:bg-primary/10" : "border-muted text-muted-foreground cursor-not-allowed"}`}>
                                           {manualSendingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
                                         </button>
                                       )}
