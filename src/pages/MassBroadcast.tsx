@@ -757,7 +757,14 @@ export default function MassBroadcast() {
                               </Badge>
                             </div>
                             <div className="mt-1 space-y-1">
-                              <span className="text-[11px] text-muted-foreground">{new Date(camp.created_at).toLocaleDateString("pt-BR")}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] text-muted-foreground">{new Date(camp.created_at).toLocaleDateString("pt-BR")}</span>
+                                {isActive && countdown.seconds > 0 && (
+                                  <span className="text-[10px] font-mono font-semibold text-primary flex items-center gap-1">
+                                    <Timer className="h-3 w-3" /> {countdown.display}
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[11px] font-medium text-foreground">{camp.processed_recipients}/{camp.total_recipients}</span>
                                 <Progress value={pct} className="h-1.5 flex-1" />
@@ -872,7 +879,7 @@ export default function MassBroadcast() {
                                     <div className="min-w-0 flex-1">
                                       <p className="truncate font-mono text-sm text-foreground">{r.phone}</p>
                                       <span className={`text-[11px] font-medium ${r.status === "sent" ? "text-primary" : r.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
-                                        {r.status === "sent" ? "✅ Enviado" : r.status === "failed" ? "❌ Erro" : "⏳ Pendente"}
+                                        {r.status === "sent" ? "✅ Enviado" : r.status === "failed" ? "❌ Erro / Pulado" : "⏳ Pendente"}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
