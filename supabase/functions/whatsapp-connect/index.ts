@@ -26,24 +26,16 @@ Deno.serve(async (req: Request) => {
       throw new Error("Nenhuma chave de API configurada para criar instância");
     }
 
-    // Backend protection: check if company already has an instance for this scope
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+    // If company already has a token, clear it before creating a new instance
     if (company_id) {
-      const { data: existing } = await supabaseAdmin
+      await supabaseAdmin
         .from("api_settings")
-        .select(tokenColumn)
-        .eq("company_id", company_id)
-        .maybeSingle();
-
-      if (existing?.[tokenColumn] && existing[tokenColumn].trim() !== "") {
-        return new Response(
-          JSON.stringify({ error: "Você já possui uma instância ativa. Remova a anterior antes de criar uma nova." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+        .update({ [tokenColumn]: "", [`${isBroadcast ? "broadcast_" : ""}instance_name`]: "" })
+        .eq("company_id", company_id);
     }
 
     // 1. Criar instância diretamente via UAZAPI (fallback entre chaves)

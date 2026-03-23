@@ -176,6 +176,8 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
   const handleCreateInstance = async () => {
     if (!companyId) return;
     setCreating(true);
+    setQrCode(null);
+    setConnected(false);
     try {
       const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot-webhook?company_id=${companyId}`;
 
@@ -324,12 +326,10 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
               {saving ? "Salvando..." : "Salvar e Configurar Webhook"}
             </Button>
 
-            {!hasInstance && (
-              <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                {creating ? "Criando..." : "Criar Nova Instância"}
-              </Button>
-            )}
+            <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
+              {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              {creating ? "Criando..." : hasInstance ? "➕ Gerar Nova Instância / QR Code" : "Criar Nova Instância"}
+            </Button>
 
             {hasInstance && !connected && (
               <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={deleting}>
@@ -353,11 +353,6 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
             )}
           </div>
 
-          {hasInstance && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-              ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
-            </p>
-          )}
         </>
       ) : (
         <>
@@ -380,12 +375,10 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
           )}
 
           <div className="flex flex-wrap gap-2">
-            {!hasInstance && (
-              <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
-                {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                {creating ? "Criando..." : "Criar Nova Instância"}
-              </Button>
-            )}
+            <Button variant="secondary" onClick={handleCreateInstance} disabled={creating}>
+              {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              {creating ? "Criando..." : hasInstance ? "➕ Gerar Nova Instância / QR Code" : "Criar Nova Instância"}
+            </Button>
 
             {hasInstance && !connected && (
               <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)} disabled={deleting}>
@@ -409,11 +402,6 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
             )}
           </div>
 
-          {hasInstance && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-              ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
-            </p>
-          )}
         </>
       )}
 
