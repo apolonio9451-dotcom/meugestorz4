@@ -176,6 +176,8 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
   const handleCreateInstance = async () => {
     if (!companyId) return;
     setCreating(true);
+    setQrCode(null);
+    setConnected(false);
     try {
       const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatbot-webhook?company_id=${companyId}`;
 
