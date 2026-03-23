@@ -224,7 +224,18 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
       });
     } catch (err: any) {
       console.error("Erro ao criar instância:", err);
-      toast({ title: "Erro ao criar instância", description: err?.message || "Tente novamente.", variant: "destructive" });
+      const rawMsg = err?.message || "Erro desconhecido";
+      let userMsg = rawMsg;
+      if (rawMsg.includes("401") || rawMsg.includes("Unauthorized") || rawMsg.toLowerCase().includes("token")) {
+        userMsg = "🔑 Token de Admin inválido. Verifique o UAZAPI_ADMIN_TOKEN nas configurações.";
+      } else if (rawMsg.includes("404")) {
+        userMsg = "🔗 Endpoint da API não encontrado. Verifique a URL do servidor.";
+      } else if (rawMsg.includes("500") || rawMsg.toLowerCase().includes("fora do ar")) {
+        userMsg = "🔴 Servidor de WhatsApp fora do ar. Tente novamente em alguns minutos.";
+      } else if (rawMsg.toLowerCase().includes("conexão") || rawMsg.toLowerCase().includes("network")) {
+        userMsg = "📡 Erro de conexão com o servidor. Verifique sua internet.";
+      }
+      toast({ title: "Erro ao criar instância", description: userMsg, variant: "destructive" });
     } finally {
       setCreating(false);
     }

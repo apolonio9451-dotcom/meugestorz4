@@ -15,20 +15,42 @@ Deno.serve(async (req: Request) => {
     const isBroadcast = scope === "broadcast";
     const tokenColumn = isBroadcast ? "broadcast_api_token" : "api_token";
 
+    // Collect and validate API keys — filter out anything that isn't a clean token
+    const rawKeys = [
+      Deno.env.get("UAZAPI_ADMIN_TOKEN")?.trim(),
+      Deno.env.get("EVOLUTI_TOKEN")?.trim(),
+    ];
+
     const candidateApiKeys = Array.from(
-      new Set([
-        Deno.env.get("UAZAPI_ADMIN_TOKEN")?.trim(),
-        Deno.env.get("EVOLUTI_TOKEN")?.trim(),
-      ].filter((key): key is string => Boolean(key && key.length > 0)))
+      new Set(
+        rawKeys.filter((key): key is string => {
+          if (!key || key.length === 0) return false;
+          // Reject values that look like curl commands or URLs
+          if (key.toLowerCase().startsWith("curl ")) {
+            console.warn("[whatsapp-connect] UAZAPI_ADMIN_TOKEN contém um comando curl em vez de um token. Ignorando.");
+            return false;
+          }
+          if (key.startsWith("http://") || key.startsWith("https://")) {
+            console.warn("[whatsapp-connect] Token parece ser uma URL. Ignorando.");
+            return false;
+          }
+          return true;
+        })
+      )
     );
 
     if (candidateApiKeys.length === 0) {
-      throw new Error("Nenhuma chave de API configurada para criar instância");
+      throw new Error("Nenhuma chave de API válida configurada. Verifique o UAZAPI_ADMIN_TOKEN nas configurações de secrets.");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Generate unique instance name using company_id suffix
+    const uniqueSuffix = company_id ? company_id.substring(0, 8) : Date.now().toString(36);
+    const instanceDisplayName = userName || "Minha Instância";
+    const uniqueInstanceName = `inst_${uniqueSuffix}_${Date.now().toString(36)}`;
 
     // If company already has a token, clear it before creating a new instance
     if (company_id) {
@@ -38,28 +60,36 @@ Deno.serve(async (req: Request) => {
         .eq("company_id", company_id);
     }
 
-    // 1. Criar instância diretamente via UAZAPI (fallback entre chaves)
+    // 1. Criar instância via UAZAPI (fallback entre chaves)
     let instanceToken: string | null = null;
     let instanceId: string | null = null;
     let lastCreateError = "Erro ao criar instância";
 
-    console.log(`[whatsapp-connect] Tentando ${candidateApiKeys.length} chave(s). Scope: ${scope || "main"}`);
+    console.log(`[whatsapp-connect] Tentando ${candidateApiKeys.length} chave(s). Scope: ${scope || "main"}. Nome único: ${uniqueInstanceName}`);
 
     for (let ki = 0; ki < candidateApiKeys.length; ki++) {
       const apiKey = candidateApiKeys[ki];
-      console.log(`[whatsapp-connect] Tentativa ${ki + 1}/${candidateApiKeys.length} — chave: ${apiKey.substring(0, 8)}...`);
+      const maskedKey = apiKey.length > 8 ? apiKey.substring(0, 8) + "..." : "***";
+      console.log(`[whatsapp-connect] Tentativa ${ki + 1}/${candidateApiKeys.length} — chave: ${maskedKey}`);
 
       try {
         const createRes = await fetch(`${UAZAPI_URL}/instance/create`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "AdminToken": apiKey },
           body: JSON.stringify({
-            name: userName || "Minha Instância",
+            name: uniqueInstanceName,
           }),
         });
 
-        const payload = await createRes.json();
-        console.log(`[whatsapp-connect] Resposta ${createRes.status}:`, JSON.stringify(payload).substring(0, 300));
+        const rawText = await createRes.text();
+        console.log(`[whatsapp-connect] HTTP ${createRes.status} — Body: ${rawText.substring(0, 500)}`);
+
+        let payload: any;
+        try {
+          payload = JSON.parse(rawText);
+        } catch {
+          payload = { error: rawText };
+        }
 
         if (createRes.ok && payload.token) {
           instanceToken = payload.token;
@@ -67,14 +97,28 @@ Deno.serve(async (req: Request) => {
           break;
         }
 
-        lastCreateError = payload?.error || payload?.message || `Erro HTTP ${createRes.status}`;
-        if (!String(lastCreateError).toLowerCase().includes("invalid") &&
-            !String(lastCreateError).toLowerCase().includes("unauthorized")) {
+        // Build human-readable error
+        const apiError = payload?.error || payload?.message || `HTTP ${createRes.status}`;
+        
+        if (createRes.status === 401 || createRes.status === 403) {
+          lastCreateError = `Token de Admin inválido ou sem permissão (HTTP ${createRes.status}). Verifique o UAZAPI_ADMIN_TOKEN.`;
+        } else if (createRes.status === 404) {
+          lastCreateError = `Endpoint não encontrado (HTTP 404). Verifique a URL da API.`;
+        } else if (createRes.status === 409) {
+          lastCreateError = `Instância com nome duplicado. Tente novamente.`;
+        } else if (createRes.status >= 500) {
+          lastCreateError = `Servidor UAZAPI fora do ar (HTTP ${createRes.status}). Tente novamente mais tarde.`;
+        } else {
+          lastCreateError = `Erro da API: ${apiError}`;
+        }
+
+        // Only try next key if it's an auth issue
+        if (createRes.status !== 401 && createRes.status !== 403) {
           break;
         }
       } catch (fetchErr: any) {
-        console.error(`[whatsapp-connect] Erro na tentativa ${ki + 1}:`, fetchErr.message);
-        lastCreateError = fetchErr.message || "Erro de conexão com a API";
+        console.error(`[whatsapp-connect] Erro de rede na tentativa ${ki + 1}:`, fetchErr.message);
+        lastCreateError = `Erro de conexão com o servidor UAZAPI: ${fetchErr.message}`;
       }
     }
 
@@ -83,6 +127,24 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`[whatsapp-connect] Instância criada. Token: ${instanceToken.substring(0, 8)}...`);
+
+    // Auto-save token to DB
+    if (company_id) {
+      const updateData: Record<string, string> = {
+        [tokenColumn]: instanceToken,
+        [`${isBroadcast ? "broadcast_" : ""}instance_name`]: uniqueInstanceName,
+      };
+
+      const { error: upsertError } = await supabaseAdmin
+        .from("api_settings")
+        .upsert({ company_id, ...updateData }, { onConflict: "company_id" });
+
+      if (upsertError) {
+        console.error("[whatsapp-connect] Erro ao salvar token no DB:", upsertError.message);
+      } else {
+        console.log("[whatsapp-connect] Token salvo automaticamente no banco de dados.");
+      }
+    }
 
     // Set webhook if provided
     if (webhookUrl) {
