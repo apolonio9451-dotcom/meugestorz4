@@ -998,6 +998,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const phone = normalizePhone(senderPhone);
+
+    // === EARLY is_active CHECK — must happen BEFORE any AI processing ===
+    const { data: chatSettingsEarly } = await supabase
+      .from("chatbot_settings").select("is_active").eq("company_id", companyIdParam).maybeSingle();
+
+    const botIsActive = chatSettingsEarly?.is_active === true;
+
     const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, companyApiUrl, companyApiToken, {
       companyId: companyIdParam,
       phone,
@@ -1016,18 +1023,21 @@ Deno.serve(async (req: Request) => {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
-    decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
 
-    // Fetch chatbot settings
-    const { data: chatSettings } = await supabase
-      .from("chatbot_settings").select("*").eq("company_id", companyIdParam).single();
-
-    if (!chatSettings?.is_active) {
+    // If bot is disabled, stop here (after recording broadcast but before chatbot replies)
+    if (!botIsActive) {
+      console.log(`Bot desativado para empresa ${companyIdParam}, ignorando mensagem.`);
       return new Response(JSON.stringify({ status: "ok", reason: "bot_disabled" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log(`Processando mensagem de ${phone}: "${messageText.slice(0, 100)}"`);
+    decisions.push(`📩 Mensagem recebida de ${phone}: "${messageText.slice(0, 60)}"`);
+
+    // Fetch full chatbot settings (we already confirmed is_active=true)
+    const { data: chatSettings } = await supabase
+      .from("chatbot_settings").select("*").eq("company_id", companyIdParam).single();
 
     const presenceEnabled = chatSettings.presence_enabled !== false;
     const aiDecisionLog = chatSettings.ai_decision_log !== false;

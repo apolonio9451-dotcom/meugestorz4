@@ -578,7 +578,7 @@ export default function Chatbot() {
                       const { data } = await supabase.from("chatbot_settings").insert({ company_id: companyId, is_active: v }).select().single();
                       if (data) setSettingsId((data as any).id);
                     }
-                    toast({ title: v ? "✅ Bot ativado!" : "Bot desativado" });
+                    toast({ title: v ? "✅ Bot ativado!" : "🤖 Robô desativado com sucesso no servidor.", description: v ? "O chatbot está respondendo mensagens." : "Nenhuma resposta automática será enviada." });
                   } catch (err: any) {
                     setIsActive(!v);
                     toast({ title: "Erro ao alterar status", description: err?.message, variant: "destructive" });
