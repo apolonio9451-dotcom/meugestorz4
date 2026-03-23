@@ -353,11 +353,6 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
             )}
           </div>
 
-          {hasInstance && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-              ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
-            </p>
-          )}
         </>
       ) : (
         <>
@@ -407,11 +402,6 @@ export default function WhatsAppInstanceSection({ companyId, isOwner = false }: 
             )}
           </div>
 
-          {hasInstance && (
-            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-              ⚠️ Você já possui uma instância ativa. Para criar uma nova, remova a anterior primeiro.
-            </p>
-          )}
         </>
       )}
 
