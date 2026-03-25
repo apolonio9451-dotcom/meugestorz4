@@ -4,7 +4,6 @@ import {
   Info, Loader2, MessageSquareMore, Mic, PauseCircle, Pencil, Play, Plus, Radio,
   RefreshCw, Rocket, Save, Send, Shield, Smartphone, Terminal, Timer, Trash2, User, X,
 } from "lucide-react";
-import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -526,7 +525,7 @@ export default function MassBroadcast() {
      RENDER — 100% Mobile-First
      ═══════════════════════════════════════════════════ */
   return (
-    <AnimatedPage>
+    <>
       <div className="w-full max-w-[100vw] min-w-0 overflow-x-hidden box-border p-4 space-y-4">
 
         {/* ─── HEADER ─── */}
@@ -1154,6 +1153,6 @@ export default function MassBroadcast() {
           </TabsContent>
         </Tabs>
       </div>
-    </AnimatedPage>
+    </>
   );
 }

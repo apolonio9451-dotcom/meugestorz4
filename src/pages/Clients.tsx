@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import AnimatedPage from "@/components/AnimatedPage";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -1040,7 +1039,7 @@ export default function Clients() {
   };
 
   return (
-    <AnimatedPage><div className="space-y-3 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <Dialog open={!!chargePauseDialog} onOpenChange={(open) => { if (!open) setChargePauseDialog(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -2154,6 +2153,6 @@ export default function Clients() {
           </DialogContent>
         </Dialog>
       )}
-    </div></AnimatedPage>
+    </div>
   );
 }

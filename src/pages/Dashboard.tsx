@@ -1,5 +1,4 @@
 import { useAuth } from "@/hooks/useAuth";
-import AnimatedPage from "@/components/AnimatedPage";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,10 +52,10 @@ async function fetchDashboardData(companyId: string) {
     if (!srvMap[srv]) srvMap[srv] = { name: srv, total: 0, active: 0, expired: 0 };
     srvMap[srv].total++;
     const endDate = latestSub[c.id];
-    if (endDate) {
-      const days = differenceInCalendarDays(parseISO(endDate), new Date());
-      if (days >= 0) srvMap[srv].active++;
-      else srvMap[srv].expired++;
+    if (endDate && differenceInCalendarDays(parseISO(endDate), new Date()) >= 0) {
+      srvMap[srv].active++;
+    } else {
+      srvMap[srv].expired++;
     }
   });
 
@@ -111,7 +110,7 @@ export default function Dashboard() {
   const upcomingInvoices = data?.upcomingInvoices ?? [];
   const serverStats = data?.serverStats ?? [];
 
-  const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const fmt = (v: number) => `R$ ${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   const topCards = [
     { title: "Ganhos hoje", value: fmt(stats.todayRevenue), sub: `${stats.todayPayments} pagamento(s)`, icon: DollarSign, iconColor: "text-green-400" },
@@ -128,7 +127,7 @@ export default function Dashboard() {
   ];
 
   const renderCards = (cards: typeof topCards) => (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card) => (
         <Card key={card.title} className="bg-card border-border">
           <CardContent className="p-3 sm:p-5">
@@ -137,8 +136,8 @@ export default function Dashboard() {
                 <card.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${card.iconColor}`} />
               </div>
             </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{card.title}</p>
-            <p className="text-lg sm:text-2xl font-bold font-display text-foreground">{card.value}</p>
+            <p className="text-xs text-muted-foreground mb-1">{card.title}</p>
+            <p className="text-xl sm:text-2xl font-bold font-display text-foreground">{card.value}</p>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{card.sub}</p>
           </CardContent>
         </Card>
@@ -161,20 +160,20 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <AnimatedPage><div className="space-y-6">
+      <div className="space-y-6">
         <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-32 mt-2" /></div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-      </div></AnimatedPage>
+      </div>
     );
   }
 
   return (
-    <AnimatedPage><div className="space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">Visão geral do seu negócio</p>
@@ -207,9 +206,9 @@ export default function Dashboard() {
             </div>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={serverStats} margin={{ top: 4, right: 12, left: -20, bottom: 0 }} barCategoryGap="30%">
-                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <BarChart data={serverStats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} barCategoryGap="25%">
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} height={30} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted)/0.15)" }} />
                   <Bar dataKey="active" stackId="a" radius={[0, 0, 4, 4]} name="Ativos" fill="hsl(160, 65%, 45%)" />
                   <Bar dataKey="expired" stackId="a" radius={[4, 4, 0, 0]} name="Vencidos" fill="hsl(var(--destructive))" />
@@ -299,6 +298,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </div></AnimatedPage>
+    </div>
   );
 }
