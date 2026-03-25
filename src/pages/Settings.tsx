@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Settings as SettingsIcon } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
-import WhatsAppInstanceSection from "@/components/settings/WhatsAppInstanceSection";
+import WhatsAppView from "@/components/whatsapp/WhatsAppView";
 
 export default function Settings() {
   const { effectiveCompanyId: companyId, parentCompanyId, userRole, effectivePlanType, loading } = useAuth();
@@ -26,7 +26,7 @@ export default function Settings() {
 
       {hasInstanceAccess ? (
         <>
-          <WhatsAppInstanceSection companyId={companyId} isOwner={canManageApiSettings} />
+          <WhatsAppView />
           <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={canManageApiSettings} />
         </>
       ) : (

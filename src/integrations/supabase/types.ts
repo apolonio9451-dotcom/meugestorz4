@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -1954,6 +1954,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_instances: {
+        Row: {
+          created_at: string
+          device_name: string
+          id: string
+          instance_name: string
+          instance_token: string
+          is_connected: boolean
+          last_connection_at: string | null
+          server_url: string
+          status: string
+          token: string
+          updated_at: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string
+          id?: string
+          instance_name: string
+          instance_token: string
+          is_connected?: boolean
+          last_connection_at?: string | null
+          server_url: string
+          status?: string
+          token: string
+          updated_at?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_name?: string
+          id?: string
+          instance_name?: string
+          instance_token?: string
+          is_connected?: boolean
+          last_connection_at?: string | null
+          server_url?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: []
       }
       winback_campaign_progress: {
         Row: {
