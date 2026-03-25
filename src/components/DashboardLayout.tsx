@@ -639,7 +639,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 data-priority
                 src={defaultBrandLogo}
                 alt="Meu Gestor – Logo"
-                className="relative h-16 sm:h-20 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
+                className="relative h-12 sm:h-16 object-contain drop-shadow-[0_0_16px_hsl(var(--primary)/0.6)]"
               />
             </div>
           </div>
