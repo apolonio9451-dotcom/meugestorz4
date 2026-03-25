@@ -5,8 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BOLINHA_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || Deno.env.get("BOLINHA_API_TOKEN");
+const BOLINHA_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || Deno.env.get("BOLINHA_API_TOKEN") || Deno.env.get("EVOLUTI_TOKEN");
 const CREATE_INSTANCE_URL = "https://grlwciflaotripbumhve.supabase.co/functions/v1/create-instance-url";
+
+console.log(`[whatsapp-manage] Token loaded: ${BOLINHA_TOKEN ? `YES (${BOLINHA_TOKEN.substring(0, 6)}...${BOLINHA_TOKEN.substring(BOLINHA_TOKEN.length - 4)})` : "NO TOKEN FOUND"}`);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
