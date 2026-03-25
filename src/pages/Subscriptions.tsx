@@ -1,5 +1,4 @@
 import { useState } from "react";
-import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -149,7 +148,7 @@ export default function Subscriptions() {
   };
 
   return (
-    <AnimatedPage><div className="space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Assinaturas</h1>
@@ -250,6 +249,6 @@ export default function Subscriptions() {
           )}
         </CardContent>
       </Card>
-    </div></AnimatedPage>
+    </div>
   );
 }
