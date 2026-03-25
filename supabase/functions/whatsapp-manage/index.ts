@@ -5,10 +5,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const BOLINHA_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || Deno.env.get("BOLINHA_API_TOKEN") || Deno.env.get("EVOLUTI_TOKEN");
 const CREATE_INSTANCE_URL = "https://grlwciflaotripbumhve.supabase.co/functions/v1/create-instance-url";
 
-console.log(`[whatsapp-manage] Token loaded: ${BOLINHA_TOKEN ? `YES (${BOLINHA_TOKEN.substring(0, 6)}...${BOLINHA_TOKEN.substring(BOLINHA_TOKEN.length - 4)})` : "NO TOKEN FOUND"}`);
+function sanitizeAdminToken(rawValue: string | undefined, secretName: string): string | null {
+  const value = rawValue?.trim();
+  if (!value) return null;
+
+  if (value.toLowerCase().startsWith("curl ")) {
+    console.warn(`[whatsapp-manage] ${secretName} parece conter comando curl, ignorando.`);
+    return null;
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    console.warn(`[whatsapp-manage] ${secretName} parece conter URL, ignorando.`);
+    return null;
+  }
+
+  return value;
+}
+
+function getCandidateAdminTokens(): string[] {
+  const candidates = [
+    sanitizeAdminToken(Deno.env.get("UAZAPI_ADMIN_TOKEN"), "UAZAPI_ADMIN_TOKEN"),
+    sanitizeAdminToken(Deno.env.get("BOLINHA_API_TOKEN"), "BOLINHA_API_TOKEN"),
+    sanitizeAdminToken(Deno.env.get("EVOLUTI_TOKEN"), "EVOLUTI_TOKEN"),
+  ].filter((token): token is string => Boolean(token));
+
+  return Array.from(new Set(candidates));
+}
+
+function maskToken(token: string) {
+  if (token.length <= 8) return "***";
+  return `${token.substring(0, 4)}...${token.substring(token.length - 4)}`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -39,6 +68,7 @@ Deno.serve(async (req) => {
     const userId = user.id;
     const body = await req.json();
     const { action } = body;
+    const candidateAdminTokens = getCandidateAdminTokens();
 
     console.log(`[whatsapp-manage] Action: ${action} for user: ${userId}`);
 
@@ -62,36 +92,84 @@ Deno.serve(async (req) => {
       
       console.log(`[whatsapp-manage] Creating instance: ${instanceName}`);
 
-      const createPayload = {
-        token: BOLINHA_TOKEN,
-        name: instanceName,
-        deviceName,
-        systemName: "MeuCRM",
-        system_name: "MeuCRM",
-        system: "MeuCRM",
-        profileName: "MeuCRM",
-        browser: "chrome",
-        fingerprintProfile: "chrome",
-      };
-
-      const createRes = await fetch(CREATE_INSTANCE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createPayload),
-      });
-
-      if (!createRes.ok) {
-        const errorText = await createRes.text();
-        console.error(`[whatsapp-manage] API creation failed: ${createRes.status}`, errorText);
-        return new Response(JSON.stringify({ error: "Falha ao criar instância na API", detail: errorText }), {
-          status: createRes.status,
+      if (candidateAdminTokens.length === 0) {
+        return new Response(JSON.stringify({
+          error: "Nenhum token de admin válido configurado",
+          detail: "Configure UAZAPI_ADMIN_TOKEN ou EVOLUTI_TOKEN com o valor puro do token (sem curl/URL).",
+        }), {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const apiData = await createRes.json();
+      let apiData: any = null;
+      let createErrorStatus = 500;
+      let createErrorDetail = "Falha ao criar instância na API";
+
+      for (let i = 0; i < candidateAdminTokens.length; i++) {
+        const adminToken = candidateAdminTokens[i];
+        const createPayload = {
+          token: adminToken,
+          name: instanceName,
+          deviceName,
+          systemName: "MeuCRM",
+          system_name: "MeuCRM",
+          system: "MeuCRM",
+          profileName: "MeuCRM",
+          browser: "chrome",
+          fingerprintProfile: "chrome",
+        };
+
+        console.log(`[whatsapp-manage] Trying admin token ${i + 1}/${candidateAdminTokens.length}: ${maskToken(adminToken)}`);
+
+        let createRes: Response;
+        try {
+          createRes = await fetch(CREATE_INSTANCE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(createPayload),
+          });
+        } catch (fetchError: any) {
+          console.error("[whatsapp-manage] Failed to reach create-instance endpoint:", fetchError?.message);
+          createErrorStatus = 502;
+          createErrorDetail = `Falha de rede ao chamar create-instance-url: ${fetchError?.message || "erro desconhecido"}`;
+          continue;
+        }
+
+        const responseText = await createRes.text();
+        let parsedData: any = null;
+        try {
+          parsedData = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          parsedData = { raw: responseText };
+        }
+
+        if (createRes.ok) {
+          apiData = parsedData;
+          break;
+        }
+
+        createErrorStatus = createRes.status;
+        createErrorDetail = responseText || "Sem detalhes retornados";
+        console.error(`[whatsapp-manage] API creation failed with token ${maskToken(adminToken)}: ${createRes.status}`, responseText);
+
+        if (createRes.status !== 401 && createRes.status !== 403) {
+          break;
+        }
+      }
+
+      if (!apiData) {
+        return new Response(JSON.stringify({
+          error: "Falha ao criar instância na API",
+          detail: createErrorDetail,
+        }), {
+          status: createErrorStatus,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const serverUrl = apiData.server_url;
-      const instanceToken = apiData["Instance Token"] || apiData.instance_token;
+      const instanceToken = apiData["Instance Token"] || apiData.instance_token || apiData.instanceToken;
       const generalToken = apiData.token;
 
       if (!serverUrl || !instanceToken) {
