@@ -48,44 +48,44 @@ export default function WhatsAppView() {
   const pollingRef = useRef<number | null>(null);
   const lockRef = useRef(false);
 
-  const callManage = useCallback(async (action: string) => {
+  const callManage = useCallback(async (action: string, options?: { forceNew?: boolean }) => {
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action }
+        body: {
+          action,
+          force_new: options?.forceNew === true,
+        }
       });
-      if (error) throw error;
+
+      if (error) {
+        const details = (error as any)?.context || (error as any)?.details || error.message;
+        console.error(`[WhatsApp] Error calling ${action}:`, {
+          message: error.message,
+          details,
+          raw: error,
+        });
+        toast.error(details || error.message || `Erro ao executar ${action}`);
+        return null;
+      }
+
+      if (data?.error) {
+        console.error(`[WhatsApp] Backend returned error for ${action}:`, data);
+        toast.error(data.detail || data.error || `Erro ao executar ${action}`);
+        return null;
+      }
+
       return data;
     } catch (err: any) {
-      console.error(`[WhatsApp] Error calling ${action}:`, err);
-      toast.error(err.message || `Erro ao executar ${action}`);
+      console.error(`[WhatsApp] Unexpected error calling ${action}:`, err);
+      toast.error(err?.message || `Erro ao executar ${action}`);
       return null;
     }
   }, []);
 
-  const loadInstance = useCallback(async () => {
-    if (lockRef.current) return;
-    lockRef.current = true;
-    setLoading(true);
-    
-    const data = await callManage("get-or-create");
-    if (data?.instance) {
-      setInstance(data.instance);
-      if (data.is_new) {
-        toast.success("Instância WhatsApp inicializada!");
-      }
-      
-      if (!data.instance.is_connected) {
-        fetchQrCode();
-      }
-    }
-    
-    setLoading(false);
-    lockRef.current = false;
-  }, [callManage]);
-
   const fetchQrCode = useCallback(async () => {
     setActionLoading("qrcode");
     const data = await callManage("qrcode");
+
     if (data?.connected) {
       setInstance(prev => prev ? { ...prev, is_connected: true, status: "connected" } : null);
       setQrCode(null);
@@ -94,8 +94,39 @@ export default function WhatsAppView() {
       setQrCode(data.qrcode);
       setPolling(true);
     }
+
     setActionLoading(null);
   }, [callManage]);
+
+  const loadInstance = useCallback(async (options?: { forceNew?: boolean; clearCache?: boolean }) => {
+    if (lockRef.current) return;
+    lockRef.current = true;
+    setLoading(true);
+
+    if (options?.clearCache) {
+      setInstance(null);
+      setQrCode(null);
+      setPolling(false);
+      sessionStorage.removeItem("whatsapp-instance-cache");
+      localStorage.removeItem("whatsapp-instance-cache");
+    }
+
+    const data = await callManage("get-or-create", { forceNew: options?.forceNew });
+
+    if (data?.instance) {
+      setInstance(data.instance);
+      if (data.is_new) {
+        toast.success("Instância WhatsApp inicializada!");
+      }
+
+      if (!data.instance.is_connected) {
+        await fetchQrCode();
+      }
+    }
+
+    setLoading(false);
+    lockRef.current = false;
+  }, [callManage, fetchQrCode]);
 
   const handleDisconnect = async () => {
     setActionLoading("disconnect");
@@ -192,7 +223,7 @@ export default function WhatsAppView() {
             <div className="text-center py-8 space-y-4">
               <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
               <p className="text-muted-foreground">Ocorreu um erro ao carregar sua instância.</p>
-              <Button onClick={() => loadInstance()}>Tentar Novamente</Button>
+              <Button onClick={() => loadInstance({ clearCache: true, forceNew: true })}>Tentar Novamente</Button>
             </div>
           ) : instance.is_connected ? (
             <div className="space-y-6">
