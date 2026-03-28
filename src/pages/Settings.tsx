@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Settings as SettingsIcon } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
+import WhatsAppView from "@/components/whatsapp/WhatsAppView";
 
 export default function Settings() {
   const { effectiveCompanyId: companyId, parentCompanyId, userRole, effectivePlanType, loading } = useAuth();
@@ -24,7 +25,10 @@ export default function Settings() {
       </div>
 
       {hasInstanceAccess ? (
-        <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={canManageApiSettings} />
+        <>
+          <WhatsAppView />
+          <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={canManageApiSettings} />
+        </>
       ) : (
         <div className="glass-card rounded-xl p-6 border border-border/60">
           <h2 className="text-lg font-display font-semibold text-foreground">Acesso bloqueado</h2>
