@@ -1,7 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Settings as SettingsIcon } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
-import ApiSettingsSection from "@/components/settings/ApiSettingsSection";
 import WhatsAppView from "@/components/whatsapp/WhatsAppView";
 
 export default function Settings() {
@@ -9,7 +8,6 @@ export default function Settings() {
   const isOwner = userRole === "Proprietário";
   const isMaster = userRole === "master";
   const canManageApiSettings = isOwner || isMaster;
-  const isReseller = !!parentCompanyId;
   const hasInstanceAccess = loading ? true : (canManageApiSettings || effectivePlanType === "pro");
 
   return (
@@ -25,15 +23,12 @@ export default function Settings() {
       </div>
 
       {hasInstanceAccess ? (
-        <>
-          <WhatsAppView />
-          <ApiSettingsSection companyId={isReseller && companyId === parentCompanyId ? null : companyId} isOwner={canManageApiSettings} />
-        </>
+        <WhatsAppView />
       ) : (
         <div className="glass-card rounded-xl p-6 border border-border/60">
           <h2 className="text-lg font-display font-semibold text-foreground">Acesso bloqueado</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            O módulo de Instância e Configuração de Envio é exclusivo para Plano PRO.
+            O módulo de Instância é exclusivo para Plano PRO.
           </p>
         </div>
       )}
