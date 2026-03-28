@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Settings as SettingsIcon } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import WhatsAppView from "@/components/whatsapp/WhatsAppView";
+import DataBackupExport from "@/components/settings/DataBackupExport";
 
 export default function Settings() {
   const { effectiveCompanyId: companyId, parentCompanyId, userRole, effectivePlanType, loading } = useAuth();
@@ -33,6 +34,7 @@ export default function Settings() {
         </div>
       )}
 
+      {isOwner && <DataBackupExport />}
       {isOwner && <AnnouncementManager />}
     </div>
   );
