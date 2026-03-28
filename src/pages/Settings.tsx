@@ -34,6 +34,7 @@ export default function Settings() {
         </div>
       )}
 
+      {isOwner && <DataBackupExport />}
       {isOwner && <AnnouncementManager />}
     </div>
   );
