@@ -82,6 +82,22 @@ export default function WhatsAppView() {
     }
   }, []);
 
+  const fetchQrCode = useCallback(async () => {
+    setActionLoading("qrcode");
+    const data = await callManage("qrcode");
+
+    if (data?.connected) {
+      setInstance(prev => prev ? { ...prev, is_connected: true, status: "connected" } : null);
+      setQrCode(null);
+      toast.success("WhatsApp já está conectado!");
+    } else if (data?.qrcode) {
+      setQrCode(data.qrcode);
+      setPolling(true);
+    }
+
+    setActionLoading(null);
+  }, [callManage]);
+
   const loadInstance = useCallback(async (options?: { forceNew?: boolean; clearCache?: boolean }) => {
     if (lockRef.current) return;
     lockRef.current = true;
@@ -111,22 +127,6 @@ export default function WhatsAppView() {
     setLoading(false);
     lockRef.current = false;
   }, [callManage, fetchQrCode]);
-
-  const fetchQrCode = useCallback(async () => {
-    setActionLoading("qrcode");
-    const data = await callManage("qrcode");
-
-    if (data?.connected) {
-      setInstance(prev => prev ? { ...prev, is_connected: true, status: "connected" } : null);
-      setQrCode(null);
-      toast.success("WhatsApp já está conectado!");
-    } else if (data?.qrcode) {
-      setQrCode(data.qrcode);
-      setPolling(true);
-    }
-
-    setActionLoading(null);
-  }, [callManage]);
 
   const handleDisconnect = async () => {
     setActionLoading("disconnect");
