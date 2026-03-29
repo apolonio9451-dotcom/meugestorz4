@@ -105,29 +105,22 @@ export default function Messages() {
   const shouldShowUpgradeUI = !loading && planType !== "pro";
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !authCompanyId) return;
     const fetchCompanyAndTemplates = async () => {
-      const { data: membership } = await supabase
-        .from("company_memberships")
-        .select("company_id")
-        .eq("user_id", user.id)
-        .single();
-      if (!membership) return;
-      setCompanyId(membership.company_id);
+      setCompanyId(authCompanyId);
 
       // Fetch pix key
       const { data: settings } = await supabase
         .from("api_settings" as any)
         .select("pix_key")
-        .eq("company_id", membership.company_id)
+        .eq("company_id", authCompanyId)
         .maybeSingle();
       if (settings) setPixKey((settings as any).pix_key || "");
-
 
       const { data } = await supabase
         .from("message_templates")
         .select("category, message")
-        .eq("company_id", membership.company_id);
+        .eq("company_id", authCompanyId);
 
       const map: Record<string, string> = {};
       categories.forEach((c) => {
@@ -137,7 +130,7 @@ export default function Messages() {
       setTemplates(map);
     };
     fetchCompanyAndTemplates();
-  }, [user]);
+  }, [user, authCompanyId]);
 
   const handleSave = async (categoryKey: string) => {
     if (!companyId) return;

@@ -39,6 +39,22 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) return value.trim();
+  }
+  return "";
+}
+
+function getApiHeaders(apiToken: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    token: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -66,22 +82,27 @@ Deno.serve(async (req) => {
       .eq("company_id", company_id)
       .single();
 
-    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token, tokenLen: apiSettings.api_token?.length } : "null", "error:", settingsError?.message);
+    const dbApiUrl = (apiSettings?.api_url || "").trim();
+    const dbApiToken = (apiSettings?.api_token || "").trim();
 
-    if (!apiSettings?.api_url || !apiSettings?.api_token) {
-      const reason = !apiSettings
-        ? "Nenhuma configuração de instância encontrada para esta empresa."
-        : !apiSettings.api_url
-        ? "URL da API não configurada. Acesse o menu Instância para configurar."
-        : "Token da instância não configurado. Acesse o menu Instância para configurar.";
+    const apiUrl = (dbApiUrl || getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"])).replace(/\/$/, "");
+    const apiToken = dbApiToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+
+    console.log("[test-send] apiSettings:", apiSettings ? {
+      api_url: apiSettings.api_url,
+      instance: apiSettings.instance_name,
+      hasToken: !!apiSettings.api_token,
+      tokenLen: apiSettings.api_token?.length,
+      usingEnvFallback: !dbApiToken || !dbApiUrl,
+    } : "null", "error:", settingsError?.message);
+
+    if (!apiUrl || !apiToken) {
+      const reason = `Configuração ausente. Defina URL/Token no menu Instância ou nos secrets WA_API_URL + WA_ADMIN_TOKEN (fallback também aceita EVOLUTI_API_URL, BOLINHA_API_TOKEN, UAZAPI_ADMIN_TOKEN, EVOLUTI_TOKEN).`;
       return new Response(
         JSON.stringify({ error: reason }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
-    const apiToken = apiSettings.api_token;
 
     // Get template
     const { data: templateRow } = await supabase
@@ -147,13 +168,25 @@ Deno.serve(async (req) => {
 
     try {
       console.log("[test-send] Chamando API:", { endpoint, tokenLength: apiToken.length, tokenPrefix: apiToken.substring(0, 6) + "..." });
+
+      const preflight = await fetch(`${apiUrl}/instance`, {
+        method: "GET",
+        headers: getApiHeaders(apiToken),
+      });
+      const preflightBody = await preflight.text();
+      if (preflight.status === 401) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido/expirado. Atualize o token da instância e reconecte o WhatsApp." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!preflight.ok) {
+        console.log("[test-send] preflight warning:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
+      }
+
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "token": apiToken,
-          "Authorization": `Bearer ${apiToken}`,
-        },
+        headers: getApiHeaders(apiToken),
         body: JSON.stringify({ number: normalizedPhone, text: messageBody, linkPreview: true }),
       });
 

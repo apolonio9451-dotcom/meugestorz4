@@ -54,6 +54,14 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
 const CONNECTION_ERROR_MESSAGE = "Erro de Conexão";
 const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
 
+function getApiHeaders(apiToken: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    token: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
 /** Parse API response for known session/disconnection errors */
 function isSessionError(responseText: string, httpStatus: number): boolean {
   if (httpStatus === 401) return true;
@@ -77,7 +85,7 @@ async function sendMessage(
   try {
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "token": apiToken },
+      headers: getApiHeaders(apiToken),
       body: JSON.stringify({ number, text: body, linkPreview: true }),
     });
     const responseText = await res.text();
@@ -218,7 +226,7 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
   try {
     const res = await fetch(`${apiUrl}/instance`, {
       method: "GET",
-      headers: { "Content-Type": "application/json", token: apiToken },
+      headers: getApiHeaders(apiToken),
     });
 
     if (res.status === 401) {
