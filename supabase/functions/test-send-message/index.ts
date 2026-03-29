@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       .eq("company_id", company_id)
       .single();
 
-    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token } : "null", "error:", settingsError?.message);
+    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token, tokenLen: apiSettings.api_token?.length } : "null", "error:", settingsError?.message);
 
     if (!apiSettings?.api_url || !apiSettings?.api_token) {
       const reason = !apiSettings
