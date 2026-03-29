@@ -244,7 +244,13 @@ export default function AutoSendLogs({ companyId }: Props) {
                     </Badge>
                     {(log.status === "error" || log.status === "failed") && log.error_message && (
                       <span className="text-destructive/70 truncate max-w-[120px]" title={log.error_message}>
-                        {log.error_message.slice(0, 40)}…
+                        {log.error_message.includes("401") || log.error_message.includes("Token")
+                          ? "Erro de Conexão"
+                          : log.error_message.includes("fetch") || log.error_message.includes("network")
+                          ? "Erro de Rede"
+                          : log.error_message.length > 40
+                          ? "Erro de Conexão"
+                          : log.error_message.slice(0, 40)}
                       </span>
                     )}
                   </div>
