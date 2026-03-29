@@ -92,6 +92,19 @@ async function fetchLatestCampaignCredentials(
   };
 }
 
+/** Detect session/disconnection errors from API response */
+function isSessionError(responseText: string, httpStatus: number): boolean {
+  if (httpStatus === 401) return true;
+  try {
+    const json = JSON.parse(responseText);
+    const msg = String(json?.message || json?.error || "").toLowerCase();
+    if (msg.includes("disconnected") || msg.includes("not connected") || msg.includes("qr code") || msg.includes("not logged")) {
+      return true;
+    }
+  } catch { /* not JSON */ }
+  return false;
+}
+
 async function validateCampaignToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number }> {
   try {
     const res = await fetch(`${apiUrl.replace(/\/$/, "")}/instance`, {
@@ -100,6 +113,10 @@ async function validateCampaignToken(apiUrl: string, apiToken: string): Promise<
     });
     if (res.status === 401) {
       return { ok: false, status: 401 };
+    }
+    const body = await res.text();
+    if (isSessionError(body, res.status)) {
+      return { ok: false, status: res.status };
     }
     return { ok: true, status: res.status };
   } catch {
@@ -129,13 +146,17 @@ async function sendText(apiUrl: string, apiToken: string, number: string, text: 
     headers: { "Content-Type": "application/json", token: apiToken },
     body: JSON.stringify({ number, text, linkPreview: true }),
   });
+  const body = await response.text();
+
+  // Detect WhatsApp disconnected even on 2xx
+  if (isSessionError(body, response.status)) {
+    const error = new Error(SESSION_EXPIRED_MESSAGE);
+    (error as any).httpStatus = 401;
+    throw error;
+  }
+
   if (!response.ok) {
-    const body = await response.text();
-    const error = new Error(
-      response.status === 401
-        ? SESSION_EXPIRED_MESSAGE
-        : body || `Falha HTTP ${response.status}`
-    );
+    const error = new Error(FRIENDLY_CONNECTION_ERROR);
     (error as any).httpStatus = response.status;
     throw error;
   }

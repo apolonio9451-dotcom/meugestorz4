@@ -54,12 +54,25 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
 const CONNECTION_ERROR_MESSAGE = "Erro de Conexão";
 const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
 
+/** Parse API response for known session/disconnection errors */
+function isSessionError(responseText: string, httpStatus: number): boolean {
+  if (httpStatus === 401) return true;
+  try {
+    const json = JSON.parse(responseText);
+    const msg = String(json?.message || json?.error || "").toLowerCase();
+    if (msg.includes("disconnected") || msg.includes("not connected") || msg.includes("qr code") || msg.includes("not logged")) {
+      return true;
+    }
+  } catch { /* not JSON, ignore */ }
+  return false;
+}
+
 async function sendMessage(
   apiUrl: string,
   apiToken: string,
   number: string,
   body: string,
-): Promise<{ ok: boolean; error: string; status?: number; responsePreview?: string }> {
+): Promise<{ ok: boolean; error: string; status?: number; isSessionError?: boolean }> {
   const endpoint = `${apiUrl}/send/text`;
   try {
     const res = await fetch(endpoint, {
@@ -68,18 +81,34 @@ async function sendMessage(
       body: JSON.stringify({ number, text: body, linkPreview: true }),
     });
     const responseText = await res.text();
-    if (res.ok) return { ok: true, error: "" };
 
-    const responsePreview = responseText.slice(0, 400);
-    console.log(
-      `[auto-send] API non-2xx | endpoint=${endpoint} | status=${res.status} | body=${responsePreview}`,
-    );
+    // Check for success with embedded error (some APIs return 200 with error body)
+    if (res.ok) {
+      try {
+        const json = JSON.parse(responseText);
+        if (json?.error === true && json?.message) {
+          const sessionErr = isSessionError(responseText, res.status);
+          console.log(`[auto-send] API 2xx but error body | ${json.message} | sessionError=${sessionErr}`);
+          return {
+            ok: false,
+            error: sessionErr ? SESSION_EXPIRED_MESSAGE : CONNECTION_ERROR_MESSAGE,
+            status: res.status,
+            isSessionError: sessionErr,
+          };
+        }
+      } catch { /* not JSON success response, that's fine */ }
+      return { ok: true, error: "" };
+    }
 
-    const errorDetail = res.status === 401
-      ? `${CONNECTION_ERROR_MESSAGE} (401)`
-      : CONNECTION_ERROR_MESSAGE;
+    console.log(`[auto-send] API non-2xx | status=${res.status} | body=${responseText.slice(0, 300)}`);
 
-    return { ok: false, error: errorDetail, status: res.status, responsePreview };
+    const sessionErr = isSessionError(responseText, res.status);
+    return {
+      ok: false,
+      error: sessionErr ? SESSION_EXPIRED_MESSAGE : CONNECTION_ERROR_MESSAGE,
+      status: res.status,
+      isSessionError: sessionErr,
+    };
   } catch (err) {
     console.log(`[auto-send] API fetch exception | endpoint=${endpoint} | error=${String(err)}`);
     return { ok: false, error: CONNECTION_ERROR_MESSAGE };
@@ -192,20 +221,24 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
       headers: { "Content-Type": "application/json", token: apiToken },
     });
 
-    // Explicit token/auth error
     if (res.status === 401) {
       return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE };
     }
 
+    const body = await res.text();
+
+    // Check for WhatsApp disconnected even on 2xx responses
+    if (isSessionError(body, res.status)) {
+      console.log(`[auto-send] preflight: sessão desconectada | status=${res.status}`);
+      return { ok: false, status: res.status, error: SESSION_EXPIRED_MESSAGE };
+    }
+
     if (!res.ok) {
-      const body = await res.text();
       console.log(`[auto-send] preflight non-2xx | status=${res.status} | body=${body.slice(0, 300)}`);
     }
 
-    // For preflight, only block on explicit auth failures.
     return { ok: true, status: res.status };
   } catch {
-    // Don't block queue on transient validation failures.
     return { ok: true };
   }
 }
@@ -568,14 +601,14 @@ Deno.serve(async (req) => {
             console.log(`[auto-send] ✅ ${client.name} (${category}) enviado`);
           } else {
             totalErrors++;
-            if (sendResult.status === 401) {
-              console.log(`[auto-send] ⛔ ${client.name} (${category}) 401 - token inválido, parando empresa`);
+            if (sendResult.isSessionError || sendResult.status === 401) {
+              console.log(`[auto-send] ⛔ ${client.name} (${category}) sessão expirada/desconectado, parando empresa`);
               await logSessionExpired(supabase, companyId, normalizedPhone);
               break; // Stop processing this company entirely
             } else {
               console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
             }
-            // Continue to next client for non-401 errors
+            // Continue to next client for non-session errors
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
@@ -720,7 +753,7 @@ Deno.serve(async (req) => {
             totalSent++;
           } else {
             totalErrors++;
-            if (sendResult.status === 401) {
+            if (sendResult.isSessionError || sendResult.status === 401) {
               await logSessionExpired(supabase, companyId, normalizedPhone);
               break;
             }
