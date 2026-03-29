@@ -85,6 +85,20 @@ async function sendMessage(
   }
 }
 
+/** Resolve API token: prefer db value, fallback to env secrets */
+function resolveApiToken(dbToken: string | null | undefined): string {
+  if (dbToken && dbToken.trim().length > 5) return dbToken.trim();
+  const fallbacks = ["BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN", "WA_ADMIN_TOKEN"];
+  for (const name of fallbacks) {
+    const val = Deno.env.get(name);
+    if (val && val.trim().length > 5 && !val.includes("curl") && !val.startsWith("http")) {
+      console.log(`[auto-send] Token fallback: usando secret ${name}`);
+      return val.trim();
+    }
+  }
+  return "";
+}
+
 const AUTH_TOKEN_INVALID_MESSAGE = "Erro de Autenticação: Por favor, atualize seu Token nas Configurações.";
 
 async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string }> {
