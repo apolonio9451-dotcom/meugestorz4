@@ -97,8 +97,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // --- Resolve latest token (company config first, then backend secrets fallback) ---
-      let manageToken = "";
+      // --- Resolve tokens for create-instance (prefer backend admin token, retry with UI token if needed) ---
+      const tokenCandidates: string[] = [];
+      const adminToken = getFirstEnvValue(["BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "WA_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+      if (adminToken) tokenCandidates.push(adminToken);
+
       try {
         const { data: membership } = await adminClient
           .from("company_memberships")
@@ -115,48 +118,51 @@ Deno.serve(async (req: Request) => {
             .eq("company_id", membership.company_id)
             .maybeSingle();
 
-          manageToken = normalizeToken((apiSettings as any)?.api_token);
+          const uiToken = normalizeToken((apiSettings as any)?.api_token);
+          if (uiToken && !tokenCandidates.includes(uiToken)) tokenCandidates.push(uiToken);
         }
       } catch (tokenResolveErr: any) {
         console.error("[whatsapp-manage] token resolve failed:", tokenResolveErr?.message || String(tokenResolveErr));
       }
 
-      if (!manageToken) {
-        manageToken = getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
-      }
-
-      if (!manageToken) {
+      if (tokenCandidates.length === 0) {
         return new Response(
-          JSON.stringify({ error: "Token da API não configurado. Salve o token no menu Instância." }),
+          JSON.stringify({ error: "Token da API não configurado. Verifique o token no menu Instância." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const instanceName = `bolinha-crm-${userId.substring(0, 8)}`;
       const deviceName = "BolinhaCRM";
-
-      const createPayload = {
-        token: manageToken,
-        name: instanceName,
-        deviceName,
-        systemName: "BolinhaCRM",
-        system_name: "BolinhaCRM",
-        system: "BolinhaCRM",
-        profileName: "BolinhaCRM",
-        browser: "chrome",
-        fingerprintProfile: "chrome",
-      };
-
       console.log("[whatsapp-manage] Creating instance:", instanceName);
 
-      const createRes = await fetch(CREATE_INSTANCE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createPayload),
-      });
+      let createRes: Response | null = null;
+      let createText = "";
 
-      const createText = await createRes.text();
-      console.log(`[whatsapp-manage] Create response ${createRes.status}: ${createText.substring(0, 500)}`);
+      for (const candidateToken of tokenCandidates) {
+        const createPayload = {
+          token: candidateToken,
+          name: instanceName,
+          deviceName,
+          systemName: "BolinhaCRM",
+          system_name: "BolinhaCRM",
+          system: "BolinhaCRM",
+          profileName: "BolinhaCRM",
+          browser: "chrome",
+          fingerprintProfile: "chrome",
+        };
+
+        createRes = await fetch(CREATE_INSTANCE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createPayload),
+        });
+
+        createText = await createRes.text();
+        console.log(`[whatsapp-manage] Create response ${createRes.status}: ${createText.substring(0, 500)}`);
+
+        if (createRes.ok || createRes.status !== 401) break;
+      }
 
       if (!createRes.ok) {
         let detail = createText;
