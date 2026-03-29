@@ -54,12 +54,25 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
 const CONNECTION_ERROR_MESSAGE = "Erro de Conexão";
 const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
 
+/** Parse API response for known session/disconnection errors */
+function isSessionError(responseText: string, httpStatus: number): boolean {
+  if (httpStatus === 401) return true;
+  try {
+    const json = JSON.parse(responseText);
+    const msg = String(json?.message || json?.error || "").toLowerCase();
+    if (msg.includes("disconnected") || msg.includes("not connected") || msg.includes("qr code") || msg.includes("not logged")) {
+      return true;
+    }
+  } catch { /* not JSON, ignore */ }
+  return false;
+}
+
 async function sendMessage(
   apiUrl: string,
   apiToken: string,
   number: string,
   body: string,
-): Promise<{ ok: boolean; error: string; status?: number; responsePreview?: string }> {
+): Promise<{ ok: boolean; error: string; status?: number; isSessionError?: boolean }> {
   const endpoint = `${apiUrl}/send/text`;
   try {
     const res = await fetch(endpoint, {
@@ -68,18 +81,34 @@ async function sendMessage(
       body: JSON.stringify({ number, text: body, linkPreview: true }),
     });
     const responseText = await res.text();
-    if (res.ok) return { ok: true, error: "" };
 
-    const responsePreview = responseText.slice(0, 400);
-    console.log(
-      `[auto-send] API non-2xx | endpoint=${endpoint} | status=${res.status} | body=${responsePreview}`,
-    );
+    // Check for success with embedded error (some APIs return 200 with error body)
+    if (res.ok) {
+      try {
+        const json = JSON.parse(responseText);
+        if (json?.error === true && json?.message) {
+          const sessionErr = isSessionError(responseText, res.status);
+          console.log(`[auto-send] API 2xx but error body | ${json.message} | sessionError=${sessionErr}`);
+          return {
+            ok: false,
+            error: sessionErr ? SESSION_EXPIRED_MESSAGE : CONNECTION_ERROR_MESSAGE,
+            status: res.status,
+            isSessionError: sessionErr,
+          };
+        }
+      } catch { /* not JSON success response, that's fine */ }
+      return { ok: true, error: "" };
+    }
 
-    const errorDetail = res.status === 401
-      ? `${CONNECTION_ERROR_MESSAGE} (401)`
-      : CONNECTION_ERROR_MESSAGE;
+    console.log(`[auto-send] API non-2xx | status=${res.status} | body=${responseText.slice(0, 300)}`);
 
-    return { ok: false, error: errorDetail, status: res.status, responsePreview };
+    const sessionErr = isSessionError(responseText, res.status);
+    return {
+      ok: false,
+      error: sessionErr ? SESSION_EXPIRED_MESSAGE : CONNECTION_ERROR_MESSAGE,
+      status: res.status,
+      isSessionError: sessionErr,
+    };
   } catch (err) {
     console.log(`[auto-send] API fetch exception | endpoint=${endpoint} | error=${String(err)}`);
     return { ok: false, error: CONNECTION_ERROR_MESSAGE };
