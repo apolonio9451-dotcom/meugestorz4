@@ -449,9 +449,10 @@ Deno.serve(async (req) => {
     // --- Support check-up auto-send (runs for ALL companies, independent of auto_send_hour) ---
     for (const config of apiConfigs) {
       if (Date.now() - execStart > MAX_EXEC_MS) break;
-      if (!config.api_url || !config.api_token) continue;
+      const resolvedSupportToken = resolveApiToken(config.api_token);
+      if (!config.api_url || !resolvedSupportToken) continue;
       const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = config.api_token;
+      const apiToken = resolvedSupportToken;
       const companyId = config.company_id;
       const supportIntervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
 
