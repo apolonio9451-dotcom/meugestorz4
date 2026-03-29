@@ -433,7 +433,7 @@ Deno.serve(async (req) => {
         const normalizedPhone = normalizePhone(phone);
 
         try {
-          await sleep(supportIntervalMs);
+          await sleep(Math.max(supportIntervalMs, MIN_DELAY_MS));
           const sendResult = await sendMessage(apiUrl, apiToken, normalizedPhone, messageBody);
 
           await supabase.from("auto_send_logs").insert({
