@@ -121,7 +121,7 @@ export default function AutoSendLogs({ companyId }: Props) {
   }, [companyId]);
 
   const successCount = logs.filter((l) => l.status === "success").length;
-  const errorCount = logs.filter((l) => l.status === "error").length;
+  const errorCount = logs.filter((l) => l.status === "error" || l.status === "failed").length;
   const totalCount = logs.length;
 
   // Get today's logs for progress
@@ -129,12 +129,14 @@ export default function AutoSendLogs({ companyId }: Props) {
   const todayLogs = logs.filter((l) => l.created_at.startsWith(today));
   const todaySuccess = todayLogs.filter((l) => l.status === "success").length;
   const todayErrors = todayLogs.filter((l) => l.status === "error").length;
+  const todaySkipped = todayLogs.filter((l) => l.status === "failed").length;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "success":
         return <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />;
       case "error":
+      case "failed":
         return <XCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />;
       case "sending":
         return <Loader2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 animate-spin" />;
@@ -203,6 +205,13 @@ export default function AutoSendLogs({ companyId }: Props) {
                     <span className="text-muted-foreground">Erros</span>
                   </div>
                 )}
+                {todaySkipped > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <XCircle className="w-3.5 h-3.5 text-destructive" />
+                    <span className="text-destructive font-medium">{todaySkipped}</span>
+                    <span className="text-muted-foreground">Pulados por Erro</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 text-xs ml-auto">
                   <span className="text-muted-foreground">Total Hoje:</span>
                   <span className="font-medium text-foreground">{todayLogs.length}</span>
@@ -233,7 +242,7 @@ export default function AutoSendLogs({ companyId }: Props) {
                     >
                       {categoryLabels[log.category] || log.category}
                     </Badge>
-                    {log.status === "error" && log.error_message && (
+                    {(log.status === "error" || log.status === "failed") && log.error_message && (
                       <span className="text-destructive/70 truncate max-w-[120px]" title={log.error_message}>
                         {log.error_message.slice(0, 40)}…
                       </span>
@@ -303,7 +312,7 @@ export default function AutoSendLogs({ companyId }: Props) {
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Status</p>
                 <Badge variant={selectedLog.status === "success" ? "default" : "destructive"} className="text-xs">
-                  {selectedLog.status === "success" ? "Concluído" : "Erro"}
+                  {selectedLog.status === "success" ? "Concluído" : selectedLog.status === "failed" ? "Falha" : "Erro"}
                 </Badge>
               </div>
 
