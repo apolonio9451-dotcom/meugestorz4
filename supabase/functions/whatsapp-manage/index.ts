@@ -9,6 +9,18 @@ const corsHeaders = {
 const CREATE_INSTANCE_URL =
   "https://grlwciflaotripbumhve.supabase.co/functions/v1/create-instance-url";
 
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) return value.trim();
+  }
+  return "";
+}
+
+function normalizeToken(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -85,40 +97,72 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // --- Create new instance via external API ---
-      const bolinhaToken = Deno.env.get("BOLINHA_API_TOKEN")?.trim();
-      if (!bolinhaToken) {
+      // --- Resolve tokens for create-instance (prefer backend admin token, retry with UI token if needed) ---
+      const tokenCandidates: string[] = [];
+      const adminToken = getFirstEnvValue(["BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "WA_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+      if (adminToken) tokenCandidates.push(adminToken);
+
+      try {
+        const { data: membership } = await adminClient
+          .from("company_memberships")
+          .select("company_id, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (membership?.company_id) {
+          const { data: apiSettings } = await adminClient
+            .from("api_settings")
+            .select("api_token")
+            .eq("company_id", membership.company_id)
+            .maybeSingle();
+
+          const uiToken = normalizeToken((apiSettings as any)?.api_token);
+          if (uiToken && !tokenCandidates.includes(uiToken)) tokenCandidates.push(uiToken);
+        }
+      } catch (tokenResolveErr: any) {
+        console.error("[whatsapp-manage] token resolve failed:", tokenResolveErr?.message || String(tokenResolveErr));
+      }
+
+      if (tokenCandidates.length === 0) {
         return new Response(
-          JSON.stringify({ error: "BOLINHA_API_TOKEN não configurado" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Token da API não configurado. Verifique o token no menu Instância." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const instanceName = `bolinha-crm-${userId.substring(0, 8)}`;
       const deviceName = "BolinhaCRM";
-
-      const createPayload = {
-        token: bolinhaToken,
-        name: instanceName,
-        deviceName,
-        systemName: "BolinhaCRM",
-        system_name: "BolinhaCRM",
-        system: "BolinhaCRM",
-        profileName: "BolinhaCRM",
-        browser: "chrome",
-        fingerprintProfile: "chrome",
-      };
-
       console.log("[whatsapp-manage] Creating instance:", instanceName);
 
-      const createRes = await fetch(CREATE_INSTANCE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createPayload),
-      });
+      let createRes: Response | null = null;
+      let createText = "";
 
-      const createText = await createRes.text();
-      console.log(`[whatsapp-manage] Create response ${createRes.status}: ${createText.substring(0, 500)}`);
+      for (const candidateToken of tokenCandidates) {
+        const createPayload = {
+          token: candidateToken,
+          name: instanceName,
+          deviceName,
+          systemName: "BolinhaCRM",
+          system_name: "BolinhaCRM",
+          system: "BolinhaCRM",
+          profileName: "BolinhaCRM",
+          browser: "chrome",
+          fingerprintProfile: "chrome",
+        };
+
+        createRes = await fetch(CREATE_INSTANCE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createPayload),
+        });
+
+        createText = await createRes.text();
+        console.log(`[whatsapp-manage] Create response ${createRes.status}: ${createText.substring(0, 500)}`);
+
+        if (createRes.ok || createRes.status !== 401) break;
+      }
 
       if (!createRes.ok) {
         let detail = createText;
