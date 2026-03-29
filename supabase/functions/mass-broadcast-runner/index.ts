@@ -12,6 +12,14 @@ const MAX_CONSECUTIVE_ERRORS = 5;
 const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
 const FRIENDLY_CONNECTION_ERROR = "Erro de Conexão";
 
+function getApiHeaders(apiToken: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    token: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
 type CampaignRow = {
   id: string;
   name: string;
