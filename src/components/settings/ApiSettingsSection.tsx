@@ -77,6 +77,22 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
         if (data) setExistingId((data as any).id);
       }
       if (error) throw error;
+
+      const { data: resetData, error: resetError } = await supabase.functions.invoke("auto-send-messages", {
+        body: { action: "reset-error-queue", companyId },
+      });
+
+      if (!resetError) {
+        const resetCount = Number((resetData as any)?.resetCount ?? 0);
+        if (resetCount > 0) {
+          toast({
+            title: "Fila de erros resetada",
+            description: `${resetCount} envio(s) voltaram para pendente.`,
+          });
+        }
+        window.dispatchEvent(new CustomEvent("auto-send-logs-reset"));
+      }
+
       toast({ title: "Configurações salvas!" });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" });
