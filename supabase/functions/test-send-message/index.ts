@@ -146,11 +146,13 @@ Deno.serve(async (req) => {
     console.log("[test-send] Enviando para:", { endpoint, phone: normalizedPhone, messageLength: messageBody.length });
 
     try {
+      console.log("[test-send] Chamando API:", { endpoint, tokenLength: apiToken.length, tokenPrefix: apiToken.substring(0, 6) + "..." });
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "token": apiToken,
+          "Authorization": `Bearer ${apiToken}`,
         },
         body: JSON.stringify({ number: normalizedPhone, text: messageBody, linkPreview: true }),
       });
