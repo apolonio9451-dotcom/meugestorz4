@@ -598,12 +598,19 @@ Deno.serve(async (req) => {
     // --- Support check-up auto-send (runs for ALL companies, independent of auto_send_hour) ---
     for (const config of apiConfigs) {
       if (Date.now() - execStart > MAX_EXEC_MS) break;
-      const resolvedSupportToken = resolveApiToken(config.api_token);
-      if (!config.api_url || !resolvedSupportToken) continue;
-      const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = resolvedSupportToken;
       const companyId = config.company_id;
-      const supportIntervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
+      const supportConfig = await fetchLatestDispatchConfig(supabase, companyId);
+      let apiUrl = supportConfig.apiUrl;
+      let apiToken = supportConfig.apiToken;
+      if (!apiUrl || !apiToken) continue;
+      const supportIntervalMs = supportConfig.sendIntervalSeconds * 1000;
+
+      const supportValidation = await validateApiToken(apiUrl, apiToken);
+      if (!supportValidation.ok) {
+        await logSessionExpired(supabase, companyId);
+        totalErrors++;
+        continue;
+      }
 
       const { data: supportCatSetting } = await supabase
         .from("auto_send_category_settings")
@@ -645,6 +652,26 @@ Deno.serve(async (req) => {
         if (Date.now() - execStart > MAX_EXEC_MS) break;
         if (client.ultimo_envio_auto === today) continue;
 
+        const latestBeforeSupportSend = await fetchLatestDispatchConfig(supabase, companyId);
+        const currentApiUrl = latestBeforeSupportSend.apiUrl;
+        const currentApiToken = latestBeforeSupportSend.apiToken;
+
+        if (!currentApiUrl || !currentApiToken) {
+          totalErrors++;
+          continue;
+        }
+
+        if (currentApiUrl !== apiUrl || currentApiToken !== apiToken) {
+          const latestValidation = await validateApiToken(currentApiUrl, currentApiToken);
+          if (!latestValidation.ok) {
+            await logSessionExpired(supabase, companyId);
+            totalErrors++;
+            break;
+          }
+          apiUrl = currentApiUrl;
+          apiToken = currentApiToken;
+        }
+
         const phone = client.whatsapp || client.phone || "";
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
@@ -668,7 +695,7 @@ Deno.serve(async (req) => {
           usuario: client.iptv_user || "",
           senha: client.iptv_password || "",
           servidor: client.server || "",
-          sua_chave_pix: config.pix_key || "",
+            sua_chave_pix: latestBeforeSupportSend.pixKey || "",
         });
 
         const normalizedPhone = normalizePhone(phone);
@@ -693,6 +720,10 @@ Deno.serve(async (req) => {
             totalSent++;
           } else {
             totalErrors++;
+            if (sendResult.status === 401) {
+              await logSessionExpired(supabase, companyId, normalizedPhone);
+              break;
+            }
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
@@ -701,7 +732,7 @@ Deno.serve(async (req) => {
             client_name: client.name,
             category: "suporte",
             status: "failed",
-            error_message: String(sendErr),
+            error_message: CONNECTION_ERROR_MESSAGE,
             phone: normalizedPhone,
             message_sent: messageBody,
           });
@@ -713,11 +744,18 @@ Deno.serve(async (req) => {
     // --- Follow-up auto-send ---
     for (const config of eligibleConfigs) {
       if (Date.now() - execStart > MAX_EXEC_MS) break;
-      if (!config.api_url || !config.api_token) continue;
-
-      const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = config.api_token;
       const companyId = config.company_id;
+      const followupConfig = await fetchLatestDispatchConfig(supabase, companyId);
+      let apiUrl = followupConfig.apiUrl;
+      let apiToken = followupConfig.apiToken;
+      if (!apiUrl || !apiToken) continue;
+
+      const followupValidation = await validateApiToken(apiUrl, apiToken);
+      if (!followupValidation.ok) {
+        await logSessionExpired(supabase, companyId);
+        totalErrors++;
+        continue;
+      }
 
       // Check if followup category is disabled
       const { data: followupCatSetting } = await supabase
@@ -757,6 +795,26 @@ Deno.serve(async (req) => {
       for (const client of followupClients) {
         if (Date.now() - execStart > MAX_EXEC_MS) break;
 
+        const latestBeforeFollowupSend = await fetchLatestDispatchConfig(supabase, companyId);
+        const currentApiUrl = latestBeforeFollowupSend.apiUrl;
+        const currentApiToken = latestBeforeFollowupSend.apiToken;
+
+        if (!currentApiUrl || !currentApiToken) {
+          totalErrors++;
+          continue;
+        }
+
+        if (currentApiUrl !== apiUrl || currentApiToken !== apiToken) {
+          const latestValidation = await validateApiToken(currentApiUrl, currentApiToken);
+          if (!latestValidation.ok) {
+            await logSessionExpired(supabase, companyId);
+            totalErrors++;
+            break;
+          }
+          apiUrl = currentApiUrl;
+          apiToken = currentApiToken;
+        }
+
         const phone = client.whatsapp || client.phone || "";
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
@@ -793,7 +851,7 @@ Deno.serve(async (req) => {
           usuario: client.iptv_user || "",
           senha: client.iptv_password || "",
           servidor: client.server || "",
-          sua_chave_pix: config.pix_key || "",
+          sua_chave_pix: latestBeforeFollowupSend.pixKey || "",
         });
 
         const normalizedPhone = normalizePhone(phone);
@@ -818,6 +876,10 @@ Deno.serve(async (req) => {
             totalSent++;
           } else {
             totalErrors++;
+            if (sendResult.status === 401) {
+              await logSessionExpired(supabase, companyId, normalizedPhone);
+              break;
+            }
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
@@ -826,7 +888,7 @@ Deno.serve(async (req) => {
             client_name: client.name,
             category: "followup",
             status: "failed",
-            error_message: String(sendErr),
+            error_message: CONNECTION_ERROR_MESSAGE,
             phone: normalizedPhone,
             message_sent: messageBody,
           });
@@ -854,12 +916,19 @@ Deno.serve(async (req) => {
 
     for (const config of eligibleConfigs) {
       if (Date.now() - execStart > MAX_EXEC_MS) break;
-      if (!config.api_url || !config.api_token) continue;
-      if (config.winback_paused) continue;
-
-      const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = config.api_token;
       const companyId = config.company_id;
+      const winbackConfig = await fetchLatestDispatchConfig(supabase, companyId);
+      let apiUrl = winbackConfig.apiUrl;
+      let apiToken = winbackConfig.apiToken;
+      if (!apiUrl || !apiToken) continue;
+      if (winbackConfig.winbackPaused) continue;
+
+      const winbackValidation = await validateApiToken(apiUrl, apiToken);
+      if (!winbackValidation.ok) {
+        await logSessionExpired(supabase, companyId);
+        totalErrors++;
+        continue;
+      }
 
       const { data: wbTemplateRows } = await supabase
         .from("message_templates")
@@ -898,6 +967,26 @@ Deno.serve(async (req) => {
 
       for (const client of wbClients) {
         if (Date.now() - execStart > MAX_EXEC_MS) break;
+
+        const latestBeforeWinbackSend = await fetchLatestDispatchConfig(supabase, companyId);
+        const currentApiUrl = latestBeforeWinbackSend.apiUrl;
+        const currentApiToken = latestBeforeWinbackSend.apiToken;
+
+        if (!currentApiUrl || !currentApiToken) {
+          totalErrors++;
+          continue;
+        }
+
+        if (currentApiUrl !== apiUrl || currentApiToken !== apiToken) {
+          const latestValidation = await validateApiToken(currentApiUrl, currentApiToken);
+          if (!latestValidation.ok) {
+            await logSessionExpired(supabase, companyId);
+            totalErrors++;
+            break;
+          }
+          apiUrl = currentApiUrl;
+          apiToken = currentApiToken;
+        }
 
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
@@ -940,7 +1029,7 @@ Deno.serve(async (req) => {
           usuario: client.iptv_user || "",
           senha: "",
           servidor: client.server || "",
-          sua_chave_pix: config.pix_key || "",
+          sua_chave_pix: latestBeforeWinbackSend.pixKey || "",
         });
 
         const normalizedPhone = normalizePhone(phone);
@@ -972,6 +1061,10 @@ Deno.serve(async (req) => {
             totalSent++;
           } else {
             totalErrors++;
+            if (sendResult.status === 401) {
+              await logSessionExpired(supabase, companyId, normalizedPhone);
+              break;
+            }
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
@@ -980,7 +1073,7 @@ Deno.serve(async (req) => {
             client_name: client.name,
             category: `repescagem_${currentStepDef.key}`,
             status: "failed",
-            error_message: String(sendErr),
+            error_message: CONNECTION_ERROR_MESSAGE,
             phone: normalizedPhone,
             message_sent: messageBody,
           });
