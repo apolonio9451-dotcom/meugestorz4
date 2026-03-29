@@ -85,7 +85,7 @@ async function sendMessage(
   try {
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "token": apiToken },
+      headers: getApiHeaders(apiToken),
       body: JSON.stringify({ number, text: body, linkPreview: true }),
     });
     const responseText = await res.text();
@@ -226,7 +226,7 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
   try {
     const res = await fetch(`${apiUrl}/instance`, {
       method: "GET",
-      headers: { "Content-Type": "application/json", token: apiToken },
+      headers: getApiHeaders(apiToken),
     });
 
     if (res.status === 401) {

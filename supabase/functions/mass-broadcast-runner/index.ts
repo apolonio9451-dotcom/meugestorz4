@@ -117,7 +117,7 @@ async function validateCampaignToken(apiUrl: string, apiToken: string): Promise<
   try {
     const res = await fetch(`${apiUrl.replace(/\/$/, "")}/instance`, {
       method: "GET",
-      headers: { "Content-Type": "application/json", token: apiToken },
+      headers: getApiHeaders(apiToken),
     });
     if (res.status === 401) {
       return { ok: false, status: 401 };
@@ -138,7 +138,7 @@ async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
   try {
     await fetch(`${apiUrl.replace(/\/$/, "")}/operations/presence`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", token: apiToken },
+      headers: getApiHeaders(apiToken),
       body: JSON.stringify({ phone, presence: "composing" }),
     });
     await sleep(durationMs);
@@ -151,7 +151,7 @@ async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
 async function sendText(apiUrl: string, apiToken: string, number: string, text: string): Promise<{ ok: boolean; status: number }> {
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}/send/text`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({ number, text, linkPreview: true }),
   });
   const body = await response.text();
