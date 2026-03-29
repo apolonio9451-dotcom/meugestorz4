@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Smartphone,
   Wifi,
@@ -14,6 +17,10 @@ import {
   QrCode,
   CheckCircle2,
   AlertCircle,
+  Eye,
+  EyeOff,
+  Save,
+  Key,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -46,8 +53,69 @@ export default function WhatsAppView() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [apiValidationError, setApiValidationError] = useState<string | null>(null);
 
+  // Token fields
+  const { effectiveCompanyId: companyId } = useAuth();
+  const [apiUrl, setApiUrl] = useState("");
+  const [apiToken, setApiToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
+  const [savingToken, setSavingToken] = useState(false);
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+  const [existingSettingsId, setExistingSettingsId] = useState<string | null>(null);
+
   const pollingRef = useRef<number | null>(null);
   const lockRef = useRef(false);
+
+  // Load existing token
+  useEffect(() => {
+    if (!companyId) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from("api_settings" as any)
+        .select("id, api_url, api_token")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (data) {
+        setApiUrl((data as any).api_url || "");
+        setApiToken((data as any).api_token || "");
+        setExistingSettingsId((data as any).id);
+      }
+      setTokenLoaded(true);
+    };
+    load();
+  }, [companyId]);
+
+  const handleSaveToken = async () => {
+    if (!companyId) return;
+    setSavingToken(true);
+    try {
+      const payload = {
+        company_id: companyId,
+        api_url: apiUrl.trim().replace(/\/$/, ""),
+        api_token: apiToken.trim(),
+      };
+      let error;
+      if (existingSettingsId) {
+        ({ error } = await supabase.from("api_settings" as any).update(payload).eq("id", existingSettingsId));
+      } else {
+        const { data, error: e } = await supabase.from("api_settings" as any).insert(payload).select().single();
+        error = e;
+        if (data) setExistingSettingsId((data as any).id);
+      }
+      if (error) throw error;
+
+      // Reset error queue
+      await supabase.functions.invoke("auto-send-messages", {
+        body: { action: "reset-error-queue", companyId },
+      });
+
+      toast.success("Token salvo com sucesso! Fila de erros resetada.");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao salvar token");
+    } finally {
+      setSavingToken(false);
+    }
+  };
 
   const callManage = useCallback(async (action: string, options?: { forceNew?: boolean }) => {
     try {
@@ -114,7 +182,6 @@ export default function WhatsAppView() {
         if (data.is_new) {
           toast.success("Instância WhatsApp inicializada!");
         }
-        // Real-time API validation: check actual connection status
         if (data.instance.is_connected) {
           const validation = await callManage("validate-connection");
           if (validation?.status === 401 || validation?.disconnected) {
@@ -176,12 +243,10 @@ export default function WhatsAppView() {
     }
   }, [callManage]);
 
-  // Initial load
   useEffect(() => {
     loadInstance();
   }, [loadInstance]);
 
-  // Polling every 15s
   useEffect(() => {
     if (!polling || !instance || instance.is_connected) return;
 
@@ -221,6 +286,72 @@ export default function WhatsAppView() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Token / API Settings Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="w-5 h-5 text-primary" />
+            Configuração da API
+          </CardTitle>
+          <CardDescription>
+            Configure a URL e o Token da sua instância para envio de mensagens.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {tokenLoaded ? (
+            <>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">URL da API</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showUrl ? "text" : "password"}
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    placeholder="https://ipazua.uazapi.com"
+                    className="bg-secondary/50 border-border font-mono text-sm"
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
+                    {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Token da Instância</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showToken ? "text" : "password"}
+                    value={apiToken}
+                    onChange={(e) => setApiToken(e.target.value)}
+                    placeholder="Cole seu token aqui"
+                    className="bg-secondary/50 border-border font-mono text-sm"
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
+                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSaveToken} disabled={savingToken || !apiUrl.trim() || !apiToken.trim()}>
+                  {savingToken ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Salvar Token
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 py-4">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm text-muted-foreground">Carregando...</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp Instance Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -237,7 +368,6 @@ export default function WhatsAppView() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* No instance / error state */}
           {!instance ? (
             <div className="text-center py-8 space-y-4">
               <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
@@ -249,7 +379,6 @@ export default function WhatsAppView() {
               </Button>
             </div>
           ) : instance.is_connected ? (
-            /* Connected state */
             <div className="space-y-6">
               {apiValidationError && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-center">
@@ -307,7 +436,6 @@ export default function WhatsAppView() {
               </div>
             </div>
           ) : (
-            /* QR Code / waiting state */
             <div className="flex flex-col items-center gap-6 py-4">
               {qrCode ? (
                 <>
@@ -372,7 +500,6 @@ export default function WhatsAppView() {
         </CardContent>
       </Card>
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
