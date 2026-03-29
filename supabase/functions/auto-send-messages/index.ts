@@ -51,7 +51,7 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
-async function sendMessage(apiUrl: string, apiToken: string, number: string, body: string): Promise<{ ok: boolean; error: string }> {
+async function sendMessage(apiUrl: string, apiToken: string, number: string, body: string): Promise<{ ok: boolean; error: string; status?: number }> {
   const endpoint = `${apiUrl}/send/text`;
   try {
     const res = await fetch(endpoint, {
@@ -61,11 +61,18 @@ async function sendMessage(apiUrl: string, apiToken: string, number: string, bod
     });
     const responseText = await res.text();
     if (res.ok) return { ok: true, error: "" };
-    return { ok: false, error: responseText };
+    // Include HTTP status for specific error handling (e.g. 401)
+    const errorDetail = res.status === 401
+      ? "Token inválido ou expirado (401). Verifique a conexão da instância no menu Configurações."
+      : responseText;
+    return { ok: false, error: errorDetail, status: res.status };
   } catch (err) {
     return { ok: false, error: String(err) };
   }
 }
+
+// Minimum delay between sends to avoid API rate-limiting (2 seconds floor)
+const MIN_DELAY_MS = 2000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
