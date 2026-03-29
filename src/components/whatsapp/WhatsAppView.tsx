@@ -66,6 +66,20 @@ export default function WhatsAppView() {
   const pollingRef = useRef<number | null>(null);
   const lockRef = useRef(false);
 
+  const toSafeErrorMessage = (value: unknown): string => {
+    if (typeof value === "string" && value.trim().length > 0) return value;
+    if (value && typeof value === "object") {
+      const maybe = (value as any).message || (value as any).error || (value as any).detail;
+      if (typeof maybe === "string" && maybe.trim().length > 0) return maybe;
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return "Erro inesperado";
+      }
+    }
+    return "Erro inesperado";
+  };
+
   // Load existing token
   useEffect(() => {
     if (!companyId) return;
@@ -125,21 +139,24 @@ export default function WhatsAppView() {
 
       if (error) {
         const details = (error as any)?.context || (error as any)?.details || error.message;
+        const safeMessage = toSafeErrorMessage(details) || toSafeErrorMessage(error.message) || `Erro ao executar ${action}`;
         console.error(`[WhatsApp] Error calling ${action}:`, details);
-        toast.error(details || error.message || `Erro ao executar ${action}`);
+        toast.error(safeMessage);
         return null;
       }
 
       if (data?.error) {
+        const safeMessage = toSafeErrorMessage((data as any).detail) || toSafeErrorMessage((data as any).error) || `Erro ao executar ${action}`;
         console.error(`[WhatsApp] Backend error for ${action}:`, data);
-        toast.error(data.detail || data.error || `Erro ao executar ${action}`);
+        toast.error(safeMessage);
         return null;
       }
 
       return data;
     } catch (err: any) {
+      const safeMessage = toSafeErrorMessage(err?.message) || `Erro ao executar ${action}`;
       console.error(`[WhatsApp] Unexpected error:`, err);
-      toast.error(err?.message || `Erro ao executar ${action}`);
+      toast.error(safeMessage);
       return null;
     }
   }, []);

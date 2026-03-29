@@ -9,6 +9,18 @@ const corsHeaders = {
 const CREATE_INSTANCE_URL =
   "https://grlwciflaotripbumhve.supabase.co/functions/v1/create-instance-url";
 
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) return value.trim();
+  }
+  return "";
+}
+
+function normalizeToken(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -85,12 +97,38 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // --- Create new instance via external API ---
-      const bolinhaToken = Deno.env.get("BOLINHA_API_TOKEN")?.trim();
-      if (!bolinhaToken) {
+      // --- Resolve latest token (company config first, then backend secrets fallback) ---
+      let manageToken = "";
+      try {
+        const { data: membership } = await adminClient
+          .from("company_memberships")
+          .select("company_id, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (membership?.company_id) {
+          const { data: apiSettings } = await adminClient
+            .from("api_settings")
+            .select("api_token")
+            .eq("company_id", membership.company_id)
+            .maybeSingle();
+
+          manageToken = normalizeToken((apiSettings as any)?.api_token);
+        }
+      } catch (tokenResolveErr: any) {
+        console.error("[whatsapp-manage] token resolve failed:", tokenResolveErr?.message || String(tokenResolveErr));
+      }
+
+      if (!manageToken) {
+        manageToken = getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+      }
+
+      if (!manageToken) {
         return new Response(
-          JSON.stringify({ error: "BOLINHA_API_TOKEN não configurado" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Token da API não configurado. Salve o token no menu Instância." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -98,7 +136,7 @@ Deno.serve(async (req: Request) => {
       const deviceName = "BolinhaCRM";
 
       const createPayload = {
-        token: bolinhaToken,
+        token: manageToken,
         name: instanceName,
         deviceName,
         systemName: "BolinhaCRM",
