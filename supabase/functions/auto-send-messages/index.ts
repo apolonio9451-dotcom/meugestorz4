@@ -221,20 +221,24 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
       headers: { "Content-Type": "application/json", token: apiToken },
     });
 
-    // Explicit token/auth error
     if (res.status === 401) {
       return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE };
     }
 
+    const body = await res.text();
+
+    // Check for WhatsApp disconnected even on 2xx responses
+    if (isSessionError(body, res.status)) {
+      console.log(`[auto-send] preflight: sessão desconectada | status=${res.status}`);
+      return { ok: false, status: res.status, error: SESSION_EXPIRED_MESSAGE };
+    }
+
     if (!res.ok) {
-      const body = await res.text();
       console.log(`[auto-send] preflight non-2xx | status=${res.status} | body=${body.slice(0, 300)}`);
     }
 
-    // For preflight, only block on explicit auth failures.
     return { ok: true, status: res.status };
   } catch {
-    // Don't block queue on transient validation failures.
     return { ok: true };
   }
 }
@@ -749,7 +753,7 @@ Deno.serve(async (req) => {
             totalSent++;
           } else {
             totalErrors++;
-            if (sendResult.status === 401) {
+            if (sendResult.isSessionError || sendResult.status === 401) {
               await logSessionExpired(supabase, companyId, normalizedPhone);
               break;
             }
