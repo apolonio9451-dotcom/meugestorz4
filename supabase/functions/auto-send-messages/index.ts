@@ -52,6 +52,7 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
 }
 
 const CONNECTION_ERROR_MESSAGE = "Erro de Conexão";
+const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
 
 async function sendMessage(
   apiUrl: string,
@@ -85,21 +86,104 @@ async function sendMessage(
   }
 }
 
-/** Resolve API token: prefer db value, fallback to env secrets */
-function resolveApiToken(dbToken: string | null | undefined): string {
-  if (dbToken && dbToken.trim().length > 5) return dbToken.trim();
-  const fallbacks = ["BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN", "WA_ADMIN_TOKEN"];
-  for (const name of fallbacks) {
-    const val = Deno.env.get(name);
-    if (val && val.trim().length > 5 && !val.includes("curl") && !val.startsWith("http")) {
-      console.log(`[auto-send] Token fallback: usando secret ${name}`);
-      return val.trim();
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) {
+      return value.trim();
     }
   }
   return "";
 }
 
-const AUTH_TOKEN_INVALID_MESSAGE = "Erro de Autenticação: Por favor, atualize seu Token nas Configurações.";
+function resolveApiUrl(dbUrl: string | null | undefined): string {
+  const fromDb = (dbUrl || "").trim().replace(/\/$/, "");
+  if (fromDb.length > 0) return fromDb;
+  return getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"]).replace(/\/$/, "");
+}
+
+/** Resolve API token: prefer db value, fallback to env secrets */
+function resolveApiToken(dbToken: string | null | undefined): string {
+  const fromDb = (dbToken || "").trim();
+  if (fromDb.length > 5) return fromDb;
+  const fallbackToken = getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+  if (fallbackToken.length > 5 && !fallbackToken.includes("curl") && !fallbackToken.startsWith("http")) {
+    return fallbackToken;
+  }
+  return "";
+}
+
+const AUTH_TOKEN_INVALID_MESSAGE = SESSION_EXPIRED_MESSAGE;
+
+type LatestDispatchConfig = {
+  apiUrl: string;
+  apiToken: string;
+  pixKey: string;
+  sendIntervalSeconds: number;
+  overdueChargePauseEnabled: boolean;
+  overdueChargePauseDays: number;
+  winbackPaused: boolean;
+  autoSendHour: number;
+  autoSendMinute: number;
+};
+
+async function fetchLatestDispatchConfig(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+): Promise<LatestDispatchConfig> {
+  const { data } = await supabase
+    .from("api_settings")
+    .select("api_url, api_token, pix_key, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, winback_paused, auto_send_hour, auto_send_minute")
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  const row = (data || {}) as any;
+  return {
+    apiUrl: resolveApiUrl(row.api_url),
+    apiToken: resolveApiToken(row.api_token),
+    pixKey: String(row.pix_key || ""),
+    sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
+    overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),
+    overdueChargePauseDays: Math.min(90, Math.max(1, Number(row.overdue_charge_pause_days ?? 10))),
+    winbackPaused: Boolean(row.winback_paused ?? false),
+    autoSendHour: Number(row.auto_send_hour ?? 8),
+    autoSendMinute: Number(row.auto_send_minute ?? 0),
+  };
+}
+
+async function logSessionExpired(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  phone = "",
+) {
+  await supabase.from("auto_send_logs").insert({
+    company_id: companyId,
+    client_name: `[Sistema]`,
+    category: "erro_config",
+    status: "error",
+    error_message: SESSION_EXPIRED_MESSAGE,
+    phone,
+    message_sent: "",
+  });
+}
+
+async function getRequestUserId(req: Request, supabaseUrl: string): Promise<string | null> {
+  const authorization = req.headers.get("Authorization");
+  if (!authorization) return null;
+
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  if (!anonKey) return null;
+
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: { Authorization: authorization },
+    },
+  });
+
+  const { data, error } = await userClient.auth.getUser();
+  if (error || !data.user) return null;
+  return data.user.id;
+}
 
 async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string }> {
   try {
