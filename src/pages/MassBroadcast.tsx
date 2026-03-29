@@ -236,8 +236,8 @@ export default function MassBroadcast() {
   useEffect(() => { void loadMonitor(); }, [loadMonitor]);
 
   useEffect(() => {
-    if (!companyId) return;
-    const ch = supabase.channel(`mass-broadcast-${companyId}`)
+    if (!companyId || !user?.id) return;
+    const ch = supabase.channel(`${user.id}:mass-broadcast-${companyId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "api_settings", filter: `company_id=eq.${companyId}` }, () => scheduleSync())
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_campaigns", filter: `company_id=eq.${companyId}` }, () => scheduleSync({ withMonitor: true }))
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_logs", filter: `company_id=eq.${companyId}` }, () => scheduleSync())
@@ -246,7 +246,7 @@ export default function MassBroadcast() {
       .on("postgres_changes", { event: "*", schema: "public", table: "mass_broadcast_conversation_messages", filter: `company_id=eq.${companyId}` }, () => scheduleSync({ withMonitor: true }))
       .subscribe();
     return () => { if (rtRef.current !== null) window.clearTimeout(rtRef.current); supabase.removeChannel(ch); };
-  }, [companyId, scheduleSync]);
+  }, [companyId, user?.id, scheduleSync]);
 
   /* ─── Handlers ─── */
   const handleToggle = async (checked: boolean) => {

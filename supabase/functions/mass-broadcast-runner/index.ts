@@ -9,7 +9,7 @@ const MAX_PER_RUN = 12;
 const BATCH_PAUSE_EVERY = 20;
 const BATCH_PAUSE_SECONDS = 300;
 const MAX_CONSECUTIVE_ERRORS = 5;
-const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
+const SESSION_EXPIRED_MESSAGE = "Sessão expirada. Por favor, revalide seu token nas Configurações";
 const FRIENDLY_CONNECTION_ERROR = "Erro de Conexão";
 
 function getApiHeaders(apiToken: string): HeadersInit {

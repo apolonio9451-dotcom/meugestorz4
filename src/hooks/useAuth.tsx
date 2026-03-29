@@ -216,7 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const channel = supabase
-      .channel("reseller-role-sync")
+      .channel(`${user.id}:reseller-role-sync`)
       .on(
         "postgres_changes",
         {
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user || !companyId) return;
 
     const channel = supabase
-      .channel("company-plan-sync")
+      .channel(`${user.id}:company-plan-sync`)
       .on(
         "postgres_changes",
         {
