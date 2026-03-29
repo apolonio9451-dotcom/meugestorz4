@@ -251,7 +251,11 @@ export default function WhatsAppView() {
           ) : instance.is_connected ? (
             /* Connected state */
             <div className="space-y-6">
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-3">
+              {apiValidationError && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-center">
+                  <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
+                </div>
+              )}
                 <Wifi className="w-12 h-12 text-emerald-500 mx-auto" />
                 <h3 className="text-xl font-bold text-emerald-500">
                   Conectado com Sucesso!
