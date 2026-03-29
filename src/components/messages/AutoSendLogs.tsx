@@ -13,6 +13,7 @@ import {
 import { RefreshCw, CheckCircle2, XCircle, Clock, Loader2, Activity, Zap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase as supabaseClient } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LogEntry {
   id: string;
@@ -48,6 +49,7 @@ interface Props {
 }
 
 export default function AutoSendLogs({ companyId }: Props) {
+  const { user } = useAuth();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
@@ -98,9 +100,9 @@ export default function AutoSendLogs({ companyId }: Props) {
 
   // Realtime subscription
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId || !user?.id) return;
     const channel = supabase
-      .channel("auto-send-logs-realtime")
+      .channel(`${user.id}:auto-send-logs-realtime`)
       .on(
         "postgres_changes",
         {
@@ -118,7 +120,7 @@ export default function AutoSendLogs({ companyId }: Props) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [companyId]);
+  }, [companyId, user?.id]);
 
   const successCount = logs.filter((l) => l.status === "success").length;
   const errorCount = logs.filter((l) => l.status === "error" || l.status === "failed").length;
@@ -244,8 +246,10 @@ export default function AutoSendLogs({ companyId }: Props) {
                     </Badge>
                     {(log.status === "error" || log.status === "failed") && log.error_message && (
                       <span className="text-destructive/70 truncate max-w-[120px]" title={log.error_message}>
-                        {log.error_message.includes("401") || log.error_message.includes("Token")
-                          ? "Erro de Conexão"
+                        {log.error_message.toLowerCase().includes("sessão expirada")
+                          ? "Sessão expirada. Por favor, revalide seu token nas Configurações"
+                          : log.error_message.includes("401") || log.error_message.includes("Token")
+                          ? "Sessão expirada. Por favor, revalide seu token nas Configurações"
                           : log.error_message.includes("fetch") || log.error_message.includes("network")
                           ? "Erro de Rede"
                           : log.error_message.length > 40
