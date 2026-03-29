@@ -51,7 +51,7 @@ export default function LiveSendStatusBar({ companyId, expectedToday }: Props) {
   }, [companyId, today]);
 
   const sent = logs.filter((l) => l.status === "success").length;
-  const errors = logs.filter((l) => l.status === "error").length;
+  const errors = logs.filter((l) => l.status === "error" || l.status === "failed").length;
 
   // Determine if system recently active (last log within 5 min)
   const isActive = logs.length > 0 && (() => {
