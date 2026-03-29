@@ -58,7 +58,6 @@ function getApiHeaders(apiToken: string): HeadersInit {
   return {
     "Content-Type": "application/json",
     token: apiToken,
-    Authorization: `Bearer ${apiToken}`,
   };
 }
 
@@ -150,6 +149,29 @@ function resolveApiToken(dbToken: string | null | undefined): string {
   return "";
 }
 
+async function getCompanyInstanceToken(supabase: any, companyId: string): Promise<string> {
+  const { data: memberships } = await supabase
+    .from("company_memberships")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: true })
+    .limit(20);
+
+  const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
+  if (!userIds.length) return "";
+
+  const { data: instance } = await supabase
+    .from("whatsapp_instances")
+    .select("instance_token")
+    .in("user_id", userIds)
+    .eq("is_connected", true)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return String((instance as any)?.instance_token || "").trim();
+}
+
 const AUTH_TOKEN_INVALID_MESSAGE = SESSION_EXPIRED_MESSAGE;
 
 type LatestDispatchConfig = {
@@ -175,9 +197,10 @@ async function fetchLatestDispatchConfig(
     .maybeSingle();
 
   const row = (data || {}) as any;
+  const instanceToken = await getCompanyInstanceToken(supabase, companyId);
   return {
     apiUrl: resolveApiUrl(row.api_url),
-    apiToken: resolveApiToken(row.api_token),
+    apiToken: instanceToken || resolveApiToken(row.api_token),
     pixKey: String(row.pix_key || ""),
     sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
     overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),

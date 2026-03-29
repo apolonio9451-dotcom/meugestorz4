@@ -16,7 +16,6 @@ function getApiHeaders(apiToken: string): HeadersInit {
   return {
     "Content-Type": "application/json",
     token: apiToken,
-    Authorization: `Bearer ${apiToken}`,
   };
 }
 
@@ -83,6 +82,32 @@ function resolveApiToken(dbToken?: string | null): string {
   return getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
 }
 
+async function getCompanyInstanceToken(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+): Promise<string> {
+  const { data: memberships } = await supabase
+    .from("company_memberships")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: true })
+    .limit(20);
+
+  const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
+  if (!userIds.length) return "";
+
+  const { data: instance } = await supabase
+    .from("whatsapp_instances")
+    .select("instance_token")
+    .in("user_id", userIds)
+    .eq("is_connected", true)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return String((instance as any)?.instance_token || "").trim();
+}
+
 async function fetchLatestCampaignCredentials(
   supabase: ReturnType<typeof createClient>,
   companyId: string,
@@ -94,9 +119,10 @@ async function fetchLatestCampaignCredentials(
     .maybeSingle();
 
   const row = (data || {}) as any;
+  const instanceToken = await getCompanyInstanceToken(supabase, companyId);
   return {
     apiUrl: resolveApiUrl(row.broadcast_api_url || row.api_url),
-    apiToken: resolveApiToken(row.broadcast_api_token || row.api_token),
+    apiToken: instanceToken || resolveApiToken(row.broadcast_api_token || row.api_token),
   };
 }
 
