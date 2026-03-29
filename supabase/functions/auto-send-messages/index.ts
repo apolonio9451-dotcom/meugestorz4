@@ -52,7 +52,7 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
 }
 
 const CONNECTION_ERROR_MESSAGE = "Erro de Conexão";
-const SESSION_EXPIRED_MESSAGE = "Sessão expirada, gere um novo token";
+const SESSION_EXPIRED_MESSAGE = "Sessão expirada. Por favor, revalide seu token nas Configurações";
 
 function getApiHeaders(apiToken: string): HeadersInit {
   return {
