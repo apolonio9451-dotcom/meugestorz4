@@ -128,7 +128,7 @@ type LatestDispatchConfig = {
 };
 
 async function fetchLatestDispatchConfig(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
 ): Promise<LatestDispatchConfig> {
   const { data } = await supabase
@@ -152,7 +152,7 @@ async function fetchLatestDispatchConfig(
 }
 
 async function logSessionExpired(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   phone = "",
 ) {
