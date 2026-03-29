@@ -85,6 +85,20 @@ async function sendMessage(
   }
 }
 
+/** Resolve API token: prefer db value, fallback to env secrets */
+function resolveApiToken(dbToken: string | null | undefined): string {
+  if (dbToken && dbToken.trim().length > 5) return dbToken.trim();
+  const fallbacks = ["BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN", "WA_ADMIN_TOKEN"];
+  for (const name of fallbacks) {
+    const val = Deno.env.get(name);
+    if (val && val.trim().length > 5 && !val.includes("curl") && !val.startsWith("http")) {
+      console.log(`[auto-send] Token fallback: usando secret ${name}`);
+      return val.trim();
+    }
+  }
+  return "";
+}
+
 const AUTH_TOKEN_INVALID_MESSAGE = "Erro de Autenticação: Por favor, atualize seu Token nas Configurações.";
 
 async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string }> {
@@ -192,14 +206,18 @@ Deno.serve(async (req) => {
     let totalErrors = 0;
 
     for (const config of eligibleConfigs) {
-      if (!config.api_url || !config.api_token) continue;
+      const resolvedToken = resolveApiToken(config.api_token);
+      if (!config.api_url || !resolvedToken) {
+        console.log(`[auto-send] Empresa ${config.company_id} sem URL ou Token configurado, pulando`);
+        continue;
+      }
       if (Date.now() - execStart > MAX_EXEC_MS) {
         console.log(`[auto-send] ⏱️ Tempo limite atingido, continuando no próximo ciclo`);
         break;
       }
 
       const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = config.api_token;
+      const apiToken = resolvedToken;
       const companyId = config.company_id;
       const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
       const overdueChargePauseEnabled = Boolean((config as any).overdue_charge_pause_enabled ?? true);
@@ -431,9 +449,10 @@ Deno.serve(async (req) => {
     // --- Support check-up auto-send (runs for ALL companies, independent of auto_send_hour) ---
     for (const config of apiConfigs) {
       if (Date.now() - execStart > MAX_EXEC_MS) break;
-      if (!config.api_url || !config.api_token) continue;
+      const resolvedSupportToken = resolveApiToken(config.api_token);
+      if (!config.api_url || !resolvedSupportToken) continue;
       const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = config.api_token;
+      const apiToken = resolvedSupportToken;
       const companyId = config.company_id;
       const supportIntervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
 
