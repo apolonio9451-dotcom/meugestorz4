@@ -858,6 +858,13 @@ export type Database = {
             referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clients_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       companies: {
@@ -1497,6 +1504,13 @@ export type Database = {
             referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reseller_activity_logs_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reseller_credit_transactions: {
@@ -1542,6 +1556,13 @@ export type Database = {
             referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reseller_credit_transactions_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reseller_settings: {
@@ -1584,6 +1605,13 @@ export type Database = {
             columns: ["reseller_id"]
             isOneToOne: true
             referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_settings_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: true
+            referencedRelation: "resellers_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1662,6 +1690,13 @@ export type Database = {
             columns: ["parent_reseller_id"]
             isOneToOne: false
             referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resellers_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1953,6 +1988,13 @@ export type Database = {
             referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "trial_links_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       whatsapp_instances: {
@@ -2050,7 +2092,88 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      resellers_safe: {
+        Row: {
+          can_create_subreseller: boolean | null
+          can_create_trial: boolean | null
+          can_resell: boolean | null
+          company_id: string | null
+          created_at: string | null
+          credit_balance: number | null
+          email: string | null
+          id: string | null
+          level: number | null
+          name: string | null
+          notes: string | null
+          parent_reseller_id: string | null
+          status: string | null
+          subscription_expires_at: string | null
+          updated_at: string | null
+          user_id: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          can_create_subreseller?: boolean | null
+          can_create_trial?: boolean | null
+          can_resell?: boolean | null
+          company_id?: string | null
+          created_at?: string | null
+          credit_balance?: number | null
+          email?: string | null
+          id?: string | null
+          level?: number | null
+          name?: string | null
+          notes?: string | null
+          parent_reseller_id?: string | null
+          status?: string | null
+          subscription_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          can_create_subreseller?: boolean | null
+          can_create_trial?: boolean | null
+          can_resell?: boolean | null
+          company_id?: string | null
+          created_at?: string | null
+          credit_balance?: number | null
+          email?: string | null
+          id?: string | null
+          level?: number | null
+          name?: string | null
+          notes?: string | null
+          parent_reseller_id?: string | null
+          status?: string | null
+          subscription_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resellers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resellers_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resellers_parent_reseller_id_fkey"
+            columns: ["parent_reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_reseller_account_plans: {
