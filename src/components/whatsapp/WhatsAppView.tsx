@@ -44,6 +44,7 @@ export default function WhatsAppView() {
   const [polling, setPolling] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [apiValidationError, setApiValidationError] = useState<string | null>(null);
 
   const pollingRef = useRef<number | null>(null);
   const lockRef = useRef(false);
@@ -109,10 +110,22 @@ export default function WhatsAppView() {
 
       if (data?.instance) {
         setInstance(data.instance);
+        setApiValidationError(null);
         if (data.is_new) {
           toast.success("Instância WhatsApp inicializada!");
         }
-        if (!data.instance.is_connected) {
+        // Real-time API validation: check actual connection status
+        if (data.instance.is_connected) {
+          const validation = await callManage("validate-connection");
+          if (validation?.status === 401 || validation?.disconnected) {
+            setInstance((prev) =>
+              prev ? { ...prev, is_connected: false, status: "disconnected" } : null
+            );
+            setApiValidationError("Sessão expirada. Revalide sua conexão escaneando o QR Code novamente.");
+            toast.error("WhatsApp desconectado: token inválido ou expirado.");
+            await fetchQrCode();
+          }
+        } else {
           await fetchQrCode();
         }
       }
