@@ -51,7 +51,14 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
-async function sendMessage(apiUrl: string, apiToken: string, number: string, body: string): Promise<{ ok: boolean; error: string; status?: number }> {
+const CONNECTION_ERROR_MESSAGE = "Erro de Conexão";
+
+async function sendMessage(
+  apiUrl: string,
+  apiToken: string,
+  number: string,
+  body: string,
+): Promise<{ ok: boolean; error: string; status?: number; responsePreview?: string }> {
   const endpoint = `${apiUrl}/send/text`;
   try {
     const res = await fetch(endpoint, {
@@ -61,13 +68,20 @@ async function sendMessage(apiUrl: string, apiToken: string, number: string, bod
     });
     const responseText = await res.text();
     if (res.ok) return { ok: true, error: "" };
-    // Include HTTP status for specific error handling (e.g. 401)
+
+    const responsePreview = responseText.slice(0, 400);
+    console.log(
+      `[auto-send] API non-2xx | endpoint=${endpoint} | status=${res.status} | body=${responsePreview}`,
+    );
+
     const errorDetail = res.status === 401
-      ? "Token inválido ou expirado (401). Verifique a conexão da instância no menu Configurações."
-      : responseText;
-    return { ok: false, error: errorDetail, status: res.status };
+      ? `${CONNECTION_ERROR_MESSAGE} (401)`
+      : CONNECTION_ERROR_MESSAGE;
+
+    return { ok: false, error: errorDetail, status: res.status, responsePreview };
   } catch (err) {
-    return { ok: false, error: String(err) };
+    console.log(`[auto-send] API fetch exception | endpoint=${endpoint} | error=${String(err)}`);
+    return { ok: false, error: CONNECTION_ERROR_MESSAGE };
   }
 }
 
@@ -85,11 +99,24 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
       return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE };
     }
 
+    if (!res.ok) {
+      const body = await res.text();
+      console.log(`[auto-send] preflight non-2xx | status=${res.status} | body=${body.slice(0, 300)}`);
+    }
+
     // For preflight, only block on explicit auth failures.
     return { ok: true, status: res.status };
   } catch {
     // Don't block queue on transient validation failures.
     return { ok: true };
+  }
+}
+
+async function readRequestJson(req: Request): Promise<any> {
+  try {
+    return await req.json();
+  } catch {
+    return {};
   }
 }
 
