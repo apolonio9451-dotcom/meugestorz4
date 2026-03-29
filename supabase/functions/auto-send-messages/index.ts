@@ -258,12 +258,63 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const requestBody = await readRequestJson(req);
 
     const nowUtc = new Date();
     const brasiliaTime = new Date(nowUtc.getTime() - 3 * 60 * 60 * 1000);
     const today = brasiliaTime.toISOString().split("T")[0];
     const brasiliaHour = brasiliaTime.getUTCHours();
     const brasiliaMinute = brasiliaTime.getUTCMinutes();
+
+    if (requestBody?.action === "reset-error-queue") {
+      const userId = await getRequestUserId(req, supabaseUrl);
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "Não autenticado" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const companyId = String(requestBody?.companyId || "").trim();
+      if (!companyId) {
+        return new Response(JSON.stringify({ error: "companyId é obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: canManage } = await supabase.rpc("is_company_admin_or_owner", {
+        _user_id: userId,
+        _company_id: companyId,
+      });
+
+      if (!canManage) {
+        return new Response(JSON.stringify({ error: "Sem permissão para resetar a fila" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: rowsToReset } = await supabase
+        .from("auto_send_logs")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("status", "failed");
+
+      const resetCount = rowsToReset?.length || 0;
+
+      if (resetCount > 0) {
+        await supabase
+          .from("auto_send_logs")
+          .update({ status: "pending", error_message: null })
+          .eq("company_id", companyId)
+          .eq("status", "failed");
+      }
+
+      return new Response(JSON.stringify({ ok: true, resetCount }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     console.log(`[auto-send] Brasília: ${today} ${brasiliaHour}:${String(brasiliaMinute).padStart(2, "0")}`);
 
@@ -290,9 +341,13 @@ Deno.serve(async (req) => {
     let totalErrors = 0;
 
     for (const config of eligibleConfigs) {
-      const resolvedToken = resolveApiToken(config.api_token);
-      if (!config.api_url || !resolvedToken) {
-        console.log(`[auto-send] Empresa ${config.company_id} sem URL ou Token configurado, pulando`);
+      const companyId = config.company_id;
+      const latestConfig = await fetchLatestDispatchConfig(supabase, companyId);
+      let apiUrl = latestConfig.apiUrl;
+      let apiToken = latestConfig.apiToken;
+
+      if (!apiUrl || !apiToken) {
+        console.log(`[auto-send] Empresa ${companyId} sem URL ou Token configurado, pulando`);
         continue;
       }
       if (Date.now() - execStart > MAX_EXEC_MS) {
@@ -300,12 +355,9 @@ Deno.serve(async (req) => {
         break;
       }
 
-      const apiUrl = config.api_url.replace(/\/$/, "");
-      const apiToken = resolvedToken;
-      const companyId = config.company_id;
-      const intervalMs = ((config as any).send_interval_seconds ?? 60) * 1000;
-      const overdueChargePauseEnabled = Boolean((config as any).overdue_charge_pause_enabled ?? true);
-      const overdueChargePauseDays = Math.min(90, Math.max(1, Number((config as any).overdue_charge_pause_days ?? 10)));
+      const intervalMs = latestConfig.sendIntervalSeconds * 1000;
+      const overdueChargePauseEnabled = latestConfig.overdueChargePauseEnabled;
+      const overdueChargePauseDays = latestConfig.overdueChargePauseDays;
 
       console.log(
         `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}`
@@ -314,15 +366,7 @@ Deno.serve(async (req) => {
       // Preflight auth validation to avoid hundreds of 401 failures.
       const tokenValidation = await validateApiToken(apiUrl, apiToken);
       if (!tokenValidation.ok) {
-        await supabase.from("auto_send_logs").insert({
-          company_id: companyId,
-          client_name: `[Sistema]`,
-          category: "erro_config",
-          status: "error",
-          error_message: tokenValidation.error || AUTH_TOKEN_INVALID_MESSAGE,
-          phone: "",
-          message_sent: "",
-        });
+        await logSessionExpired(supabase, companyId);
         totalErrors++;
         continue;
       }
@@ -446,6 +490,36 @@ Deno.serve(async (req) => {
         }
 
         const { client, category, sub, plan, diffDays } = batchToProcess[i];
+        const latestBeforeSend = await fetchLatestDispatchConfig(supabase, companyId);
+        const currentApiUrl = latestBeforeSend.apiUrl;
+        const currentApiToken = latestBeforeSend.apiToken;
+
+        if (!currentApiUrl || !currentApiToken) {
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_id: client.id,
+            client_name: client.name,
+            category,
+            status: "failed",
+            error_message: CONNECTION_ERROR_MESSAGE,
+            phone: normalizePhone(client.whatsapp || client.phone || ""),
+            message_sent: "",
+          });
+          totalErrors++;
+          continue;
+        }
+
+        if (currentApiUrl !== apiUrl || currentApiToken !== apiToken) {
+          const latestValidation = await validateApiToken(currentApiUrl, currentApiToken);
+          if (!latestValidation.ok) {
+            await logSessionExpired(supabase, companyId);
+            totalErrors++;
+            break;
+          }
+          apiUrl = currentApiUrl;
+          apiToken = currentApiToken;
+        }
+
         const endDate = new Date(sub.end_date + "T00:00:00");
         const valor = sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0;
 
@@ -464,7 +538,7 @@ Deno.serve(async (req) => {
           usuario: client.iptv_user || "",
           senha: client.iptv_password || "",
           servidor: client.server || "",
-          sua_chave_pix: config.pix_key || "",
+          sua_chave_pix: latestBeforeSend.pixKey || "",
         });
 
         const normalizedPhone = normalizePhone(client.whatsapp || client.phone || "");
@@ -496,16 +570,7 @@ Deno.serve(async (req) => {
             totalErrors++;
             if (sendResult.status === 401) {
               console.log(`[auto-send] ⛔ ${client.name} (${category}) 401 - token inválido, parando empresa`);
-              await supabase.from("auto_send_logs").insert({
-                company_id: companyId,
-                client_id: client.id,
-                client_name: `[Sistema]`,
-                category: "erro_config",
-                status: "error",
-                error_message: "⛔ Sessão expirada (401). Revalide seu Token nas Configurações.",
-                phone: normalizedPhone,
-                message_sent: "",
-              });
+              await logSessionExpired(supabase, companyId, normalizedPhone);
               break; // Stop processing this company entirely
             } else {
               console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
