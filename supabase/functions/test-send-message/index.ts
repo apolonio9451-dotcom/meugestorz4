@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       .eq("company_id", company_id)
       .single();
 
-    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token } : "null", "error:", settingsError?.message);
+    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token, tokenLen: apiSettings.api_token?.length } : "null", "error:", settingsError?.message);
 
     if (!apiSettings?.api_url || !apiSettings?.api_token) {
       const reason = !apiSettings
@@ -146,11 +146,13 @@ Deno.serve(async (req) => {
     console.log("[test-send] Enviando para:", { endpoint, phone: normalizedPhone, messageLength: messageBody.length });
 
     try {
+      console.log("[test-send] Chamando API:", { endpoint, tokenLength: apiToken.length, tokenPrefix: apiToken.substring(0, 6) + "..." });
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "token": apiToken,
+          "Authorization": `Bearer ${apiToken}`,
         },
         body: JSON.stringify({ number: normalizedPhone, text: messageBody, linkPreview: true }),
       });
