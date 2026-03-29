@@ -47,11 +47,33 @@ function getFirstEnvValue(names: string[]): string {
   return "";
 }
 
+async function getCompanyInstanceToken(supabase: any, companyId: string): Promise<string> {
+  const { data: memberships } = await supabase
+    .from("company_memberships")
+    .select("user_id")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: true })
+    .limit(20);
+
+  const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
+  if (!userIds.length) return "";
+
+  const { data: instance } = await supabase
+    .from("whatsapp_instances")
+    .select("instance_token")
+    .in("user_id", userIds)
+    .eq("is_connected", true)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return String((instance as any)?.instance_token || "").trim();
+}
+
 function getApiHeaders(apiToken: string): HeadersInit {
   return {
     "Content-Type": "application/json",
     token: apiToken,
-    Authorization: `Bearer ${apiToken}`,
   };
 }
 
@@ -84,16 +106,18 @@ Deno.serve(async (req) => {
 
     const dbApiUrl = (apiSettings?.api_url || "").trim();
     const dbApiToken = (apiSettings?.api_token || "").trim();
+    const instanceToken = await getCompanyInstanceToken(supabase, company_id);
 
     const apiUrl = (dbApiUrl || getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"])).replace(/\/$/, "");
-    const apiToken = dbApiToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+    const apiToken = instanceToken || dbApiToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
 
     console.log("[test-send] apiSettings:", apiSettings ? {
       api_url: apiSettings.api_url,
       instance: apiSettings.instance_name,
       hasToken: !!apiSettings.api_token,
       tokenLen: apiSettings.api_token?.length,
-      usingEnvFallback: !dbApiToken || !dbApiUrl,
+      usingInstanceToken: !!instanceToken,
+      usingEnvFallback: !instanceToken && (!dbApiToken || !dbApiUrl),
     } : "null", "error:", settingsError?.message);
 
     if (!apiUrl || !apiToken) {
