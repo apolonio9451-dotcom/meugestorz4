@@ -597,14 +597,14 @@ Deno.serve(async (req) => {
             console.log(`[auto-send] ✅ ${client.name} (${category}) enviado`);
           } else {
             totalErrors++;
-            if (sendResult.status === 401) {
-              console.log(`[auto-send] ⛔ ${client.name} (${category}) 401 - token inválido, parando empresa`);
+            if (sendResult.isSessionError || sendResult.status === 401) {
+              console.log(`[auto-send] ⛔ ${client.name} (${category}) sessão expirada/desconectado, parando empresa`);
               await logSessionExpired(supabase, companyId, normalizedPhone);
               break; // Stop processing this company entirely
             } else {
               console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
             }
-            // Continue to next client for non-401 errors
+            // Continue to next client for non-session errors
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
