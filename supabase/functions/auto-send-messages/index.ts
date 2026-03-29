@@ -71,6 +71,28 @@ async function sendMessage(apiUrl: string, apiToken: string, number: string, bod
   }
 }
 
+const AUTH_TOKEN_INVALID_MESSAGE = "Erro de Autenticação: Por favor, atualize seu Token nas Configurações.";
+
+async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+  try {
+    const res = await fetch(`${apiUrl}/instance`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", token: apiToken },
+    });
+
+    // Explicit token/auth error
+    if (res.status === 401) {
+      return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE };
+    }
+
+    // For preflight, only block on explicit auth failures.
+    return { ok: true, status: res.status };
+  } catch {
+    // Don't block queue on transient validation failures.
+    return { ok: true };
+  }
+}
+
 // Minimum delay between sends to avoid API rate-limiting (2 seconds floor)
 const MIN_DELAY_MS = 2000;
 
@@ -160,6 +182,37 @@ Deno.serve(async (req) => {
         `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}`
       );
 
+      // Preflight auth validation to avoid hundreds of 401 failures.
+      const tokenValidation = await validateApiToken(apiUrl, apiToken);
+      if (!tokenValidation.ok) {
+        await supabase.from("auto_send_logs").insert({
+          company_id: companyId,
+          client_name: `[Sistema]`,
+          category: "erro_config",
+          status: "error",
+          error_message: tokenValidation.error || AUTH_TOKEN_INVALID_MESSAGE,
+          phone: "",
+          message_sent: "",
+        });
+        totalErrors++;
+        continue;
+      }
+
+      const { data: failedTodayRows } = await supabase
+        .from("auto_send_logs")
+        .select("client_id, category")
+        .eq("company_id", companyId)
+        .eq("status", "failed")
+        .gte("created_at", `${today}T00:00:00`)
+        .lte("created_at", `${today}T23:59:59`)
+        .in("category", ["vence_hoje", "vence_amanha", "a_vencer", "vencidos"]);
+
+      const failedClientIdsToday = new Set<string>(
+        (failedTodayRows || [])
+          .map((row: any) => row.client_id)
+          .filter((id: string | null) => Boolean(id)) as string[]
+      );
+
       const { data: categorySettings } = await supabase
         .from("auto_send_category_settings")
         .select("category, is_active")
@@ -204,6 +257,8 @@ Deno.serve(async (req) => {
       const todayDate = new Date(today + "T00:00:00");
 
       for (const client of clients) {
+        if (failedClientIdsToday.has(client.id)) continue;
+
         const phone = client.whatsapp || client.phone || "";
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
@@ -314,7 +369,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category,
-            status: sendResult.ok ? "success" : "error",
+            status: sendResult.ok ? "success" : "failed",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -342,7 +397,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category,
-            status: "error",
+            status: "failed",
             error_message: String(sendErr),
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -441,7 +496,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category: "suporte",
-            status: sendResult.ok ? "success" : "error",
+            status: sendResult.ok ? "success" : "failed",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -459,7 +514,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category: "suporte",
-            status: "error",
+            status: "failed",
             error_message: String(sendErr),
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -566,7 +621,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category: "followup",
-            status: sendResult.ok ? "success" : "error",
+            status: sendResult.ok ? "success" : "failed",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -584,7 +639,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category: "followup",
-            status: "error",
+            status: "failed",
             error_message: String(sendErr),
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -713,7 +768,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category: `repescagem_${currentStepDef.key}`,
-            status: sendResult.ok ? "success" : "error",
+            status: sendResult.ok ? "success" : "failed",
             error_message: sendResult.error || null,
             phone: normalizedPhone,
             message_sent: messageBody,
@@ -738,7 +793,7 @@ Deno.serve(async (req) => {
             client_id: client.id,
             client_name: client.name,
             category: `repescagem_${currentStepDef.key}`,
-            status: "error",
+            status: "failed",
             error_message: String(sendErr),
             phone: normalizedPhone,
             message_sent: messageBody,
