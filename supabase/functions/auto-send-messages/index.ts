@@ -253,10 +253,27 @@ Deno.serve(async (req) => {
 
       console.log(`[auto-send] Processando lote: ${batchToProcess.length} de ${sendQueue.length} (max batch: ${maxBatchSize})`);
 
+      let consecutive401 = 0;
+      const MAX_CONSECUTIVE_401 = 3;
+      const effectiveDelay = Math.max(intervalMs, MIN_DELAY_MS);
+
       for (let i = 0; i < batchToProcess.length; i++) {
-        // Safety: stop if we're running too long
         if (Date.now() - execStart > MAX_EXEC_MS) {
           console.log(`[auto-send] ⏱️ Tempo limite no lote, ${sendQueue.length - i} restantes para próximo ciclo`);
+          break;
+        }
+
+        if (consecutive401 >= MAX_CONSECUTIVE_401) {
+          console.log(`[auto-send] ⚠️ Token inválido detectado (${consecutive401}x 401). Pulando empresa ${companyId}.`);
+          await supabase.from("auto_send_logs").insert({
+            company_id: companyId,
+            client_name: `[Sistema]`,
+            category: "erro_config",
+            status: "error",
+            error_message: "Token inválido ou expirado. Verifique a conexão da instância no menu Configurações.",
+            phone: "",
+            message_sent: "",
+          });
           break;
         }
 
@@ -284,9 +301,9 @@ Deno.serve(async (req) => {
 
         const normalizedPhone = normalizePhone(client.whatsapp || client.phone || "");
 
-        // Delay between sends (skip first)
+        // Delay between sends — always respect minimum 2s delay
         if (i > 0) {
-          await sleep(intervalMs);
+          await sleep(effectiveDelay);
         }
 
         try {
@@ -306,14 +323,20 @@ Deno.serve(async (req) => {
           if (sendResult.ok) {
             await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
             totalSent++;
+            consecutive401 = 0;
             console.log(`[auto-send] ✅ ${client.name} (${category}) enviado`);
           } else {
             totalErrors++;
-            console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
-            // DON'T stop - continue to next client
+            if (sendResult.status === 401) {
+              consecutive401++;
+              console.log(`[auto-send] ⚠️ ${client.name} (${category}) 401 - token inválido (${consecutive401}/${MAX_CONSECUTIVE_401})`);
+            } else {
+              consecutive401 = 0;
+              console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
+            }
+            // ALWAYS continue to next client
           }
         } catch (sendErr) {
-          // Log the error but DON'T stop the queue
           await supabase.from("auto_send_logs").insert({
             company_id: companyId,
             client_id: client.id,
@@ -325,8 +348,9 @@ Deno.serve(async (req) => {
             message_sent: messageBody,
           });
           totalErrors++;
+          consecutive401 = 0;
           console.log(`[auto-send] ❌ ${client.name} (${category}) exception: ${sendErr}`);
-          // Continue to next - never stop the queue
+          await sleep(MIN_DELAY_MS);
         }
       }
     }
