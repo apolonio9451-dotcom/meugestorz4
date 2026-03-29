@@ -69,7 +69,7 @@ async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
   }
 }
 
-async function sendText(apiUrl: string, apiToken: string, number: string, text: string) {
+async function sendText(apiUrl: string, apiToken: string, number: string, text: string): Promise<{ ok: boolean; status: number }> {
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}/send/text`, {
     method: "POST",
     headers: { "Content-Type": "application/json", token: apiToken },
@@ -77,8 +77,15 @@ async function sendText(apiUrl: string, apiToken: string, number: string, text: 
   });
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || `Falha HTTP ${response.status}`);
+    const error = new Error(
+      response.status === 401
+        ? "Erro de Conexão: Token inválido ou expirado. Atualize nas Configurações."
+        : body || `Falha HTTP ${response.status}`
+    );
+    (error as any).httpStatus = response.status;
+    throw error;
   }
+  return { ok: true, status: response.status };
 }
 
 async function insertLog(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
@@ -302,18 +309,51 @@ Deno.serve(async (req) => {
           processed += 1;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
+          const httpStatus = (error as any)?.httpStatus;
+
+          // ═══ 401 DETECTION: Immediately pause campaign on auth failure ═══
+          if (httpStatus === 401) {
+            await supabase
+              .from("mass_broadcast_recipients")
+              .update({ status: "failed", error_message: "Erro de Conexão", last_attempt_at: new Date().toISOString() })
+              .eq("id", recipient.id);
+
+            await supabase
+              .from("mass_broadcast_campaigns")
+              .update({ status: "paused" })
+              .eq("id", campaign.id);
+
+            await insertLog(supabase, {
+              campaign_id: campaign.id, recipient_id: recipient.id,
+              company_id: recipient.company_id, phone, step: "auth_error",
+              status: "error",
+              message: `⛔ Sessão expirada. Revalide seu token nas Configurações.`,
+              error_message: "401 - Token inválido",
+            });
+
+            await updateCampaignCounters(supabase, campaign.id, (c) => ({
+              processed_recipients: c.processed_recipients + 1,
+              failure_count: c.failure_count + 1,
+            }));
+
+            // Skip all remaining recipients for this company
+            consecutiveErrors[campaign.id] = MAX_CONSECUTIVE_ERRORS;
+            failed += 1;
+            processed += 1;
+            continue;
+          }
 
           // ═══ SINGLE ATTEMPT: Mark as failed permanently, skip immediately ═══
           await supabase
             .from("mass_broadcast_recipients")
-            .update({ status: "failed", error_message: errorMessage, last_attempt_at: new Date().toISOString() })
+            .update({ status: "failed", error_message: "Erro de Conexão", last_attempt_at: new Date().toISOString() })
             .eq("id", recipient.id);
 
           await insertLog(supabase, {
             campaign_id: campaign.id, recipient_id: recipient.id,
             company_id: recipient.company_id, phone, step: "offer",
             status: "error", message: recipient.offer_template || "",
-            error_message: errorMessage,
+            error_message: "Erro de Conexão",
           });
 
           await updateCampaignCounters(supabase, campaign.id, (c) => ({
