@@ -334,9 +334,6 @@ export default function AutoSendLogs({ companyId }: Props) {
                   </p>
                 </div>
               )}
-                  </p>
-                </div>
-              )}
 
               {selectedLog.message_sent && (
                 <div>
