@@ -326,7 +326,14 @@ export default function AutoSendLogs({ companyId }: Props) {
                 <div>
                   <p className="text-muted-foreground text-xs mb-1">Motivo do Erro</p>
                   <p className="text-xs text-destructive bg-destructive/10 rounded-lg p-3 font-mono break-all">
-                    {selectedLog.error_message}
+                    {selectedLog.error_message.includes("401") || selectedLog.error_message.includes("Token")
+                      ? "Erro de Conexão — Token inválido ou expirado. Verifique suas configurações de instância."
+                      : selectedLog.error_message.includes("fetch") || selectedLog.error_message.includes("network")
+                      ? "Erro de Rede — Não foi possível conectar ao servidor de envio."
+                      : selectedLog.error_message}
+                  </p>
+                </div>
+              )}
                   </p>
                 </div>
               )}
