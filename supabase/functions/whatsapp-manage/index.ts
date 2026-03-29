@@ -311,6 +311,54 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // =========================================================
+    // ACTION: validate-connection
+    // =========================================================
+    if (action === "validate-connection") {
+      const { data: inst } = await adminClient
+        .from("whatsapp_instances")
+        .select("server_url, instance_token, is_connected")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!inst || !inst.server_url || !inst.instance_token) {
+        return new Response(
+          JSON.stringify({ disconnected: true, status: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      try {
+        const res = await fetch(`${inst.server_url}/instance`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", token: inst.instance_token },
+        });
+
+        if (res.status === 401) {
+          // Token invalid — mark as disconnected in DB
+          await adminClient
+            .from("whatsapp_instances")
+            .update({ is_connected: false, status: "disconnected" })
+            .eq("user_id", userId);
+
+          return new Response(
+            JSON.stringify({ disconnected: true, status: 401 }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ disconnected: false, status: res.status }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch {
+        return new Response(
+          JSON.stringify({ disconnected: false, status: 0, error: "Falha de rede" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({ error: `Ação desconhecida: ${action}` }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

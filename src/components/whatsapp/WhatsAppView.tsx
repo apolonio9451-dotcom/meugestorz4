@@ -256,6 +256,7 @@ export default function WhatsAppView() {
                   <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
                 </div>
               )}
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-3">
                 <Wifi className="w-12 h-12 text-emerald-500 mx-auto" />
                 <h3 className="text-xl font-bold text-emerald-500">
                   Conectado com Sucesso!
