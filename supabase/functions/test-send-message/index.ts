@@ -39,6 +39,14 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
+function getApiHeaders(apiToken: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    token: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -147,13 +155,25 @@ Deno.serve(async (req) => {
 
     try {
       console.log("[test-send] Chamando API:", { endpoint, tokenLength: apiToken.length, tokenPrefix: apiToken.substring(0, 6) + "..." });
+
+      const preflight = await fetch(`${apiUrl}/instance`, {
+        method: "GET",
+        headers: getApiHeaders(apiToken),
+      });
+      const preflightBody = await preflight.text();
+      if (preflight.status === 401) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido/expirado. Atualize o token da instância e reconecte o WhatsApp." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!preflight.ok) {
+        console.log("[test-send] preflight warning:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
+      }
+
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "token": apiToken,
-          "Authorization": `Bearer ${apiToken}`,
-        },
+        headers: getApiHeaders(apiToken),
         body: JSON.stringify({ number: normalizedPhone, text: messageBody, linkPreview: true }),
       });
 
