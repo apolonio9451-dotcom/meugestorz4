@@ -366,11 +366,22 @@ Deno.serve(async (req) => {
           } else {
             totalErrors++;
             if (sendResult.status === 401) {
-              console.log(`[auto-send] ⚠️ ${client.name} (${category}) 401 - token inválido`);
+              console.log(`[auto-send] ⛔ ${client.name} (${category}) 401 - token inválido, parando empresa`);
+              await supabase.from("auto_send_logs").insert({
+                company_id: companyId,
+                client_id: client.id,
+                client_name: `[Sistema]`,
+                category: "erro_config",
+                status: "error",
+                error_message: "⛔ Sessão expirada (401). Revalide seu Token nas Configurações.",
+                phone: normalizedPhone,
+                message_sent: "",
+              });
+              break; // Stop processing this company entirely
             } else {
               console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
             }
-            // ALWAYS continue to next client
+            // Continue to next client for non-401 errors
           }
         } catch (sendErr) {
           await supabase.from("auto_send_logs").insert({
