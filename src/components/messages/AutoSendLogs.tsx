@@ -71,9 +71,12 @@ export default function AutoSendLogs({ companyId }: Props) {
       });
       fetchLogs();
     } catch (err: any) {
+      const msg = String(err?.message || "").toLowerCase();
       toast({
         title: "Erro ao reiniciar",
-        description: err?.message || "Não foi possível disparar os envios.",
+        description: msg.includes("401") || msg.includes("token") || msg.includes("sessão expirada")
+          ? "Sessão expirada. Por favor, revalide seu token nas Configurações"
+          : err?.message || "Não foi possível disparar os envios.",
         variant: "destructive",
       });
     } finally {

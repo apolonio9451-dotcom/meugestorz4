@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { CheckCircle2, XCircle, Radio } from "lucide-react";
 
 interface Props {
@@ -9,12 +10,13 @@ interface Props {
 }
 
 export default function LiveSendStatusBar({ companyId, expectedToday }: Props) {
+  const { user } = useAuth();
   const [logs, setLogs] = useState<{ status: string; created_at: string }[]>([]);
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId || !user?.id) return;
     const fetchTodayLogs = async () => {
       const { data } = await supabase
         .from("auto_send_logs")
@@ -27,7 +29,7 @@ export default function LiveSendStatusBar({ companyId, expectedToday }: Props) {
     fetchTodayLogs();
 
     const channel = supabase
-      .channel("live-send-status")
+      .channel(`${user.id}:live-send-status`)
       .on(
         "postgres_changes",
         {
@@ -48,7 +50,7 @@ export default function LiveSendStatusBar({ companyId, expectedToday }: Props) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [companyId, today]);
+  }, [companyId, today, user?.id]);
 
   const sent = logs.filter((l) => l.status === "success").length;
   const errors = logs.filter((l) => l.status === "error" || l.status === "failed").length;
