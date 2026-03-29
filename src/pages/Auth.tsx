@@ -98,7 +98,6 @@ export default function Auth() {
           full_name: fullName,
           company_name: "Trial",
           whatsapp,
-          plain_password: password,
           is_trial: true,
           trial_token: trialToken,
           trial_company_id: trialInfo.company_id,
