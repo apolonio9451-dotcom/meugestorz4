@@ -192,6 +192,13 @@ Deno.serve(async (req) => {
 
       const responseText = await res.text();
 
+      if (res.status === 401) {
+        return new Response(
+          JSON.stringify({ error: "⚠️ Token inválido/expirado. Vá em Configurações → Instância, atualize o Token e reconecte o WhatsApp." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (!res.ok) {
         return new Response(
           JSON.stringify({ error: `Falha ao enviar mensagem (status ${res.status}). Detalhe: ${responseText}` }),
