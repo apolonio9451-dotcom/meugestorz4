@@ -453,7 +453,10 @@ export default function Clients() {
     const fd = new FormData(formEl);
     const draft: Record<string, any> = {};
     fd.forEach((v, k) => { draft[k] = v; });
-    draft._formCredentials = formCredentials;
+    draft._formCredentials = formCredentials.map((cred) => ({
+      ...cred,
+      password: "",
+    }));
     draft._formMacKeys = formMacKeys;
     draft._formPlanId = formPlanId;
     draft._formAmount = formAmount;
@@ -500,7 +503,10 @@ export default function Clients() {
       // Restore draft if available
       const draft = loadFormDraft();
       if (draft) {
-        setFormCredentials(draft._formCredentials || [{ username: "", password: "", label: "" }]);
+        setFormCredentials((draft._formCredentials || [{ username: "", password: "", label: "" }]).map((cred: any) => ({
+          ...cred,
+          password: "",
+        })));
         setFormMacKeys(draft._formMacKeys || []);
         setFormPlanId(draft._formPlanId || "");
         setFormAmount(draft._formAmount || "");

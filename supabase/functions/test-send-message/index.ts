@@ -39,6 +39,14 @@ function replacePlaceholders(template: string, vars: Record<string, string>): st
   return msg;
 }
 
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) return value.trim();
+  }
+  return "";
+}
+
 function getApiHeaders(apiToken: string): HeadersInit {
   return {
     "Content-Type": "application/json",
@@ -74,22 +82,27 @@ Deno.serve(async (req) => {
       .eq("company_id", company_id)
       .single();
 
-    console.log("[test-send] apiSettings:", apiSettings ? { api_url: apiSettings.api_url, instance: apiSettings.instance_name, hasToken: !!apiSettings.api_token, tokenLen: apiSettings.api_token?.length } : "null", "error:", settingsError?.message);
+    const dbApiUrl = (apiSettings?.api_url || "").trim();
+    const dbApiToken = (apiSettings?.api_token || "").trim();
 
-    if (!apiSettings?.api_url || !apiSettings?.api_token) {
-      const reason = !apiSettings
-        ? "Nenhuma configuração de instância encontrada para esta empresa."
-        : !apiSettings.api_url
-        ? "URL da API não configurada. Acesse o menu Instância para configurar."
-        : "Token da instância não configurado. Acesse o menu Instância para configurar.";
+    const apiUrl = (dbApiUrl || getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"])).replace(/\/$/, "");
+    const apiToken = dbApiToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+
+    console.log("[test-send] apiSettings:", apiSettings ? {
+      api_url: apiSettings.api_url,
+      instance: apiSettings.instance_name,
+      hasToken: !!apiSettings.api_token,
+      tokenLen: apiSettings.api_token?.length,
+      usingEnvFallback: !dbApiToken || !dbApiUrl,
+    } : "null", "error:", settingsError?.message);
+
+    if (!apiUrl || !apiToken) {
+      const reason = `Configuração ausente. Defina URL/Token no menu Instância ou nos secrets WA_API_URL + WA_ADMIN_TOKEN (fallback também aceita EVOLUTI_API_URL, BOLINHA_API_TOKEN, UAZAPI_ADMIN_TOKEN, EVOLUTI_TOKEN).`;
       return new Response(
         JSON.stringify({ error: reason }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
-    const apiToken = apiSettings.api_token;
 
     // Get template
     const { data: templateRow } = await supabase
