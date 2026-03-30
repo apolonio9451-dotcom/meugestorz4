@@ -7,6 +7,27 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const SESSION_EXPIRED_MESSAGE = "Sessão expirada. Por favor, revalide seu token nas Configurações";
+
+function getApiHeaders(apiToken: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    token: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
+function isSessionError(responseText: string, httpStatus: number): boolean {
+  if (httpStatus === 401) return true;
+  try {
+    const json = JSON.parse(responseText);
+    const msg = String(json?.message || json?.error || "").toLowerCase();
+    return msg.includes("invalid token") || msg.includes("token inválido") || msg.includes("expired");
+  } catch {
+    return responseText.toLowerCase().includes("invalid token");
+  }
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -14,16 +35,30 @@ function sleep(ms: number) {
 async function simulatePresence(apiUrl: string, apiToken: string, phone: string, type: "composing" | "recording", durationMs: number) {
   await fetch(`${apiUrl}/operations/presence`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({ phone, presence: type }),
   });
   await sleep(durationMs);
 }
 
+async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number }> {
+  const response = await fetch(`${apiUrl}/instance`, {
+    method: "GET",
+    headers: getApiHeaders(apiToken),
+  });
+
+  const text = await response.text();
+  if (isSessionError(text, response.status)) {
+    return { ok: false, status: 401 };
+  }
+
+  return { ok: true, status: response.status };
+}
+
 async function sendAudio(apiUrl: string, apiToken: string, phone: string, mediaUrl: string) {
   const response = await fetch(`${apiUrl}/send/audio`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({ number: phone, url: mediaUrl, caption: "" }),
   });
 
@@ -35,7 +70,7 @@ async function sendAudio(apiUrl: string, apiToken: string, phone: string, mediaU
 async function sendImage(apiUrl: string, apiToken: string, phone: string, mediaUrl: string, caption: string) {
   const response = await fetch(`${apiUrl}/send/image`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({ number: phone, url: mediaUrl, caption }),
   });
 
@@ -130,6 +165,14 @@ Deno.serve(async (req: Request) => {
     const apiToken = apiSettings.api_token;
     const phone = String(conversation.phone).replace(/\D/g, "");
 
+    const tokenValidation = await validateApiToken(apiUrl, apiToken);
+    if (!tokenValidation.ok && tokenValidation.status === 401) {
+      return new Response(JSON.stringify({ error: SESSION_EXPIRED_MESSAGE }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (mediaType === "audio") {
       await simulatePresence(apiUrl, apiToken, phone, "recording", 5000);
       await sendAudio(apiUrl, apiToken, phone, mediaUrl);
@@ -179,8 +222,11 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro interno";
+    const status = message.toLowerCase().includes("401") || message.toLowerCase().includes("invalid token")
+      ? 401
+      : 500;
     return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
