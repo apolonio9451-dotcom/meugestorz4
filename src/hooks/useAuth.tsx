@@ -311,7 +311,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isOwnerOrAdmin = userRole === "Proprietário" || userRole === "Admin" || userRole === "master";
-  const effectivePlanType: "starter" | "pro" = isOwnerOrAdmin ? "pro" : planType;
+  // Plan restrictions removed — all users get full access
+  const effectivePlanType: "starter" | "pro" = "pro";
 
   useEffect(() => {
     const isPrivilegedUser = isOwnerOrAdmin || effectivePlanType === "pro";
