@@ -2177,6 +2177,10 @@ export type Database = {
         Args: { _client_id: string; _company_id: string }
         Returns: boolean
       }
+      can_access_client_record: {
+        Args: { _client_id: string; _company_id: string }
+        Returns: boolean
+      }
       get_reseller_account_plans: {
         Args: { _company_id: string }
         Returns: {
