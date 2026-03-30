@@ -135,16 +135,6 @@ export default function Profile() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ShieldCheck className="w-4 h-4 shrink-0" />
                   <span>{userRole}</span>
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                      planType === "pro"
-                        ? "bg-[hsl(48,96%,53%)]/20 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
-                        : "bg-muted text-muted-foreground border-border"
-                    )}
-                  >
-                    {planType === "pro" ? "Pro" : "Starter"}
-                  </span>
                 </div>
               )}
             </div>
