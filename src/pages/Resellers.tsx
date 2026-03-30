@@ -251,18 +251,6 @@ export default function Resellers() {
 
     setResellers(data as Reseller[]);
 
-    // Fetch plans - use parent company for resellers, own company for owners
-    const plansCompanyId = isOwner ? companyId : (parentCompanyId || companyId);
-    const plansMap: Record<string, "starter" | "pro"> = {};
-    const { data: plansData } = await (supabase.rpc as any)("get_reseller_account_plans", {
-      _company_id: plansCompanyId,
-    });
-
-    (plansData || []).forEach((entry: any) => {
-      plansMap[entry.reseller_id] = entry.plan_type === "starter" ? "starter" : "pro";
-    });
-
-    setResellerPlans(plansMap);
     setLoading(false);
   };
 
