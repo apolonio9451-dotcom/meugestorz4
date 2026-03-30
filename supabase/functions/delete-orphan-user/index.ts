@@ -24,23 +24,44 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Find the user
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    if (listError) throw listError;
+    // Search through pages to find the user
+    let found = null;
+    let page = 1;
+    const perPage = 1000;
+    while (!found) {
+      const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+      if (error) throw error;
+      if (!users || users.length === 0) break;
+      found = users.find((u) => u.email === email);
+      if (users.length < perPage) break;
+      page++;
+    }
 
-    const user = users.find((u) => u.email === email);
-    if (!user) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
+    if (!found) {
+      return new Response(JSON.stringify({ error: "User not found", searched_pages: page }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Delete the user
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(found.id);
     if (deleteError) throw deleteError;
 
-    return new Response(JSON.stringify({ success: true, deleted_id: user.id }), {
+    // Clean up any orphaned data
+    await supabaseAdmin.from("profiles").delete().eq("id", found.id);
+    await supabaseAdmin.from("company_memberships").delete().eq("user_id", found.id);
+    await supabaseAdmin.from("resellers").delete().eq("user_id", found.id);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      deleted_id: found.id,
+      email: found.email,
+      confirmed: !!found.email_confirmed_at
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
