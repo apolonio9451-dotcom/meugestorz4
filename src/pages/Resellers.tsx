@@ -184,12 +184,8 @@ export default function Resellers() {
   const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
   const [ghostLoading, setGhostLoading] = useState<string | null>(null);
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
-  const [resellerPlans, setResellerPlans] = useState<Record<string, "starter" | "pro">>({});
 
-  // Downgrade confirmation (two-step)
-  const [downgradeStep, setDowngradeStep] = useState<0 | 1 | 2>(0);
-  const [downgradeTarget, setDowngradeTarget] = useState<Reseller | null>(null);
-  const [downgrading, setDowngrading] = useState(false);
+  // Downgrade confirmation removed — plans unified
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
@@ -255,18 +251,6 @@ export default function Resellers() {
 
     setResellers(data as Reseller[]);
 
-    // Fetch plans - use parent company for resellers, own company for owners
-    const plansCompanyId = isOwner ? companyId : (parentCompanyId || companyId);
-    const plansMap: Record<string, "starter" | "pro"> = {};
-    const { data: plansData } = await (supabase.rpc as any)("get_reseller_account_plans", {
-      _company_id: plansCompanyId,
-    });
-
-    (plansData || []).forEach((entry: any) => {
-      plansMap[entry.reseller_id] = entry.plan_type === "starter" ? "starter" : "pro";
-    });
-
-    setResellerPlans(plansMap);
     setLoading(false);
   };
 
@@ -618,66 +602,7 @@ export default function Resellers() {
     setGhostLoading(null);
   };
 
-  const getResellerPlan = (resellerId: string): "starter" | "pro" =>
-    resellerPlans[resellerId] === "starter" ? "starter" : "pro";
-
-  const canChangePlans = isOwner || (isReseller && getResellerPlan(myResellerId || "") === "pro");
-
-  const handleChangeResellerPlan = async (r: Reseller, nextPlan: "starter" | "pro") => {
-    if (!canChangePlans) {
-      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário ou revendedor PRO pai pode alterar plano.", variant: "destructive" });
-      return;
-    }
-
-    const currentPlan = getResellerPlan(r.id);
-    if (currentPlan === nextPlan) return;
-
-    // Downgrade: open two-step confirmation
-    if (nextPlan === "starter") {
-      setDowngradeTarget(r);
-      setDowngradeStep(1);
-      return;
-    }
-
-    // Upgrade to Pro: direct
-    const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
-      _reseller_id: r.id,
-      _plan_type: nextPlan,
-    });
-
-    if (error) {
-      toast({ title: "Erro ao alterar plano", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    setResellerPlans((prev) => ({ ...prev, [r.id]: nextPlan }));
-    toast({ title: "Plano atualizado", description: `${r.name} agora está no plano Pro.` });
-  };
-
-  const handleConfirmDowngrade = async () => {
-    if (!downgradeTarget) return;
-    setDowngrading(true);
-
-    const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
-      _reseller_id: downgradeTarget.id,
-      _plan_type: "starter",
-    });
-
-    setDowngrading(false);
-
-    if (error) {
-      toast({ title: "Erro ao alterar plano", description: error.message, variant: "destructive" });
-    } else {
-      setResellerPlans((prev) => ({ ...prev, [downgradeTarget.id]: "starter" }));
-      toast({
-        title: "Plano alterado para Starter",
-        description: "Acesso a automações revogado com sucesso.",
-      });
-      setDowngradeStep(0);
-      setDowngradeTarget(null);
-      fetchResellers();
-    }
-  };
+  // Plan management removed — all resellers have full access
 
   const openCredits = (r: Reseller) => {
     if (r.status !== "active") {
@@ -1052,19 +977,7 @@ export default function Resellers() {
                         <TableCell>
                           <div>
                             <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-sm text-foreground">{r.name}</p>
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1.5 py-0 font-bold tracking-wider uppercase ${
-                                  getResellerPlan(r.id) === "pro"
-                                    ? "bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
-                                    : "bg-muted text-muted-foreground border-border"
-                                }`}
-                              >
-                                {getResellerPlan(r.id) === "pro" ? "PRO" : "STARTER"}
-                              </Badge>
-                            </div>
+                            <p className="font-medium text-sm text-foreground">{r.name}</p>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
                           </div>
@@ -1123,20 +1036,6 @@ export default function Resellers() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                            {canChangePlans && r.user_id && (
-                              <Select
-                                value={getResellerPlan(r.id)}
-                                onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
-                              >
-                                <SelectTrigger className="h-7 w-[128px] text-xs">
-                                  <SelectValue placeholder="Alterar Plano" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="starter">Starter</SelectItem>
-                                  <SelectItem value="pro">Pro</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
                             {isOwner && r.user_id && (
                               <Button size="sm" variant="ghost" className="gap-1 h-7 text-xs text-purple-400 hover:bg-purple-500/10" onClick={() => handleGhostLogin(r)} disabled={ghostLoading === r.id} title="Login Fantasma">
                                 <LogIn className="w-3.5 h-3.5" />
@@ -1202,19 +1101,7 @@ export default function Resellers() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
-                          <Badge
-                            variant="outline"
-                            className={`text-[9px] px-1.5 py-0 shrink-0 font-bold tracking-wider uppercase ${
-                              getResellerPlan(r.id) === "pro"
-                                ? "bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
-                                : "bg-muted text-muted-foreground border-border"
-                            }`}
-                          >
-                            {getResellerPlan(r.id) === "pro" ? "PRO" : "STARTER"}
-                          </Badge>
-                        </div>
+                        <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
                         {r.email && (
                           <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Mail className="w-3 h-3 shrink-0" />
@@ -1278,24 +1165,6 @@ export default function Resellers() {
                       </div>
                     </div>
 
-                    {/* Plan Selector - prominent on mobile */}
-                    {canChangePlans && r.user_id && (
-                      <div className="flex items-center gap-2 px-1">
-                        <span className="text-[10px] text-muted-foreground font-medium">Plano:</span>
-                        <Select
-                          value={getResellerPlan(r.id)}
-                          onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
-                        >
-                          <SelectTrigger className="h-8 flex-1 text-xs text-[16px]">
-                            <SelectValue placeholder="Plano" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="starter">Starter</SelectItem>
-                            <SelectItem value="pro">Pro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
 
                     {/* Actions */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
@@ -1661,37 +1530,6 @@ export default function Resellers() {
               <Copy className="w-3 h-3" /> Copiar
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-      {/* Downgrade Confirmation Dialog - Two Steps */}
-      <Dialog open={downgradeStep > 0} onOpenChange={(open) => { if (!open) { setDowngradeStep(0); setDowngradeTarget(null); } }}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              {downgradeStep === 1 ? "Confirmar Downgrade" : "Atenção Final"}
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {downgradeStep === 1
-              ? `Você tem certeza? Mudar "${downgradeTarget?.name || "este revendedor"}" para Starter removerá todos os privilégios de automação e revenda.`
-              : `Esta ação irá revogar o acesso às ferramentas Pro (Bot, API, Repescagem) deste revendedor. Confirmar alteração?`
-            }
-          </p>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => { setDowngradeStep(0); setDowngradeTarget(null); }}>
-              Cancelar
-            </Button>
-            {downgradeStep === 1 ? (
-              <Button variant="destructive" onClick={() => setDowngradeStep(2)}>
-                Continuar
-              </Button>
-            ) : (
-              <Button variant="destructive" onClick={handleConfirmDowngrade} disabled={downgrading}>
-                {downgrading ? "Processando..." : "Confirmar Downgrade"}
-              </Button>
-            )}
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
