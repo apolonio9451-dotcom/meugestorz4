@@ -184,12 +184,8 @@ export default function Resellers() {
   const [recentClientCounts, setRecentClientCounts] = useState<Record<string, number>>({});
   const [ghostLoading, setGhostLoading] = useState<string | null>(null);
   const [adminWhatsapp, setAdminWhatsapp] = useState<string | null>(null);
-  const [resellerPlans, setResellerPlans] = useState<Record<string, "starter" | "pro">>({});
 
-  // Downgrade confirmation (two-step)
-  const [downgradeStep, setDowngradeStep] = useState<0 | 1 | 2>(0);
-  const [downgradeTarget, setDowngradeTarget] = useState<Reseller | null>(null);
-  const [downgrading, setDowngrading] = useState(false);
+  // Downgrade confirmation removed — plans unified
 
   const isOwner = userRole === "Proprietário";
   const isReseller = resellerCredits !== null;
