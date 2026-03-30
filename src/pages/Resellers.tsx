@@ -977,19 +977,7 @@ export default function Resellers() {
                         <TableCell>
                           <div>
                             <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium text-sm text-foreground">{r.name}</p>
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1.5 py-0 font-bold tracking-wider uppercase ${
-                                  getResellerPlan(r.id) === "pro"
-                                    ? "bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
-                                    : "bg-muted text-muted-foreground border-border"
-                                }`}
-                              >
-                                {getResellerPlan(r.id) === "pro" ? "PRO" : "STARTER"}
-                              </Badge>
-                            </div>
+                            <p className="font-medium text-sm text-foreground">{r.name}</p>
                             {r.email && <p className="text-[11px] text-muted-foreground">{r.email}</p>}
                             {r.whatsapp && <p className="text-[11px] text-muted-foreground">{r.whatsapp}</p>}
                           </div>
