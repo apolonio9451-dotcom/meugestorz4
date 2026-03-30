@@ -602,66 +602,7 @@ export default function Resellers() {
     setGhostLoading(null);
   };
 
-  const getResellerPlan = (resellerId: string): "starter" | "pro" =>
-    resellerPlans[resellerId] === "starter" ? "starter" : "pro";
-
-  const canChangePlans = isOwner || (isReseller && getResellerPlan(myResellerId || "") === "pro");
-
-  const handleChangeResellerPlan = async (r: Reseller, nextPlan: "starter" | "pro") => {
-    if (!canChangePlans) {
-      toast({ title: "Ação bloqueada", description: "Apenas o Proprietário ou revendedor PRO pai pode alterar plano.", variant: "destructive" });
-      return;
-    }
-
-    const currentPlan = getResellerPlan(r.id);
-    if (currentPlan === nextPlan) return;
-
-    // Downgrade: open two-step confirmation
-    if (nextPlan === "starter") {
-      setDowngradeTarget(r);
-      setDowngradeStep(1);
-      return;
-    }
-
-    // Upgrade to Pro: direct
-    const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
-      _reseller_id: r.id,
-      _plan_type: nextPlan,
-    });
-
-    if (error) {
-      toast({ title: "Erro ao alterar plano", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    setResellerPlans((prev) => ({ ...prev, [r.id]: nextPlan }));
-    toast({ title: "Plano atualizado", description: `${r.name} agora está no plano Pro.` });
-  };
-
-  const handleConfirmDowngrade = async () => {
-    if (!downgradeTarget) return;
-    setDowngrading(true);
-
-    const { error } = await (supabase.rpc as any)("set_reseller_account_plan", {
-      _reseller_id: downgradeTarget.id,
-      _plan_type: "starter",
-    });
-
-    setDowngrading(false);
-
-    if (error) {
-      toast({ title: "Erro ao alterar plano", description: error.message, variant: "destructive" });
-    } else {
-      setResellerPlans((prev) => ({ ...prev, [downgradeTarget.id]: "starter" }));
-      toast({
-        title: "Plano alterado para Starter",
-        description: "Acesso a automações revogado com sucesso.",
-      });
-      setDowngradeStep(0);
-      setDowngradeTarget(null);
-      fetchResellers();
-    }
-  };
+  // Plan management removed — all resellers have full access
 
   const openCredits = (r: Reseller) => {
     if (r.status !== "active") {
