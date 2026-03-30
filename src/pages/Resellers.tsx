@@ -1101,19 +1101,7 @@ export default function Resellers() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-[9px] font-mono text-muted-foreground/60 mb-0.5 select-all">ID: {r.id.substring(0, 8)}</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
-                          <Badge
-                            variant="outline"
-                            className={`text-[9px] px-1.5 py-0 shrink-0 font-bold tracking-wider uppercase ${
-                              getResellerPlan(r.id) === "pro"
-                                ? "bg-[hsl(48,96%,53%)]/15 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
-                                : "bg-muted text-muted-foreground border-border"
-                            }`}
-                          >
-                            {getResellerPlan(r.id) === "pro" ? "PRO" : "STARTER"}
-                          </Badge>
-                        </div>
+                        <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
                         {r.email && (
                           <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Mail className="w-3 h-3 shrink-0" />
