@@ -12,7 +12,7 @@ interface SidebarUserMenuProps {
 }
 
 export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUserMenuProps) {
-  const { user, userRole, effectivePlanType: planType } = useAuth();
+  const { user, userRole } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -88,17 +88,6 @@ export default function SidebarUserMenu({ onSignOut, onCloseSidebar }: SidebarUs
               className={cn("text-[9px] px-1.5 py-0 h-4 font-semibold border", roleColor)}
             >
               {userRole || "Usuário"}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[9px] px-1.5 py-0 h-4 font-bold border",
-                planType === "pro"
-                  ? "bg-[hsl(48,96%,53%)]/20 text-[hsl(48,96%,53%)] border-[hsl(48,96%,53%)]/40"
-                  : "bg-muted text-muted-foreground border-border"
-              )}
-            >
-              {planType === "pro" ? "Pro" : "Starter"}
             </Badge>
           </div>
         </div>
