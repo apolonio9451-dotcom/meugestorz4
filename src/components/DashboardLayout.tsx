@@ -76,12 +76,12 @@ const navItems: NavItem[] = [
     icon: Megaphone,
     children: [
       { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
-      { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw, proOnly: true },
-      { href: "/dashboard/mass-broadcast", label: "Disparo em Massa", icon: Rocket, proOnly: true },
+      { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
+      { href: "/dashboard/mass-broadcast", label: "Disparo em Massa", icon: Rocket },
     ],
   },
-  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
-  { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: UserCog, adminOnly: true, proOnly: true },
+  { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot },
+  { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: UserCog, adminOnly: true },
   
   {
     label: "Configurações",
@@ -90,7 +90,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/servers", label: "Servidores", icon: Server },
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
-      { href: "/dashboard/settings", label: "Instância", icon: Zap, proOnly: true },
+      { href: "/dashboard/settings", label: "Instância", icon: Zap },
     ],
   },
 ];
