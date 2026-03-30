@@ -23,7 +23,6 @@ const WinBack = lazy(() => import("@/pages/WinBack"));
 const Marketing = lazy(() => import("@/pages/Marketing"));
 const MassBroadcast = lazy(() => import("@/pages/MassBroadcast"));
 const Resellers = lazy(() => import("@/pages/Resellers"));
-const AccessControl = lazy(() => import("@/pages/AccessControl"));
 const SettingsPage = lazy(() => import("@/pages/Settings"));
 const Messages = lazy(() => import("@/pages/Messages"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -79,7 +78,6 @@ const App = () => (
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
             <Route path="/dashboard/mass-broadcast" element={<DashboardRoute><MassBroadcast /></DashboardRoute>} />
             <Route path="/dashboard/resellers" element={<DashboardRoute><PlanGate feature="Revendedores"><Resellers /></PlanGate></DashboardRoute>} />
-            <Route path="/dashboard/access-control" element={<DashboardRoute><PlanGate feature="Gestão de Acesso"><AccessControl /></PlanGate></DashboardRoute>} />
             
             <Route path="/dashboard/trials" element={<DashboardRoute><Trials /></DashboardRoute>} />
             <Route path="/dashboard/messages" element={<DashboardRoute><Messages /></DashboardRoute>} />

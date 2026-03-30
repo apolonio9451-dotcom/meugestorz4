@@ -81,16 +81,7 @@ const navItems: NavItem[] = [
     ],
   },
   { href: "/dashboard/chatbot", label: "Chatbot IA", icon: Bot, proOnly: true },
-  {
-    label: "Gestão de Acesso",
-    icon: UserCog,
-    adminOnly: true,
-    proOnly: true,
-    children: [
-      { href: "/dashboard/resellers", label: "Revendedores", icon: UserCog, proOnly: true },
-      { href: "/dashboard/access-control", label: "Convites e Acessos", icon: KeyRound, proOnly: true },
-    ],
-  },
+  { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: UserCog, adminOnly: true, proOnly: true },
   
   {
     label: "Configurações",
