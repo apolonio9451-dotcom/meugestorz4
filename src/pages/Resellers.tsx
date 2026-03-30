@@ -1165,24 +1165,6 @@ export default function Resellers() {
                       </div>
                     </div>
 
-                    {/* Plan Selector - prominent on mobile */}
-                    {canChangePlans && r.user_id && (
-                      <div className="flex items-center gap-2 px-1">
-                        <span className="text-[10px] text-muted-foreground font-medium">Plano:</span>
-                        <Select
-                          value={getResellerPlan(r.id)}
-                          onValueChange={(value) => handleChangeResellerPlan(r, value as "starter" | "pro")}
-                        >
-                          <SelectTrigger className="h-8 flex-1 text-xs text-[16px]">
-                            <SelectValue placeholder="Plano" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="starter">Starter</SelectItem>
-                            <SelectItem value="pro">Pro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
 
                     {/* Actions */}
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
