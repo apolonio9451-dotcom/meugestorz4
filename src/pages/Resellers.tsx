@@ -409,7 +409,12 @@ export default function Resellers() {
     setTrialGenerating(true);
     const { data, error } = await supabase
       .from("trial_links")
-      .insert({ company_id: companyId, created_by: user.id, client_name: "Pendente" })
+      .insert({
+        company_id: companyId,
+        created_by: user.id,
+        client_name: "Pendente",
+        reseller_id: myResellerId || null,
+      })
       .select("token")
       .single();
     if (error) {

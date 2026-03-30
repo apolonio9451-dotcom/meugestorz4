@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import {
   ShieldCheck,
   Search,
@@ -21,6 +19,10 @@ import {
   Users,
   UserCog,
   Crown,
+  FlaskConical,
+  CheckCircle2,
+  AlertTriangle,
+  Network,
 } from "lucide-react";
 
 interface TeamMember {
@@ -30,6 +32,9 @@ interface TeamMember {
   created_at: string;
   email: string;
   full_name: string;
+  source: "membership" | "reseller";
+  status?: string;
+  parent_reseller_id?: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -50,41 +55,115 @@ const roleColors: Record<string, string> = {
   operator: "bg-muted text-muted-foreground border-border",
 };
 
+const statusConfig: Record<string, { label: string; icon: typeof CheckCircle2; color: string }> = {
+  trial: { label: "Em Teste", icon: FlaskConical, color: "text-amber-400" },
+  active: { label: "Ativo", icon: CheckCircle2, color: "text-emerald-400" },
+  expired: { label: "Expirado", icon: AlertTriangle, color: "text-zinc-400" },
+  overdue: { label: "Vencido", icon: AlertTriangle, color: "text-orange-400" },
+};
+
 export default function AccessControl() {
-  const { effectiveCompanyId: companyId } = useAuth();
-  const { toast } = useToast();
+  const { effectiveCompanyId: companyId, userRole, user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [myResellerId, setMyResellerId] = useState<string | null>(null);
+
+  const isOwner = userRole === "Proprietário";
+
+  // Get current user's reseller ID
+  useEffect(() => {
+    if (!user || isOwner) return;
+    (async () => {
+      const { data } = await supabase
+        .from("resellers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) setMyResellerId(data.id);
+    })();
+  }, [user, isOwner]);
 
   const fetchMembers = async () => {
     if (!companyId) return;
     setLoading(true);
 
-    const { data: memberships } = await supabase
-      .from("company_memberships")
-      .select("id, user_id, role, created_at")
-      .eq("company_id", companyId)
-      .order("created_at");
-
-    if (!memberships) {
-      setLoading(false);
-      return;
-    }
-
     const enriched: TeamMember[] = [];
-    for (const m of memberships) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("email, full_name")
-        .eq("id", m.user_id)
-        .maybeSingle();
 
-      enriched.push({
-        ...m,
-        email: profile?.email || "—",
-        full_name: profile?.full_name || "—",
-      });
+    if (isOwner) {
+      // Owner sees all: memberships + resellers
+      const [{ data: memberships }, { data: resellers }] = await Promise.all([
+        supabase
+          .from("company_memberships")
+          .select("id, user_id, role, created_at")
+          .eq("company_id", companyId)
+          .order("created_at"),
+        supabase
+          .from("resellers")
+          .select("id, user_id, name, email, status, parent_reseller_id, created_at")
+          .eq("company_id", companyId)
+          .order("created_at"),
+      ]);
+
+      // Add membership-only users (owners, admins without reseller record)
+      const resellerUserIds = new Set((resellers || []).map(r => r.user_id).filter(Boolean));
+
+      for (const m of memberships || []) {
+        if (resellerUserIds.has(m.user_id)) continue; // Will be added from resellers
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", m.user_id)
+          .maybeSingle();
+        enriched.push({
+          id: m.id,
+          user_id: m.user_id,
+          role: m.role,
+          created_at: m.created_at,
+          email: profile?.email || "—",
+          full_name: profile?.full_name || "—",
+          source: "membership",
+        });
+      }
+
+      // Add resellers
+      for (const r of resellers || []) {
+        enriched.push({
+          id: r.id,
+          user_id: r.user_id || "",
+          role: "operator",
+          created_at: r.created_at,
+          email: r.email || "—",
+          full_name: r.name || "—",
+          source: "reseller",
+          status: r.status,
+          parent_reseller_id: r.parent_reseller_id,
+        });
+      }
+    } else {
+      // Reseller: only see sub-resellers linked via parent_reseller_id
+      const resellerId = myResellerId;
+      if (!resellerId) { setLoading(false); return; }
+
+      const { data: resellers } = await supabase
+        .from("resellers")
+        .select("id, user_id, name, email, status, parent_reseller_id, created_at")
+        .eq("parent_reseller_id", resellerId)
+        .order("created_at");
+
+      for (const r of resellers || []) {
+        enriched.push({
+          id: r.id,
+          user_id: r.user_id || "",
+          role: "operator",
+          created_at: r.created_at,
+          email: r.email || "—",
+          full_name: r.name || "—",
+          source: "reseller",
+          status: r.status,
+          parent_reseller_id: r.parent_reseller_id,
+        });
+      }
     }
 
     setMembers(enriched);
@@ -92,8 +171,49 @@ export default function AccessControl() {
   };
 
   useEffect(() => {
-    fetchMembers();
-  }, [companyId]);
+    if (isOwner) {
+      fetchMembers();
+    } else if (myResellerId) {
+      fetchMembers();
+    }
+  }, [companyId, myResellerId]);
+
+  // Realtime: refresh when resellers table changes
+  useEffect(() => {
+    if (!user || !companyId) return;
+
+    const channel = supabase
+      .channel(`${user.id}:access-control-sync`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "resellers",
+          filter: `company_id=eq.${companyId}`,
+        },
+        () => {
+          fetchMembers();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "company_memberships",
+          filter: `company_id=eq.${companyId}`,
+        },
+        () => {
+          fetchMembers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, companyId, myResellerId]);
 
   const filtered = members.filter((m) => {
     const q = search.toLowerCase();
@@ -108,8 +228,8 @@ export default function AccessControl() {
   const stats = {
     total: members.length,
     owners: members.filter((m) => m.role === "owner").length,
-    admins: members.filter((m) => m.role === "admin").length,
-    operators: members.filter((m) => m.role === "operator").length,
+    resellers: members.filter((m) => m.source === "reseller").length,
+    trials: members.filter((m) => m.status === "trial").length,
   };
 
   return (
@@ -120,7 +240,9 @@ export default function AccessControl() {
           Controle de Acessos
         </h1>
         <p className="text-sm text-muted-foreground">
-          Gerencie permissões e acessos dos membros da sua equipe.
+          {isOwner
+            ? "Gerencie permissões e acessos de toda a sua equipe."
+            : "Veja os revendedores vinculados a você."}
         </p>
       </div>
 
@@ -129,8 +251,8 @@ export default function AccessControl() {
         {[
           { label: "Total", value: stats.total, icon: Users, color: "text-primary" },
           { label: "Proprietários", value: stats.owners, icon: Crown, color: "text-primary" },
-          { label: "Administradores", value: stats.admins, icon: ShieldCheck, color: "text-amber-500" },
-          { label: "Operadores", value: stats.operators, icon: UserCog, color: "text-emerald-500" },
+          { label: "Revendedores", value: stats.resellers, icon: Network, color: "text-amber-500" },
+          { label: "Em Teste", value: stats.trials, icon: FlaskConical, color: "text-emerald-500" },
         ].map((s) => (
           <Card key={s.label} className="p-3">
             <div className="flex items-center gap-2">
@@ -167,11 +289,14 @@ export default function AccessControl() {
                   <TableHead>Membro</TableHead>
                   <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                   <TableHead>Cargo</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => {
                   const RoleIcon = roleIcons[m.role] || UserCog;
+                  const st = m.status ? statusConfig[m.status] : null;
+                  const StatusIcon = st?.icon || CheckCircle2;
                   return (
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">
@@ -188,6 +313,16 @@ export default function AccessControl() {
                           <RoleIcon className="w-3 h-3 mr-1" />
                           {roleLabels[m.role] || m.role}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {st ? (
+                          <span className={`flex items-center gap-1 text-xs ${st.color}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {st.label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
