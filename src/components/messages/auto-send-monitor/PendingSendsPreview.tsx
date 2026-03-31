@@ -162,6 +162,8 @@ export default function PendingSendsPreview({ companyId }: Props) {
 
   useEffect(() => {
     fetchPendingQueue();
+    const interval = setInterval(fetchPendingQueue, 60000);
+    return () => clearInterval(interval);
   }, [fetchPendingQueue]);
 
   if (!companyId) return null;
