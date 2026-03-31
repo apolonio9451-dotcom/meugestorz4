@@ -39,7 +39,7 @@ export default function PendingSendsPreview({ companyId }: Props) {
   const [pendingClients, setPendingClients] = useState<PendingClient[]>([]);
   const [skippedClients, setSkippedClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [showSkipped, setShowSkipped] = useState(false);
   const [categorySettings, setCategorySettings] = useState<Record<string, boolean>>({});
   const [overdueSettings, setOverdueSettings] = useState({ enabled: true, days: 10 });
@@ -93,7 +93,12 @@ export default function PendingSendsPreview({ companyId }: Props) {
 
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
-        const sub = subs[0];
+        // Use latest subscription by end_date (same logic as edge function)
+        const sub = [...subs].sort((a: any, b: any) => {
+          const aTime = new Date(`${a.end_date}T00:00:00`).getTime();
+          const bTime = new Date(`${b.end_date}T00:00:00`).getTime();
+          return bTime - aTime;
+        })[0];
         const endDate = new Date(sub.end_date + "T00:00:00");
         const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -157,6 +162,8 @@ export default function PendingSendsPreview({ companyId }: Props) {
 
   useEffect(() => {
     fetchPendingQueue();
+    const interval = setInterval(fetchPendingQueue, 60000);
+    return () => clearInterval(interval);
   }, [fetchPendingQueue]);
 
   if (!companyId) return null;
