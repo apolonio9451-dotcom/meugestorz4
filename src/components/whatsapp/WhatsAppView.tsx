@@ -211,6 +211,9 @@ export default function WhatsAppView() {
         if (data.instance.is_connected) {
           const validation = await callManage("validate-connection");
           if (validation?.status === 401 || validation?.disconnected) {
+            setProfilePic(null);
+            setProfileName(null);
+            setProfilePhone(null);
             setInstance((prev) =>
               prev ? { ...prev, is_connected: false, status: "disconnected" } : null
             );
