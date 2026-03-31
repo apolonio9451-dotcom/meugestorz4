@@ -861,13 +861,19 @@ export default function Clients() {
   const searchLower = useMemo(() => search.toLowerCase(), [search]);
 
   const searchFiltered = useMemo(() => activeClients.filter(
-    (c) => c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search) || 
-    (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(searchLower))
-  ), [activeClients, searchLower, search, macKeys]);
+    (c) => {
+      if (serverFilter !== "all" && (c.server || "") !== serverFilter) return false;
+      return c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search) || 
+        (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(searchLower));
+    }
+  ), [activeClients, searchLower, search, macKeys, serverFilter]);
 
   const searchFilteredExcluded = useMemo(() => excludedClients.filter(
-    (c) => c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search)
-  ), [excludedClients, searchLower, search]);
+    (c) => {
+      if (serverFilter !== "all" && (c.server || "") !== serverFilter) return false;
+      return c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search);
+    }
+  ), [excludedClients, searchLower, search, serverFilter]);
 
   const getClientDays = useCallback((clientId: string) => {
     const sub = subscriptions[clientId];
