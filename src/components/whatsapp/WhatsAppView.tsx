@@ -17,8 +17,6 @@ import {
   QrCode,
   CheckCircle2,
   AlertCircle,
-  Eye,
-  EyeOff,
   Save,
   Key,
 } from "lucide-react";
