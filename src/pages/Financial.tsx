@@ -220,18 +220,6 @@ export default function Financial() {
     { title: "Total de Clientes", value: totalClients, icon: Users, trend: "neutral" as const, isCurrency: false },
   ];
 
-  if (!authLoading && !canViewFinancial) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Financeiro bloqueado</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Somente proprietário ou admin podem visualizar o financeiro global.</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   // Quick filters
   const setQuickFilter = (months: number) => {
