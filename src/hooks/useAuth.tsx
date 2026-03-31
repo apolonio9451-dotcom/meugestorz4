@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchCompanyData = async (userId: string) => {
     const requestId = ++fetchSeqRef.current;
 
-    const [membershipRes, resellerRes] = await Promise.all([
+    const [membershipRes, resellerRes, ownCompanyRes] = await Promise.all([
       supabase
         .from("company_memberships")
         .select("company_id, role, is_trial, trial_expires_at")
@@ -107,22 +107,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("id, company_id, credit_balance, status")
         .eq("user_id", userId)
         .maybeSingle(),
+      // Find the user's OWN company (where they are owner) for data isolation
+      supabase
+        .from("company_memberships")
+        .select("company_id, is_trial, trial_expires_at")
+        .eq("user_id", userId)
+        .eq("role", "owner")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     if (requestId !== fetchSeqRef.current) return;
 
     const membership = membershipRes.data;
     const resellerData = resellerRes.data;
+    const ownCompany = ownCompanyRes.data;
 
     if (resellerData) {
-      const resellerCompanyId = membership?.company_id || resellerData.company_id;
+      // Use user's OWN company for data operations (plans, messages, etc.)
+      // Fall back to parent company if no own company exists
+      const ownCompanyId = ownCompany?.company_id || membership?.company_id || resellerData.company_id;
+      const parentCompanyId = resellerData.company_id;
       const membershipRole = membership?.role;
       const resolvedRole = roleLabels[membershipRole || "operator"] || "Usuário";
 
       const { data: companyData } = await supabase
         .from("companies")
         .select("plan_type")
-        .eq("id", resellerCompanyId)
+        .eq("id", ownCompanyId)
         .maybeSingle();
 
       if (requestId !== fetchSeqRef.current) return;
@@ -130,11 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const dbPlan = (companyData as any)?.plan_type;
       const resolvedPlan: "starter" | "pro" = dbPlan === "starter" ? "starter" : "pro";
       const resellerIsTrial = resellerData.status === "trial";
-      const trialExp = resellerIsTrial ? membership?.trial_expires_at || null : null;
+      // Get trial expiry from the parent company membership (where is_trial=true)
+      const trialMembership = membership?.is_trial ? membership : null;
+      const trialExp = resellerIsTrial ? trialMembership?.trial_expires_at || null : null;
 
       applyCompanyState({
-        companyId: resellerCompanyId,
-        parentCompanyId: resellerData.company_id,
+        companyId: ownCompanyId,
+        parentCompanyId: parentCompanyId,
         userRole: resolvedRole,
         resellerCredits: resellerData.credit_balance,
         planType: resolvedPlan,
