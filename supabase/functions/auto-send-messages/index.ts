@@ -270,6 +270,11 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
 
     const body = await res.text();
 
+    if (res.status === 404) {
+      console.log(`[auto-send] preflight endpoint não encontrado | status=404 | body=${body.slice(0, 300)}`);
+      return { ok: true, status: 404 };
+    }
+
     // Check for WhatsApp disconnected even on 2xx responses
     if (isSessionError(body, res.status)) {
       console.log(`[auto-send] preflight: sessão desconectada | status=${res.status}`);
@@ -281,7 +286,8 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
     }
 
     return { ok: true, status: res.status };
-  } catch {
+  } catch (error) {
+    console.log(`[auto-send] preflight fetch exception | error=${String(error)}`);
     return { ok: true };
   }
 }

@@ -216,7 +216,9 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (!preflight.ok) {
+      if (preflight.status === 404) {
+        console.log("[test-send] preflight endpoint não encontrado, seguindo para envio direto:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
+      } else if (!preflight.ok) {
         console.log("[test-send] preflight warning:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
       }
 
