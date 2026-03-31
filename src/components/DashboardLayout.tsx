@@ -49,6 +49,7 @@ import {
   Zap,
   Lock,
   AlertTriangle,
+  SlidersHorizontal,
 } from "lucide-react";
 
 type NavItem = {
