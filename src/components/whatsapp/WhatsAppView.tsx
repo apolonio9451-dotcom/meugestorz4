@@ -330,18 +330,13 @@ export default function WhatsAppView() {
 
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Token da Instância</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type={showToken ? "text" : "password"}
-                    value={apiToken}
-                    onChange={(e) => setApiToken(e.target.value)}
-                    placeholder="Cole seu token aqui"
-                    className="bg-secondary/50 border-border font-mono text-sm"
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
-                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <Input
+                  type="password"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  placeholder="Cole seu token aqui"
+                  className="bg-secondary/50 border-border font-mono text-sm"
+                />
                 <p className="text-muted-foreground text-xs">
                   O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
                 </p>
