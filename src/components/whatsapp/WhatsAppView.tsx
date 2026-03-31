@@ -61,6 +61,10 @@ export default function WhatsAppView() {
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [existingSettingsId, setExistingSettingsId] = useState<string | null>(null);
 
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [profilePhone, setProfilePhone] = useState<string | null>(null);
+
   const pollingRef = useRef<number | null>(null);
   const lockRef = useRef(false);
 
