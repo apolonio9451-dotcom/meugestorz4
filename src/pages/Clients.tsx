@@ -1115,8 +1115,9 @@ export default function Clients() {
             </div>
             {servers.length > 0 && (
               <Select value={serverFilter} onValueChange={setServerFilter}>
-                <SelectTrigger className="h-9 w-9 p-0 border-none bg-transparent justify-center shrink-0 [&>svg]:hidden">
-                  <Filter className={cn("w-4 h-4", serverFilter !== "all" ? "text-primary" : "text-muted-foreground")} />
+                <SelectTrigger className="h-9 w-auto gap-1.5 px-2.5 border border-border bg-card shrink-0 text-xs [&>svg:last-child]:hidden">
+                  <Filter className={cn("w-3.5 h-3.5", serverFilter !== "all" ? "text-primary" : "text-muted-foreground")} />
+                  <span className={cn("hidden sm:inline", serverFilter !== "all" ? "text-primary font-medium" : "text-muted-foreground")}>{serverFilter === "all" ? "Servidor" : serverFilter}</span>
                 </SelectTrigger>
                 <SelectContent align="end">
                   <SelectItem value="all">Todos os servidores</SelectItem>
