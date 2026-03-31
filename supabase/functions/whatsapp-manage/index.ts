@@ -371,28 +371,69 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      let pic: string | null = null;
+      let name: string | null = null;
+      let phone: string | null = null;
+
       try {
-        // Try fetching profile info from the API
+        // Try fetching profile info from /instance endpoint
         const res = await fetch(`${inst.server_url}/instance`, {
           method: "GET",
           headers: { "Content-Type": "application/json", token: inst.instance_token },
         });
         if (res.ok) {
           const info = await res.json();
-          const pic = info?.instance?.profilePicUrl || info?.profilePicUrl || info?.instance?.imgUrl || info?.imgUrl || null;
-          const name = info?.instance?.profileName || info?.profileName || info?.instance?.name || null;
-          const phone = info?.instance?.owner || info?.owner || info?.instance?.wuid || null;
-          return new Response(
-            JSON.stringify({ profile_picture: pic, profile_name: name, phone }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          console.log("[whatsapp-manage] profile-picture /instance response keys:", JSON.stringify(Object.keys(info || {})));
+          if (info?.instance) {
+            console.log("[whatsapp-manage] instance sub-keys:", JSON.stringify(Object.keys(info.instance)));
+          }
+          pic = info?.instance?.profilePicUrl || info?.profilePicUrl || info?.instance?.imgUrl || info?.imgUrl || info?.instance?.profilePictureUrl || info?.profilePictureUrl || null;
+          name = info?.instance?.profileName || info?.profileName || info?.instance?.pushname || info?.pushname || info?.instance?.name || null;
+          phone = info?.instance?.owner || info?.owner || info?.instance?.wuid || info?.wuid || info?.instance?.me?.id || null;
         }
       } catch (e: any) {
-        console.error("[whatsapp-manage] profile-picture fetch error:", e.message);
+        console.error("[whatsapp-manage] profile-picture /instance error:", e.message);
+      }
+
+      // Try /instance/me or /me endpoint as fallback
+      if (!pic) {
+        try {
+          const meRes = await fetch(`${inst.server_url}/instance/me`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", token: inst.instance_token },
+          });
+          if (meRes.ok) {
+            const meInfo = await meRes.json();
+            console.log("[whatsapp-manage] profile-picture /instance/me response:", JSON.stringify(meInfo).substring(0, 500));
+            pic = meInfo?.profilePicUrl || meInfo?.profilePictureUrl || meInfo?.imgUrl || meInfo?.picture || meInfo?.image || null;
+            if (!name) name = meInfo?.pushname || meInfo?.profileName || meInfo?.name || null;
+            if (!phone) phone = meInfo?.id || meInfo?.wuid || meInfo?.owner || null;
+          }
+        } catch (_e) {
+          // silent fallback
+        }
+      }
+
+      // Try /profilePicture endpoint as another fallback
+      if (!pic && phone) {
+        try {
+          const cleanPhone = phone.replace(/@.*/, "");
+          const ppRes = await fetch(`${inst.server_url}/profilePicture/${cleanPhone}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", token: inst.instance_token },
+          });
+          if (ppRes.ok) {
+            const ppInfo = await ppRes.json();
+            console.log("[whatsapp-manage] profile-picture /profilePicture response:", JSON.stringify(ppInfo).substring(0, 500));
+            pic = ppInfo?.profilePictureUrl || ppInfo?.profilePicUrl || ppInfo?.imgUrl || ppInfo?.url || ppInfo?.picture || null;
+          }
+        } catch (_e) {
+          // silent fallback
+        }
       }
 
       return new Response(
-        JSON.stringify({ profile_picture: null }),
+        JSON.stringify({ profile_picture: pic, profile_name: name, phone }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
