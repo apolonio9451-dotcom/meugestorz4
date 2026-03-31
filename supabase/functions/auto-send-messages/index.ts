@@ -459,7 +459,8 @@ Deno.serve(async (req) => {
       // Preflight auth validation to avoid hundreds of 401 failures.
       const tokenValidation = await validateApiToken(apiUrl, apiToken);
       if (!tokenValidation.ok) {
-        await logSessionExpired(supabase, companyId);
+        console.log(`[auto-send] ❌ Preflight falhou para empresa ${companyId} | status=${tokenValidation.status} | tokenLen=${apiToken.length} | tokenPrefix=${apiToken.substring(0, 8)}...`);
+        await logSessionExpired(supabase, companyId, "", tokenValidation.errorBody || "");
         totalErrors++;
         continue;
       }
