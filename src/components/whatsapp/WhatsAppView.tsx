@@ -243,6 +243,9 @@ export default function WhatsAppView() {
       );
       setQrCode(null);
       setPolling(false);
+      setProfilePic(null);
+      setProfileName(null);
+      setProfilePhone(null);
       toast.success("WhatsApp desconectado.");
       fetchQrCode();
     }
