@@ -267,18 +267,19 @@ async function getRequestUserId(req: Request, supabaseUrl: string): Promise<stri
   return data.user.id;
 }
 
-async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string; errorBody?: string }> {
   try {
     const res = await fetch(`${apiUrl}/instance`, {
       method: "GET",
       headers: getApiHeaders(apiToken),
     });
 
-    if (res.status === 401) {
-      return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE };
-    }
-
     const body = await res.text();
+
+    if (res.status === 401) {
+      console.log(`[auto-send] preflight 401 | body=${body.slice(0, 300)}`);
+      return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE, errorBody: body };
+    }
 
     if (res.status === 404) {
       console.log(`[auto-send] preflight endpoint não encontrado | status=404 | body=${body.slice(0, 300)}`);
@@ -288,7 +289,7 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
     // Check for WhatsApp disconnected even on 2xx responses
     if (isSessionError(body, res.status)) {
       console.log(`[auto-send] preflight: sessão desconectada | status=${res.status}`);
-      return { ok: false, status: res.status, error: SESSION_EXPIRED_MESSAGE };
+      return { ok: false, status: res.status, error: SESSION_EXPIRED_MESSAGE, errorBody: body };
     }
 
     if (!res.ok) {
