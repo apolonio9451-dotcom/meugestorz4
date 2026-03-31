@@ -68,6 +68,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GhostModeProvider>
+          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -95,6 +96,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
           </GhostModeProvider>
         </AuthProvider>
       </BrowserRouter>
