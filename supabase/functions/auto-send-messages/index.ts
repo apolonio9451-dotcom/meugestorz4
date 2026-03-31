@@ -208,10 +208,20 @@ async function fetchLatestDispatchConfig(
     .maybeSingle();
 
   const row = (data || {}) as any;
-  const instanceToken = await getCompanyInstanceToken(supabase, companyId);
+  const dbToken = String(row.api_token || "").trim();
+
+  // Priority: api_settings.api_token (user-configured) > instance_token > env fallback
+  let resolvedToken = "";
+  if (dbToken.length > 5) {
+    resolvedToken = dbToken;
+  } else {
+    const instanceToken = await getCompanyInstanceToken(supabase, companyId);
+    resolvedToken = instanceToken || resolveApiToken(row.api_token);
+  }
+
   return {
     apiUrl: resolveApiUrl(row.api_url),
-    apiToken: instanceToken || resolveApiToken(row.api_token),
+    apiToken: resolvedToken,
     pixKey: String(row.pix_key || ""),
     sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
     overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),
