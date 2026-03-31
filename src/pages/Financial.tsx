@@ -47,7 +47,7 @@ async function fetchFinancialData(companyId: string) {
 
 export default function Financial() {
   const { effectiveCompanyId: companyId, userRole, loading: authLoading } = useAuth();
-  const canViewFinancial = userRole === "Proprietário" || userRole === "Admin" || userRole === "master";
+  // All users have full access (plan unification)
 
   // Date range filter - default: current month
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
