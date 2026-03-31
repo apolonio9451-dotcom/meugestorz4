@@ -58,7 +58,7 @@ async function getCompanyInstanceToken(supabase: any, companyId: string): Promis
   const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
   if (!userIds.length) return "";
 
-  const { data: instance } = await supabase
+  const { data: connectedInstance } = await supabase
     .from("whatsapp_instances")
     .select("instance_token")
     .in("user_id", userIds)
@@ -67,7 +67,18 @@ async function getCompanyInstanceToken(supabase: any, companyId: string): Promis
     .limit(1)
     .maybeSingle();
 
-  return String((instance as any)?.instance_token || "").trim();
+  const connectedToken = String((connectedInstance as any)?.instance_token || "").trim();
+  if (connectedToken) return connectedToken;
+
+  const { data: latestInstance } = await supabase
+    .from("whatsapp_instances")
+    .select("instance_token, status, updated_at")
+    .in("user_id", userIds)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return String((latestInstance as any)?.instance_token || "").trim();
 }
 
 function getApiHeaders(apiToken: string): HeadersInit {
@@ -163,8 +174,10 @@ Deno.serve(async (req) => {
       .limit(1)
       .single();
 
-    const sub = sampleClient?.client_subscriptions?.[0];
-    const plan = sub?.subscription_plans;
+    const sub = sampleClient?.client_subscriptions?.[0] as any;
+    const plan: any = Array.isArray(sub?.subscription_plans)
+      ? sub.subscription_plans[0]
+      : sub?.subscription_plans;
     const valor = sub?.custom_price && sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub?.amount ?? 0;
     const endDate = sub?.end_date ? new Date(sub.end_date + "T00:00:00") : new Date();
     const todayDate = new Date();
@@ -205,7 +218,9 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (!preflight.ok) {
+      if (preflight.status === 404) {
+        console.log("[test-send] preflight endpoint não encontrado, seguindo para envio direto:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
+      } else if (!preflight.ok) {
         console.log("[test-send] preflight warning:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
       }
 
