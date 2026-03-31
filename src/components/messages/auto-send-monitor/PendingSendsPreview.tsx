@@ -39,7 +39,7 @@ export default function PendingSendsPreview({ companyId }: Props) {
   const [pendingClients, setPendingClients] = useState<PendingClient[]>([]);
   const [skippedClients, setSkippedClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [showSkipped, setShowSkipped] = useState(false);
   const [categorySettings, setCategorySettings] = useState<Record<string, boolean>>({});
   const [overdueSettings, setOverdueSettings] = useState({ enabled: true, days: 10 });
