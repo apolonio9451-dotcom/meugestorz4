@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Pause, Play, RefreshCw, Square, Trash2 } from "lucide-react";
@@ -18,7 +19,7 @@ interface Props {
   onRefresh: () => void;
 }
 
-function SpinnerLabel({ icon, label }: { icon?: React.ReactNode; label: string }) {
+function SpinnerLabel({ icon, label }: { icon?: ReactNode; label: string }) {
   return (
     <>
       {icon}
