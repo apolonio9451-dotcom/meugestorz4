@@ -174,8 +174,10 @@ Deno.serve(async (req) => {
       .limit(1)
       .single();
 
-    const sub = sampleClient?.client_subscriptions?.[0];
-    const plan = sub?.subscription_plans;
+    const sub = sampleClient?.client_subscriptions?.[0] as any;
+    const plan = Array.isArray(sub?.subscription_plans)
+      ? sub.subscription_plans[0]
+      : sub?.subscription_plans;
     const valor = sub?.custom_price && sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub?.amount ?? 0;
     const endDate = sub?.end_date ? new Date(sub.end_date + "T00:00:00") : new Date();
     const todayDate = new Date();
