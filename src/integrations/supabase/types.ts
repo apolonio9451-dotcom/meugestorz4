@@ -123,6 +123,54 @@ export type Database = {
           },
         ]
       }
+      auto_send_control_states: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          last_action: string
+          last_activity_at: string | null
+          last_error: string | null
+          last_error_body: string | null
+          pause_requested: boolean
+          status: string
+          stop_requested: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_action?: string
+          last_activity_at?: string | null
+          last_error?: string | null
+          last_error_body?: string | null
+          pause_requested?: boolean
+          status?: string
+          stop_requested?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_action?: string
+          last_activity_at?: string | null
+          last_error?: string | null
+          last_error_body?: string | null
+          pause_requested?: boolean
+          status?: string
+          stop_requested?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       auto_send_logs: {
         Row: {
           category: string
@@ -176,6 +224,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      auto_send_runtime_events: {
+        Row: {
+          company_id: string
+          created_at: string
+          event_type: string
+          id: string
+          level: string
+          message: string
+          metadata: Json
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json
+        }
+        Relationships: []
       }
       bot_training_rules: {
         Row: {
