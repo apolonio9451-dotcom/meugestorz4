@@ -16,6 +16,7 @@ import LogsList from "./auto-send-monitor/LogsList";
 import MonitorControls from "./auto-send-monitor/MonitorControls";
 import MonitorSummary from "./auto-send-monitor/MonitorSummary";
 import RealtimeLogFeed from "./auto-send-monitor/RealtimeLogFeed";
+import PendingSendsPreview from "./auto-send-monitor/PendingSendsPreview";
 import {
   ControlState,
   LogEntry,
@@ -345,6 +346,7 @@ export default function AutoSendLogs({ companyId }: Props) {
   return (
     <>
       <Card className="mt-6">
+        <PendingSendsPreview companyId={companyId} />
         <CardHeader className="space-y-4 pb-3">
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2 text-base">
