@@ -17,8 +17,6 @@ import {
   QrCode,
   CheckCircle2,
   AlertCircle,
-  Eye,
-  EyeOff,
   Save,
   Key,
 } from "lucide-react";
@@ -57,8 +55,6 @@ export default function WhatsAppView() {
   const { effectiveCompanyId: companyId } = useAuth();
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
-  const [showToken, setShowToken] = useState(false);
-  const [showUrl, setShowUrl] = useState(false);
   const [savingToken, setSavingToken] = useState(false);
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [existingSettingsId, setExistingSettingsId] = useState<string | null>(null);
@@ -319,34 +315,24 @@ export default function WhatsAppView() {
             <>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">URL da API</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type={showUrl ? "text" : "password"}
-                    value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
-                    placeholder="https://ipazua.uazapi.com"
-                    className="bg-secondary/50 border-border font-mono text-sm"
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
-                    {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <Input
+                  type="password"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="https://ipazua.uazapi.com"
+                  className="bg-secondary/50 border-border font-mono text-sm"
+                />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Token da Instância</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type={showToken ? "text" : "password"}
-                    value={apiToken}
-                    onChange={(e) => setApiToken(e.target.value)}
-                    placeholder="Cole seu token aqui"
-                    className="bg-secondary/50 border-border font-mono text-sm"
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
-                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <Input
+                  type="password"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  placeholder="Cole seu token aqui"
+                  className="bg-secondary/50 border-border font-mono text-sm"
+                />
                 <p className="text-muted-foreground text-xs">
                   O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
                 </p>
