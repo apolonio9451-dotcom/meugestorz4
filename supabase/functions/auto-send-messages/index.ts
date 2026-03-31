@@ -79,7 +79,7 @@ async function sendMessage(
   apiToken: string,
   number: string,
   body: string,
-): Promise<{ ok: boolean; error: string; status?: number; isSessionError?: boolean }> {
+): Promise<{ ok: boolean; error: string; status?: number; isSessionError?: boolean; errorBody?: string }> {
   const endpoint = `${apiUrl}/send/text`;
   try {
     const res = await fetch(endpoint, {
@@ -101,6 +101,7 @@ async function sendMessage(
             error: sessionErr ? SESSION_EXPIRED_MESSAGE : CONNECTION_ERROR_MESSAGE,
             status: res.status,
             isSessionError: sessionErr,
+            errorBody: responseText,
           };
         }
       } catch { /* not JSON success response, that's fine */ }
@@ -115,10 +116,11 @@ async function sendMessage(
       error: sessionErr ? SESSION_EXPIRED_MESSAGE : CONNECTION_ERROR_MESSAGE,
       status: res.status,
       isSessionError: sessionErr,
+      errorBody: responseText,
     };
   } catch (err) {
     console.log(`[auto-send] API fetch exception | endpoint=${endpoint} | error=${String(err)}`);
-    return { ok: false, error: CONNECTION_ERROR_MESSAGE };
+    return { ok: false, error: CONNECTION_ERROR_MESSAGE, errorBody: String(err) };
   }
 }
 
@@ -188,6 +190,7 @@ const AUTH_TOKEN_INVALID_MESSAGE = SESSION_EXPIRED_MESSAGE;
 type LatestDispatchConfig = {
   apiUrl: string;
   apiToken: string;
+  apiTokens: string[];
   pixKey: string;
   sendIntervalSeconds: number;
   overdueChargePauseEnabled: boolean;
@@ -196,6 +199,45 @@ type LatestDispatchConfig = {
   autoSendHour: number;
   autoSendMinute: number;
 };
+
+function buildTokenCandidates(...tokens: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+
+  for (const token of tokens) {
+    const clean = String(token || "").trim();
+    if (!clean || clean.length <= 5 || clean.includes("curl") || clean.startsWith("http") || seen.has(clean)) {
+      continue;
+    }
+    seen.add(clean);
+    candidates.push(clean);
+  }
+
+  return candidates;
+}
+
+async function resolveWorkingApiToken(apiUrl: string, candidates: string[]) {
+  for (const candidate of candidates) {
+    const validation = await validateApiToken(apiUrl, candidate);
+    if (validation.ok) {
+      return { ok: true as const, token: candidate };
+    }
+  }
+
+  const lastToken = candidates[candidates.length - 1] || "";
+  const lastValidation = lastToken ? await validateApiToken(apiUrl, lastToken) : { ok: false, error: AUTH_TOKEN_INVALID_MESSAGE };
+  return {
+    ok: false as const,
+    error: lastValidation.error || AUTH_TOKEN_INVALID_MESSAGE,
+    errorBody: lastValidation.errorBody,
+  };
+}
+
+function formatApiError(error: string, errorBody?: string) {
+  const cleanBody = String(errorBody || "").trim().replace(/\s+/g, " ").slice(0, 500);
+  if (!cleanBody) return error;
+  return `${error} | API: ${cleanBody}`;
+}
 
 async function fetchLatestDispatchConfig(
   supabase: any,
@@ -222,6 +264,12 @@ async function fetchLatestDispatchConfig(
   } else {
     resolvedToken = resolveApiToken(row.api_token);
   }
+
+  const tokenCandidates = buildTokenCandidates(
+    instanceToken,
+    dbToken,
+    resolveApiToken(row.api_token),
+  );
 
   // Also resolve API URL from instance server_url if not set in api_settings
   let resolvedUrl = resolveApiUrl(row.api_url);
@@ -251,6 +299,7 @@ async function fetchLatestDispatchConfig(
   return {
     apiUrl: resolvedUrl,
     apiToken: resolvedToken,
+    apiTokens: tokenCandidates,
     pixKey: String(row.pix_key || ""),
     sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
     overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),
@@ -353,6 +402,16 @@ function getCategory(daysUntilExpiry: number): string | null {
   if (daysUntilExpiry === 3) return "a_vencer";
   if (daysUntilExpiry < 0) return "vencidos";
   return null;
+}
+
+function getLatestSubscription(subscriptions: any[] | null | undefined) {
+  if (!Array.isArray(subscriptions) || subscriptions.length === 0) return null;
+
+  return [...subscriptions].sort((a: any, b: any) => {
+    const aTime = new Date(`${a?.end_date || "1970-01-01"}T00:00:00`).getTime();
+    const bTime = new Date(`${b?.end_date || "1970-01-01"}T00:00:00`).getTime();
+    return bTime - aTime;
+  })[0] ?? null;
 }
 
 const defaultTemplates: Record<string, string> = {
@@ -468,7 +527,7 @@ Deno.serve(async (req) => {
       let apiUrl = latestConfig.apiUrl;
       let apiToken = latestConfig.apiToken;
 
-      if (!apiUrl || !apiToken) {
+      if (!apiUrl || latestConfig.apiTokens.length === 0) {
         console.log(`[auto-send] Empresa ${companyId} sem URL ou Token configurado, pulando`);
         continue;
       }
@@ -485,14 +544,14 @@ Deno.serve(async (req) => {
         `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}`
       );
 
-      // Preflight auth validation to avoid hundreds of 401 failures.
-      const tokenValidation = await validateApiToken(apiUrl, apiToken);
-      if (!tokenValidation.ok) {
-        console.log(`[auto-send] ❌ Preflight falhou para empresa ${companyId} | status=${tokenValidation.status} | tokenLen=${apiToken.length} | tokenPrefix=${apiToken.substring(0, 8)}...`);
-        await logSessionExpired(supabase, companyId, "", tokenValidation.errorBody || "");
+      const workingToken = await resolveWorkingApiToken(apiUrl, latestConfig.apiTokens);
+      if (!workingToken.ok) {
+        console.log(`[auto-send] ❌ Preflight falhou para empresa ${companyId}`);
+        await logSessionExpired(supabase, companyId, "", workingToken.errorBody || "");
         totalErrors++;
         continue;
       }
+      apiToken = workingToken.token;
 
       const { data: failedTodayRows } = await supabase
         .from("auto_send_logs")
@@ -573,7 +632,8 @@ Deno.serve(async (req) => {
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
 
-        const sub = subs[0];
+        const sub = getLatestSubscription(subs);
+        if (!sub) continue;
         const plan = sub.subscription_plans;
         const endDate = new Date(sub.end_date + "T00:00:00");
         const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -615,16 +675,21 @@ Deno.serve(async (req) => {
         const { client, category, sub, plan, diffDays } = batchToProcess[i];
         const latestBeforeSend = await fetchLatestDispatchConfig(supabase, companyId);
         const currentApiUrl = latestBeforeSend.apiUrl;
-        const currentApiToken = latestBeforeSend.apiToken;
+        const currentWorkingToken = currentApiUrl
+          ? await resolveWorkingApiToken(currentApiUrl, latestBeforeSend.apiTokens)
+          : { ok: false as const, error: CONNECTION_ERROR_MESSAGE };
 
-        if (!currentApiUrl || !currentApiToken) {
+        if (!currentApiUrl || !currentWorkingToken.ok) {
           await supabase.from("auto_send_logs").insert({
             company_id: companyId,
             client_id: client.id,
             client_name: client.name,
             category,
             status: "failed",
-            error_message: CONNECTION_ERROR_MESSAGE,
+            error_message: formatApiError(
+              currentWorkingToken.ok ? CONNECTION_ERROR_MESSAGE : currentWorkingToken.error,
+              currentWorkingToken.ok ? undefined : currentWorkingToken.errorBody,
+            ),
             phone: normalizePhone(client.whatsapp || client.phone || ""),
             message_sent: "",
           });
@@ -632,13 +697,9 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const currentApiToken = currentWorkingToken.token;
+
         if (currentApiUrl !== apiUrl || currentApiToken !== apiToken) {
-          const latestValidation = await validateApiToken(currentApiUrl, currentApiToken);
-          if (!latestValidation.ok) {
-            await logSessionExpired(supabase, companyId);
-            totalErrors++;
-            break;
-          }
           apiUrl = currentApiUrl;
           apiToken = currentApiToken;
         }
@@ -680,7 +741,7 @@ Deno.serve(async (req) => {
             client_name: client.name,
             category,
             status: sendResult.ok ? "success" : "failed",
-            error_message: sendResult.error || null,
+            error_message: sendResult.ok ? null : formatApiError(sendResult.error, sendResult.errorBody),
             phone: normalizedPhone,
             message_sent: messageBody,
           });
@@ -693,7 +754,7 @@ Deno.serve(async (req) => {
             totalErrors++;
             if (sendResult.isSessionError || sendResult.status === 401) {
               console.log(`[auto-send] ⛔ ${client.name} (${category}) sessão expirada/desconectado, parando empresa`);
-              await logSessionExpired(supabase, companyId, normalizedPhone);
+              await logSessionExpired(supabase, companyId, normalizedPhone, sendResult.errorBody || "");
               break; // Stop processing this company entirely
             } else {
               console.log(`[auto-send] ❌ ${client.name} (${category}) erro: ${sendResult.error}`);
@@ -799,7 +860,7 @@ Deno.serve(async (req) => {
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
         const subs = (client as any).client_subscriptions;
-        const sub = subs?.[0];
+        const sub = getLatestSubscription(subs);
         const plan = sub?.subscription_plans;
         const valor = sub ? (sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub.amount ?? 0) : 0;
 
@@ -942,7 +1003,7 @@ Deno.serve(async (req) => {
         if (!phone || phone.replace(/\D/g, "").length < 8) continue;
 
         const subs = (client as any).client_subscriptions;
-        const sub = subs?.[0];
+        const sub = getLatestSubscription(subs);
         const plan = sub?.subscription_plans;
 
         // Only follow-up clients whose subscription is active and not near expiry
@@ -1114,7 +1175,8 @@ Deno.serve(async (req) => {
         const subs = (client as any).client_subscriptions;
         if (!subs || subs.length === 0) continue;
 
-        const sub = subs[0];
+        const sub = getLatestSubscription(subs);
+        if (!sub) continue;
         const plan = sub.subscription_plans;
         const endDate = new Date(sub.end_date + "T00:00:00");
         const todayDate = new Date(today + "T00:00:00");
