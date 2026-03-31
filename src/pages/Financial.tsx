@@ -47,7 +47,7 @@ async function fetchFinancialData(companyId: string) {
 
 export default function Financial() {
   const { effectiveCompanyId: companyId, userRole, loading: authLoading } = useAuth();
-  const canViewFinancial = userRole === "Proprietário" || userRole === "Admin" || userRole === "master";
+  // All users have full access (plan unification)
 
   // Date range filter - default: current month
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
@@ -220,18 +220,6 @@ export default function Financial() {
     { title: "Total de Clientes", value: totalClients, icon: Users, trend: "neutral" as const, isCurrency: false },
   ];
 
-  if (!authLoading && !canViewFinancial) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Financeiro bloqueado</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Somente proprietário ou admin podem visualizar o financeiro global.</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   // Quick filters
   const setQuickFilter = (months: number) => {
