@@ -21,7 +21,6 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
   const [overdueChargePauseEnabled, setOverdueChargePauseEnabled] = useState(true);
   const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
   const [saving, setSaving] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [existingId, setExistingId] = useState<string | null>(null);
 
