@@ -73,6 +73,7 @@ export default function Clients() {
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});
   const [search, setSearch] = useState("");
+  const [serverFilter, setServerFilter] = useState<string>("all");
   const [mainFilter, setMainFilter] = useState<"todos" | "status" | "vencidos" | "pendentes" | "excluidos" | "log">("todos");
   const [statusSubFilter, setStatusSubFilter] = useState<"ativos" | "vence_hoje" | "vence_amanha" | "a_vencer" | "followup" | "suporte">("ativos");
   const [dialogOpen, setDialogOpen] = useState(false);
