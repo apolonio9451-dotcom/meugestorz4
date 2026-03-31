@@ -57,8 +57,6 @@ export default function WhatsAppView() {
   const { effectiveCompanyId: companyId } = useAuth();
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
-  const [showToken, setShowToken] = useState(false);
-  const [showUrl, setShowUrl] = useState(false);
   const [savingToken, setSavingToken] = useState(false);
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [existingSettingsId, setExistingSettingsId] = useState<string | null>(null);
