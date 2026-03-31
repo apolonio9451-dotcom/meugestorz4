@@ -273,9 +273,10 @@ export default function WhatsAppView() {
         setPolling(false);
         setQrCode(null);
         toast.success("WhatsApp conectado!");
+        fetchProfilePicture();
       }
     }
-  }, [callManage]);
+  }, [callManage, fetchProfilePicture]);
 
   useEffect(() => {
     loadInstance();
