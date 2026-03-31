@@ -410,36 +410,43 @@ export default function WhatsAppView() {
                   <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
                 </div>
               )}
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-4">
+              <div className="bg-emerald-500/10 border-2 border-emerald-500/40 rounded-xl p-6 text-center space-y-4">
                 <div className="flex flex-col items-center gap-3">
-                  <Avatar className="w-20 h-20 border-2 border-emerald-500/50 shadow-lg">
-                    {profilePic ? (
-                      <AvatarImage src={profilePic} alt="WhatsApp Profile" />
-                    ) : null}
-                    <AvatarFallback className="bg-emerald-500/20 text-emerald-600">
-                      <User className="w-8 h-8" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <Wifi className="w-6 h-6 text-emerald-500" />
+                  <div className="relative">
+                    <Avatar className="w-24 h-24 border-[3px] border-emerald-500 shadow-lg shadow-emerald-500/20">
+                      {profilePic ? (
+                        <AvatarImage src={profilePic} alt="WhatsApp Profile" />
+                      ) : null}
+                      <AvatarFallback className="bg-emerald-500/20 text-emerald-600">
+                        <User className="w-10 h-10" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-background">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-emerald-500">
-                  Conectado com Sucesso!
-                </h3>
-                <div className="text-sm text-foreground/80 space-y-1">
-                  {profileName && (
-                    <p><strong>Perfil:</strong> {profileName}</p>
-                  )}
-                  {profilePhone && (
-                    <p><strong>Número:</strong> {profilePhone.replace(/@.*/, "")}</p>
-                  )}
-                  <p>
-                    <strong>Dispositivo:</strong> {instance.device_name}
+
+                {profileName && (
+                  <h3 className="text-xl font-bold text-foreground">{profileName}</h3>
+                )}
+
+                {profilePhone && (
+                  <p className="text-lg font-mono font-semibold text-emerald-500 tracking-wide">
+                    {formatPhoneNumber(profilePhone.replace(/@.*/, ""))}
                   </p>
+                )}
+
+                <div className="text-sm text-muted-foreground space-y-0.5">
                   <p>
-                    <strong>Status:</strong> Ativo e pronto para uso
+                    <strong className="text-foreground/80">Dispositivo:</strong> {instance.device_name}
+                  </p>
+                  <p className="flex items-center justify-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Ativo e pronto para uso
                   </p>
                   {instance.last_connection_at && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Última atividade:{" "}
                       {new Date(instance.last_connection_at).toLocaleString()}
                     </p>
