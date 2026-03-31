@@ -172,8 +172,6 @@ export const themePresets: ThemePreset[] = [
       "--glass-glow": "174 72% 56%",
     },
   },
-    },
-  },
 ];
 
 const THEME_CACHE_KEY = "meugestor-theme-vars";
