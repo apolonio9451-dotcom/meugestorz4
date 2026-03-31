@@ -236,13 +236,14 @@ async function logSessionExpired(
   supabase: any,
   companyId: string,
   phone = "",
+  apiErrorBody = "",
 ) {
   await supabase.from("auto_send_logs").insert({
     company_id: companyId,
     client_name: `[Sistema]`,
     category: "erro_config",
     status: "error",
-    error_message: SESSION_EXPIRED_MESSAGE,
+    error_message: `${SESSION_EXPIRED_MESSAGE}${apiErrorBody ? ` | API: ${apiErrorBody.slice(0, 500)}` : ""}`,
     phone,
     message_sent: "",
   });
