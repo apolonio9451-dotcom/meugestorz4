@@ -89,14 +89,21 @@ export default function AutoSendLogs({ companyId }: Props) {
       return;
     }
 
-    const { data, error } = await (supabase as any)
-      .from("auto_send_control_states")
-      .select("*")
-      .eq("company_id", companyId)
-      .maybeSingle();
+    try {
+      const { data, error } = await (supabase as any)
+        .from("auto_send_control_states")
+        .select("*")
+        .eq("company_id", companyId)
+        .maybeSingle();
 
-    if (error) throw error;
-    setControlState((data as ControlState | null) || null);
+      if (error) {
+        console.warn("[AutoSendLogs] control_states query error (table may not exist):", error.message);
+        return;
+      }
+      setControlState((data as ControlState | null) || null);
+    } catch (e) {
+      console.warn("[AutoSendLogs] control_states fetch failed:", e);
+    }
   }, [companyId]);
 
   const fetchRuntimeEvents = useCallback(async () => {
