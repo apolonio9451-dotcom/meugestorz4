@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Save, Loader2, Eye, EyeOff, Wifi } from "lucide-react";
+import { Save, Loader2, Wifi } from "lucide-react";
 
 interface Props {
   companyId: string | null;
