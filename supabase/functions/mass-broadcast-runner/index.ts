@@ -161,7 +161,7 @@ async function validateCampaignToken(apiUrl: string, apiToken: string): Promise<
 
 /** Simulate "composing" presence before sending */
 async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
-  const durationMs = Math.floor(Math.random() * 2001) + 3000; // 3-5 seconds
+  const durationMs = Math.floor(Math.random() * 2001) + 3000;
   try {
     await fetch(`${apiUrl.replace(/\/$/, "")}/operations/presence`, {
       method: "POST",
@@ -170,12 +170,56 @@ async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
     });
     await sleep(durationMs);
   } catch {
-    // Non-critical: if presence fails, continue sending
     await sleep(durationMs);
   }
 }
 
-async function sendText(apiUrl: string, apiToken: string, number: string, text: string): Promise<{ ok: boolean; status: number }> {
+/**
+ * Fetch all contacts saved in the WhatsApp instance's address book.
+ * Returns a Set of normalized phone numbers (digits only).
+ * Falls back to an empty set on any error so the broadcast is never blocked.
+ */
+async function fetchInstanceContacts(apiUrl: string, apiToken: string): Promise<Set<string>> {
+  const contacts = new Set<string>();
+  const endpoints = ["/contacts/all", "/contacts"];
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(`${apiUrl.replace(/\/$/, "")}${endpoint}`, {
+        method: "GET",
+        headers: getApiHeaders(apiToken),
+      });
+
+      if (!res.ok) continue;
+
+      const body = await res.json();
+      const list: any[] = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : [];
+
+      for (const contact of list) {
+        const raw = String(contact?.id || contact?.phone || contact?.number || contact?.jid || "")
+          .replace("@s.whatsapp.net", "")
+          .replace("@c.us", "")
+          .replace(/\D/g, "");
+
+        if (raw.length >= 8) {
+          contacts.add(raw);
+        }
+      }
+
+      if (contacts.size > 0) {
+        console.log(`[mass-broadcast] Loaded ${contacts.size} instance contacts from ${endpoint}`);
+        return contacts;
+      }
+    } catch (err) {
+      console.log(`[mass-broadcast] Failed to fetch contacts from ${endpoint}: ${String(err)}`);
+    }
+  }
+
+  console.log("[mass-broadcast] No contacts fetched from instance (will send to all)");
+  return contacts;
+}
+
+async function sendTextMessage(apiUrl: string, apiToken: string, number: string, text: string): Promise<{ ok: boolean; status: number }> {
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}/send/text`, {
     method: "POST",
     headers: getApiHeaders(apiToken),
@@ -266,12 +310,20 @@ Deno.serve(async (req) => {
 
     // ═══ SKIP-ON-ERROR: Track consecutive errors per campaign ═══
     const consecutiveErrors: Record<string, number> = {};
+    // ═══ SKIP-SAVED-CONTACTS: Cache instance contacts per company ═══
+    const instanceContactsCache: Record<string, Set<string>> = {};
 
     for (const settings of apiSettings) {
       if (processed >= MAX_PER_RUN) break;
       const companyId = settings.company_id;
       let credentials = await fetchLatestCampaignCredentials(supabase, companyId);
       if (!credentials.apiUrl || !credentials.apiToken) continue;
+
+      // Fetch saved contacts once per company run
+      if (!instanceContactsCache[companyId]) {
+        instanceContactsCache[companyId] = await fetchInstanceContacts(credentials.apiUrl, credentials.apiToken);
+      }
+      const savedContacts = instanceContactsCache[companyId];
 
       const preflight = await validateCampaignToken(credentials.apiUrl, credentials.apiToken);
       if (!preflight.ok && preflight.status === 401) {
@@ -370,6 +422,37 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ═══ SKIP SAVED CONTACTS: If number is in instance address book, skip ═══
+        if (savedContacts.size > 0 && savedContacts.has(phone)) {
+          console.log(`[mass-broadcast] Skipping ${phone} — saved in instance contacts`);
+          await supabase
+            .from("mass_broadcast_recipients")
+            .update({
+              status: "skipped",
+              error_message: "Contato salvo na agenda da instância — envio bloqueado",
+              last_attempt_at: new Date().toISOString(),
+            })
+            .eq("id", recipient.id);
+
+          await insertLog(supabase, {
+            campaign_id: campaign.id,
+            recipient_id: recipient.id,
+            company_id: recipient.company_id,
+            phone,
+            step: "skip_contact",
+            status: "skipped",
+            message: "Contato encontrado na agenda da instância. Envio bloqueado automaticamente.",
+            error_message: null,
+          });
+
+          await updateCampaignCounters(supabase, campaign.id, (c) => ({
+            processed_recipients: c.processed_recipients + 1,
+          }));
+
+          processed += 1;
+          continue;
+        }
+
         try {
           const latestCredentials = await fetchLatestCampaignCredentials(supabase, recipient.company_id);
           if (latestCredentials.apiUrl && latestCredentials.apiToken) {
@@ -417,7 +500,7 @@ Deno.serve(async (req) => {
           await simulateTyping(credentials.apiUrl, credentials.apiToken, phone);
 
           const sentAt = new Date().toISOString();
-          await sendText(credentials.apiUrl, credentials.apiToken, phone, message);
+          await sendTextMessage(credentials.apiUrl, credentials.apiToken, phone, message);
 
           // Calculate delay for the NEXT recipient in queue
           const delay = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);
