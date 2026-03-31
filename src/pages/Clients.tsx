@@ -12,7 +12,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send, PauseCircle, PlayCircle, Loader2 } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send, PauseCircle, PlayCircle, Loader2, Filter } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -73,6 +73,7 @@ export default function Clients() {
   const [subscriptions, setSubscriptions] = useState<Record<string, Subscription>>({});
   const [macKeys, setMacKeys] = useState<Record<string, MacKey[]>>({});
   const [search, setSearch] = useState("");
+  const [serverFilter, setServerFilter] = useState<string>("all");
   const [mainFilter, setMainFilter] = useState<"todos" | "status" | "vencidos" | "pendentes" | "excluidos" | "log">("todos");
   const [statusSubFilter, setStatusSubFilter] = useState<"ativos" | "vence_hoje" | "vence_amanha" | "a_vencer" | "followup" | "suporte">("ativos");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -860,13 +861,19 @@ export default function Clients() {
   const searchLower = useMemo(() => search.toLowerCase(), [search]);
 
   const searchFiltered = useMemo(() => activeClients.filter(
-    (c) => c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search) || 
-    (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(searchLower))
-  ), [activeClients, searchLower, search, macKeys]);
+    (c) => {
+      if (serverFilter !== "all" && (c.server || "") !== serverFilter) return false;
+      return c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search) || 
+        (macKeys[c.id] || []).some(mk => mk.mac.toLowerCase().includes(searchLower));
+    }
+  ), [activeClients, searchLower, search, macKeys, serverFilter]);
 
   const searchFilteredExcluded = useMemo(() => excludedClients.filter(
-    (c) => c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search)
-  ), [excludedClients, searchLower, search]);
+    (c) => {
+      if (serverFilter !== "all" && (c.server || "") !== serverFilter) return false;
+      return c.name.toLowerCase().includes(searchLower) || (c.whatsapp || "").includes(search);
+    }
+  ), [excludedClients, searchLower, search, serverFilter]);
 
   const getClientDays = useCallback((clientId: string) => {
     const sub = subscriptions[clientId];
@@ -1106,6 +1113,19 @@ export default function Clients() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
+            {servers.length > 0 && (
+              <Select value={serverFilter} onValueChange={setServerFilter}>
+                <SelectTrigger className="h-9 w-9 p-0 border-none bg-transparent justify-center shrink-0 [&>svg]:hidden">
+                  <Filter className={cn("w-4 h-4", serverFilter !== "all" ? "text-primary" : "text-muted-foreground")} />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="all">Todos os servidores</SelectItem>
+                  {servers.map(s => (
+                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <DialogTrigger asChild>
               <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
             </DialogTrigger>
