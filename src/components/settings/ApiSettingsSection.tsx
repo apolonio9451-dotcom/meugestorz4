@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Save, Loader2, Eye, EyeOff, Wifi } from "lucide-react";
+import { Save, Loader2, Wifi } from "lucide-react";
 
 interface Props {
   companyId: string | null;
@@ -20,8 +20,6 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
   const [pixKey, setPixKey] = useState("");
   const [overdueChargePauseEnabled, setOverdueChargePauseEnabled] = useState(true);
   const [overdueChargePauseDays, setOverdueChargePauseDays] = useState(10);
-  const [showToken, setShowToken] = useState(false);
-  const [showUrl, setShowUrl] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [existingId, setExistingId] = useState<string | null>(null);
@@ -119,15 +117,12 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             <Label className="text-sm font-semibold text-foreground">URL da API</Label>
             <div className="flex gap-2">
               <Input
-                type={showUrl ? "text" : "password"}
+                type="password"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
                 placeholder="https://..."
                 className="bg-secondary/50 border-border font-mono"
               />
-              <Button type="button" variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
-                {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
 
@@ -135,15 +130,12 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             <Label className="text-sm font-semibold text-foreground">Token da Instância</Label>
             <div className="flex gap-2">
               <Input
-                type={showToken ? "text" : "password"}
+                type="password"
                 value={apiToken}
                 onChange={(e) => setApiToken(e.target.value)}
                 placeholder="Cole seu token aqui"
                 className="bg-secondary/50 border-border font-mono"
               />
-              <Button type="button" variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
-                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
             </div>
             <p className="text-muted-foreground text-xs">
               O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
