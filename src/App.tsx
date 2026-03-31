@@ -54,7 +54,9 @@ const queryClient = new QueryClient({
 
 const DashboardRoute = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
-    <DashboardLayout>{children}</DashboardLayout>
+    <DashboardLayout>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </DashboardLayout>
   </ProtectedRoute>
 );
 
