@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { GhostModeProvider } from "@/hooks/useGhostMode";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import PlanGate from "@/components/PlanGate";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,7 +54,9 @@ const queryClient = new QueryClient({
 
 const DashboardRoute = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
-    <DashboardLayout>{children}</DashboardLayout>
+    <DashboardLayout>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </DashboardLayout>
   </ProtectedRoute>
 );
 
@@ -65,6 +68,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <GhostModeProvider>
+          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -92,6 +96,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
           </GhostModeProvider>
         </AuthProvider>
       </BrowserRouter>
