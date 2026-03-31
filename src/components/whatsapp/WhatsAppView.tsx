@@ -410,12 +410,28 @@ export default function WhatsAppView() {
                   <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
                 </div>
               )}
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-3">
-                <Wifi className="w-12 h-12 text-emerald-500 mx-auto" />
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-4">
+                <div className="flex flex-col items-center gap-3">
+                  <Avatar className="w-20 h-20 border-2 border-emerald-500/50 shadow-lg">
+                    {profilePic ? (
+                      <AvatarImage src={profilePic} alt="WhatsApp Profile" />
+                    ) : null}
+                    <AvatarFallback className="bg-emerald-500/20 text-emerald-600">
+                      <User className="w-8 h-8" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <Wifi className="w-6 h-6 text-emerald-500" />
+                </div>
                 <h3 className="text-xl font-bold text-emerald-500">
                   Conectado com Sucesso!
                 </h3>
                 <div className="text-sm text-foreground/80 space-y-1">
+                  {profileName && (
+                    <p><strong>Perfil:</strong> {profileName}</p>
+                  )}
+                  {profilePhone && (
+                    <p><strong>Número:</strong> {profilePhone.replace(/@.*/, "")}</p>
+                  )}
                   <p>
                     <strong>Dispositivo:</strong> {instance.device_name}
                   </p>

@@ -355,6 +355,49 @@ Deno.serve(async (req: Request) => {
     }
 
     // =========================================================
+    // ACTION: profile-picture
+    // =========================================================
+    if (action === "profile-picture") {
+      const { data: inst } = await adminClient
+        .from("whatsapp_instances")
+        .select("server_url, instance_token, is_connected")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!inst || !inst.is_connected) {
+        return new Response(
+          JSON.stringify({ profile_picture: null }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      try {
+        // Try fetching profile info from the API
+        const res = await fetch(`${inst.server_url}/instance`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", token: inst.instance_token },
+        });
+        if (res.ok) {
+          const info = await res.json();
+          const pic = info?.instance?.profilePicUrl || info?.profilePicUrl || info?.instance?.imgUrl || info?.imgUrl || null;
+          const name = info?.instance?.profileName || info?.profileName || info?.instance?.name || null;
+          const phone = info?.instance?.owner || info?.owner || info?.instance?.wuid || null;
+          return new Response(
+            JSON.stringify({ profile_picture: pic, profile_name: name, phone }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } catch (e: any) {
+        console.error("[whatsapp-manage] profile-picture fetch error:", e.message);
+      }
+
+      return new Response(
+        JSON.stringify({ profile_picture: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // =========================================================
     // ACTION: validate-connection
     // =========================================================
     if (action === "validate-connection") {
