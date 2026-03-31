@@ -31,6 +31,7 @@ const Trials = lazy(() => import("@/pages/Trials"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const ResellerPanel = lazy(() => import("@/pages/ResellerPanel"));
 const Chatbot = lazy(() => import("@/pages/Chatbot"));
+const GeneralSettings = lazy(() => import("@/pages/GeneralSettings"));
 
 const PageLoader = () => (
   <div className="flex flex-col gap-4 p-6">
