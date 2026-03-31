@@ -58,7 +58,6 @@ function getApiHeaders(apiToken: string): HeadersInit {
   return {
     "Content-Type": "application/json",
     token: apiToken,
-    Authorization: `Bearer ${apiToken}`,
   };
 }
 
@@ -209,10 +208,20 @@ async function fetchLatestDispatchConfig(
     .maybeSingle();
 
   const row = (data || {}) as any;
-  const instanceToken = await getCompanyInstanceToken(supabase, companyId);
+  const dbToken = String(row.api_token || "").trim();
+
+  // Priority: api_settings.api_token (user-configured) > instance_token > env fallback
+  let resolvedToken = "";
+  if (dbToken.length > 5) {
+    resolvedToken = dbToken;
+  } else {
+    const instanceToken = await getCompanyInstanceToken(supabase, companyId);
+    resolvedToken = instanceToken || resolveApiToken(row.api_token);
+  }
+
   return {
     apiUrl: resolveApiUrl(row.api_url),
-    apiToken: instanceToken || resolveApiToken(row.api_token),
+    apiToken: resolvedToken,
     pixKey: String(row.pix_key || ""),
     sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
     overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),
@@ -227,13 +236,14 @@ async function logSessionExpired(
   supabase: any,
   companyId: string,
   phone = "",
+  apiErrorBody = "",
 ) {
   await supabase.from("auto_send_logs").insert({
     company_id: companyId,
     client_name: `[Sistema]`,
     category: "erro_config",
     status: "error",
-    error_message: SESSION_EXPIRED_MESSAGE,
+    error_message: `${SESSION_EXPIRED_MESSAGE}${apiErrorBody ? ` | API: ${apiErrorBody.slice(0, 500)}` : ""}`,
     phone,
     message_sent: "",
   });
@@ -257,18 +267,19 @@ async function getRequestUserId(req: Request, supabaseUrl: string): Promise<stri
   return data.user.id;
 }
 
-async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok: boolean; status?: number; error?: string; errorBody?: string }> {
   try {
     const res = await fetch(`${apiUrl}/instance`, {
       method: "GET",
       headers: getApiHeaders(apiToken),
     });
 
-    if (res.status === 401) {
-      return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE };
-    }
-
     const body = await res.text();
+
+    if (res.status === 401) {
+      console.log(`[auto-send] preflight 401 | body=${body.slice(0, 300)}`);
+      return { ok: false, status: 401, error: AUTH_TOKEN_INVALID_MESSAGE, errorBody: body };
+    }
 
     if (res.status === 404) {
       console.log(`[auto-send] preflight endpoint não encontrado | status=404 | body=${body.slice(0, 300)}`);
@@ -278,7 +289,7 @@ async function validateApiToken(apiUrl: string, apiToken: string): Promise<{ ok:
     // Check for WhatsApp disconnected even on 2xx responses
     if (isSessionError(body, res.status)) {
       console.log(`[auto-send] preflight: sessão desconectada | status=${res.status}`);
-      return { ok: false, status: res.status, error: SESSION_EXPIRED_MESSAGE };
+      return { ok: false, status: res.status, error: SESSION_EXPIRED_MESSAGE, errorBody: body };
     }
 
     if (!res.ok) {
@@ -448,7 +459,8 @@ Deno.serve(async (req) => {
       // Preflight auth validation to avoid hundreds of 401 failures.
       const tokenValidation = await validateApiToken(apiUrl, apiToken);
       if (!tokenValidation.ok) {
-        await logSessionExpired(supabase, companyId);
+        console.log(`[auto-send] ❌ Preflight falhou para empresa ${companyId} | status=${tokenValidation.status} | tokenLen=${apiToken.length} | tokenPrefix=${apiToken.substring(0, 8)}...`);
+        await logSessionExpired(supabase, companyId, "", tokenValidation.errorBody || "");
         totalErrors++;
         continue;
       }

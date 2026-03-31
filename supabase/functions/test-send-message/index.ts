@@ -85,7 +85,6 @@ function getApiHeaders(apiToken: string): HeadersInit {
   return {
     "Content-Type": "application/json",
     token: apiToken,
-    Authorization: `Bearer ${apiToken}`,
   };
 }
 
@@ -118,18 +117,23 @@ Deno.serve(async (req) => {
 
     const dbApiUrl = (apiSettings?.api_url || "").trim();
     const dbApiToken = (apiSettings?.api_token || "").trim();
-    const instanceToken = await getCompanyInstanceToken(supabase, company_id);
 
+    // Priority: api_settings.api_token (user-configured) > instance_token > env fallback
     const apiUrl = (dbApiUrl || getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"])).replace(/\/$/, "");
-    const apiToken = instanceToken || dbApiToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+    let apiToken = "";
+    if (dbApiToken.length > 5) {
+      apiToken = dbApiToken;
+    } else {
+      const instanceToken = await getCompanyInstanceToken(supabase, company_id);
+      apiToken = instanceToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+    }
 
     console.log("[test-send] apiSettings:", apiSettings ? {
       api_url: apiSettings.api_url,
       instance: apiSettings.instance_name,
       hasToken: !!apiSettings.api_token,
       tokenLen: apiSettings.api_token?.length,
-      usingInstanceToken: !!instanceToken,
-      usingEnvFallback: !instanceToken && (!dbApiToken || !dbApiUrl),
+      usingDbToken: dbApiToken.length > 5,
     } : "null", "error:", settingsError?.message);
 
     if (!apiUrl || !apiToken) {
