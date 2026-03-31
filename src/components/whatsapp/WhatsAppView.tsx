@@ -163,6 +163,13 @@ export default function WhatsAppView() {
     }
   }, []);
 
+  const fetchProfilePicture = useCallback(async () => {
+    const data = await callManage("profile-picture");
+    if (data?.profile_picture) setProfilePic(data.profile_picture);
+    if (data?.profile_name) setProfileName(data.profile_name);
+    if (data?.phone) setProfilePhone(data.phone);
+  }, [callManage]);
+
   const fetchQrCode = useCallback(async () => {
     setActionLoading("qrcode");
     const data = await callManage("qrcode");
