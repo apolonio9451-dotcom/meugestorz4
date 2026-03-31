@@ -19,7 +19,9 @@ import {
   AlertCircle,
   Save,
   Key,
+  User,
 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
