@@ -1113,6 +1113,19 @@ export default function Clients() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Buscar por nome, WhatsApp ou MAC..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
+            {servers.length > 0 && (
+              <Select value={serverFilter} onValueChange={setServerFilter}>
+                <SelectTrigger className="h-9 w-9 p-0 border-none bg-transparent justify-center shrink-0 [&>svg]:hidden">
+                  <Filter className={cn("w-4 h-4", serverFilter !== "all" ? "text-primary" : "text-muted-foreground")} />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="all">Todos os servidores</SelectItem>
+                  {servers.map(s => (
+                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <DialogTrigger asChild>
               <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
             </DialogTrigger>
