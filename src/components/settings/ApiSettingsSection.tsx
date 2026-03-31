@@ -119,15 +119,12 @@ export default function ApiSettingsSection({ companyId, isOwner = false }: Props
             <Label className="text-sm font-semibold text-foreground">URL da API</Label>
             <div className="flex gap-2">
               <Input
-                type={showUrl ? "text" : "password"}
+                type="password"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
                 placeholder="https://..."
                 className="bg-secondary/50 border-border font-mono"
               />
-              <Button type="button" variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
-                {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
             </div>
           </div>
 
