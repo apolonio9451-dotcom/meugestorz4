@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       .single();
 
     const sub = sampleClient?.client_subscriptions?.[0] as any;
-    const plan = Array.isArray(sub?.subscription_plans)
+    const plan: any = Array.isArray(sub?.subscription_plans)
       ? sub.subscription_plans[0]
       : sub?.subscription_plans;
     const valor = sub?.custom_price && sub.custom_price > 0 ? sub.custom_price : plan?.price ?? sub?.amount ?? 0;
