@@ -433,7 +433,7 @@ Deno.serve(async (req: Request) => {
       }
 
       return new Response(
-        JSON.stringify({ profile_picture: null }),
+        JSON.stringify({ profile_picture: pic, profile_name: name, phone }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
