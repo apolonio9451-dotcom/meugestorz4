@@ -47,7 +47,8 @@ function getFirstEnvValue(names: string[]): string {
   return "";
 }
 
-async function getCompanyInstanceToken(supabase: any, companyId: string): Promise<string> {
+/** Get the instance_token from whatsapp_instances for a company's users */
+async function getCompanyInstanceData(supabase: any, companyId: string): Promise<{ token: string; serverUrl: string; isConnected: boolean }> {
   const { data: memberships } = await supabase
     .from("company_memberships")
     .select("user_id")
@@ -56,29 +57,40 @@ async function getCompanyInstanceToken(supabase: any, companyId: string): Promis
     .limit(20);
 
   const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
-  if (!userIds.length) return "";
+  if (!userIds.length) return { token: "", serverUrl: "", isConnected: false };
 
+  // Try connected instance first
   const { data: connectedInstance } = await supabase
     .from("whatsapp_instances")
-    .select("instance_token")
+    .select("instance_token, server_url, is_connected")
     .in("user_id", userIds)
     .eq("is_connected", true)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const connectedToken = String((connectedInstance as any)?.instance_token || "").trim();
-  if (connectedToken) return connectedToken;
+  if (connectedInstance?.instance_token) {
+    return {
+      token: String(connectedInstance.instance_token).trim(),
+      serverUrl: String(connectedInstance.server_url || "").trim(),
+      isConnected: true,
+    };
+  }
 
+  // Fallback to latest instance
   const { data: latestInstance } = await supabase
     .from("whatsapp_instances")
-    .select("instance_token, status, updated_at")
+    .select("instance_token, server_url, is_connected, status")
     .in("user_id", userIds)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  return String((latestInstance as any)?.instance_token || "").trim();
+  return {
+    token: String(latestInstance?.instance_token || "").trim(),
+    serverUrl: String(latestInstance?.server_url || "").trim(),
+    isConnected: Boolean(latestInstance?.is_connected),
+  };
 }
 
 function getApiHeaders(apiToken: string): HeadersInit {
@@ -86,6 +98,18 @@ function getApiHeaders(apiToken: string): HeadersInit {
     "Content-Type": "application/json",
     token: apiToken,
   };
+}
+
+/** Try sending with a given token, return result */
+async function trySend(apiUrl: string, apiToken: string, phone: string, messageBody: string): Promise<{ ok: boolean; status: number; body: string }> {
+  const endpoint = `${apiUrl}/send/text`;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: getApiHeaders(apiToken),
+    body: JSON.stringify({ number: phone, text: messageBody, linkPreview: true }),
+  });
+  const body = await res.text();
+  return { ok: res.ok, status: res.status, body };
 }
 
 Deno.serve(async (req) => {
@@ -115,31 +139,29 @@ Deno.serve(async (req) => {
       .eq("company_id", company_id)
       .single();
 
+    // Get instance data (token + connection status)
+    const instanceData = await getCompanyInstanceData(supabase, company_id);
+
     const dbApiUrl = (apiSettings?.api_url || "").trim();
     const dbApiToken = (apiSettings?.api_token || "").trim();
+    const instanceToken = instanceData.token;
 
-    // Priority: api_settings.api_token (user-configured) > instance_token > env fallback
-    const apiUrl = (dbApiUrl || getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"])).replace(/\/$/, "");
-    let apiToken = "";
-    if (dbApiToken.length > 5) {
-      apiToken = dbApiToken;
-    } else {
-      const instanceToken = await getCompanyInstanceToken(supabase, company_id);
-      apiToken = instanceToken || getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
-    }
+    // Resolve API URL: api_settings > instance server_url > env fallback
+    const apiUrl = (dbApiUrl || instanceData.serverUrl || getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"])).replace(/\/$/, "");
 
-    console.log("[test-send] apiSettings:", apiSettings ? {
-      api_url: apiSettings.api_url,
-      instance: apiSettings.instance_name,
-      hasToken: !!apiSettings.api_token,
-      tokenLen: apiSettings.api_token?.length,
-      usingDbToken: dbApiToken.length > 5,
-    } : "null", "error:", settingsError?.message);
+    // Build list of tokens to try (in order): instance_token first (uazapi native), then api_settings, then env
+    const tokensToTry: { label: string; token: string }[] = [];
+    if (instanceToken.length > 5) tokensToTry.push({ label: "instance_token", token: instanceToken });
+    if (dbApiToken.length > 5 && dbApiToken !== instanceToken) tokensToTry.push({ label: "api_settings", token: dbApiToken });
+    const envToken = getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+    if (envToken.length > 5 && !tokensToTry.some(t => t.token === envToken)) tokensToTry.push({ label: "env_fallback", token: envToken });
 
-    if (!apiUrl || !apiToken) {
-      const reason = `Configuração ausente. Defina URL/Token no menu Instância ou nos secrets WA_API_URL + WA_ADMIN_TOKEN (fallback também aceita EVOLUTI_API_URL, BOLINHA_API_TOKEN, UAZAPI_ADMIN_TOKEN, EVOLUTI_TOKEN).`;
+    console.log("[test-send] Token candidates:", tokensToTry.map(t => ({ label: t.label, len: t.token.length, prefix: t.token.substring(0, 8) + "..." })));
+    console.log("[test-send] Instance connected:", instanceData.isConnected, "| apiUrl:", apiUrl);
+
+    if (!apiUrl || tokensToTry.length === 0) {
       return new Response(
-        JSON.stringify({ error: reason }),
+        JSON.stringify({ error: "Configuração ausente. Defina URL/Token no menu Instância ou conecte o WhatsApp nas configurações." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -205,62 +227,51 @@ Deno.serve(async (req) => {
     });
 
     const normalizedPhone = normalizePhone(phone);
-    const endpoint = `${apiUrl}/send/text`;
-    console.log("[test-send] Enviando para:", { endpoint, phone: normalizedPhone, messageLength: messageBody.length });
 
-    try {
-      console.log("[test-send] Chamando API:", { endpoint, tokenLength: apiToken.length, tokenPrefix: apiToken.substring(0, 6) + "..." });
+    // Try each token until one succeeds
+    let lastError = "";
+    let lastStatus = 0;
+    for (const candidate of tokensToTry) {
+      console.log(`[test-send] Tentando token ${candidate.label} (${candidate.token.substring(0, 8)}...)`);
+      try {
+        const result = await trySend(apiUrl, candidate.token, normalizedPhone, messageBody);
+        console.log(`[test-send] Resultado com ${candidate.label}: status=${result.status} ok=${result.ok} body=${result.body.slice(0, 200)}`);
 
-      const preflight = await fetch(`${apiUrl}/instance`, {
-        method: "GET",
-        headers: getApiHeaders(apiToken),
-      });
-      const preflightBody = await preflight.text();
-      if (preflight.status === 401) {
-        return new Response(
-          JSON.stringify({ error: "Token inválido/expirado. Atualize o token da instância e reconecte o WhatsApp." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        if (result.ok) {
+          return new Response(
+            JSON.stringify({ success: true, phone: normalizedPhone, message: messageBody, tokenUsed: candidate.label }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        lastStatus = result.status;
+        lastError = result.body;
+
+        // If it's not a 401, don't try other tokens (it's a different error)
+        if (result.status !== 401) {
+          return new Response(
+            JSON.stringify({ error: `Falha ao enviar (status ${result.status}). Detalhe: ${result.body.slice(0, 500)}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // 401 = try next token
+      } catch (err) {
+        console.log(`[test-send] Erro de rede com ${candidate.label}: ${String(err)}`);
+        lastError = String(err);
       }
-      if (preflight.status === 404) {
-        console.log("[test-send] preflight endpoint não encontrado, seguindo para envio direto:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
-      } else if (!preflight.ok) {
-        console.log("[test-send] preflight warning:", { status: preflight.status, body: preflightBody?.slice(0, 300) });
-      }
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: getApiHeaders(apiToken),
-        body: JSON.stringify({ number: normalizedPhone, text: messageBody, linkPreview: true }),
-      });
-
-      const responseText = await res.text();
-
-      if (res.status === 401) {
-        return new Response(
-          JSON.stringify({ error: "⚠️ Token inválido/expirado. Vá em Configurações → Instância, atualize o Token e reconecte o WhatsApp." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (!res.ok) {
-        return new Response(
-          JSON.stringify({ error: `Falha ao enviar mensagem (status ${res.status}). Detalhe: ${responseText}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, phone: normalizedPhone, message: messageBody }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch (networkErr) {
-      return new Response(
-        JSON.stringify({ error: `Erro de rede ao conectar com a API: ${String(networkErr)}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
+
+    // All tokens failed
+    const errorMsg = lastStatus === 401
+      ? "⚠️ Nenhum token válido encontrado. Vá em Configurações → Instância, reconecte o WhatsApp e verifique se o token está atualizado."
+      : `Falha ao enviar mensagem. Último erro: ${lastError.slice(0, 500)}`;
+
+    return new Response(
+      JSON.stringify({ error: errorMsg }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (err) {
+    console.error("[test-send] Erro geral:", err);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
