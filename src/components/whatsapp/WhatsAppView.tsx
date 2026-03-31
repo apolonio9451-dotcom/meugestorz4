@@ -319,18 +319,13 @@ export default function WhatsAppView() {
             <>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">URL da API</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type={showUrl ? "text" : "password"}
-                    value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
-                    placeholder="https://ipazua.uazapi.com"
-                    className="bg-secondary/50 border-border font-mono text-sm"
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setShowUrl(!showUrl)}>
-                    {showUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <Input
+                  type="password"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="https://ipazua.uazapi.com"
+                  className="bg-secondary/50 border-border font-mono text-sm"
+                />
               </div>
 
               <div className="space-y-2">
