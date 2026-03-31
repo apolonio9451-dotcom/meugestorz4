@@ -91,6 +91,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/plans", label: "Planos", icon: CreditCard },
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
       { href: "/dashboard/settings", label: "Instância", icon: Zap },
+      { href: "/dashboard/general-settings", label: "Geral", icon: SlidersHorizontal },
     ],
   },
 ];
