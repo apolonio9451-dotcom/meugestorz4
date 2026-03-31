@@ -89,14 +89,21 @@ export default function AutoSendLogs({ companyId }: Props) {
       return;
     }
 
-    const { data, error } = await (supabase as any)
-      .from("auto_send_control_states")
-      .select("*")
-      .eq("company_id", companyId)
-      .maybeSingle();
+    try {
+      const { data, error } = await (supabase as any)
+        .from("auto_send_control_states")
+        .select("*")
+        .eq("company_id", companyId)
+        .maybeSingle();
 
-    if (error) throw error;
-    setControlState((data as ControlState | null) || null);
+      if (error) {
+        console.warn("[AutoSendLogs] control_states query error (table may not exist):", error.message);
+        return;
+      }
+      setControlState((data as ControlState | null) || null);
+    } catch (e) {
+      console.warn("[AutoSendLogs] control_states fetch failed:", e);
+    }
   }, [companyId]);
 
   const fetchRuntimeEvents = useCallback(async () => {
@@ -105,15 +112,22 @@ export default function AutoSendLogs({ companyId }: Props) {
       return;
     }
 
-    const { data, error } = await (supabase as any)
-      .from("auto_send_runtime_events")
-      .select("id, level, event_type, message, metadata, created_at")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false })
-      .limit(MAX_RUNTIME_ROWS);
+    try {
+      const { data, error } = await (supabase as any)
+        .from("auto_send_runtime_events")
+        .select("id, level, event_type, message, metadata, created_at")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false })
+        .limit(MAX_RUNTIME_ROWS);
 
-    if (error) throw error;
-    setRuntimeEvents((data as RuntimeEvent[]) || []);
+      if (error) {
+        console.warn("[AutoSendLogs] runtime_events query error (table may not exist):", error.message);
+        return;
+      }
+      setRuntimeEvents((data as RuntimeEvent[]) || []);
+    } catch (e) {
+      console.warn("[AutoSendLogs] runtime_events fetch failed:", e);
+    }
   }, [companyId]);
 
   const refreshMonitor = useCallback(async (showFeedback = false) => {
