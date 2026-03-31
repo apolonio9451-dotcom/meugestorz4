@@ -19,7 +19,9 @@ import {
   AlertCircle,
   Save,
   Key,
+  User,
 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +60,10 @@ export default function WhatsAppView() {
   const [savingToken, setSavingToken] = useState(false);
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [existingSettingsId, setExistingSettingsId] = useState<string | null>(null);
+
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [profilePhone, setProfilePhone] = useState<string | null>(null);
 
   const pollingRef = useRef<number | null>(null);
   const lockRef = useRef(false);
@@ -157,6 +163,13 @@ export default function WhatsAppView() {
     }
   }, []);
 
+  const fetchProfilePicture = useCallback(async () => {
+    const data = await callManage("profile-picture");
+    if (data?.profile_picture) setProfilePic(data.profile_picture);
+    if (data?.profile_name) setProfileName(data.profile_name);
+    if (data?.phone) setProfilePhone(data.phone);
+  }, [callManage]);
+
   const fetchQrCode = useCallback(async () => {
     setActionLoading("qrcode");
     const data = await callManage("qrcode");
@@ -198,12 +211,17 @@ export default function WhatsAppView() {
         if (data.instance.is_connected) {
           const validation = await callManage("validate-connection");
           if (validation?.status === 401 || validation?.disconnected) {
+            setProfilePic(null);
+            setProfileName(null);
+            setProfilePhone(null);
             setInstance((prev) =>
               prev ? { ...prev, is_connected: false, status: "disconnected" } : null
             );
             setApiValidationError("Sessão expirada. Revalide sua conexão escaneando o QR Code novamente.");
             toast.error("WhatsApp desconectado: token inválido ou expirado.");
             await fetchQrCode();
+          } else {
+            fetchProfilePicture();
           }
         } else {
           await fetchQrCode();
@@ -213,7 +231,7 @@ export default function WhatsAppView() {
       setLoading(false);
       lockRef.current = false;
     },
-    [callManage, fetchQrCode]
+    [callManage, fetchQrCode, fetchProfilePicture]
   );
 
   const handleDisconnect = async () => {
@@ -225,6 +243,9 @@ export default function WhatsAppView() {
       );
       setQrCode(null);
       setPolling(false);
+      setProfilePic(null);
+      setProfileName(null);
+      setProfilePhone(null);
       toast.success("WhatsApp desconectado.");
       fetchQrCode();
     }
@@ -252,9 +273,10 @@ export default function WhatsAppView() {
         setPolling(false);
         setQrCode(null);
         toast.success("WhatsApp conectado!");
+        fetchProfilePicture();
       }
     }
-  }, [callManage]);
+  }, [callManage, fetchProfilePicture]);
 
   useEffect(() => {
     loadInstance();
@@ -388,12 +410,28 @@ export default function WhatsAppView() {
                   <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
                 </div>
               )}
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-3">
-                <Wifi className="w-12 h-12 text-emerald-500 mx-auto" />
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-4">
+                <div className="flex flex-col items-center gap-3">
+                  <Avatar className="w-20 h-20 border-2 border-emerald-500/50 shadow-lg">
+                    {profilePic ? (
+                      <AvatarImage src={profilePic} alt="WhatsApp Profile" />
+                    ) : null}
+                    <AvatarFallback className="bg-emerald-500/20 text-emerald-600">
+                      <User className="w-8 h-8" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <Wifi className="w-6 h-6 text-emerald-500" />
+                </div>
                 <h3 className="text-xl font-bold text-emerald-500">
                   Conectado com Sucesso!
                 </h3>
                 <div className="text-sm text-foreground/80 space-y-1">
+                  {profileName && (
+                    <p><strong>Perfil:</strong> {profileName}</p>
+                  )}
+                  {profilePhone && (
+                    <p><strong>Número:</strong> {profilePhone.replace(/@.*/, "")}</p>
+                  )}
                   <p>
                     <strong>Dispositivo:</strong> {instance.device_name}
                   </p>
