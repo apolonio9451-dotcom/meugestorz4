@@ -26,15 +26,15 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="instancia" className="w-full">
-        <TabsList className="w-full flex-col items-stretch h-auto gap-1 sm:flex-row sm:items-center sm:h-10 sm:gap-0">
-          <TabsTrigger value="instancia" className="gap-2 justify-start">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="instancia" className="gap-2">
             <Wifi className="h-4 w-4" />
             Instância
           </TabsTrigger>
           {isOwner && (
-            <TabsTrigger value="geral" className="gap-2 justify-start">
+            <TabsTrigger value="geral" className="gap-2">
               <SlidersHorizontal className="h-4 w-4" />
-              Geral
+              Configuração Geral
             </TabsTrigger>
           )}
         </TabsList>
