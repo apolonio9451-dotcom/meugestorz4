@@ -310,12 +310,20 @@ Deno.serve(async (req) => {
 
     // ═══ SKIP-ON-ERROR: Track consecutive errors per campaign ═══
     const consecutiveErrors: Record<string, number> = {};
+    // ═══ SKIP-SAVED-CONTACTS: Cache instance contacts per company ═══
+    const instanceContactsCache: Record<string, Set<string>> = {};
 
     for (const settings of apiSettings) {
       if (processed >= MAX_PER_RUN) break;
       const companyId = settings.company_id;
       let credentials = await fetchLatestCampaignCredentials(supabase, companyId);
       if (!credentials.apiUrl || !credentials.apiToken) continue;
+
+      // Fetch saved contacts once per company run
+      if (!instanceContactsCache[companyId]) {
+        instanceContactsCache[companyId] = await fetchInstanceContacts(credentials.apiUrl, credentials.apiToken);
+      }
+      const savedContacts = instanceContactsCache[companyId];
 
       const preflight = await validateCampaignToken(credentials.apiUrl, credentials.apiToken);
       if (!preflight.ok && preflight.status === 401) {
@@ -414,6 +422,37 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ═══ SKIP SAVED CONTACTS: If number is in instance address book, skip ═══
+        if (savedContacts.size > 0 && savedContacts.has(phone)) {
+          console.log(`[mass-broadcast] Skipping ${phone} — saved in instance contacts`);
+          await supabase
+            .from("mass_broadcast_recipients")
+            .update({
+              status: "skipped",
+              error_message: "Contato salvo na agenda da instância — envio bloqueado",
+              last_attempt_at: new Date().toISOString(),
+            })
+            .eq("id", recipient.id);
+
+          await insertLog(supabase, {
+            campaign_id: campaign.id,
+            recipient_id: recipient.id,
+            company_id: recipient.company_id,
+            phone,
+            step: "skip_contact",
+            status: "skipped",
+            message: "Contato encontrado na agenda da instância. Envio bloqueado automaticamente.",
+            error_message: null,
+          });
+
+          await updateCampaignCounters(supabase, campaign.id, (c) => ({
+            processed_recipients: c.processed_recipients + 1,
+          }));
+
+          processed += 1;
+          continue;
+        }
+
         try {
           const latestCredentials = await fetchLatestCampaignCredentials(supabase, recipient.company_id);
           if (latestCredentials.apiUrl && latestCredentials.apiToken) {
@@ -461,7 +500,7 @@ Deno.serve(async (req) => {
           await simulateTyping(credentials.apiUrl, credentials.apiToken, phone);
 
           const sentAt = new Date().toISOString();
-          await sendText(credentials.apiUrl, credentials.apiToken, phone, message);
+          await sendTextMessage(credentials.apiUrl, credentials.apiToken, phone, message);
 
           // Calculate delay for the NEXT recipient in queue
           const delay = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);
