@@ -220,6 +220,8 @@ export default function WhatsAppView() {
             setApiValidationError("Sessão expirada. Revalide sua conexão escaneando o QR Code novamente.");
             toast.error("WhatsApp desconectado: token inválido ou expirado.");
             await fetchQrCode();
+          } else {
+            fetchProfilePicture();
           }
         } else {
           await fetchQrCode();
@@ -229,7 +231,7 @@ export default function WhatsAppView() {
       setLoading(false);
       lockRef.current = false;
     },
-    [callManage, fetchQrCode]
+    [callManage, fetchQrCode, fetchProfilePicture]
   );
 
   const handleDisconnect = async () => {
