@@ -133,8 +133,7 @@ Deno.serve(async (req) => {
       instance: apiSettings.instance_name,
       hasToken: !!apiSettings.api_token,
       tokenLen: apiSettings.api_token?.length,
-      usingInstanceToken: !!instanceToken,
-      usingEnvFallback: !instanceToken && (!dbApiToken || !dbApiUrl),
+      usingDbToken: dbApiToken.length > 5,
     } : "null", "error:", settingsError?.message);
 
     if (!apiUrl || !apiToken) {
