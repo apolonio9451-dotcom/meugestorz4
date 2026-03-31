@@ -35,6 +35,18 @@ import {
 
 type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error";
 
+function formatPhoneNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length >= 12) {
+    const ddd = digits.slice(2, 4);
+    const number = digits.slice(4);
+    const part1 = number.slice(0, number.length - 4);
+    const part2 = number.slice(-4);
+    return `+55 ${ddd} ${part1}-${part2}`;
+  }
+  return `+${digits}`;
+}
+
 interface WhatsAppInstance {
   id: string;
   instance_name: string;
