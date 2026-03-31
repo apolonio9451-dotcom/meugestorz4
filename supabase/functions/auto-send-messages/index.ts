@@ -161,7 +161,7 @@ async function getCompanyInstanceToken(supabase: any, companyId: string): Promis
   const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
   if (!userIds.length) return "";
 
-  const { data: instance } = await supabase
+  const { data: connectedInstance } = await supabase
     .from("whatsapp_instances")
     .select("instance_token")
     .in("user_id", userIds)
@@ -170,7 +170,18 @@ async function getCompanyInstanceToken(supabase: any, companyId: string): Promis
     .limit(1)
     .maybeSingle();
 
-  return String((instance as any)?.instance_token || "").trim();
+  const connectedToken = String((connectedInstance as any)?.instance_token || "").trim();
+  if (connectedToken) return connectedToken;
+
+  const { data: latestInstance } = await supabase
+    .from("whatsapp_instances")
+    .select("instance_token, status, updated_at")
+    .in("user_id", userIds)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return String((latestInstance as any)?.instance_token || "").trim();
 }
 
 const AUTH_TOKEN_INVALID_MESSAGE = SESSION_EXPIRED_MESSAGE;
