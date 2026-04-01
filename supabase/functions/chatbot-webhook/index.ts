@@ -886,6 +886,7 @@ Deno.serve(async (req: Request) => {
   const rawCompanyId = new URL(req.url).searchParams.get("company_id") || "";
   const uuidMatch = rawCompanyId.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   const companyIdParam = uuidMatch ? uuidMatch[1] : rawCompanyId || null;
+  const userIdParam = new URL(req.url).searchParams.get("user_id") || "";
 
   // Decision log accumulator
   const decisions: string[] = [];
@@ -902,8 +903,38 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("===== WEBHOOK RECEBIDO =====");
-    console.log("company_id:", companyIdParam);
+    console.log("company_id:", companyIdParam, "user_id:", userIdParam);
     console.log("Corpo recebido:", JSON.stringify(body).slice(0, 3000));
+
+    // ── Handle connection/disconnection events (same logic as whatsapp-webhook) ──
+    if (userIdParam) {
+      const isConnected =
+        body.event === "connection" ||
+        body.status === "CONNECTED" ||
+        body.connected === true;
+      const isDisconnected =
+        body.event === "disconnected" ||
+        body.status === "DISCONNECTED" ||
+        body.connected === false;
+
+      if (isConnected) {
+        await supabase
+          .from("whatsapp_instances")
+          .update({
+            status: "connected",
+            is_connected: true,
+            last_connection_at: new Date().toISOString(),
+          })
+          .eq("user_id", userIdParam);
+        console.log(`[chatbot-webhook] User ${userIdParam} → connected`);
+      } else if (isDisconnected) {
+        await supabase
+          .from("whatsapp_instances")
+          .update({ status: "disconnected", is_connected: false })
+          .eq("user_id", userIdParam);
+        console.log(`[chatbot-webhook] User ${userIdParam} → disconnected`);
+      }
+    }
 
     const { messageText, senderPhone, fromMe, messageType, eventType } = extractIncomingPayload(body);
     console.log("Dados extraídos:", JSON.stringify({ messageText: messageText.slice(0, 200), senderPhone, fromMe, messageType, eventType }));
@@ -917,6 +948,7 @@ Deno.serve(async (req: Request) => {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Ignore group messages - check all possible indicators
     const rawJid = body?.data?.key?.remoteJid || body?.key?.remoteJid || 

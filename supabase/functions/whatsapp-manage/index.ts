@@ -192,8 +192,23 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Register webhook
-      const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${userId}`;
+      // Resolve company_id for the webhook
+      let webhookCompanyId = "";
+      try {
+        const { data: membershipRow } = await adminClient
+          .from("company_memberships")
+          .select("company_id")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        webhookCompanyId = membershipRow?.company_id || "";
+      } catch (_e) {
+        console.error("[whatsapp-manage] Failed to resolve company_id for webhook:", _e);
+      }
+
+      // Register webhook → chatbot-webhook (handles messages + connection events)
+      const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${webhookCompanyId}&user_id=${userId}`;
       try {
         const whRes = await fetch(`${serverUrl}/webhook`, {
           method: "POST",
@@ -292,10 +307,46 @@ Deno.serve(async (req: Request) => {
 
       const connected = qrJson?.connected === true || qrJson?.instance?.status === "connected";
       if (connected) {
+        // Resolve company_id for webhook
+        let whCompanyId = "";
+        try {
+          const { data: mRow } = await adminClient
+            .from("company_memberships")
+            .select("company_id")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          whCompanyId = mRow?.company_id || "";
+        } catch (_e) {}
+
+        const newWebhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
+
         await adminClient
           .from("whatsapp_instances")
-          .update({ status: "connected", is_connected: true, last_connection_at: new Date().toISOString() })
+          .update({ status: "connected", is_connected: true, last_connection_at: new Date().toISOString(), webhook_url: newWebhookUrl })
           .eq("user_id", userId);
+
+        // Re-register webhook on the WhatsApp API
+        try {
+          await fetch(`${inst.server_url}/webhook`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", token: inst.instance_token },
+            body: JSON.stringify({
+              url: newWebhookUrl,
+              enabled: true,
+              active: true,
+              byApi: true,
+              addUrlEvents: true,
+              addUrlTypesMessages: true,
+              excludeMessages: ["wasSentByApi", "isGroupYes"],
+              events: ["connection", "messages", "messages_update", "presence", "call", "contacts", "groups", "labels", "chats", "chat_labels", "blocks", "leads", "history", "sender"],
+            }),
+          });
+          console.log("[whatsapp-manage] Webhook re-registered on connect");
+        } catch (_whErr: any) {
+          console.error("[whatsapp-manage] Webhook re-register failed:", _whErr?.message);
+        }
 
         return new Response(
           JSON.stringify({ connected: true }),
