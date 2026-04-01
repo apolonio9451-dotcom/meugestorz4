@@ -192,8 +192,23 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Register webhook
-      const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${userId}`;
+      // Resolve company_id for the webhook
+      let webhookCompanyId = "";
+      try {
+        const { data: membershipRow } = await adminClient
+          .from("company_memberships")
+          .select("company_id")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        webhookCompanyId = membershipRow?.company_id || "";
+      } catch (_e) {
+        console.error("[whatsapp-manage] Failed to resolve company_id for webhook:", _e);
+      }
+
+      // Register webhook → chatbot-webhook (handles messages + connection events)
+      const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${webhookCompanyId}&user_id=${userId}`;
       try {
         const whRes = await fetch(`${serverUrl}/webhook`, {
           method: "POST",
