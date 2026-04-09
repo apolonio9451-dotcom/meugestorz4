@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
@@ -21,7 +21,7 @@ import {
   Play, Pause, ExternalLink, Filter, RotateCcw, Sparkles,
   Eye, Volume2, Info, Search,
   ChevronDown, ChevronUp, Hash, Layers, Download,
-  BookOpen, Route, Palette
+  BookOpen, Route, Palette, Wifi, WifiOff
 } from "lucide-react";
 import { format } from "date-fns";
 import AudioRecorder from "@/components/chatbot/AudioRecorder";
@@ -56,22 +56,6 @@ REGRAS:
 - Se não souber algo, diga que vai verificar e retornar
 - Seja educado, objetivo e prestativo`;
 
-const EXAMPLE_NEW_CONTACT = `Quando um novo contato mandar mensagem:
-1. Cumprimente de forma amigável e pergunte o nome
-2. Apresente nossos serviços de IPTV (qualidade HD/4K, +500 canais, filmes e séries)
-3. Destaque os diferenciais: sem travamento, suporte 24h, teste grátis
-4. Pergunte qual tipo de conteúdo o cliente mais assiste
-5. Ofereça um teste gratuito de 24h
-6. Se o cliente aceitar, use [ENVIAR_CATALOGO] para mostrar os planos`;
-
-const EXAMPLE_CLIENT = `Ao atender um cliente existente:
-1. Saúde pelo nome e pergunte como pode ajudar
-2. Se for problema técnico: peça detalhes e tente resolver
-3. Se o plano vencer em menos de 5 dias: lembre sobre renovação
-4. Se pedir 2ª via ou pagamento: use [ENVIAR_BOTOES:Pix|Boleto|Cartão]
-5. Se reclamar: seja empático, ofereça solução e, se necessário, transfira
-6. Finalize perguntando se precisa de mais alguma coisa`;
-
 const CONTEXT_LABELS: Record<string, { label: string; color: string }> = {
   client: { label: "Cliente", color: "default" },
   new_contact: { label: "Novo Contato", color: "secondary" },
@@ -82,10 +66,11 @@ const CONTEXT_LABELS: Record<string, { label: string; color: string }> = {
   error: { label: "Erro", color: "destructive" },
   invalid_payload: { label: "Payload Inválido", color: "destructive" },
   media_received: { label: "Mídia Recebida", color: "secondary" },
+  training_rule: { label: "Regra Treinada", color: "default" },
 };
 
 export default function Chatbot() {
-  const { effectiveCompanyId: companyId } = useAuth();
+  const { effectiveCompanyId: companyId, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("simulador");
@@ -149,7 +134,6 @@ export default function Chatbot() {
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [logsLimit, setLogsLimit] = useState(50);
 
-
   // API check
   const [apiConfigured, setApiConfigured] = useState(false);
   const [showApiModal, setShowApiModal] = useState(false);
@@ -164,6 +148,12 @@ export default function Chatbot() {
   const [menuButtonText, setMenuButtonText] = useState("Ver Opções");
   const [menuItems, setMenuItems] = useState<{ id: string; title: string; description?: string }[]>([]);
 
+  // WhatsApp Instance status
+  const [instanceData, setInstanceData] = useState<{ profilePicture?: string; phone?: string; isConnected?: boolean; deviceName?: string } | null>(null);
+
+  // Autosave timer for personality
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!companyId) { setLoading(false); return; }
     fetchAll();
@@ -171,8 +161,31 @@ export default function Chatbot() {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts(), fetchApiStatus()]);
+    await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts(), fetchApiStatus(), fetchInstanceStatus()]);
     setLoading(false);
+  };
+
+  const fetchInstanceStatus = async () => {
+    if (!user?.id) return;
+    try {
+      const { data } = await supabase
+        .from("whatsapp_instances")
+        .select("is_connected, device_name, phone_number, profile_picture, status")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setInstanceData({
+          isConnected: (data as any).is_connected,
+          deviceName: (data as any).device_name,
+          phone: (data as any).phone_number || "",
+          profilePicture: (data as any).profile_picture || "",
+        });
+      }
+    } catch {
+      // Silently fail
+    }
   };
 
   const fetchApiStatus = async () => {
@@ -320,6 +333,18 @@ export default function Chatbot() {
       setSaving(false);
     }
   };
+
+  const handleAutoSavePersonality = useCallback((value: string) => {
+    setPersonality(value);
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (!companyId || !settingsId) return;
+      try {
+        await supabase.from("chatbot_settings").update({ personality: value.trim() }).eq("id", settingsId);
+        toast({ title: "💾 Personalidade salva automaticamente" });
+      } catch { /* silent */ }
+    }, 2000);
+  }, [companyId, settingsId]);
 
   const handleRestoreDefaults = () => {
     setPersonality(DEFAULT_PERSONALITY);
@@ -508,7 +533,6 @@ export default function Chatbot() {
     );
   };
 
-
   const filteredLogs = logs.filter((log) => {
     if (logFilter !== "all" && log.context_type !== logFilter) return false;
     if (logSearch) {
@@ -539,31 +563,67 @@ export default function Chatbot() {
     );
   }
 
+  const isConnected = instanceData?.isConnected === true;
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <audio ref={audioRef} onEnded={() => setPlayingMedia(null)} className="hidden" />
 
-
-      {/* Header */}
+      {/* ═══════ HEADER with Instance Status ═══════ */}
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
-              <Brain className="w-7 h-7 text-primary" />
-              Central de Treinamento IA
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Treine sua IA para vendas e suporte em uma interface simples e objetiva
-            </p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
+                <Brain className="w-7 h-7 text-primary" />
+                Central de Treinamento IA
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Treine sua IA para vendas e suporte em uma interface simples e objetiva
+              </p>
+            </div>
+            {/* Mini Instance Status Card */}
+            <div className={`hidden md:flex items-center gap-3 px-4 py-2.5 rounded-xl border backdrop-blur-sm transition-all ${
+              isConnected
+                ? "bg-primary/5 border-primary/20"
+                : "bg-destructive/5 border-destructive/20"
+            }`}>
+              <div className="relative">
+                {instanceData?.profilePicture ? (
+                  <img
+                    src={instanceData.profilePicture}
+                    alt="WhatsApp"
+                    className={`w-9 h-9 rounded-full object-cover ring-2 ${isConnected ? "ring-primary/50" : "ring-destructive/50"}`}
+                  />
+                ) : (
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isConnected ? "bg-primary/10" : "bg-destructive/10"}`}>
+                    <Phone className={`w-4 h-4 ${isConnected ? "text-primary" : "text-destructive"}`} />
+                  </div>
+                )}
+                <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
+                  isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+                }`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground truncate max-w-[120px]">
+                  {instanceData?.phone || instanceData?.deviceName || "Instância"}
+                </p>
+                <p className={`text-[10px] font-medium ${isConnected ? "text-primary" : "text-destructive"}`}>
+                  {isConnected ? "Conectado" : "Desconectado"}
+                </p>
+              </div>
+              {isConnected ? <Wifi className="w-3.5 h-3.5 text-primary" /> : <WifiOff className="w-3.5 h-3.5 text-destructive" />}
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+            {/* Bot Active/Inactive Toggle - Enhanced contrast */}
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all font-medium ${
               isActive
-                ? "bg-primary/10 border-primary/30 text-primary"
-                : "bg-secondary border-border text-muted-foreground"
+                ? "bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_-3px_hsl(var(--primary)/0.3)]"
+                : "bg-destructive/10 border-destructive/30 text-destructive"
             }`}>
-              <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
-              <span className="text-sm font-medium">{isActive ? "Bot Ativo" : "Bot Desativado"}</span>
+              <div className={`w-3 h-3 rounded-full ${isActive ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.6)]" : "bg-destructive"}`} />
+              <span className="text-sm font-bold">{isActive ? "Bot Ativo" : "Bot Desativado"}</span>
               <Switch checked={isActive} onCheckedChange={async (v) => {
                 if (v && !apiConfigured) {
                   setShowApiModal(true);
@@ -697,27 +757,30 @@ export default function Chatbot() {
         </DialogContent>
       </Dialog>
 
-      {/* Quick Stats */}
+      {/* ═══════ GLASSMORPHISM STATS ═══════ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="glass-card rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-foreground">{logStats.total}</p>
-          <p className="text-xs text-muted-foreground">Total Atendimentos</p>
-        </div>
-        <div className="glass-card rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-primary">{logStats.success}</p>
-          <p className="text-xs text-muted-foreground">Sucesso</p>
-        </div>
-        <div className="glass-card rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-foreground">{logStats.clients}</p>
-          <p className="text-xs text-muted-foreground">Clientes</p>
-        </div>
-        <div className="glass-card rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-foreground">{logStats.newContacts}</p>
-          <p className="text-xs text-muted-foreground">Novos Contatos</p>
-        </div>
+        {[
+          { value: logStats.total, label: "Total Atendimentos", color: "text-foreground" },
+          { value: logStats.success, label: "Sucesso", color: "text-primary" },
+          { value: logStats.clients, label: "Clientes", color: "text-foreground" },
+          { value: logStats.newContacts, label: "Novos Contatos", color: "text-foreground" },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="relative overflow-hidden rounded-xl border border-border/30 p-4 text-center backdrop-blur-md bg-background/40"
+            style={{
+              background: "linear-gradient(135deg, hsl(var(--background) / 0.6), hsl(var(--card) / 0.3))",
+              boxShadow: "0 8px 32px 0 hsl(var(--primary) / 0.06), inset 0 0 0 1px hsl(var(--border) / 0.1)",
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+            <p className={`text-2xl font-bold ${stat.color} relative z-10`}>{stat.value}</p>
+            <p className="text-xs text-muted-foreground relative z-10">{stat.label}</p>
+          </div>
+        ))}
       </div>
 
-      {/* ============ MAIN TABS ============ */}
+      {/* ═══════ MAIN TABS ═══════ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto gap-1 p-1">
           <TabsTrigger value="interacao" className="text-[10px] md:text-xs py-1.5 px-1.5 shrink-0">
@@ -737,12 +800,8 @@ export default function Chatbot() {
           </TabsTrigger>
         </TabsList>
 
-
-
-        {/* ============ ABA: BIBLIOTECA DE MÍDIA ============ */}
+        {/* ═══════ TAB: MÍDIA ═══════ */}
         <TabsContent value="interacao" className="space-y-4 mt-4">
-
-          {/* Biblioteca de Mídia */}
           <div className="glass-card rounded-xl p-3 md:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -804,21 +863,95 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        {/* ============ ABA: TREINAMENTO ATIVO DA IA ============ */}
+        {/* ═══════ TAB: PLAYGROUND (Side-by-Side) ═══════ */}
         <TabsContent value="simulador" className="space-y-4 mt-4">
           {companyId && (
             <>
-              <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 md:p-4 flex items-start gap-3">
-                <Brain className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Central de Treinamento Ativo</h3>
-                  <p className="text-[11px] md:text-xs text-muted-foreground mt-1">
-                    Este não é apenas um simulador — <strong>tudo que você instruir aqui será aplicado em tempo real</strong> no atendimento do WhatsApp.
-                    Envie uma mensagem, clique em <span className="text-primary font-medium">✏️ Instruir</span> na resposta do bot e ensine como ele deve responder. A regra é salva no banco de dados e usada automaticamente nas próximas conversas reais.
-                  </p>
+              {/* Side-by-side Playground layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* LEFT: System Prompt / Instructions Editor */}
+                <div className="glass-card rounded-xl p-4 md:p-5 space-y-4 flex flex-col">
+                  <div className="flex items-center justify-between shrink-0">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Pencil className="w-4 h-4 text-primary" />
+                      Personalidade & Prompt de Sistema
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Select value={aiModel} onValueChange={setAiModel}>
+                        <SelectTrigger className="h-7 text-[10px] w-[150px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AI_MODELS.map((m) => (
+                            <SelectItem key={m.value} value={m.value}>
+                              <span className="text-xs">{m.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleRestoreDefaults} title="Restaurar padrão">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Textarea
+                    value={personality}
+                    onChange={(e) => handleAutoSavePersonality(e.target.value)}
+                    placeholder={DEFAULT_PERSONALITY}
+                    className="flex-1 min-h-[200px] text-sm bg-secondary/20 border-border/30 resize-none font-mono leading-relaxed"
+                  />
+
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Instrução: Novos Contatos</Label>
+                      <Textarea
+                        value={newContactInstructions}
+                        onChange={(e) => setNewContactInstructions(e.target.value)}
+                        placeholder="Como a IA deve tratar novos contatos..."
+                        className="min-h-[80px] text-xs bg-secondary/20 border-border/30"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Instrução: Clientes Existentes</Label>
+                      <Textarea
+                        value={clientInstructions}
+                        onChange={(e) => setClientInstructions(e.target.value)}
+                        placeholder="Como a IA deve tratar clientes existentes..."
+                        className="min-h-[80px] text-xs bg-secondary/20 border-border/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between shrink-0 pt-2 border-t border-border/30">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <Label className="text-[10px] text-muted-foreground">Temperatura:</Label>
+                        <span className="text-xs font-mono text-foreground">{aiTemperature}</span>
+                      </div>
+                      <Slider
+                        value={[aiTemperature]}
+                        onValueChange={([v]) => setAiTemperature(v)}
+                        min={0}
+                        max={1}
+                        step={0.1}
+                        className="w-24"
+                      />
+                    </div>
+                    <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
+                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                      Salvar Tudo
+                    </Button>
+                  </div>
+                </div>
+
+                {/* RIGHT: Chat Simulator */}
+                <div className="min-h-[650px]">
+                  <ChatSimulator companyId={companyId} onRuleSaved={() => setTrainingRulesRefresh(prev => prev + 1)} />
                 </div>
               </div>
-              <ChatSimulator companyId={companyId} onRuleSaved={() => setTrainingRulesRefresh(prev => prev + 1)} />
+
+              {/* Training Rules below */}
               <div className="glass-card rounded-xl p-3 md:p-6">
                 <TrainingRulesList companyId={companyId} refreshKey={trainingRulesRefresh} />
               </div>
@@ -829,7 +962,7 @@ export default function Chatbot() {
           )}
         </TabsContent>
 
-        {/* ============ ABA: LOGS ============ */}
+        {/* ═══════ TAB: LOGS (Enhanced) ═══════ */}
         <TabsContent value="logs" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -873,6 +1006,17 @@ export default function Chatbot() {
                 {filteredLogs.map((log) => {
                   const ctx = CONTEXT_LABELS[log.context_type] || CONTEXT_LABELS.new_contact;
                   const isExpanded = expandedLog === log.id;
+                  // Confidence indicator based on context
+                  const confidenceMap: Record<string, { label: string; color: string }> = {
+                    training_rule: { label: "Regra Treinada", color: "bg-primary/20 text-primary" },
+                    auto_reply: { label: "Gatilho Exato", color: "bg-primary/20 text-primary" },
+                    client: { label: "IA + Contexto", color: "bg-accent/30 text-accent-foreground" },
+                    new_contact: { label: "IA Geral", color: "bg-secondary text-muted-foreground" },
+                    welcome: { label: "Script Fixo", color: "bg-primary/10 text-primary" },
+                    away: { label: "Script Fixo", color: "bg-secondary text-muted-foreground" },
+                  };
+                  const confidence = confidenceMap[log.context_type];
+
                   return (
                     <div key={log.id} className={`rounded-lg border transition-all cursor-pointer ${log.status === "error" ? "bg-destructive/5 border-destructive/20" : "bg-secondary/30 border-border/50 hover:border-border"}`} onClick={() => setExpandedLog(isExpanded ? null : log.id)}>
                       <div className="flex items-center justify-between px-4 py-2.5">
@@ -880,6 +1024,11 @@ export default function Chatbot() {
                           <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="text-sm font-medium text-foreground truncate">{log.client_name}</span>
                           <Badge variant={ctx.color as any} className="text-[9px] shrink-0">{ctx.label}</Badge>
+                          {confidence && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium shrink-0 hidden md:inline ${confidence.color}`}>
+                              {confidence.label}
+                            </span>
+                          )}
                           <span className="text-[11px] font-mono text-muted-foreground hidden md:inline">{log.phone}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -901,8 +1050,16 @@ export default function Chatbot() {
                             </div>
                           </div>
                           {log.error_message && <p className="text-xs text-destructive bg-destructive/10 rounded p-2">⚠️ {log.error_message}</p>}
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
                             <span>📱 {log.phone}</span><span>•</span><span>Tipo: {ctx.label}</span><span>•</span><span>Status: {log.status}</span>
+                            {confidence && (
+                              <>
+                                <span>•</span>
+                                <span className={`px-1.5 py-0.5 rounded-full ${confidence.color}`}>
+                                  🎯 Fonte: {confidence.label}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       )}
@@ -917,7 +1074,7 @@ export default function Chatbot() {
           </div>
         </TabsContent>
 
-        {/* ============ ABA: AVANÇADO (merge advanced + diagnostics) ============ */}
+        {/* ═══════ TAB: AVANÇADO ═══════ */}
         <TabsContent value="avancado" className="space-y-4 mt-4">
           <div className="glass-card rounded-xl p-6 space-y-6">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
