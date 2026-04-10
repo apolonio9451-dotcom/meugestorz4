@@ -1077,6 +1077,7 @@ Deno.serve(async (req) => {
 
           if (sendResult.ok) {
             await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
+            alreadySentFollowupIds.add(client.id);
             totalSent++;
           } else {
             totalErrors++;
