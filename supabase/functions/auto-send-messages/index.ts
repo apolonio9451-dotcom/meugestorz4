@@ -974,10 +974,30 @@ Deno.serve(async (req) => {
         .eq("follow_up_active", true)
         .or(`ultimo_envio_auto.is.null,ultimo_envio_auto.neq.${today}`);
 
-      if (!followupClients) continue;
+      if (!followupClients || followupClients.length === 0) continue;
+
+      // Idempotency: fetch all follow-up logs already sent today for this company
+      const todayStart = today + "T00:00:00.000Z";
+      const { data: existingFollowupLogs } = await supabase
+        .from("auto_send_logs")
+        .select("client_id")
+        .eq("company_id", companyId)
+        .eq("category", "followup")
+        .eq("status", "success")
+        .gte("created_at", todayStart);
+
+      const alreadySentFollowupIds = new Set(
+        (existingFollowupLogs || []).map((l: any) => l.client_id).filter(Boolean)
+      );
 
       for (const client of followupClients) {
         if (Date.now() - execStart > MAX_EXEC_MS) break;
+
+        // Skip if a follow-up was already successfully sent today (prevents duplicates)
+        if (alreadySentFollowupIds.has(client.id)) {
+          console.log(`[auto-send] ⏭️ Follow-up já enviado hoje para ${client.name}, pulando`);
+          continue;
+        }
 
         const latestBeforeFollowupSend = await fetchLatestDispatchConfig(supabase, companyId);
         const currentApiUrl = latestBeforeFollowupSend.apiUrl;
@@ -1057,6 +1077,7 @@ Deno.serve(async (req) => {
 
           if (sendResult.ok) {
             await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
+            alreadySentFollowupIds.add(client.id);
             totalSent++;
           } else {
             totalErrors++;
