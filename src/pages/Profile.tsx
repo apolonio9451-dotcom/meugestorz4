@@ -7,33 +7,110 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, KeyRound, Loader2, ShieldCheck, MessageCircle, UserCog } from "lucide-react";
+import { Mail, KeyRound, Loader2, ShieldCheck, MessageCircle, UserCog, Check, Palette, Pipette } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function md5(str: string): string {
-  // Simple hash for Gravatar — we use a basic approach
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16).padStart(32, "0");
-}
+import { themePresets, applyThemePreset, type ThemePreset } from "@/lib/themes";
 
 function getGravatarUrl(email: string, size = 200): string {
   const trimmed = email.trim().toLowerCase();
-  // Use a simple approach: encode email for Gravatar identicon fallback
   return `https://www.gravatar.com/avatar/${encodeURIComponent(trimmed)}?s=${size}&d=identicon`;
 }
 
+// Custom color option — build a theme preset from a hex color
+function buildCustomThemeFromHex(hex: string): ThemePreset {
+  // Convert hex to HSL
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  const hDeg = Math.round(h * 360);
+  const sPct = Math.round(s * 100);
+  const lPct = Math.round(l * 100);
+
+  const primary = `${hDeg} ${sPct}% ${lPct}%`;
+  const bgH = hDeg;
+
+  return {
+    id: `hex_${hex.slice(1)}`,
+    name: "Personalizado",
+    description: "Tema personalizado",
+    colors: { primary: hex, secondary: "#1a1a2e", background: "#0a0a14" },
+    cssVars: {
+      "--background": `${bgH} 40% 6%`,
+      "--foreground": `${bgH} 15% 93%`,
+      "--card": `${bgH} 32% 11%`,
+      "--card-foreground": `${bgH} 15% 93%`,
+      "--popover": `${bgH} 32% 11%`,
+      "--popover-foreground": `${bgH} 15% 93%`,
+      "--primary": primary,
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": `${bgH} 30% 11%`,
+      "--secondary-foreground": `${bgH} 15% 90%`,
+      "--muted": `${bgH} 22% 13%`,
+      "--muted-foreground": `${bgH} 10% 48%`,
+      "--accent": `${hDeg} ${Math.max(sPct - 7, 30)}% ${Math.max(lPct - 2, 30)}%`,
+      "--accent-foreground": "0 0% 100%",
+      "--border": `${hDeg} 40% 20%`,
+      "--input": `${bgH} 22% 12%`,
+      "--ring": primary,
+      "--sidebar-background": `${bgH} 45% 4%`,
+      "--sidebar-foreground": `${bgH} 12% 60%`,
+      "--sidebar-primary": primary,
+      "--sidebar-primary-foreground": "0 0% 100%",
+      "--sidebar-accent": `${bgH} 25% 12%`,
+      "--sidebar-accent-foreground": `${bgH} 15% 85%`,
+      "--sidebar-border": `${bgH} 20% 13%`,
+      "--sidebar-ring": primary,
+      "--glass-bg": `${bgH} 35% 10%`,
+      "--glass-border": `${hDeg} 60% 35%`,
+      "--glass-glow": primary,
+    },
+  };
+}
+
 export default function Profile() {
-  const { user, userRole, effectivePlanType: planType } = useAuth();
+  const { user, userRole } = useAuth();
   const { toast } = useToast();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [adminInfo, setAdminInfo] = useState<{ name: string; whatsapp: string | null } | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState("teal");
+  const [customHex, setCustomHex] = useState("#e91e63");
+
+  // Load saved theme on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("theme_preset")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.theme_preset) {
+          const saved = data.theme_preset as string;
+          setSelectedTheme(saved);
+          // Apply it
+          if (saved.startsWith("hex_")) {
+            const hex = `#${saved.slice(4)}`;
+            setCustomHex(hex);
+            applyThemePreset(buildCustomThemeFromHex(hex));
+          } else {
+            const preset = themePresets.find((t) => t.id === saved);
+            if (preset) applyThemePreset(preset);
+          }
+        }
+      });
+  }, [user]);
 
   useEffect(() => {
     const fetchAdmin = async () => {
@@ -79,6 +156,33 @@ export default function Profile() {
     ? fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
     : email.slice(0, 2).toUpperCase();
 
+  const handleThemeSelect = async (themeId: string) => {
+    setSelectedTheme(themeId);
+
+    // Apply instantly
+    if (themeId.startsWith("hex_")) {
+      const hex = `#${themeId.slice(4)}`;
+      applyThemePreset(buildCustomThemeFromHex(hex));
+    } else {
+      const preset = themePresets.find((t) => t.id === themeId);
+      if (preset) applyThemePreset(preset);
+    }
+
+    // Persist
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ theme_preset: themeId } as any)
+        .eq("id", user.id);
+    }
+  };
+
+  const handleCustomColor = (hex: string) => {
+    setCustomHex(hex);
+    const themeId = `hex_${hex.slice(1)}`;
+    handleThemeSelect(themeId);
+  };
+
   const handlePasswordReset = async () => {
     if (!newPassword) {
       toast({ title: "Erro", description: "Digite a nova senha.", variant: "destructive" });
@@ -105,6 +209,9 @@ export default function Profile() {
       setConfirmPassword("");
     }
   };
+
+  // Quick color swatches (hex colors for the custom picker row)
+  const quickColors = ["#e91e63", "#f44336", "#ff9800", "#4caf50", "#00bcd4", "#2196f3", "#9c27b0", "#607d8b"];
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -172,6 +279,89 @@ export default function Profile() {
           </CardContent>
         </Card>
       )}
+
+      {/* Theme Selector Card */}
+      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Palette className="w-5 h-5 text-primary" />
+            Personalização
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">Escolha a cor do tema do sistema</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {themePresets.map((preset) => {
+              const isActive = selectedTheme === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => handleThemeSelect(preset.id)}
+                  className={cn(
+                    "relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all duration-200 hover:scale-110",
+                    isActive ? "border-foreground ring-2 ring-foreground/30 scale-110" : "border-border/50 hover:border-foreground/40"
+                  )}
+                  title={preset.name}
+                >
+                  {/* Split circle: left = primary, right = background */}
+                  <div className="absolute inset-0 flex">
+                    <div className="w-1/2 h-full" style={{ backgroundColor: preset.colors.primary }} />
+                    <div className="w-1/2 h-full" style={{ backgroundColor: preset.colors.background }} />
+                  </div>
+                  {isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-white drop-shadow-lg" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Quick hex colors */}
+            {quickColors.map((hex) => {
+              const themeId = `hex_${hex.slice(1)}`;
+              const isActive = selectedTheme === themeId;
+              return (
+                <button
+                  key={hex}
+                  onClick={() => handleCustomColor(hex)}
+                  className={cn(
+                    "relative w-12 h-12 rounded-full overflow-hidden border-2 transition-all duration-200 hover:scale-110",
+                    isActive ? "border-foreground ring-2 ring-foreground/30 scale-110" : "border-border/50 hover:border-foreground/40"
+                  )}
+                  title={hex}
+                >
+                  <div className="absolute inset-0 flex">
+                    <div className="w-1/2 h-full" style={{ backgroundColor: hex }} />
+                    <div className="w-1/2 h-full" style={{ backgroundColor: "#0a0a14" }} />
+                  </div>
+                  {isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-white drop-shadow-lg" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Native color picker */}
+            <label
+              className={cn(
+                "relative w-12 h-12 rounded-full border-2 border-dashed border-border/60 flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110 hover:border-foreground/40 bg-muted/30"
+              )}
+              title="Escolher cor personalizada"
+            >
+              <Pipette className="w-5 h-5 text-muted-foreground" />
+              <input
+                type="color"
+                value={customHex}
+                onChange={(e) => handleCustomColor(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </label>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Password Reset Card */}
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
