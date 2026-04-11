@@ -531,6 +531,7 @@ export type Database = {
           closing_message: string
           company_id: string
           created_at: string
+          daily_schedule: Json | null
           id: string
           interactive_menu_body: string
           interactive_menu_button_text: string
@@ -569,6 +570,7 @@ export type Database = {
           closing_message?: string
           company_id: string
           created_at?: string
+          daily_schedule?: Json | null
           id?: string
           interactive_menu_body?: string
           interactive_menu_button_text?: string
@@ -607,6 +609,7 @@ export type Database = {
           closing_message?: string
           company_id?: string
           created_at?: string
+          daily_schedule?: Json | null
           id?: string
           interactive_menu_body?: string
           interactive_menu_button_text?: string

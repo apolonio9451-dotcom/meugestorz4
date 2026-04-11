@@ -628,25 +628,29 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
         <TrialBanner />
-        <header className="sticky top-0 z-30 h-16 glass-header flex items-center justify-between px-4 lg:px-6 backdrop-blur-xl bg-background/60 border-b border-border/30">
+        <header className="sticky top-0 z-30 h-16 glass-header flex items-center justify-between px-4 lg:px-6">
           <button className="lg:hidden mr-3 hover:scale-110 transition-transform duration-200" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6 text-foreground" />
           </button>
 
-          <div className="flex-1 flex items-center justify-center">
-            <div className="relative flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-60 h-12 rounded-full bg-primary/20 blur-3xl" />
+          <div className="flex items-center">
+            <div className="relative flex items-center">
+              <div className="absolute -inset-4 flex items-center justify-center pointer-events-none">
+                <div className="w-48 h-10 rounded-full bg-primary/15 blur-2xl" />
               </div>
               <img
                 data-priority
                 src={defaultBrandLogo}
                 alt="Meu Gestor – Logo"
-                className="relative h-10 sm:h-11 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]"
+                className="relative h-9 sm:h-10 object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.4)]"
+                loading="eager"
+                decoding="sync"
+                fetchPriority="high"
               />
             </div>
           </div>
 
+          <div className="flex-1" />
           <div className="w-6 lg:hidden" />
         </header>
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
