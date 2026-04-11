@@ -676,6 +676,14 @@ export default function Chatbot() {
                 </p>
               </div>
               {isConnected ? <Wifi className="w-3.5 h-3.5 text-primary" /> : <WifiOff className="w-3.5 h-3.5 text-destructive" />}
+              <button
+                onClick={handleResyncWebhook}
+                disabled={resyncingWebhook}
+                className="ml-1 p-1 rounded-md hover:bg-secondary/80 transition-colors"
+                title="Re-sincronizar webhook"
+              >
+                <RefreshCw className={`w-3 h-3 text-muted-foreground ${resyncingWebhook ? "animate-spin" : ""}`} />
+              </button>
             </div>
           </div>
           <div className="flex items-center gap-3">
