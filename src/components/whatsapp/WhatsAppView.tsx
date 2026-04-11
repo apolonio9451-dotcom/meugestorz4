@@ -321,6 +321,41 @@ export default function WhatsAppView() {
     }
   }, [callManage, fetchProfilePicture]);
 
+  // Realtime subscription for instant status updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`whatsapp-instance-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_instances',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          const row = payload.new;
+          if (row) {
+            setInstance(prev => prev ? {
+              ...prev,
+              is_connected: row.is_connected === true,
+              status: row.status || prev.status,
+            } : prev);
+            if (row.is_connected && row.status === 'connected') {
+              setPolling(false);
+              setQrCode(null);
+              fetchProfilePicture();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, fetchProfilePicture]);
+
   useEffect(() => {
     loadInstance();
   }, [loadInstance]);
