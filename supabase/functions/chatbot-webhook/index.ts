@@ -945,10 +945,14 @@ Deno.serve(async (req: Request) => {
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  const rawCompanyId = new URL(req.url).searchParams.get("company_id") || "";
+  const reqUrl = new URL(req.url);
+  const rawCompanyId = reqUrl.searchParams.get("company_id") || "";
   const uuidMatch = rawCompanyId.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   const companyIdParam = uuidMatch ? uuidMatch[1] : rawCompanyId || null;
-  const userIdParam = new URL(req.url).searchParams.get("user_id") || "";
+  // UAZAPI appends event paths like /messages/text to webhook URL, corrupting the last query param
+  const rawUserId = reqUrl.searchParams.get("user_id") || "";
+  const userIdMatch = rawUserId.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  const userIdParam = userIdMatch ? userIdMatch[1] : "";
 
   // Decision log accumulator
   const decisions: string[] = [];
