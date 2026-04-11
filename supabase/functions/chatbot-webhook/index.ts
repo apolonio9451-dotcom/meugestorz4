@@ -31,35 +31,38 @@ async function simulatePresence(
   }
 }
 
-async function tryRefreshSession(apiUrl: string, apiToken: string): Promise<string | null> {
-  try {
-    // Attempt to reconnect the instance session
-    const resp = await fetch(`${apiUrl}/instance/restart`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", token: apiToken },
-    });
-    if (resp.ok) {
-      console.log("[chatbot-webhook] Session refresh attempted via /instance/restart");
-      await sleep(3000); // Wait for session to stabilize
-      return apiToken; // Return same token after refresh
-    }
-    // Try alternative restart endpoint
-    const resp2 = await fetch(`${apiUrl}/instance/reconnect`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", token: apiToken },
-    });
-    if (resp2.ok) {
-      console.log("[chatbot-webhook] Session refresh attempted via /instance/reconnect");
-      await sleep(3000);
-      return apiToken;
-    }
-  } catch (e) {
-    console.error("[chatbot-webhook] Session refresh failed:", e);
+// Env var fallback for token resolution (same strategy as auto-send-messages)
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) return value.trim();
   }
-  return null;
+  return "";
 }
 
-async function sendText(apiUrl: string, apiToken: string, to: string, text: string, retried = false): Promise<any> {
+function resolveApiTokenFromEnv(): string {
+  const fallback = getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+  if (fallback.length > 5 && !fallback.includes("curl") && !fallback.startsWith("http")) return fallback;
+  return "";
+}
+
+function resolveApiUrlFromEnv(): string {
+  return getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"]).replace(/\/$/, "");
+}
+
+async function validateApiToken(apiUrl: string, token: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`${apiUrl}/instance/me`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", token },
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function sendText(apiUrl: string, apiToken: string, to: string, text: string): Promise<any> {
   console.log(`Enviando texto para ${to}: "${text.slice(0, 80)}..."`);
   const resp = await fetch(`${apiUrl}/send/text`, {
     method: "POST",
@@ -68,18 +71,8 @@ async function sendText(apiUrl: string, apiToken: string, to: string, text: stri
   });
   const body = await resp.text();
   if (!resp.ok) {
-    // On 401, attempt automatic session renewal before giving up
-    if ((resp.status === 401 || isSessionErrorText(body)) && !retried) {
-      console.warn(`[chatbot-webhook] 401 on send/text, attempting session refresh...`);
-      const refreshedToken = await tryRefreshSession(apiUrl, apiToken);
-      if (refreshedToken) {
-        return sendText(apiUrl, refreshedToken, to, text, true);
-      }
-      console.error(`[chatbot-webhook] SESSION ERROR on send/text: ${resp.status} - ${body.slice(0, 300)}`);
-      throw new SessionExpiredError(`Sessão expirada (${resp.status}). Reconecte a instância nas Configurações.`);
-    }
     if (resp.status === 401 || isSessionErrorText(body)) {
-      console.error(`[chatbot-webhook] SESSION ERROR on send/text after retry: ${resp.status} - ${body.slice(0, 300)}`);
+      console.error(`[chatbot-webhook] SESSION ERROR on send/text: ${resp.status} - ${body.slice(0, 300)}`);
       throw new SessionExpiredError(`Sessão expirada (${resp.status}). Reconecte a instância nas Configurações.`);
     }
     throw new Error(`UAZAPI send/text failed: ${resp.status} - ${body}`);
@@ -1057,56 +1050,87 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials — UAZAPI sends the real token in webhook payload
+    // ── Credential resolution (unified with auto-send-messages strategy) ──
+    // Build candidate list, validate each, use first working one
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
 
-    // 0. BEST SOURCE: Extract token directly from UAZAPI webhook payload
-    const payloadToken = (body?.token || "").toString().trim();
-    const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+    if (companyIdParam) {
+      // Collect all possible URLs and tokens
+      const { data: apiSettings } = await supabase
+        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+      const dbToken = String(apiSettings?.api_token || "").trim();
+      const dbUrl = String(apiSettings?.api_url || "").trim().replace(/\/$/, "");
 
-    if (payloadToken && payloadBaseUrl) {
-      companyApiUrl = payloadBaseUrl;
-      companyApiToken = payloadToken;
-      console.log("[chatbot-webhook] Token resolved from webhook payload (most reliable)");
-
-      // Auto-sync: update DB with the fresh token from UAZAPI
-      if (companyIdParam) {
-        supabase.from("api_settings")
-          .update({ api_token: payloadToken, api_url: payloadBaseUrl, updated_at: new Date().toISOString() })
-          .eq("company_id", companyIdParam)
-          .then(() => console.log("[chatbot-webhook] api_settings token auto-synced"));
-      }
+      let instToken = "";
+      let instUrl = "";
       if (userIdParam) {
-        supabase.from("whatsapp_instances")
-          .update({ instance_token: payloadToken, server_url: payloadBaseUrl, status: "connected", is_connected: true, updated_at: new Date().toISOString() })
-          .eq("user_id", userIdParam)
-          .then(() => console.log("[chatbot-webhook] whatsapp_instances token auto-synced"));
+        const { data: inst } = await supabase
+          .from("whatsapp_instances").select("server_url, instance_token, is_connected")
+          .eq("user_id", userIdParam).maybeSingle();
+        instToken = String(inst?.instance_token || "").trim();
+        instUrl = String(inst?.server_url || "").trim().replace(/\/$/, "");
+      }
+
+      const envToken = resolveApiTokenFromEnv();
+      const envUrl = resolveApiUrlFromEnv();
+      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+
+      // Resolve URL (first available)
+      companyApiUrl = dbUrl || instUrl || envUrl || payloadBaseUrl || null;
+
+      // Build token candidates (same pattern as auto-send buildTokenCandidates)
+      const tokenCandidates: string[] = [];
+      const seen = new Set<string>();
+      for (const t of [dbToken, instToken, envToken]) {
+        const clean = t.trim();
+        if (clean.length > 5 && !clean.includes("curl") && !clean.startsWith("http") && !seen.has(clean)) {
+          seen.add(clean);
+          tokenCandidates.push(clean);
+        }
+      }
+
+      if (companyApiUrl && tokenCandidates.length > 0) {
+        // Validate tokens against API (try each until one works)
+        for (const candidate of tokenCandidates) {
+          const valid = await validateApiToken(companyApiUrl, candidate);
+          if (valid) {
+            companyApiToken = candidate;
+            console.log(`[chatbot-webhook] Token VALIDATED: ${candidate.substring(0, 8)}...`);
+
+            // Auto-sync validated token back to DB if it differs
+            if (candidate !== dbToken && companyIdParam) {
+              supabase.from("api_settings")
+                .update({ api_token: candidate, updated_at: new Date().toISOString() })
+                .eq("company_id", companyIdParam)
+                .then(() => console.log("[chatbot-webhook] DB token auto-synced with validated token"));
+            }
+            if (candidate !== instToken && userIdParam) {
+              supabase.from("whatsapp_instances")
+                .update({ instance_token: candidate, status: "connected", is_connected: true, updated_at: new Date().toISOString() })
+                .eq("user_id", userIdParam)
+                .then(() => console.log("[chatbot-webhook] Instance token auto-synced"));
+            }
+            break;
+          }
+          console.warn(`[chatbot-webhook] Token INVALID: ${candidate.substring(0, 8)}... (skipping)`);
+        }
+
+        // If no candidate validated, use first one anyway (error will be caught later)
+        if (!companyApiToken) {
+          companyApiToken = tokenCandidates[0];
+          console.warn(`[chatbot-webhook] No token validated, using first candidate: ${companyApiToken.substring(0, 8)}...`);
+        }
+      } else if (tokenCandidates.length > 0) {
+        companyApiToken = tokenCandidates[0];
+        console.log(`[chatbot-webhook] No URL to validate, using first token: ${companyApiToken.substring(0, 8)}...`);
       }
     }
 
-    if (companyIdParam && (!companyApiUrl || !companyApiToken)) {
-      // 1. Try api_settings (configured via UI)
-      const { data: apiSettings } = await supabase
-        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
-      if (apiSettings?.api_url && apiSettings?.api_token) {
-        companyApiUrl = (apiSettings.api_url as string).replace(/\/$/, "");
-        companyApiToken = apiSettings.api_token as string;
-        console.log("[chatbot-webhook] Token resolved from api_settings (secondary)");
-      }
-      // 2. Fallback to whatsapp_instances
-      if ((!companyApiUrl || !companyApiToken) && userIdParam) {
-        const { data: inst } = await supabase
-          .from("whatsapp_instances")
-          .select("server_url, instance_token, is_connected")
-          .eq("user_id", userIdParam)
-          .maybeSingle();
-        if (inst?.instance_token && inst?.server_url) {
-          if (!companyApiUrl) companyApiUrl = (inst.server_url as string).replace(/\/$/, "");
-          if (!companyApiToken) companyApiToken = inst.instance_token as string;
-          console.log(`[chatbot-webhook] Token resolved from whatsapp_instances (fallback, connected=${inst.is_connected})`);
-        }
-      }
+    // Use BaseUrl from payload ONLY for URL if still missing
+    if (!companyApiUrl) {
+      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+      if (payloadBaseUrl) companyApiUrl = payloadBaseUrl;
     }
 
     // Handle non-text messages
@@ -1208,15 +1232,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials — cascading: whatsapp_instances → api_settings
+    // Use already-resolved credentials (no duplicate fetch needed)
     let apiUrl = companyApiUrl || "";
     let apiToken = companyApiToken || "";
-    if (!apiUrl || !apiToken) {
-      const { data: apiSettings } = await supabase
-        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
-      if (!apiUrl && apiSettings?.api_url) apiUrl = apiSettings.api_url;
-      if (!apiToken && apiSettings?.api_token) apiToken = apiSettings.api_token;
-    }
     if (!apiUrl || !apiToken) {
       return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1919,11 +1937,10 @@ REGRAS IMPORTANTES:
       if (companyIdParam) {
         const supabase2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         
-        // Log session error with actionable message
         const contextType = isSessionErr ? "session_expired" : "error";
         const clientName = isSessionErr ? "⚠️ Sessão Expirada" : "Erro";
         const errorMsg = isSessionErr
-          ? `🔴 TOKEN INVÁLIDO: ${error.message}\n\n➡️ AÇÃO NECESSÁRIA: Acesse Configurações → Instância e reconecte o WhatsApp.\n\n--- Decisões ---\n${decisions.join("\n")}`
+          ? `🔴 TOKEN INVÁLIDO: ${error.message}\n\n➡️ Verifique o token nas Configurações de Envio.\n\n--- Decisões ---\n${decisions.join("\n")}`
           : `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`;
 
         await supabase2.from("chatbot_logs").insert({
@@ -1933,14 +1950,9 @@ REGRAS IMPORTANTES:
           error_message: errorMsg,
         });
 
-        // If session expired, mark instance as disconnected to prevent error loops
-        if (isSessionErr && userIdParam) {
-          await supabase2
-            .from("whatsapp_instances")
-            .update({ status: "disconnected", is_connected: false })
-            .eq("user_id", userIdParam);
-          console.log(`[chatbot-webhook] Marked instance as disconnected for user ${userIdParam} due to session error`);
-        }
+        // NOTE: Do NOT mark instance as disconnected on 401 — the instance may still be
+        // connected but using a stale/wrong token. Disconnecting here causes UI desync
+        // and prevents the user from fixing it easily.
       }
     } catch (_) {}
     return new Response(JSON.stringify({ status: "ok", error: isSessionErr ? "session_expired" : "internal" }), {
