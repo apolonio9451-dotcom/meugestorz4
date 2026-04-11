@@ -1796,7 +1796,7 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
     }));
 
     if (historyMessages.length > 0) {
-      decisions.push(`🧠 Memória: ${historyMessages.length} mensagens anteriores carregadas (últimas 24h)`);
+      decisions.push(`🧠 Memória: ${historyMessages.length} mensagens anteriores carregadas (últimas 48h)`);
     }
 
     // Save the incoming user message to conversation memory
@@ -1807,13 +1807,13 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
       content: messageText.slice(0, 2000),
     });
 
-    // Cleanup old messages (older than 24h) for this contact
+    // Cleanup old messages (older than 48h) for this contact
     await supabase
       .from("chatbot_conversation_messages")
       .delete()
       .eq("company_id", companyIdParam)
       .eq("phone", phone)
-      .lt("created_at", twentyFourHoursAgo);
+      .lt("created_at", fortyEightHoursAgo);
 
     // Build AI messages with conversation history
     const aiMessages: { role: string; content: string }[] = [
