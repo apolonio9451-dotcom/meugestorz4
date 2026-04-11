@@ -13,11 +13,11 @@ export default function Settings() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
-          <SettingsIcon className="h-6 w-6 text-primary" />
-          Instância
+          <Wifi className="h-6 w-6 text-primary" />
+          Gerenciamento WhatsApp
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Gerencie sua conexão WhatsApp e configurações de envio
+          Gerencie sua conexão WhatsApp
         </p>
       </div>
 
