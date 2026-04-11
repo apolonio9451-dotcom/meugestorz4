@@ -190,9 +190,21 @@ function isWithinBusinessHours(settings: any): boolean {
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const brasiliaTime = new Date(utcMs + brasiliaOffset * 60000);
   const dayOfWeek = brasiliaTime.getDay();
+  const currentMinutes = brasiliaTime.getHours() * 60 + brasiliaTime.getMinutes();
+
+  // Check per-day schedule first (new system)
+  const dailySchedule: any[] = settings.daily_schedule || [];
+  if (dailySchedule.length > 0) {
+    const todaySchedule = dailySchedule.find((d: any) => d.day === dayOfWeek);
+    if (!todaySchedule || !todaySchedule.active) return false;
+    const [startH, startM] = (todaySchedule.start || "08:00").split(":").map(Number);
+    const [endH, endM] = (todaySchedule.end || "18:00").split(":").map(Number);
+    return currentMinutes >= startH * 60 + startM && currentMinutes <= endH * 60 + endM;
+  }
+
+  // Fallback: legacy single-range schedule
   const days: number[] = settings.business_days || [1, 2, 3, 4, 5];
   if (!days.includes(dayOfWeek)) return false;
-  const currentMinutes = brasiliaTime.getHours() * 60 + brasiliaTime.getMinutes();
   const [startH, startM] = (settings.business_hours_start || "08:00").split(":").map(Number);
   const [endH, endM] = (settings.business_hours_end || "18:00").split(":").map(Number);
   return currentMinutes >= startH * 60 + startM && currentMinutes <= endH * 60 + endM;
