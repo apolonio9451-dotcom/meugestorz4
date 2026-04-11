@@ -52,13 +52,22 @@ function resolveApiUrlFromEnv(): string {
 
 async function validateApiToken(apiUrl: string, token: string): Promise<boolean> {
   try {
-    const resp = await fetch(`${apiUrl}/instance/me`, {
+    const resp = await fetch(`${apiUrl}/instance`, {
       method: "GET",
       headers: { "Content-Type": "application/json", token },
     });
-    return resp.ok;
+    const body = await resp.text();
+    // 401 = invalid token; 404 = endpoint not found but token may be valid; 2xx = ok
+    if (resp.status === 401) return false;
+    if (resp.status === 404) return true; // match auto-send behavior
+    if (resp.ok) return true;
+    // Check for session errors in body
+    if (isSessionErrorText(body)) return false;
+    // Non-401, non-404 errors: assume token is ok (network issue, etc)
+    return true;
   } catch {
-    return false;
+    // Network error — don't reject the token, assume it's valid
+    return true;
   }
 }
 
