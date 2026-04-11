@@ -201,8 +201,13 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
     message?.extendedTextMessage?.text ||
     message?.buttonsResponseMessage?.selectedDisplayText ||
     message?.listResponseMessage?.title ||
+    message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
     message?.templateButtonReplyMessage?.selectedDisplayText ||
     message?.editedMessage?.message?.protocolMessage?.editedMessage?.conversation ||
+    message?.imageMessage?.caption ||
+    message?.videoMessage?.caption ||
+    message?.documentMessage?.caption ||
+    message?.audioMessage?.caption ||
     msgData?.body || msgData?.text || "";
   let messageType = "text";
   if (message?.imageMessage) messageType = "image";
