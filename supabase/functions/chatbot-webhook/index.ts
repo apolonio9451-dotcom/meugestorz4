@@ -1203,15 +1203,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials — cascading: whatsapp_instances → api_settings
+    // Use already-resolved credentials (no duplicate fetch needed)
     let apiUrl = companyApiUrl || "";
     let apiToken = companyApiToken || "";
-    if (!apiUrl || !apiToken) {
-      const { data: apiSettings } = await supabase
-        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
-      if (!apiUrl && apiSettings?.api_url) apiUrl = apiSettings.api_url;
-      if (!apiToken && apiSettings?.api_token) apiToken = apiSettings.api_token;
-    }
     if (!apiUrl || !apiToken) {
       return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
