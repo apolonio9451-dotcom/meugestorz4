@@ -168,21 +168,45 @@ export default function Chatbot() {
   const fetchInstanceStatus = async () => {
     if (!user?.id) return;
     try {
-      const { data } = await supabase
-        .from("whatsapp_instances")
-        .select("is_connected, device_name, phone_number, profile_picture, status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setInstanceData({
-          isConnected: (data as any).is_connected,
-          deviceName: (data as any).device_name,
-          phone: (data as any).phone_number || "",
-          profilePicture: (data as any).profile_picture || "",
-        });
+      // Step 1: Get instance from whatsapp-manage (handles auth + real-time validation)
+      const { data: manageData, error: manageError } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "get-or-create" },
+      });
+
+      if (manageError || !manageData?.instance) {
+        setInstanceData(null);
+        return;
       }
+
+      const inst = manageData.instance;
+      const connected = inst.is_connected === true;
+
+      // Step 2: If connected, fetch profile picture/name/phone via the edge function
+      let profilePic = "";
+      let profilePhone = "";
+      let profileName = "";
+
+      if (connected) {
+        try {
+          const { data: profileData } = await supabase.functions.invoke("whatsapp-manage", {
+            body: { action: "profile-picture" },
+          });
+          if (profileData) {
+            profilePic = profileData.profile_picture || "";
+            profilePhone = profileData.phone || "";
+            profileName = profileData.profile_name || "";
+          }
+        } catch {
+          // Profile fetch is optional
+        }
+      }
+
+      setInstanceData({
+        isConnected: connected,
+        deviceName: inst.device_name || profileName || "",
+        phone: profilePhone,
+        profilePicture: profilePic,
+      });
     } catch {
       // Silently fail
     }
