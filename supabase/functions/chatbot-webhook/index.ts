@@ -1661,10 +1661,21 @@ REGRAS OBRIGATÓRIAS PARA CLIENTE IDENTIFICADO:
         contextInstructions += `\n\nREFERÊNCIA DE TOM INICIAL (não envie automaticamente, adapte ao contexto real da mensagem):\n${welcomeMsg}`;
         decisions.push("👋 Welcome message convertida em referência de tom, sem disparo automático");
       }
-      clientContext = `
-CONTEXTO: Este é um NOVO CONTATO que NÃO é cliente.
+
+      // If we have a WhatsApp name, use it even for new contacts
+      if (whatsappContactName) {
+        decisions.push(`📱 Usando nome da agenda WhatsApp para novo contato: "${whatsappContactName}"`);
+        clientContext = `
+CONTEXTO: Este é um NOVO CONTATO (não cadastrado como cliente), mas o nome dele na agenda do WhatsApp é "${whatsappContactName}".
+REGRA: Use o nome "${whatsappContactName.split(" ")[0]}" para cumprimentar. NUNCA pergunte o nome — você já sabe.
 Foque em vendas: apresente o serviço, benefícios e como contratar.
 Seja persuasivo mas educado.`;
+      } else {
+        clientContext = `
+CONTEXTO: Este é um NOVO CONTATO que NÃO é cliente e o nome não está disponível.
+Foque em vendas: apresente o serviço, benefícios e como contratar.
+Seja persuasivo mas educado.`;
+      }
 
       // Use custom new contact instructions if available
       if (newContactInstr) {
