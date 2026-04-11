@@ -543,7 +543,7 @@ Deno.serve(async (req: Request) => {
     if (action === "resync-webhook") {
       const { data: inst } = await adminClient
         .from("whatsapp_instances")
-        .select("server_url, instance_token, is_connected")
+        .select("server_url, instance_token, is_connected, webhook_url")
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -556,6 +556,7 @@ Deno.serve(async (req: Request) => {
 
       // Step 1: Validate actual connection status via API
       let realConnected = false;
+      let apiStatusRaw = "";
       try {
         const statusRes = await fetch(`${inst.server_url}/instance`, {
           method: "GET",
@@ -563,15 +564,22 @@ Deno.serve(async (req: Request) => {
         });
         if (statusRes.ok) {
           const statusInfo = await statusRes.json();
+          apiStatusRaw = JSON.stringify(statusInfo).substring(0, 500);
           realConnected = statusInfo?.instance?.status === "connected" ||
             statusInfo?.connected === true ||
             statusInfo?.instance?.state === "open";
-          console.log("[whatsapp-manage] resync: real connection status =", realConnected, JSON.stringify(statusInfo).substring(0, 300));
+          console.log("[whatsapp-manage] resync: real connection status =", realConnected, apiStatusRaw);
         } else if (statusRes.status === 401) {
           console.log("[whatsapp-manage] resync: token invalid (401)");
+          apiStatusRaw = `401 from ${inst.server_url}/instance`;
+        } else {
+          const errText = await statusRes.text();
+          apiStatusRaw = `${statusRes.status}: ${errText.substring(0, 200)}`;
+          console.log("[whatsapp-manage] resync: unexpected status:", apiStatusRaw);
         }
       } catch (e: any) {
         console.error("[whatsapp-manage] resync: status check failed:", e.message);
+        apiStatusRaw = `Error: ${e.message}`;
       }
 
       // Step 2: Update DB with real status
@@ -586,6 +594,8 @@ Deno.serve(async (req: Request) => {
 
       // Step 3: Re-register webhook
       let webhookRegistered = false;
+      let webhookResponse = "";
+      let currentWebhookOnApi = "";
       if (realConnected) {
         let whCompanyId = "";
         try {
@@ -602,6 +612,22 @@ Deno.serve(async (req: Request) => {
         const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
 
         try {
+          // Step 3a: Check current webhook config on the API
+          try {
+            const getWhRes = await fetch(`${inst.server_url}/webhook`, {
+              method: "GET",
+              headers: { "Content-Type": "application/json", token: inst.instance_token },
+            });
+            if (getWhRes.ok) {
+              const whConfig = await getWhRes.json();
+              currentWebhookOnApi = JSON.stringify(whConfig).substring(0, 500);
+              console.log("[whatsapp-manage] resync: current webhook config on API:", currentWebhookOnApi);
+            }
+          } catch (_checkErr) {
+            console.log("[whatsapp-manage] resync: could not check current webhook config");
+          }
+
+          // Step 3b: Register webhook
           const whRes = await fetch(`${inst.server_url}/webhook`, {
             method: "POST",
             headers: { "Content-Type": "application/json", token: inst.instance_token },
@@ -616,8 +642,29 @@ Deno.serve(async (req: Request) => {
               events: ["connection", "messages", "messages_update", "presence", "call", "contacts", "groups", "labels", "chats", "chat_labels", "blocks", "leads", "history", "sender"],
             }),
           });
+          webhookResponse = await whRes.text();
           webhookRegistered = whRes.ok;
-          console.log(`[whatsapp-manage] resync: webhook re-registered: ${whRes.status}`);
+          console.log(`[whatsapp-manage] resync: webhook re-registered: ${whRes.status} body=${webhookResponse.substring(0, 300)}`);
+
+          // Step 3c: Verify webhook was saved by checking again
+          try {
+            const verifyRes = await fetch(`${inst.server_url}/webhook`, {
+              method: "GET",
+              headers: { "Content-Type": "application/json", token: inst.instance_token },
+            });
+            if (verifyRes.ok) {
+              const verifyConfig = await verifyRes.json();
+              const savedUrl = verifyConfig?.url || verifyConfig?.webhook?.url || "";
+              const isEnabled = verifyConfig?.enabled !== false && verifyConfig?.webhook?.enabled !== false;
+              console.log(`[whatsapp-manage] resync: webhook verify - url="${savedUrl}" enabled=${isEnabled}`);
+              if (savedUrl && !savedUrl.includes("chatbot-webhook")) {
+                console.error("[whatsapp-manage] resync: WARNING - webhook URL on API does NOT point to our chatbot-webhook!");
+                webhookRegistered = false;
+              }
+            }
+          } catch (_verifyErr) {
+            console.log("[whatsapp-manage] resync: could not verify webhook after registration");
+          }
 
           // Update webhook URL in DB
           await adminClient
@@ -634,6 +681,12 @@ Deno.serve(async (req: Request) => {
           success: true,
           connected: realConnected,
           webhook_registered: webhookRegistered,
+          webhook_url: realConnected ? `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=...&user_id=${userId}` : null,
+          api_status: apiStatusRaw.substring(0, 200),
+          debug: {
+            current_webhook_on_api: currentWebhookOnApi.substring(0, 200),
+            registration_response: webhookResponse.substring(0, 200),
+          },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
