@@ -1779,16 +1779,16 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
 - Trate cada conversa como se fosse um atendimento humano real, rápido e resolutivo.`;
 
     // ===== CONVERSATION MEMORY =====
-    // Fetch recent messages from this contact (last 24h, max 5 messages)
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Fetch recent messages from this contact (last 48h, max 10 messages for better continuity)
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
     const { data: conversationHistory } = await supabase
       .from("chatbot_conversation_messages")
       .select("role, content")
       .eq("company_id", companyIdParam)
       .eq("phone", phone)
-      .gte("created_at", twentyFourHoursAgo)
+      .gte("created_at", fortyEightHoursAgo)
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(10);
 
     const historyMessages = [...(conversationHistory || [])].reverse().map((msg: any) => ({
       role: msg.role as string,
