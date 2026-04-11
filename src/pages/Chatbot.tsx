@@ -179,7 +179,14 @@ export default function Chatbot() {
   const fetchInstanceStatus = async () => {
     if (!user?.id) return;
     try {
-      // Use resync-webhook to validate real connection + re-register webhook
+      // First, quickly read DB status for immediate feedback
+      const { data: dbInstance } = await supabase
+        .from("whatsapp_instances")
+        .select("is_connected, device_name, server_url, status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Try resync-webhook to validate real connection + re-register webhook
       const { data: resyncData, error: resyncError } = await supabase.functions.invoke("whatsapp-manage", {
           body: { action: "resync-webhook", company_id: companyId },
       });
@@ -187,21 +194,21 @@ export default function Chatbot() {
       if (resyncError) {
         console.warn("[Chatbot] resync-webhook failed:", resyncError);
         setWebhookDiagnostics({ webhook_registered: false, api_status: resyncError?.message || "Erro na resync" });
-        // Fallback to get-or-create
-        const { data: manageData } = await supabase.functions.invoke("whatsapp-manage", {
-          body: { action: "get-or-create", company_id: companyId },
-        });
-        if (!manageData?.instance) { setInstanceData(null); return; }
-        setInstanceData({
-          isConnected: manageData.instance.is_connected === true,
-          deviceName: manageData.instance.device_name || "",
-          phone: "",
-          profilePicture: "",
-        });
+        // Use DB status as fallback instead of calling another function
+        if (dbInstance) {
+          setInstanceData({
+            isConnected: dbInstance.is_connected === true,
+            deviceName: (dbInstance.device_name as string) || "",
+            phone: "",
+            profilePicture: "",
+          });
+        } else {
+          setInstanceData(null);
+        }
         return;
       }
 
-      const connected = resyncData?.connected === true;
+      const connected = resyncData?.connected === true || (dbInstance?.is_connected === true && resyncData?.connected !== false);
       setWebhookDiagnostics({
         webhook_registered: resyncData?.webhook_registered === true,
         api_status: resyncData?.api_status,
@@ -233,7 +240,7 @@ export default function Chatbot() {
 
       setInstanceData({
         isConnected: connected,
-        deviceName: instData?.instance?.device_name || profileName || "",
+        deviceName: instData?.instance?.device_name || profileName || (dbInstance?.device_name as string) || "",
         phone: profilePhone,
         profilePicture: profilePic,
       });
