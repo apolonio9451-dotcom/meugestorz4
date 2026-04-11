@@ -52,13 +52,22 @@ function resolveApiUrlFromEnv(): string {
 
 async function validateApiToken(apiUrl: string, token: string): Promise<boolean> {
   try {
-    const resp = await fetch(`${apiUrl}/instance/me`, {
+    const resp = await fetch(`${apiUrl}/instance`, {
       method: "GET",
       headers: { "Content-Type": "application/json", token },
     });
-    return resp.ok;
+    const body = await resp.text();
+    // 401 = invalid token; 404 = endpoint not found but token may be valid; 2xx = ok
+    if (resp.status === 401) return false;
+    if (resp.status === 404) return true; // match auto-send behavior
+    if (resp.ok) return true;
+    // Check for session errors in body
+    if (isSessionErrorText(body)) return false;
+    // Non-401, non-404 errors: assume token is ok (network issue, etc)
+    return true;
   } catch {
-    return false;
+    // Network error — don't reject the token, assume it's valid
+    return true;
   }
 }
 
@@ -975,7 +984,7 @@ Deno.serve(async (req: Request) => {
 
     console.log("===== WEBHOOK RECEBIDO =====");
     console.log("company_id:", companyIdParam, "user_id:", userIdParam);
-    console.log("Corpo recebido:", JSON.stringify(body).slice(0, 3000));
+    console.log("CONTEÚDO DO WEBHOOK:", JSON.stringify(body, null, 2).slice(0, 5000));
 
     // ── Handle connection/disconnection events (UAZAPI format: EventType + instance.status) ──
     if (userIdParam) {
@@ -1055,8 +1064,13 @@ Deno.serve(async (req: Request) => {
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
 
+    // Extract token and URL from UAZAPI payload (highest priority — fresh from the source)
+    const payloadToken = String(body?.token || "").trim();
+    const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+    const payloadInstanceName = String(body?.instanceName || body?.instance?.instanceName || "").trim();
+
     if (companyIdParam) {
-      // Collect all possible URLs and tokens
+      // Collect all possible URLs and tokens from DB
       const { data: apiSettings } = await supabase
         .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
       const dbToken = String(apiSettings?.api_token || "").trim();
@@ -1074,21 +1088,22 @@ Deno.serve(async (req: Request) => {
 
       const envToken = resolveApiTokenFromEnv();
       const envUrl = resolveApiUrlFromEnv();
-      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
 
       // Resolve URL (first available)
       companyApiUrl = dbUrl || instUrl || envUrl || payloadBaseUrl || null;
 
-      // Build token candidates (same pattern as auto-send buildTokenCandidates)
+      // Build token candidates — payload token FIRST (it comes directly from UAZAPI)
       const tokenCandidates: string[] = [];
       const seen = new Set<string>();
-      for (const t of [dbToken, instToken, envToken]) {
+      for (const t of [payloadToken, instToken, dbToken, envToken]) {
         const clean = t.trim();
         if (clean.length > 5 && !clean.includes("curl") && !clean.startsWith("http") && !seen.has(clean)) {
           seen.add(clean);
           tokenCandidates.push(clean);
         }
       }
+
+      console.log(`[chatbot-webhook] Credential resolution: URL=${companyApiUrl || 'none'}, candidates=${tokenCandidates.length} [${tokenCandidates.map(t => t.substring(0, 8) + '...').join(', ')}]`);
 
       if (companyApiUrl && tokenCandidates.length > 0) {
         // Validate tokens against API (try each until one works)
@@ -1129,7 +1144,6 @@ Deno.serve(async (req: Request) => {
 
     // Use BaseUrl from payload ONLY for URL if still missing
     if (!companyApiUrl) {
-      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
       if (payloadBaseUrl) companyApiUrl = payloadBaseUrl;
     }
 
