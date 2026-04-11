@@ -657,6 +657,10 @@ export default function Chatbot() {
                   setShowApiModal(true);
                   return;
                 }
+                if (v && !isConnected) {
+                  toast({ title: "⚠️ Instância desconectada", description: "Conecte seu WhatsApp na aba Instância antes de ativar o bot.", variant: "destructive" });
+                  return;
+                }
                 setIsActive(v);
                 if (companyId) {
                   try {
