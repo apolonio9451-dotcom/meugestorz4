@@ -1144,7 +1144,6 @@ Deno.serve(async (req: Request) => {
 
     // Use BaseUrl from payload ONLY for URL if still missing
     if (!companyApiUrl) {
-      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
       if (payloadBaseUrl) companyApiUrl = payloadBaseUrl;
     }
 
