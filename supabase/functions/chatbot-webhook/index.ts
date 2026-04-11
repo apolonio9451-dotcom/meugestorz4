@@ -22,7 +22,7 @@ async function simulatePresence(
   try {
     await fetch(`${apiUrl}/operations/presence`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", token: apiToken },
+      headers: getApiHeaders(apiToken),
       body: JSON.stringify({ phone: to, presence: type }),
     });
     await sleep(durationMs);
@@ -50,11 +50,19 @@ function resolveApiUrlFromEnv(): string {
   return getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"]).replace(/\/$/, "");
 }
 
+function getApiHeaders(apiToken: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    token: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
 async function validateApiToken(apiUrl: string, token: string): Promise<boolean> {
   try {
     const resp = await fetch(`${apiUrl}/instance`, {
       method: "GET",
-      headers: { "Content-Type": "application/json", token },
+      headers: getApiHeaders(token),
     });
     const body = await resp.text();
     // 401 = invalid token; 404 = endpoint not found but token may be valid; 2xx = ok
@@ -75,7 +83,7 @@ async function sendText(apiUrl: string, apiToken: string, to: string, text: stri
   console.log(`Enviando texto para ${to}: "${text.slice(0, 80)}..."`);
   const resp = await fetch(`${apiUrl}/send/text`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({ number: to, text: text, linkPreview: true }),
   });
   const body = await resp.text();
@@ -110,7 +118,7 @@ async function sendMedia(
   const endpoint = type === "audio" ? "/send/audio" : "/send/video";
   const resp = await fetch(`${apiUrl}${endpoint}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({ number: to, url: mediaUrl, caption: caption || "" }),
   });
   if (!resp.ok) {
@@ -128,7 +136,7 @@ async function sendButtons(
   const choices = buttons.map((b) => `${b.title}|${b.id}`);
   const resp = await fetch(`${apiUrl}/send/menu`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({
       number: to,
       type: "button",
@@ -158,7 +166,7 @@ async function sendList(
   }
   const resp = await fetch(`${apiUrl}/send/menu`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", token: apiToken },
+    headers: getApiHeaders(apiToken),
     body: JSON.stringify({
       number: to,
       type: "list",
@@ -272,7 +280,9 @@ function extractGenericPayload(body: any): ExtractedPayload {
   const fromMe = body?.message?.fromMe === true || body?.fromMe === true;
   const textCandidates = [
     body?.message?.text,
+      body?.message?.caption,
     body?.message?.content?.text,
+      body?.message?.content?.caption,
     body?.message?.content?.selectedDisplayText,
     // UAZAPI ButtonsResponseMessage — selectedDisplayText nested inside Response
     body?.message?.content?.Response?.SelectedDisplayText,
@@ -297,6 +307,7 @@ function extractGenericPayload(body: any): ExtractedPayload {
     body?.text, body?.body,
     body?.data?.text, body?.data?.body,
     body?.data?.message?.text,
+      body?.data?.message?.caption,
     body?.data?.message?.conversation,
     body?.data?.message?.extendedTextMessage?.text,
   ];
@@ -1381,6 +1392,8 @@ Deno.serve(async (req: Request) => {
     const menuEnabled = chatSettings.interactive_menu_enabled;
     const menuItems: any[] = chatSettings.interactive_menu_items || [];
     const lowerText = messageText.toLowerCase().trim();
+    const explicitMenuRequest = /(^|\b)(op[cç](?:õ|o)es?|menu(?: principal)?)(\b|$)/i.test(lowerText);
+    const explicitCatalogRequest = /(^|\b)(planos?|cat[aá]logo|ver planos?|ver cat[aá]logo)(\b|$)/i.test(lowerText);
     
     const isMenuResponse = menuEnabled && menuItems.length > 0 && menuItems.some((item: any) => {
       const itemTitle = (item.title || "").toLowerCase().trim();
@@ -1448,38 +1461,7 @@ Deno.serve(async (req: Request) => {
       
       decisions.push(`🔘 Resposta de menu "${lowerText}" não mapeada → Passando para IA`);
     }
-
-    // Send interactive menu (only for non-menu-response messages)
-    if (!isMenuResponse && menuEnabled && menuItems.length > 0 && menuItems.some((i: any) => i.title)) {
-      decisions.push("📱 Enviando menu interativo como primeira resposta");
-      const mType = chatSettings.interactive_menu_type || "buttons";
-      const mTitle = chatSettings.interactive_menu_title || "";
-      const mBody = chatSettings.interactive_menu_body || "Selecione uma opção:";
-      const mFooter = chatSettings.interactive_menu_footer || "";
-      const mButtonText = chatSettings.interactive_menu_button_text || "Ver Opções";
-      const validItems = menuItems.filter((i: any) => i.title);
-      try {
-        await doPresence("composing", minDelay, maxDelay);
-        if (mType === "buttons") {
-          await sendButtons(apiUrl, apiToken, phone, mTitle, mBody, mFooter, validItems.slice(0, 3));
-        } else {
-          await sendList(apiUrl, apiToken, phone, mTitle, mBody, mFooter, mButtonText, validItems.slice(0, 10));
-        }
-        await supabase.from("chatbot_logs").insert({
-          company_id: companyIdParam, phone, client_name: "Menu Interativo",
-          message_received: messageText.slice(0, 500),
-          message_sent: `[MENU ${mType.toUpperCase()}] ${validItems.map((i: any) => i.title).join(" | ")}`.slice(0, 500),
-          context_type: "auto_reply", status: "success",
-          error_message: aiDecisionLog ? decisions.join("\n") : null,
-        });
-        return new Response(JSON.stringify({ status: "ok", reason: "interactive_menu" }), {
-          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch (menuErr: any) {
-        decisions.push("⚠️ Falha no menu interativo → Continuando para IA");
-        console.error("Falha ao enviar menu interativo:", menuErr);
-      }
-    }
+    decisions.push("🧭 Menu automático inicial desativado → fluxo segue para conversa natural com IA");
 
     // ===== CHECK CLIENT CONTEXT =====
     const { data: clientData } = await supabase
@@ -1539,38 +1521,8 @@ Ofereça ajuda e sugira planos disponíveis.`;
 
       const welcomeMsg = chatSettings.welcome_message?.trim();
       if (welcomeMsg) {
-        const { data: previousLogs } = await supabase
-          .from("chatbot_logs").select("id")
-          .eq("company_id", companyIdParam).eq("phone", phone)
-          .eq("context_type", "welcome").limit(1).maybeSingle();
-
-        if (!previousLogs) {
-          decisions.push("👋 Primeiro contato deste número → Enviando boas-vindas");
-          await doPresence("composing", minDelay, maxDelay);
-          await sendText(apiUrl, apiToken, phone, welcomeMsg);
-
-          // Send welcome media if configured
-          const welcomeMediaId = chatSettings.send_welcome_media_id;
-          if (welcomeMediaId) {
-            const { data: welcomeMedia } = await supabase
-              .from("chatbot_media").select("file_url, file_type, file_name")
-              .eq("id", welcomeMediaId).single();
-            if (welcomeMedia) {
-              decisions.push(`📎 Enviando mídia de boas-vindas: ${welcomeMedia.file_name}`);
-              const presType = welcomeMedia.file_type === "audio" ? "recording" : "composing";
-              await doPresence(presType as any, minDelay + 1, maxDelay + 2);
-              await sendMedia(apiUrl, apiToken, phone, welcomeMedia.file_url, welcomeMedia.file_type);
-            }
-          }
-
-          await supabase.from("chatbot_logs").insert({
-            company_id: companyIdParam, phone, client_name: "Novo Contato",
-            message_received: messageText.slice(0, 500), message_sent: welcomeMsg.slice(0, 500),
-            context_type: "welcome", status: "success",
-            error_message: aiDecisionLog ? decisions.join("\n") : null,
-          });
-          await sleep(1500);
-        }
+        contextInstructions += `\n\nREFERÊNCIA DE TOM INICIAL (não envie automaticamente, adapte ao contexto real da mensagem):\n${welcomeMsg}`;
+        decisions.push("👋 Welcome message convertida em referência de tom, sem disparo automático");
       }
       clientContext = `
 CONTEXTO: Este é um NOVO CONTATO que não é cliente.
@@ -1719,6 +1671,16 @@ ${matchedRule.instruction}`;
       }
     }
 
+    if (explicitCatalogRequest) {
+      contextInstructions += "\n\nPEDIDO EXPLÍCITO DO CLIENTE: ele quer ver planos ou catálogo. Responda naturalmente e inclua [ENVIAR_CATALOGO] apenas se houver opções configuradas.";
+      decisions.push("📋 Cliente pediu planos/catálogo explicitamente");
+    }
+
+    if (explicitMenuRequest && menuEnabled && menuItems.length > 0) {
+      contextInstructions += "\n\nPEDIDO EXPLÍCITO DO CLIENTE: ele pediu opções/menu. Responda naturalmente e inclua [ENVIAR_MENU] ao final da resposta.";
+      decisions.push("🧭 Cliente pediu opções/menu explicitamente");
+    }
+
     // Call AI
     if (!lovableApiKey) {
       throw new Error("LOVABLE_API_KEY not configured");
@@ -1726,11 +1688,16 @@ ${matchedRule.instruction}`;
 
     const aiModel = chatSettings.ai_model || "google/gemini-3-flash-preview";
     const aiTemperature = chatSettings.ai_temperature ?? 0.7;
+    const trainingRequestedInteractive =
+      contextInstructions.includes("[ENVIAR_MENU]") ||
+      contextInstructions.includes("[ENVIAR_CATALOGO]") ||
+      contextInstructions.includes("[ENVIAR_BOTOES") ||
+      contextInstructions.includes("[ENVIAR_LISTA");
 
     decisions.push(`🤖 Chamando IA (${aiModel}) com contexto: ${contextType}`);
 
     // Determine if training rules explicitly requested buttons/list
-    const hasTrainingButtonAction = commands.length > 0 || contextInstructions.includes("[ENVIAR_BOTOES") || contextInstructions.includes("[ENVIAR_LISTA");
+    const hasTrainingButtonAction = trainingRequestedInteractive;
 
     const systemPrompt = `${chatSettings.personality || "Você é um assistente virtual profissional."}
 ${contextInstructions}
@@ -1741,16 +1708,18 @@ ${hasTrainingButtonAction ? commandTagsDoc : ""}
 REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
 - Você é um HUMANO real, um consultor de suporte que digita no WhatsApp. NUNCA diga que é IA, bot ou assistente virtual.
 - Responda de forma DIRETA, informal e prestativa. Como um amigo técnico que resolve rápido.
+- A personalidade é MAX TV: suporte rápido, regional, humano, com foco em qualidade HD/4K e solução prática (inclusive sugerir tirar da tomada quando fizer sentido técnico).
 - Frases CURTAS. Máximo 2-3 linhas por mensagem. Nada de textão.
 - Use emojis com moderação (máximo 1-2 por mensagem).
 - Se não souber algo, diga "vou verificar aqui e já te retorno".
 - NÃO envie botões, listas ou menus interativos a menos que uma instrução de treinamento ESPECÍFICA peça isso explicitamente.
 - Quando o cliente pedir planos/catálogo, use [ENVIAR_CATALOGO] APENAS se não houver instrução de treinamento cobrindo isso.
 - Responda APENAS com texto natural. Sem formatação excessiva, sem bullets, sem listas numeradas.
+- Se for a primeira resposta da conversa, abra de forma amigável e humana, em linha com MAX TV, por exemplo: "Opa, tudo bem? Como posso te ajudar com sua TV hoje?".
 - Trate cada conversa como se fosse um atendimento humano real, rápido e resolutivo.`;
 
     // ===== CONVERSATION MEMORY =====
-    // Fetch recent messages from this contact (last 24h, max 20 messages)
+    // Fetch recent messages from this contact (last 24h, max 5 messages)
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: conversationHistory } = await supabase
       .from("chatbot_conversation_messages")
@@ -1758,10 +1727,10 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
       .eq("company_id", companyIdParam)
       .eq("phone", phone)
       .gte("created_at", twentyFourHoursAgo)
-      .order("created_at", { ascending: true })
-      .limit(20);
+      .order("created_at", { ascending: false })
+      .limit(5);
 
-    const historyMessages = (conversationHistory || []).map((msg: any) => ({
+    const historyMessages = [...(conversationHistory || [])].reverse().map((msg: any) => ({
       role: msg.role as string,
       content: msg.content as string,
     }));
@@ -1815,8 +1784,22 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
     console.log("Resposta da IA gerada:", replyText.slice(0, 200));
 
     // Parse AI command tags
-    const { cleanText, commands } = parseAiCommands(replyText);
-    replyText = cleanText;
+    const parsedAiReply = parseAiCommands(replyText);
+    replyText = parsedAiReply.cleanText;
+    let commands = parsedAiReply.commands;
+
+    const allowInteractiveCommands =
+      trainingRequestedInteractive ||
+      explicitMenuRequest ||
+      explicitCatalogRequest;
+
+    if (!allowInteractiveCommands) {
+      const filteredCommands = commands.filter((cmd) => !["send_menu", "send_catalog", "send_buttons", "send_list"].includes(cmd.type));
+      if (filteredCommands.length !== commands.length) {
+        decisions.push("🛑 Comandos interativos removidos para evitar botões fantasmas/menus automáticos");
+      }
+      commands = filteredCommands;
+    }
 
     // Execute AI commands
     for (const cmd of commands) {
