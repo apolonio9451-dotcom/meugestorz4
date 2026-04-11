@@ -168,21 +168,45 @@ export default function Chatbot() {
   const fetchInstanceStatus = async () => {
     if (!user?.id) return;
     try {
-      const { data } = await supabase
-        .from("whatsapp_instances")
-        .select("is_connected, device_name, phone_number, profile_picture, status")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setInstanceData({
-          isConnected: (data as any).is_connected,
-          deviceName: (data as any).device_name,
-          phone: (data as any).phone_number || "",
-          profilePicture: (data as any).profile_picture || "",
-        });
+      // Step 1: Get instance from whatsapp-manage (handles auth + real-time validation)
+      const { data: manageData, error: manageError } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "get-or-create" },
+      });
+
+      if (manageError || !manageData?.instance) {
+        setInstanceData(null);
+        return;
       }
+
+      const inst = manageData.instance;
+      const connected = inst.is_connected === true;
+
+      // Step 2: If connected, fetch profile picture/name/phone via the edge function
+      let profilePic = "";
+      let profilePhone = "";
+      let profileName = "";
+
+      if (connected) {
+        try {
+          const { data: profileData } = await supabase.functions.invoke("whatsapp-manage", {
+            body: { action: "profile-picture" },
+          });
+          if (profileData) {
+            profilePic = profileData.profile_picture || "";
+            profilePhone = profileData.phone || "";
+            profileName = profileData.profile_name || "";
+          }
+        } catch {
+          // Profile fetch is optional
+        }
+      }
+
+      setInstanceData({
+        isConnected: connected,
+        deviceName: inst.device_name || profileName || "",
+        phone: profilePhone,
+        profilePicture: profilePic,
+      });
     } catch {
       // Silently fail
     }
@@ -605,11 +629,15 @@ export default function Chatbot() {
                 }`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate max-w-[120px]">
-                  {instanceData?.phone || instanceData?.deviceName || "Instância"}
+                <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">
+                  {instanceData?.deviceName || "Instância"}
                 </p>
                 <p className={`text-[10px] font-medium ${isConnected ? "text-primary" : "text-destructive"}`}>
-                  {isConnected ? "Conectado" : "Desconectado"}
+                  {isConnected
+                    ? instanceData?.phone
+                      ? instanceData.phone.replace(/\D/g, "").replace(/^55(\d{2})(\d{4,5})(\d{4})$/, "+55 $1 $2-$3")
+                      : "Conectado"
+                    : "Desconectado"}
                 </p>
               </div>
               {isConnected ? <Wifi className="w-3.5 h-3.5 text-primary" /> : <WifiOff className="w-3.5 h-3.5 text-destructive" />}
@@ -627,6 +655,10 @@ export default function Chatbot() {
               <Switch checked={isActive} onCheckedChange={async (v) => {
                 if (v && !apiConfigured) {
                   setShowApiModal(true);
+                  return;
+                }
+                if (v && !isConnected) {
+                  toast({ title: "⚠️ Instância desconectada", description: "Conecte seu WhatsApp na aba Instância antes de ativar o bot.", variant: "destructive" });
                   return;
                 }
                 setIsActive(v);
