@@ -1695,6 +1695,20 @@ export default function Clients() {
                                   }
                                 }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={async () => {
+                                const sub = subscriptions[client.id];
+                                if (!sub) { toast.error("Cliente sem assinatura para marcar pendente"); return; }
+                                const newStatus = sub.payment_status === "pending" ? "paid" : "pending";
+                                const { error } = await supabase.from("client_subscriptions").update({ payment_status: newStatus }).eq("id", sub.id);
+                                if (error) { toast.error("Erro ao atualizar status de pagamento"); return; }
+                                toast.success(newStatus === "pending" ? `${client.name} marcado como pendente` : `${client.name} removido dos pendentes`);
+                                await logActivity(newStatus === "pending" ? "pagamento_pendente" : "pagamento_confirmado", client.name, client.id);
+                                fetchSubscriptions(); fetchActivityLogs();
+                              }}>
+                                <DollarSign className="w-3.5 h-3.5 mr-2 text-amber-500" />
+                                {subscriptions[client.id]?.payment_status === "pending" ? "Remover Pendente" : "Pagamento Pendente"}
+                              </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
                             </>
                           )}
