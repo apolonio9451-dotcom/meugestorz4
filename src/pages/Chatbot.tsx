@@ -161,6 +161,15 @@ export default function Chatbot() {
     fetchAll();
   }, [companyId]);
 
+  // Auto-refresh instance status every 30 seconds
+  useEffect(() => {
+    if (!companyId || !user?.id) return;
+    const interval = setInterval(() => {
+      fetchInstanceStatus();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [companyId, user?.id]);
+
   const fetchAll = async () => {
     setLoading(true);
     await Promise.all([fetchSettings(), fetchMedia(), fetchLogs(), fetchAutoReplies(), fetchBlockedContacts(), fetchApiStatus(), fetchInstanceStatus()]);
