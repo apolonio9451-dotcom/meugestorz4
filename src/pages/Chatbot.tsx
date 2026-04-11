@@ -151,6 +151,7 @@ export default function Chatbot() {
   // WhatsApp Instance status
   const [instanceData, setInstanceData] = useState<{ profilePicture?: string; phone?: string; isConnected?: boolean; deviceName?: string } | null>(null);
   const [resyncingWebhook, setResyncingWebhook] = useState(false);
+  const [webhookDiagnostics, setWebhookDiagnostics] = useState<{ webhook_registered?: boolean; api_status?: string; debug?: any } | null>(null);
 
   // Autosave timer for personality
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -175,6 +176,8 @@ export default function Chatbot() {
       });
 
       if (resyncError) {
+        console.warn("[Chatbot] resync-webhook failed:", resyncError);
+        setWebhookDiagnostics({ webhook_registered: false, api_status: resyncError?.message || "Erro na resync" });
         // Fallback to get-or-create
         const { data: manageData } = await supabase.functions.invoke("whatsapp-manage", {
           body: { action: "get-or-create" },
@@ -190,6 +193,11 @@ export default function Chatbot() {
       }
 
       const connected = resyncData?.connected === true;
+      setWebhookDiagnostics({
+        webhook_registered: resyncData?.webhook_registered === true,
+        api_status: resyncData?.api_status,
+        debug: resyncData?.debug,
+      });
 
       // Fetch profile data if connected
       let profilePic = "";
@@ -232,10 +240,15 @@ export default function Chatbot() {
         body: { action: "resync-webhook" },
       });
       if (error) throw error;
+      setWebhookDiagnostics({
+        webhook_registered: data?.webhook_registered === true,
+        api_status: data?.api_status,
+        debug: data?.debug,
+      });
       if (data?.connected && data?.webhook_registered) {
         toast({ title: "✅ Webhook re-sincronizado!", description: "A conexão está ativa e o webhook foi registrado com sucesso." });
       } else if (data?.connected && !data?.webhook_registered) {
-        toast({ title: "⚠️ Conectado, mas webhook falhou", description: "A instância está online, mas o registro do webhook falhou. Tente novamente.", variant: "destructive" });
+        toast({ title: "⚠️ Conectado, mas webhook falhou", description: `A instância está online, mas o registro do webhook falhou. ${data?.debug?.registration_response || "Tente novamente."}`, variant: "destructive" });
       } else {
         toast({ title: "❌ Instância desconectada", description: "Reconecte seu WhatsApp na aba Instância.", variant: "destructive" });
       }
@@ -684,6 +697,9 @@ export default function Chatbot() {
               >
                 <RefreshCw className={`w-3 h-3 text-muted-foreground ${resyncingWebhook ? "animate-spin" : ""}`} />
               </button>
+              {webhookDiagnostics && !webhookDiagnostics.webhook_registered && isConnected && (
+                <span className="ml-1 text-[9px] text-destructive font-bold animate-pulse">⚠ Webhook</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
