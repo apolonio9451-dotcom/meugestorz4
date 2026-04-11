@@ -348,6 +348,18 @@ export default function Chatbot() {
       setMenuFooter(d.interactive_menu_footer || "");
       setMenuButtonText(d.interactive_menu_button_text || "Ver Opções");
       setMenuItems(d.interactive_menu_items || []);
+      // Load per-day schedule
+      if (d.daily_schedule && Array.isArray(d.daily_schedule) && d.daily_schedule.length > 0) {
+        setDailySchedule(d.daily_schedule as any);
+      } else {
+        // Init from legacy fields
+        setDailySchedule(DAYS_OF_WEEK.map((day) => ({
+          day: day.value,
+          active: (d.business_days || [1, 2, 3, 4, 5]).includes(day.value),
+          start: d.business_hours_start || "08:00",
+          end: d.business_hours_end || "18:00",
+        })));
+      }
       setSettingsId(d.id);
     }
   };
@@ -428,6 +440,7 @@ export default function Chatbot() {
         interactive_menu_footer: menuFooter.trim(),
         interactive_menu_button_text: menuButtonText.trim(),
         interactive_menu_items: menuItems,
+        daily_schedule: dailySchedule,
       };
       let error;
       if (settingsId) {
