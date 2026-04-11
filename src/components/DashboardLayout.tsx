@@ -11,7 +11,7 @@ import { themePresets, applyThemePreset } from "@/lib/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useGhostMode } from "@/hooks/useGhostMode";
 import { cn } from "@/lib/utils";
-import BrandLogoInline from "@/components/BrandLogoInline";
+import defaultBrandLogo from "@/assets/brand-logo.svg";
 import { differenceInDays, parseISO } from "date-fns";
 import {
   Dialog,
@@ -377,7 +377,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-48 h-14 rounded-full bg-primary/20 blur-2xl" />
             </div>
-            <BrandLogoInline className="relative h-9 max-w-[160px] drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
+            <img
+              data-priority
+              src={defaultBrandLogo}
+              alt="Meu Gestor – Logo"
+              className="relative h-9 max-w-[160px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+            />
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
@@ -630,7 +635,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-60 h-12 rounded-full bg-primary/20 blur-3xl" />
               </div>
-              <BrandLogoInline className="relative h-10 sm:h-11 drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]" />
+              <img
+                data-priority
+                src={defaultBrandLogo}
+                alt="Meu Gestor – Logo"
+                className="relative h-10 sm:h-11 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)]"
+              />
             </div>
           </div>
 
