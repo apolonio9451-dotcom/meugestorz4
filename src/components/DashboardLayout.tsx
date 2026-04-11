@@ -633,8 +633,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Menu className="w-6 h-6 text-foreground" />
           </button>
 
-          <div className="flex items-center">
-            <div className="relative flex items-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative flex items-center pointer-events-auto">
               <div className="absolute -inset-4 flex items-center justify-center pointer-events-none">
                 <div className="w-48 h-10 rounded-full bg-primary/15 blur-2xl" />
               </div>
@@ -651,7 +651,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex-1" />
-          <div className="w-6 lg:hidden" />
         </header>
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           {subscriptionDaysLeft !== null && subscriptionDaysLeft <= 15 && (
