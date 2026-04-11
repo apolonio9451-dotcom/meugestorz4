@@ -1064,8 +1064,13 @@ Deno.serve(async (req: Request) => {
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
 
+    // Extract token and URL from UAZAPI payload (highest priority — fresh from the source)
+    const payloadToken = String(body?.token || "").trim();
+    const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+    const payloadInstanceName = String(body?.instanceName || body?.instance?.instanceName || "").trim();
+
     if (companyIdParam) {
-      // Collect all possible URLs and tokens
+      // Collect all possible URLs and tokens from DB
       const { data: apiSettings } = await supabase
         .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
       const dbToken = String(apiSettings?.api_token || "").trim();
@@ -1083,21 +1088,22 @@ Deno.serve(async (req: Request) => {
 
       const envToken = resolveApiTokenFromEnv();
       const envUrl = resolveApiUrlFromEnv();
-      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
 
       // Resolve URL (first available)
       companyApiUrl = dbUrl || instUrl || envUrl || payloadBaseUrl || null;
 
-      // Build token candidates (same pattern as auto-send buildTokenCandidates)
+      // Build token candidates — payload token FIRST (it comes directly from UAZAPI)
       const tokenCandidates: string[] = [];
       const seen = new Set<string>();
-      for (const t of [dbToken, instToken, envToken]) {
+      for (const t of [payloadToken, instToken, dbToken, envToken]) {
         const clean = t.trim();
         if (clean.length > 5 && !clean.includes("curl") && !clean.startsWith("http") && !seen.has(clean)) {
           seen.add(clean);
           tokenCandidates.push(clean);
         }
       }
+
+      console.log(`[chatbot-webhook] Credential resolution: URL=${companyApiUrl || 'none'}, candidates=${tokenCandidates.length} [${tokenCandidates.map(t => t.substring(0, 8) + '...').join(', ')}]`);
 
       if (companyApiUrl && tokenCandidates.length > 0) {
         // Validate tokens against API (try each until one works)
