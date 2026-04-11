@@ -931,14 +931,18 @@ Deno.serve(async (req: Request) => {
     console.log("company_id:", companyIdParam, "user_id:", userIdParam);
     console.log("Corpo recebido:", JSON.stringify(body).slice(0, 3000));
 
-    // ── Handle connection/disconnection events (same logic as whatsapp-webhook) ──
+    // ── Handle connection/disconnection events (UAZAPI format: EventType + instance.status) ──
     if (userIdParam) {
+      const eventTypeRaw = (body.EventType || body.event || body.eventType || "").toString().toLowerCase();
+      const instanceStatus = (body.instance?.status || body.status || "").toString().toLowerCase();
+      
       const isConnected =
-        body.event === "connection" ||
+        (eventTypeRaw === "connection" && instanceStatus === "connected") ||
         body.status === "CONNECTED" ||
         body.connected === true;
       const isDisconnected =
-        body.event === "disconnected" ||
+        (eventTypeRaw === "connection" && (instanceStatus === "disconnected" || instanceStatus === "connecting")) ||
+        eventTypeRaw === "disconnected" ||
         body.status === "DISCONNECTED" ||
         body.connected === false;
 
@@ -951,13 +955,13 @@ Deno.serve(async (req: Request) => {
             last_connection_at: new Date().toISOString(),
           })
           .eq("user_id", userIdParam);
-        console.log(`[chatbot-webhook] User ${userIdParam} → connected`);
+        console.log(`[chatbot-webhook] User ${userIdParam} → connected (EventType=${eventTypeRaw}, instance.status=${instanceStatus})`);
       } else if (isDisconnected) {
         await supabase
           .from("whatsapp_instances")
           .update({ status: "disconnected", is_connected: false })
           .eq("user_id", userIdParam);
-        console.log(`[chatbot-webhook] User ${userIdParam} → disconnected`);
+        console.log(`[chatbot-webhook] User ${userIdParam} → disconnected (EventType=${eventTypeRaw}, instance.status=${instanceStatus})`);
       }
     }
 
