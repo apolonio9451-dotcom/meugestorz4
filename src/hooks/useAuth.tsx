@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from("company_memberships")
         .select("company_id, role, is_trial, trial_expires_at")
         .eq("user_id", userId)
+        .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle(),
       supabase
