@@ -1051,54 +1051,83 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Credential resolution (unified with auto-send-messages strategy) ──
-    // Priority: api_settings DB → whatsapp_instances DB → env vars
-    // NEVER auto-sync from webhook payload (it corrupted valid tokens before)
+    // Build candidate list, validate each, use first working one
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
 
     if (companyIdParam) {
-      // 1. Primary: api_settings (user-configured via UI — same as auto-send)
+      // Collect all possible URLs and tokens
       const { data: apiSettings } = await supabase
         .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
       const dbToken = String(apiSettings?.api_token || "").trim();
       const dbUrl = String(apiSettings?.api_url || "").trim().replace(/\/$/, "");
-      if (dbUrl && dbToken.length > 5) {
-        companyApiUrl = dbUrl;
-        companyApiToken = dbToken;
-        console.log(`[chatbot-webhook] Token resolved from api_settings: ${dbToken.substring(0, 8)}...`);
-      }
 
-      // 2. Fallback: whatsapp_instances
-      if ((!companyApiUrl || !companyApiToken) && userIdParam) {
+      let instToken = "";
+      let instUrl = "";
+      if (userIdParam) {
         const { data: inst } = await supabase
-          .from("whatsapp_instances")
-          .select("server_url, instance_token, is_connected")
-          .eq("user_id", userIdParam)
-          .maybeSingle();
-        const instToken = String(inst?.instance_token || "").trim();
-        const instUrl = String(inst?.server_url || "").trim().replace(/\/$/, "");
-        if (instUrl && instToken.length > 5) {
-          if (!companyApiUrl) companyApiUrl = instUrl;
-          if (!companyApiToken) companyApiToken = instToken;
-          console.log(`[chatbot-webhook] Token resolved from whatsapp_instances: ${instToken.substring(0, 8)}... (connected=${inst?.is_connected})`);
+          .from("whatsapp_instances").select("server_url, instance_token, is_connected")
+          .eq("user_id", userIdParam).maybeSingle();
+        instToken = String(inst?.instance_token || "").trim();
+        instUrl = String(inst?.server_url || "").trim().replace(/\/$/, "");
+      }
+
+      const envToken = resolveApiTokenFromEnv();
+      const envUrl = resolveApiUrlFromEnv();
+      const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+
+      // Resolve URL (first available)
+      companyApiUrl = dbUrl || instUrl || envUrl || payloadBaseUrl || null;
+
+      // Build token candidates (same pattern as auto-send buildTokenCandidates)
+      const tokenCandidates: string[] = [];
+      const seen = new Set<string>();
+      for (const t of [dbToken, instToken, envToken]) {
+        const clean = t.trim();
+        if (clean.length > 5 && !clean.includes("curl") && !clean.startsWith("http") && !seen.has(clean)) {
+          seen.add(clean);
+          tokenCandidates.push(clean);
         }
       }
 
-      // 3. Last resort: environment variables (same fallback as auto-send)
-      if (!companyApiToken || companyApiToken.length <= 5) {
-        const envToken = resolveApiTokenFromEnv();
-        if (envToken) {
-          companyApiToken = envToken;
-          console.log(`[chatbot-webhook] Token resolved from env vars: ${envToken.substring(0, 8)}...`);
+      if (companyApiUrl && tokenCandidates.length > 0) {
+        // Validate tokens against API (try each until one works)
+        for (const candidate of tokenCandidates) {
+          const valid = await validateApiToken(companyApiUrl, candidate);
+          if (valid) {
+            companyApiToken = candidate;
+            console.log(`[chatbot-webhook] Token VALIDATED: ${candidate.substring(0, 8)}...`);
+
+            // Auto-sync validated token back to DB if it differs
+            if (candidate !== dbToken && companyIdParam) {
+              supabase.from("api_settings")
+                .update({ api_token: candidate, updated_at: new Date().toISOString() })
+                .eq("company_id", companyIdParam)
+                .then(() => console.log("[chatbot-webhook] DB token auto-synced with validated token"));
+            }
+            if (candidate !== instToken && userIdParam) {
+              supabase.from("whatsapp_instances")
+                .update({ instance_token: candidate, status: "connected", is_connected: true, updated_at: new Date().toISOString() })
+                .eq("user_id", userIdParam)
+                .then(() => console.log("[chatbot-webhook] Instance token auto-synced"));
+            }
+            break;
+          }
+          console.warn(`[chatbot-webhook] Token INVALID: ${candidate.substring(0, 8)}... (skipping)`);
         }
-      }
-      if (!companyApiUrl) {
-        const envUrl = resolveApiUrlFromEnv();
-        if (envUrl) companyApiUrl = envUrl;
+
+        // If no candidate validated, use first one anyway (error will be caught later)
+        if (!companyApiToken) {
+          companyApiToken = tokenCandidates[0];
+          console.warn(`[chatbot-webhook] No token validated, using first candidate: ${companyApiToken.substring(0, 8)}...`);
+        }
+      } else if (tokenCandidates.length > 0) {
+        companyApiToken = tokenCandidates[0];
+        console.log(`[chatbot-webhook] No URL to validate, using first token: ${companyApiToken.substring(0, 8)}...`);
       }
     }
 
-    // Use BaseUrl from payload ONLY for URL (not token) if still missing
+    // Use BaseUrl from payload ONLY for URL if still missing
     if (!companyApiUrl) {
       const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
       if (payloadBaseUrl) companyApiUrl = payloadBaseUrl;
