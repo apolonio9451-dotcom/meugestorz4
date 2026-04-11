@@ -150,6 +150,7 @@ export default function Chatbot() {
 
   // WhatsApp Instance status
   const [instanceData, setInstanceData] = useState<{ profilePicture?: string; phone?: string; isConnected?: boolean; deviceName?: string } | null>(null);
+  const [resyncingWebhook, setResyncingWebhook] = useState(false);
 
   // Autosave timer for personality
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -168,20 +169,29 @@ export default function Chatbot() {
   const fetchInstanceStatus = async () => {
     if (!user?.id) return;
     try {
-      // Step 1: Get instance from whatsapp-manage (handles auth + real-time validation)
-      const { data: manageData, error: manageError } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "get-or-create" },
+      // Use resync-webhook to validate real connection + re-register webhook
+      const { data: resyncData, error: resyncError } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "resync-webhook" },
       });
 
-      if (manageError || !manageData?.instance) {
-        setInstanceData(null);
+      if (resyncError) {
+        // Fallback to get-or-create
+        const { data: manageData } = await supabase.functions.invoke("whatsapp-manage", {
+          body: { action: "get-or-create" },
+        });
+        if (!manageData?.instance) { setInstanceData(null); return; }
+        setInstanceData({
+          isConnected: manageData.instance.is_connected === true,
+          deviceName: manageData.instance.device_name || "",
+          phone: "",
+          profilePicture: "",
+        });
         return;
       }
 
-      const inst = manageData.instance;
-      const connected = inst.is_connected === true;
+      const connected = resyncData?.connected === true;
 
-      // Step 2: If connected, fetch profile picture/name/phone via the edge function
+      // Fetch profile data if connected
       let profilePic = "";
       let profilePhone = "";
       let profileName = "";
@@ -196,19 +206,44 @@ export default function Chatbot() {
             profilePhone = profileData.phone || "";
             profileName = profileData.profile_name || "";
           }
-        } catch {
-          // Profile fetch is optional
-        }
+        } catch {}
       }
+
+      // Also get instance name
+      const { data: instData } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "get-or-create" },
+      });
 
       setInstanceData({
         isConnected: connected,
-        deviceName: inst.device_name || profileName || "",
+        deviceName: instData?.instance?.device_name || profileName || "",
         phone: profilePhone,
         profilePicture: profilePic,
       });
     } catch {
-      // Silently fail
+      setInstanceData(null);
+    }
+  };
+
+  const handleResyncWebhook = async () => {
+    setResyncingWebhook(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "resync-webhook" },
+      });
+      if (error) throw error;
+      if (data?.connected && data?.webhook_registered) {
+        toast({ title: "✅ Webhook re-sincronizado!", description: "A conexão está ativa e o webhook foi registrado com sucesso." });
+      } else if (data?.connected && !data?.webhook_registered) {
+        toast({ title: "⚠️ Conectado, mas webhook falhou", description: "A instância está online, mas o registro do webhook falhou. Tente novamente.", variant: "destructive" });
+      } else {
+        toast({ title: "❌ Instância desconectada", description: "Reconecte seu WhatsApp na aba Instância.", variant: "destructive" });
+      }
+      await fetchInstanceStatus();
+    } catch (err: any) {
+      toast({ title: "Erro ao re-sincronizar", description: err?.message, variant: "destructive" });
+    } finally {
+      setResyncingWebhook(false);
     }
   };
 
@@ -641,6 +676,14 @@ export default function Chatbot() {
                 </p>
               </div>
               {isConnected ? <Wifi className="w-3.5 h-3.5 text-primary" /> : <WifiOff className="w-3.5 h-3.5 text-destructive" />}
+              <button
+                onClick={handleResyncWebhook}
+                disabled={resyncingWebhook}
+                className="ml-1 p-1 rounded-md hover:bg-secondary/80 transition-colors"
+                title="Re-sincronizar webhook"
+              >
+                <RefreshCw className={`w-3 h-3 text-muted-foreground ${resyncingWebhook ? "animate-spin" : ""}`} />
+              </button>
             </div>
           </div>
           <div className="flex items-center gap-3">

@@ -537,6 +537,108 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // =========================================================
+    // ACTION: resync-webhook
+    // =========================================================
+    if (action === "resync-webhook") {
+      const { data: inst } = await adminClient
+        .from("whatsapp_instances")
+        .select("server_url, instance_token, is_connected")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!inst) {
+        return new Response(
+          JSON.stringify({ error: "Nenhuma instância encontrada" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Step 1: Validate actual connection status via API
+      let realConnected = false;
+      try {
+        const statusRes = await fetch(`${inst.server_url}/instance`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", token: inst.instance_token },
+        });
+        if (statusRes.ok) {
+          const statusInfo = await statusRes.json();
+          realConnected = statusInfo?.instance?.status === "connected" ||
+            statusInfo?.connected === true ||
+            statusInfo?.instance?.state === "open";
+          console.log("[whatsapp-manage] resync: real connection status =", realConnected, JSON.stringify(statusInfo).substring(0, 300));
+        } else if (statusRes.status === 401) {
+          console.log("[whatsapp-manage] resync: token invalid (401)");
+        }
+      } catch (e: any) {
+        console.error("[whatsapp-manage] resync: status check failed:", e.message);
+      }
+
+      // Step 2: Update DB with real status
+      await adminClient
+        .from("whatsapp_instances")
+        .update({
+          is_connected: realConnected,
+          status: realConnected ? "connected" : "disconnected",
+          ...(realConnected ? { last_connection_at: new Date().toISOString() } : {}),
+        })
+        .eq("user_id", userId);
+
+      // Step 3: Re-register webhook
+      let webhookRegistered = false;
+      if (realConnected) {
+        let whCompanyId = "";
+        try {
+          const { data: mRow } = await adminClient
+            .from("company_memberships")
+            .select("company_id")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          whCompanyId = mRow?.company_id || "";
+        } catch (_e) {}
+
+        const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
+
+        try {
+          const whRes = await fetch(`${inst.server_url}/webhook`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", token: inst.instance_token },
+            body: JSON.stringify({
+              url: webhookUrl,
+              enabled: true,
+              active: true,
+              byApi: true,
+              addUrlEvents: true,
+              addUrlTypesMessages: true,
+              excludeMessages: ["wasSentByApi", "isGroupYes"],
+              events: ["connection", "messages", "messages_update", "presence", "call", "contacts", "groups", "labels", "chats", "chat_labels", "blocks", "leads", "history", "sender"],
+            }),
+          });
+          webhookRegistered = whRes.ok;
+          console.log(`[whatsapp-manage] resync: webhook re-registered: ${whRes.status}`);
+
+          // Update webhook URL in DB
+          await adminClient
+            .from("whatsapp_instances")
+            .update({ webhook_url: webhookUrl })
+            .eq("user_id", userId);
+        } catch (whErr: any) {
+          console.error("[whatsapp-manage] resync: webhook registration failed:", whErr.message);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          connected: realConnected,
+          webhook_registered: webhookRegistered,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: `Ação desconhecida: ${action}` }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
