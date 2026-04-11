@@ -694,83 +694,40 @@ export default function Chatbot() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <audio ref={audioRef} onEnded={() => setPlayingMedia(null)} className="hidden" />
 
-      {/* ═══════ HEADER with Instance Status ═══════ */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-3">
-                <Brain className="w-7 h-7 text-primary" />
-                Central de Treinamento IA
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Treine sua IA para vendas e suporte em uma interface simples e objetiva
-              </p>
-            </div>
-            {/* Mini Instance Status Card */}
-            <div className={`hidden md:flex items-center gap-3 px-4 py-2.5 rounded-xl border backdrop-blur-sm transition-all ${
-              isConnected
-                ? "bg-primary/5 border-primary/20"
-                : "bg-destructive/5 border-destructive/20"
+      {/* ═══════ COMPACT HEADER ═══════ */}
+      <div className="space-y-2">
+        {/* Row 1: Title + Toggle + Schedule */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Brain className="w-5 h-5 md:w-6 md:h-6 text-primary shrink-0" />
+            <h1 className="text-base md:text-xl font-display font-bold text-foreground truncate">
+              Agente IA
+            </h1>
+            {/* Inline connection badge */}
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+              isConnected ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
             }`}>
-              <div className="relative">
-                {instanceData?.profilePicture ? (
-                  <img
-                    src={instanceData.profilePicture}
-                    alt="WhatsApp"
-                    className={`w-9 h-9 rounded-full object-cover ring-2 ${isConnected ? "ring-primary/50" : "ring-destructive/50"}`}
-                  />
-                ) : (
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isConnected ? "bg-primary/10" : "bg-destructive/10"}`}>
-                    <Phone className={`w-4 h-4 ${isConnected ? "text-primary" : "text-destructive"}`} />
-                  </div>
-                )}
-                <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
-                  isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
-                }`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">
-                  {instanceData?.deviceName || "Instância"}
-                </p>
-                <p className={`text-[10px] font-medium ${isConnected ? "text-primary" : "text-destructive"}`}>
-                  {isConnected
-                    ? instanceData?.phone
-                      ? instanceData.phone.replace(/\D/g, "").replace(/^55(\d{2})(\d{4,5})(\d{4})$/, "+55 $1 $2-$3")
-                      : "Conectado"
-                    : "Desconectado"}
-                </p>
-              </div>
-              {isConnected ? <Wifi className="w-3.5 h-3.5 text-primary" /> : <WifiOff className="w-3.5 h-3.5 text-destructive" />}
-              <button
-                onClick={handleResyncWebhook}
-                disabled={resyncingWebhook}
-                className="ml-1 p-1 rounded-md hover:bg-secondary/80 transition-colors"
-                title="Re-sincronizar webhook"
-              >
-                <RefreshCw className={`w-3 h-3 text-muted-foreground ${resyncingWebhook ? "animate-spin" : ""}`} />
-              </button>
-              {webhookDiagnostics && !webhookDiagnostics.webhook_registered && isConnected && (
-                <span className="ml-1 text-[9px] text-destructive font-bold animate-pulse">⚠ Webhook</span>
-              )}
+              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-primary animate-pulse" : "bg-destructive"}`} />
+              {isConnected ? "Online" : "Offline"}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Bot Active/Inactive Toggle - Enhanced contrast */}
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full border-2 transition-all font-medium ${
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Compact Bot Toggle */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all text-xs font-semibold ${
               isActive
-                ? "bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_-3px_hsl(var(--primary)/0.3)]"
-                : "bg-destructive/10 border-destructive/30 text-destructive"
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-destructive/5 border-destructive/20 text-destructive"
             }`}>
-              <div className={`w-3 h-3 rounded-full ${isActive ? "bg-primary animate-pulse shadow-[0_0_8px_hsl(var(--primary)/0.6)]" : "bg-destructive"}`} />
-              <span className="text-sm font-bold">{isActive ? "Bot Ativo" : "Bot Desativado"}</span>
+              <div className={`w-2 h-2 rounded-full ${isActive ? "bg-primary animate-pulse" : "bg-destructive"}`} />
+              <span className="hidden sm:inline">{isActive ? "Ativo" : "Off"}</span>
               <Switch checked={isActive} onCheckedChange={async (v) => {
                 if (v && !apiConfigured) {
                   setShowApiModal(true);
                   return;
                 }
                 if (v && !isConnected) {
-                  toast({ title: "⚠️ Aviso: Instância pode estar desconectada", description: "O bot será ativado, mas só responderá quando a instância estiver conectada. Clique em 🔄 para re-sincronizar." });
+                  toast({ title: "⚠️ Instância pode estar desconectada", description: "O bot será ativado, mas só responderá quando conectado." });
                 }
                 setIsActive(v);
                 if (companyId) {
@@ -782,29 +739,66 @@ export default function Chatbot() {
                       const { data } = await supabase.from("chatbot_settings").insert({ company_id: companyId, is_active: v }).select().single();
                       if (data) setSettingsId((data as any).id);
                     }
-                    toast({ title: v ? "✅ Bot ativado!" : "🤖 Bot desativado.", description: v ? "O chatbot está respondendo mensagens." : "Nenhuma resposta automática será enviada." });
-                    // If activating, also trigger webhook resync
-                    if (v) {
-                      handleResyncWebhook();
-                    }
+                    toast({ title: v ? "✅ Bot ativado!" : "🤖 Bot desativado." });
+                    if (v) handleResyncWebhook();
                   } catch (err: any) {
                     setIsActive(!v);
-                    toast({ title: "Erro ao alterar status", description: err?.message, variant: "destructive" });
+                    toast({ title: "Erro", description: err?.message, variant: "destructive" });
                   }
                 }
-              }} />
+              }} className="scale-75" />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs gap-1"
+            <button
               onClick={() => setShowSchedulePanel(!showSchedulePanel)}
+              className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors"
+              title="Horário de atividade"
             >
-              <Clock className="w-3.5 h-3.5" />
-              Horário
-              {showSchedulePanel ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </Button>
+              <Clock className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={handleResyncWebhook}
+              disabled={resyncingWebhook}
+              className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors"
+              title="Re-sincronizar webhook"
+            >
+              <RefreshCw className={`w-4 h-4 text-muted-foreground ${resyncingWebhook ? "animate-spin" : ""}`} />
+            </button>
           </div>
+        </div>
+
+        {/* Row 2: Instance detail (desktop only) */}
+        <div className="hidden md:flex items-center gap-3 px-3 py-2 rounded-lg bg-secondary/20 border border-border/30">
+          <div className="relative shrink-0">
+            {instanceData?.profilePicture ? (
+              <img
+                src={instanceData.profilePicture}
+                alt="WhatsApp"
+                className={`w-8 h-8 rounded-full object-cover ring-2 ${isConnected ? "ring-primary/40" : "ring-destructive/40"}`}
+              />
+            ) : (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isConnected ? "bg-primary/10" : "bg-destructive/10"}`}>
+                <Phone className={`w-3.5 h-3.5 ${isConnected ? "text-primary" : "text-destructive"}`} />
+              </div>
+            )}
+            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${
+              isConnected ? "bg-green-500" : "bg-red-500"
+            }`} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-foreground truncate">
+              {instanceData?.deviceName || "Instância"}
+            </p>
+            <p className={`text-[10px] ${isConnected ? "text-primary" : "text-destructive"}`}>
+              {isConnected
+                ? instanceData?.phone
+                  ? instanceData.phone.replace(/\D/g, "").replace(/^55(\d{2})(\d{4,5})(\d{4})$/, "+55 $1 $2-$3")
+                  : "Conectado"
+                : "Desconectado"}
+            </p>
+          </div>
+          {webhookDiagnostics && !webhookDiagnostics.webhook_registered && isConnected && (
+            <span className="text-[9px] text-destructive font-bold animate-pulse ml-auto">⚠ Webhook</span>
+          )}
         </div>
 
         {/* Schedule Panel */}
