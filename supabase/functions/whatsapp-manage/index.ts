@@ -21,6 +21,20 @@ function normalizeToken(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function hasConnectedState(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return ["connected", "open", "opened", "online", "ready", "authenticated"].includes(normalized);
+}
+
+function hasDisconnectedState(value: unknown): boolean {
+  if (value === false) return true;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return ["disconnected", "close", "closed", "offline", "qr", "qrcode", "connecting"].includes(normalized);
+}
+
 async function resolveAuthorizedCompanyId(adminClient: ReturnType<typeof createClient>, userId: string, requestedCompanyId?: string) {
   const normalizedRequested = typeof requestedCompanyId === "string" ? requestedCompanyId.trim() : "";
 
@@ -65,12 +79,42 @@ async function getLiveConnectionStatus(serverUrl: string, instanceToken: string)
         json = null;
       }
 
+      const connectedCandidates = [
+        json?.connected,
+        json?.status,
+        json?.state,
+        json?.connectionStatus,
+        json?.instance?.connected,
+        json?.instance?.status,
+        json?.instance?.state,
+        json?.instance?.connectionStatus,
+        json?.data?.connected,
+        json?.data?.status,
+        json?.data?.state,
+        json?.data?.connectionStatus,
+      ];
+
+      const disconnectedCandidates = [
+        json?.connected,
+        json?.status,
+        json?.state,
+        json?.connectionStatus,
+        json?.instance?.connected,
+        json?.instance?.status,
+        json?.instance?.state,
+        json?.instance?.connectionStatus,
+        json?.data?.connected,
+        json?.data?.status,
+        json?.data?.state,
+        json?.data?.connectionStatus,
+      ];
+
       const connected = response.ok && (
-        json?.connected === true ||
-        json?.status === "connected" ||
-        json?.instance?.status === "connected" ||
-        json?.instance?.state === "open"
-      );
+        connectedCandidates.some(hasConnectedState) ||
+        (text.toLowerCase().includes('"connected":true') ||
+          text.toLowerCase().includes('"status":"connected"') ||
+          text.toLowerCase().includes('"state":"open"'))
+      ) && !disconnectedCandidates.some(hasDisconnectedState);
 
       return {
         connected,
