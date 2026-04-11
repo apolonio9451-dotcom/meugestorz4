@@ -66,7 +66,7 @@ export default function WhatsAppView() {
   const [apiValidationError, setApiValidationError] = useState<string | null>(null);
 
   // Token fields
-  const { effectiveCompanyId: companyId } = useAuth();
+  const { effectiveCompanyId: companyId, user } = useAuth();
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
   const [savingToken, setSavingToken] = useState(false);
