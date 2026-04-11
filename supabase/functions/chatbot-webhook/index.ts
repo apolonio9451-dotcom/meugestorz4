@@ -31,7 +31,35 @@ async function simulatePresence(
   }
 }
 
-async function sendText(apiUrl: string, apiToken: string, to: string, text: string) {
+async function tryRefreshSession(apiUrl: string, apiToken: string): Promise<string | null> {
+  try {
+    // Attempt to reconnect the instance session
+    const resp = await fetch(`${apiUrl}/instance/restart`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token: apiToken },
+    });
+    if (resp.ok) {
+      console.log("[chatbot-webhook] Session refresh attempted via /instance/restart");
+      await sleep(3000); // Wait for session to stabilize
+      return apiToken; // Return same token after refresh
+    }
+    // Try alternative restart endpoint
+    const resp2 = await fetch(`${apiUrl}/instance/reconnect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token: apiToken },
+    });
+    if (resp2.ok) {
+      console.log("[chatbot-webhook] Session refresh attempted via /instance/reconnect");
+      await sleep(3000);
+      return apiToken;
+    }
+  } catch (e) {
+    console.error("[chatbot-webhook] Session refresh failed:", e);
+  }
+  return null;
+}
+
+async function sendText(apiUrl: string, apiToken: string, to: string, text: string, retried = false): Promise<any> {
   console.log(`Enviando texto para ${to}: "${text.slice(0, 80)}..."`);
   const resp = await fetch(`${apiUrl}/send/text`, {
     method: "POST",
@@ -40,9 +68,18 @@ async function sendText(apiUrl: string, apiToken: string, to: string, text: stri
   });
   const body = await resp.text();
   if (!resp.ok) {
-    // Detect session/auth errors to provide actionable feedback
-    if (resp.status === 401 || isSessionErrorText(body)) {
+    // On 401, attempt automatic session renewal before giving up
+    if ((resp.status === 401 || isSessionErrorText(body)) && !retried) {
+      console.warn(`[chatbot-webhook] 401 on send/text, attempting session refresh...`);
+      const refreshedToken = await tryRefreshSession(apiUrl, apiToken);
+      if (refreshedToken) {
+        return sendText(apiUrl, refreshedToken, to, text, true);
+      }
       console.error(`[chatbot-webhook] SESSION ERROR on send/text: ${resp.status} - ${body.slice(0, 300)}`);
+      throw new SessionExpiredError(`Sessão expirada (${resp.status}). Reconecte a instância nas Configurações.`);
+    }
+    if (resp.status === 401 || isSessionErrorText(body)) {
+      console.error(`[chatbot-webhook] SESSION ERROR on send/text after retry: ${resp.status} - ${body.slice(0, 300)}`);
       throw new SessionExpiredError(`Sessão expirada (${resp.status}). Reconecte a instância nas Configurações.`);
     }
     throw new Error(`UAZAPI send/text failed: ${resp.status} - ${body}`);

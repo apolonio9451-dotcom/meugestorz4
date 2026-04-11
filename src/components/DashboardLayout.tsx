@@ -382,6 +382,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               src={defaultBrandLogo}
               alt="Meu Gestor – Logo"
               className="relative h-9 max-w-[160px] object-contain drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
             />
           </div>
           <button className="lg:hidden ml-2 text-sidebar-foreground hover:text-foreground transition-colors duration-200" onClick={() => setSidebarOpen(false)}>
