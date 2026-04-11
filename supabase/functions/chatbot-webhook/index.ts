@@ -1045,19 +1045,44 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials — prioritize api_settings (user-configured, most reliable)
+    // Fetch API credentials — UAZAPI sends the real token in webhook payload
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
-    if (companyIdParam) {
-      // 1. Try api_settings first (configured via UI, most reliable token)
+
+    // 0. BEST SOURCE: Extract token directly from UAZAPI webhook payload
+    const payloadToken = (body?.token || "").toString().trim();
+    const payloadBaseUrl = (body?.BaseUrl || "").toString().trim().replace(/\/$/, "");
+
+    if (payloadToken && payloadBaseUrl) {
+      companyApiUrl = payloadBaseUrl;
+      companyApiToken = payloadToken;
+      console.log("[chatbot-webhook] Token resolved from webhook payload (most reliable)");
+
+      // Auto-sync: update DB with the fresh token from UAZAPI
+      if (companyIdParam) {
+        supabase.from("api_settings")
+          .update({ api_token: payloadToken, api_url: payloadBaseUrl, updated_at: new Date().toISOString() })
+          .eq("company_id", companyIdParam)
+          .then(() => console.log("[chatbot-webhook] api_settings token auto-synced"));
+      }
+      if (userIdParam) {
+        supabase.from("whatsapp_instances")
+          .update({ instance_token: payloadToken, server_url: payloadBaseUrl, status: "connected", is_connected: true, updated_at: new Date().toISOString() })
+          .eq("user_id", userIdParam)
+          .then(() => console.log("[chatbot-webhook] whatsapp_instances token auto-synced"));
+      }
+    }
+
+    if (companyIdParam && (!companyApiUrl || !companyApiToken)) {
+      // 1. Try api_settings (configured via UI)
       const { data: apiSettings } = await supabase
         .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
       if (apiSettings?.api_url && apiSettings?.api_token) {
         companyApiUrl = (apiSettings.api_url as string).replace(/\/$/, "");
         companyApiToken = apiSettings.api_token as string;
-        console.log("[chatbot-webhook] Token resolved from api_settings (primary)");
+        console.log("[chatbot-webhook] Token resolved from api_settings (secondary)");
       }
-      // 2. Fallback to whatsapp_instances if api_settings not configured
+      // 2. Fallback to whatsapp_instances
       if ((!companyApiUrl || !companyApiToken) && userIdParam) {
         const { data: inst } = await supabase
           .from("whatsapp_instances")
