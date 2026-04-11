@@ -31,32 +31,35 @@ async function simulatePresence(
   }
 }
 
-async function tryRefreshSession(apiUrl: string, apiToken: string): Promise<string | null> {
-  try {
-    // Attempt to reconnect the instance session
-    const resp = await fetch(`${apiUrl}/instance/restart`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", token: apiToken },
-    });
-    if (resp.ok) {
-      console.log("[chatbot-webhook] Session refresh attempted via /instance/restart");
-      await sleep(3000); // Wait for session to stabilize
-      return apiToken; // Return same token after refresh
-    }
-    // Try alternative restart endpoint
-    const resp2 = await fetch(`${apiUrl}/instance/reconnect`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", token: apiToken },
-    });
-    if (resp2.ok) {
-      console.log("[chatbot-webhook] Session refresh attempted via /instance/reconnect");
-      await sleep(3000);
-      return apiToken;
-    }
-  } catch (e) {
-    console.error("[chatbot-webhook] Session refresh failed:", e);
+// Env var fallback for token resolution (same strategy as auto-send-messages)
+function getFirstEnvValue(names: string[]): string {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    if (value && value.trim().length > 0) return value.trim();
   }
-  return null;
+  return "";
+}
+
+function resolveApiTokenFromEnv(): string {
+  const fallback = getFirstEnvValue(["WA_ADMIN_TOKEN", "BOLINHA_API_TOKEN", "UAZAPI_ADMIN_TOKEN", "EVOLUTI_TOKEN"]);
+  if (fallback.length > 5 && !fallback.includes("curl") && !fallback.startsWith("http")) return fallback;
+  return "";
+}
+
+function resolveApiUrlFromEnv(): string {
+  return getFirstEnvValue(["WA_API_URL", "EVOLUTI_API_URL"]).replace(/\/$/, "");
+}
+
+async function validateApiToken(apiUrl: string, token: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`${apiUrl}/instance/me`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", token },
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function sendText(apiUrl: string, apiToken: string, to: string, text: string, retried = false): Promise<any> {
