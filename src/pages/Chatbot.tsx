@@ -75,6 +75,9 @@ export default function Chatbot() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("simulador");
   const [trainingRulesRefresh, setTrainingRulesRefresh] = useState(0);
+  const [dailySchedule, setDailySchedule] = useState<{ day: number; active: boolean; start: string; end: string }[]>(
+    DAYS_OF_WEEK.map((d) => ({ day: d.value, active: [1, 2, 3, 4, 5].includes(d.value), start: "08:00", end: "18:00" }))
+  );
 
   // Settings
   const [settingsId, setSettingsId] = useState<string | null>(null);
