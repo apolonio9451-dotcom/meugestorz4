@@ -161,14 +161,67 @@ export default function Chatbot() {
     fetchAll();
   }, [companyId]);
 
-  // Auto-refresh instance status every 30 seconds
+  // Realtime subscription for instant status updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`whatsapp-status-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_instances',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          const row = payload.new;
+          if (row) {
+            const connected = row.is_connected === true || row.status === 'connected';
+            setInstanceData(prev => ({
+              ...prev,
+              isConnected: connected,
+              deviceName: row.device_name || prev?.deviceName || '',
+            }));
+            // Fetch profile if newly connected
+            if (connected && !instanceData?.profilePicture) {
+              fetchProfileOnly();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
+  // Auto-refresh instance status every 60 seconds (lighter — no API overrides)
   useEffect(() => {
     if (!companyId || !user?.id) return;
     const interval = setInterval(() => {
       fetchInstanceStatus();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [companyId, user?.id]);
+
+  const fetchProfileOnly = async () => {
+    if (!companyId) return;
+    try {
+      const { data: profileData } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "profile-picture", company_id: companyId },
+      });
+      if (profileData) {
+        setInstanceData(prev => ({
+          ...prev,
+          isConnected: prev?.isConnected ?? true,
+          profilePicture: profileData.profile_picture || prev?.profilePicture || '',
+          phone: profileData.phone || prev?.phone || '',
+          deviceName: profileData.profile_name || prev?.deviceName || '',
+        }));
+      }
+    } catch {}
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -179,7 +232,7 @@ export default function Chatbot() {
   const fetchInstanceStatus = async () => {
     if (!user?.id) return;
     try {
-      // Primary source: read DB status for immediate feedback
+      // Primary source: DB status (single source of truth)
       const { data: dbInstance } = await supabase
         .from("whatsapp_instances")
         .select("is_connected, device_name, server_url, status")
@@ -188,65 +241,27 @@ export default function Chatbot() {
 
       const dbConnected = dbInstance?.is_connected === true || dbInstance?.status === "connected";
 
-      // Try resync-webhook in background (non-blocking for UI)
-      let resyncConnected = dbConnected;
-      let webhookRegistered = false;
-      let apiStatus = "";
-      let resyncDebug: any = null;
-
-      try {
-        const { data: resyncData, error: resyncError } = await supabase.functions.invoke("whatsapp-manage", {
-          body: { action: "resync-webhook", company_id: companyId },
-        });
-        if (!resyncError && resyncData) {
-          resyncConnected = resyncData.connected === true;
-          webhookRegistered = resyncData.webhook_registered === true;
-          apiStatus = resyncData.api_status || "";
-          resyncDebug = resyncData.debug;
-        } else {
-          // API check failed — trust DB status
-          resyncConnected = dbConnected;
-          apiStatus = resyncError?.message || "Erro na resync";
-        }
-      } catch {
-        resyncConnected = dbConnected;
-      }
-
-      // Final connected status: trust resync if it ran, else DB
-      const connected = resyncConnected;
-
-      setWebhookDiagnostics({
-        webhook_registered: webhookRegistered,
-        api_status: apiStatus,
-        debug: resyncDebug,
-      });
-
-      // Fetch profile data if connected
-      let profilePic = "";
-      let profilePhone = "";
+      // Fetch profile data if connected (non-blocking, no status override)
+      let profilePic = instanceData?.profilePicture || "";
+      let profilePhone = instanceData?.phone || "";
       let profileName = "";
 
-      if (connected) {
+      if (dbConnected) {
         try {
           const { data: profileData } = await supabase.functions.invoke("whatsapp-manage", {
             body: { action: "profile-picture", company_id: companyId },
           });
           if (profileData) {
-            profilePic = profileData.profile_picture || "";
-            profilePhone = profileData.phone || "";
+            profilePic = profileData.profile_picture || profilePic;
+            profilePhone = profileData.phone || profilePhone;
             profileName = profileData.profile_name || "";
           }
         } catch {}
       }
 
-      // Also get instance name
-      const { data: instData } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "get-or-create", company_id: companyId },
-      });
-
       setInstanceData({
-        isConnected: connected,
-        deviceName: instData?.instance?.device_name || profileName || (dbInstance?.device_name as string) || "",
+        isConnected: dbConnected,
+        deviceName: profileName || (dbInstance?.device_name as string) || "",
         phone: profilePhone,
         profilePicture: profilePic,
       });

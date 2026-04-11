@@ -263,21 +263,9 @@ export default function WhatsAppView() {
         if (data.is_new) {
           toast.success("Instância WhatsApp inicializada!");
         }
+        // Trust DB status directly — no validate-connection override
         if (data.instance.is_connected) {
-          const validation = await callManage("validate-connection");
-          if (validation?.status === 401 || validation?.disconnected) {
-            setProfilePic(null);
-            setProfileName(null);
-            setProfilePhone(null);
-            setInstance((prev) =>
-              prev ? { ...prev, is_connected: false, status: "disconnected" } : null
-            );
-            setApiValidationError("Sessão expirada. Revalide sua conexão escaneando o QR Code novamente.");
-            toast.error("WhatsApp desconectado: token inválido ou expirado.");
-            await fetchQrCode();
-          } else {
-            fetchProfilePicture();
-          }
+          fetchProfilePicture();
         } else {
           await fetchQrCode();
         }
