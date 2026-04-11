@@ -1908,11 +1908,10 @@ REGRAS IMPORTANTES:
       if (companyIdParam) {
         const supabase2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         
-        // Log session error with actionable message
         const contextType = isSessionErr ? "session_expired" : "error";
         const clientName = isSessionErr ? "⚠️ Sessão Expirada" : "Erro";
         const errorMsg = isSessionErr
-          ? `🔴 TOKEN INVÁLIDO: ${error.message}\n\n➡️ AÇÃO NECESSÁRIA: Acesse Configurações → Instância e reconecte o WhatsApp.\n\n--- Decisões ---\n${decisions.join("\n")}`
+          ? `🔴 TOKEN INVÁLIDO: ${error.message}\n\n➡️ Verifique o token nas Configurações de Envio.\n\n--- Decisões ---\n${decisions.join("\n")}`
           : `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`;
 
         await supabase2.from("chatbot_logs").insert({
@@ -1922,14 +1921,9 @@ REGRAS IMPORTANTES:
           error_message: errorMsg,
         });
 
-        // If session expired, mark instance as disconnected to prevent error loops
-        if (isSessionErr && userIdParam) {
-          await supabase2
-            .from("whatsapp_instances")
-            .update({ status: "disconnected", is_connected: false })
-            .eq("user_id", userIdParam);
-          console.log(`[chatbot-webhook] Marked instance as disconnected for user ${userIdParam} due to session error`);
-        }
+        // NOTE: Do NOT mark instance as disconnected on 401 — the instance may still be
+        // connected but using a stale/wrong token. Disconnecting here causes UI desync
+        // and prevents the user from fixing it easily.
       }
     } catch (_) {}
     return new Response(JSON.stringify({ status: "ok", error: isSessionErr ? "session_expired" : "internal" }), {
