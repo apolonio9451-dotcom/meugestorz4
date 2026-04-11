@@ -717,19 +717,23 @@ export default function Chatbot() {
                   return;
                 }
                 if (v && !isConnected) {
-                  toast({ title: "⚠️ Instância desconectada", description: "Conecte seu WhatsApp na aba Instância antes de ativar o bot.", variant: "destructive" });
-                  return;
+                  toast({ title: "⚠️ Aviso: Instância pode estar desconectada", description: "O bot será ativado, mas só responderá quando a instância estiver conectada. Clique em 🔄 para re-sincronizar." });
                 }
                 setIsActive(v);
                 if (companyId) {
                   try {
                     if (settingsId) {
-                      await supabase.from("chatbot_settings").update({ is_active: v }).eq("id", settingsId);
+                      const { error: updateErr } = await supabase.from("chatbot_settings").update({ is_active: v }).eq("id", settingsId);
+                      if (updateErr) throw updateErr;
                     } else {
                       const { data } = await supabase.from("chatbot_settings").insert({ company_id: companyId, is_active: v }).select().single();
                       if (data) setSettingsId((data as any).id);
                     }
-                    toast({ title: v ? "✅ Bot ativado!" : "🤖 Robô desativado com sucesso no servidor.", description: v ? "O chatbot está respondendo mensagens." : "Nenhuma resposta automática será enviada." });
+                    toast({ title: v ? "✅ Bot ativado!" : "🤖 Bot desativado.", description: v ? "O chatbot está respondendo mensagens." : "Nenhuma resposta automática será enviada." });
+                    // If activating, also trigger webhook resync
+                    if (v) {
+                      handleResyncWebhook();
+                    }
                   } catch (err: any) {
                     setIsActive(!v);
                     toast({ title: "Erro ao alterar status", description: err?.message, variant: "destructive" });
