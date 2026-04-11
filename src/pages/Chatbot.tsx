@@ -179,40 +179,46 @@ export default function Chatbot() {
   const fetchInstanceStatus = async () => {
     if (!user?.id) return;
     try {
-      // First, quickly read DB status for immediate feedback
+      // Primary source: read DB status for immediate feedback
       const { data: dbInstance } = await supabase
         .from("whatsapp_instances")
         .select("is_connected, device_name, server_url, status")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // Try resync-webhook to validate real connection + re-register webhook
-      const { data: resyncData, error: resyncError } = await supabase.functions.invoke("whatsapp-manage", {
-          body: { action: "resync-webhook", company_id: companyId },
-      });
+      const dbConnected = dbInstance?.is_connected === true || dbInstance?.status === "connected";
 
-      if (resyncError) {
-        console.warn("[Chatbot] resync-webhook failed:", resyncError);
-        setWebhookDiagnostics({ webhook_registered: false, api_status: resyncError?.message || "Erro na resync" });
-        // Use DB status as fallback instead of calling another function
-        if (dbInstance) {
-          setInstanceData({
-            isConnected: dbInstance.is_connected === true,
-            deviceName: (dbInstance.device_name as string) || "",
-            phone: "",
-            profilePicture: "",
-          });
+      // Try resync-webhook in background (non-blocking for UI)
+      let resyncConnected = dbConnected;
+      let webhookRegistered = false;
+      let apiStatus = "";
+      let resyncDebug: any = null;
+
+      try {
+        const { data: resyncData, error: resyncError } = await supabase.functions.invoke("whatsapp-manage", {
+          body: { action: "resync-webhook", company_id: companyId },
+        });
+        if (!resyncError && resyncData) {
+          resyncConnected = resyncData.connected === true;
+          webhookRegistered = resyncData.webhook_registered === true;
+          apiStatus = resyncData.api_status || "";
+          resyncDebug = resyncData.debug;
         } else {
-          setInstanceData(null);
+          // API check failed — trust DB status
+          resyncConnected = dbConnected;
+          apiStatus = resyncError?.message || "Erro na resync";
         }
-        return;
+      } catch {
+        resyncConnected = dbConnected;
       }
 
-      const connected = resyncData?.connected === true || (dbInstance?.is_connected === true && resyncData?.connected !== false);
+      // Final connected status: trust resync if it ran, else DB
+      const connected = resyncConnected;
+
       setWebhookDiagnostics({
-        webhook_registered: resyncData?.webhook_registered === true,
-        api_status: resyncData?.api_status,
-        debug: resyncData?.debug,
+        webhook_registered: webhookRegistered,
+        api_status: apiStatus,
+        debug: resyncDebug,
       });
 
       // Fetch profile data if connected
