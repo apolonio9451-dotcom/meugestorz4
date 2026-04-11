@@ -11,7 +11,7 @@ import { themePresets, applyThemePreset } from "@/lib/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useGhostMode } from "@/hooks/useGhostMode";
 import { cn } from "@/lib/utils";
-import defaultBrandLogo from "@/assets/brand-logo.svg";
+import BrandLogoInline from "@/components/BrandLogoInline";
 import { differenceInDays, parseISO } from "date-fns";
 import {
   Dialog,
