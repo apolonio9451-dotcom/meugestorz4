@@ -66,7 +66,7 @@ export default function WhatsAppView() {
   const [apiValidationError, setApiValidationError] = useState<string | null>(null);
 
   // Token fields
-  const { effectiveCompanyId: companyId } = useAuth();
+  const { effectiveCompanyId: companyId, user } = useAuth();
   const [apiUrl, setApiUrl] = useState("");
   const [apiToken, setApiToken] = useState("");
   const [savingToken, setSavingToken] = useState(false);
@@ -263,21 +263,9 @@ export default function WhatsAppView() {
         if (data.is_new) {
           toast.success("Instância WhatsApp inicializada!");
         }
+        // Trust DB status directly — no validate-connection override
         if (data.instance.is_connected) {
-          const validation = await callManage("validate-connection");
-          if (validation?.status === 401 || validation?.disconnected) {
-            setProfilePic(null);
-            setProfileName(null);
-            setProfilePhone(null);
-            setInstance((prev) =>
-              prev ? { ...prev, is_connected: false, status: "disconnected" } : null
-            );
-            setApiValidationError("Sessão expirada. Revalide sua conexão escaneando o QR Code novamente.");
-            toast.error("WhatsApp desconectado: token inválido ou expirado.");
-            await fetchQrCode();
-          } else {
-            fetchProfilePicture();
-          }
+          fetchProfilePicture();
         } else {
           await fetchQrCode();
         }
@@ -332,6 +320,41 @@ export default function WhatsAppView() {
       }
     }
   }, [callManage, fetchProfilePicture]);
+
+  // Realtime subscription for instant status updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`whatsapp-instance-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whatsapp_instances',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          const row = payload.new;
+          if (row) {
+            setInstance(prev => prev ? {
+              ...prev,
+              is_connected: row.is_connected === true,
+              status: row.status || prev.status,
+            } : prev);
+            if (row.is_connected && row.status === 'connected') {
+              setPolling(false);
+              setQrCode(null);
+              fetchProfilePicture();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, fetchProfilePicture]);
 
   useEffect(() => {
     loadInstance();
