@@ -1122,17 +1122,21 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials
-    const { data: apiSettings } = await supabase
-      .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
-    if (!apiSettings?.api_url || !apiSettings?.api_token) {
+    // Fetch API credentials — cascading: whatsapp_instances → api_settings
+    let apiUrl = companyApiUrl || "";
+    let apiToken = companyApiToken || "";
+    if (!apiUrl || !apiToken) {
+      const { data: apiSettings } = await supabase
+        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+      if (!apiUrl && apiSettings?.api_url) apiUrl = apiSettings.api_url;
+      if (!apiToken && apiSettings?.api_token) apiToken = apiSettings.api_token;
+    }
+    if (!apiUrl || !apiToken) {
       return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
-    const apiToken = apiSettings.api_token;
+    apiUrl = apiUrl.replace(/\/$/, "");
     const minDelay = chatSettings.min_delay_seconds ?? 3;
     const maxDelay = chatSettings.max_delay_seconds ?? 6;
 
