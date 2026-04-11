@@ -1475,6 +1475,73 @@ Deno.serve(async (req: Request) => {
     }
     decisions.push("🧭 Menu automático inicial desativado → fluxo segue para conversa natural com IA");
 
+    // ===== WHATSAPP CONTACT NAME LOOKUP (agenda) =====
+    // Always try to get the contact name from WhatsApp first
+    let whatsappContactName = "";
+    if (apiUrl && apiToken && phone) {
+      try {
+        // Try UAZAPI contact info endpoint
+        const contactResp = await fetch(`${apiUrl}/contact/${phone}`, {
+          method: "GET",
+          headers: getApiHeaders(apiToken),
+        });
+        if (contactResp.ok) {
+          const contactInfo = await contactResp.json();
+          // UAZAPI returns name/pushname/notify in various formats
+          whatsappContactName = (
+            contactInfo?.name ||
+            contactInfo?.pushName ||
+            contactInfo?.pushname ||
+            contactInfo?.notify ||
+            contactInfo?.verifiedName ||
+            contactInfo?.shortName ||
+            contactInfo?.formattedName ||
+            contactInfo?.data?.name ||
+            contactInfo?.data?.pushName ||
+            contactInfo?.data?.pushname ||
+            contactInfo?.data?.notify ||
+            ""
+          ).trim();
+        }
+        if (!whatsappContactName) {
+          // Fallback: try /contact/check endpoint
+          const checkResp = await fetch(`${apiUrl}/contact/check`, {
+            method: "POST",
+            headers: getApiHeaders(apiToken),
+            body: JSON.stringify({ phone }),
+          });
+          if (checkResp.ok) {
+            const checkData = await checkResp.json();
+            whatsappContactName = (
+              checkData?.name || checkData?.pushName || checkData?.pushname ||
+              checkData?.notify || checkData?.data?.name || checkData?.data?.pushName || ""
+            ).trim();
+          }
+        }
+      } catch (e) {
+        console.log("[chatbot-webhook] WhatsApp contact lookup failed (non-blocking):", e);
+      }
+      if (whatsappContactName) {
+        decisions.push(`📱 Nome na agenda WhatsApp: "${whatsappContactName}"`);
+      }
+    }
+
+    // Also extract pushName/notify from the incoming webhook payload itself
+    const payloadPushName = (
+      body?.data?.pushName || body?.data?.pushname ||
+      body?.message?.pushName || body?.message?.pushname ||
+      body?.message?.sender_name || body?.message?.senderName ||
+      body?.pushName || body?.pushname ||
+      body?.contact?.name || body?.contact?.pushName ||
+      body?.data?.verifiedBizName ||
+      ""
+    ).toString().trim();
+
+    if (!whatsappContactName && payloadPushName) {
+      whatsappContactName = payloadPushName;
+      decisions.push(`📱 Nome do payload (pushName): "${whatsappContactName}"`);
+    }
+
     // ===== CLIENT LOOKUP — multi-format phone matching =====
     // Build phone variations for robust matching
     const phoneVariations: string[] = [phone];
@@ -1524,9 +1591,11 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Resolve the best name: WhatsApp agenda > DB client name > "Desconhecido"
+    // Priority: WhatsApp contact name is always preferred (it's how the user saved them)
     let clientContext = "";
     let contextType = "new_contact";
-    let clientName = "Desconhecido";
+    let clientName = whatsappContactName || "Desconhecido";
     let contextInstructions = "";
 
     // Get the custom instructions for new contact vs client
