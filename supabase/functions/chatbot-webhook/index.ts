@@ -1729,20 +1729,25 @@ ${matchedRule.instruction}`;
 
     decisions.push(`🤖 Chamando IA (${aiModel}) com contexto: ${contextType}`);
 
+    // Determine if training rules explicitly requested buttons/list
+    const hasTrainingButtonAction = commands.length > 0 || contextInstructions.includes("[ENVIAR_BOTOES") || contextInstructions.includes("[ENVIAR_LISTA");
+
     const systemPrompt = `${chatSettings.personality || "Você é um assistente virtual profissional."}
 ${contextInstructions}
 ${clientContext}
 ${mediaContext}
-${commandTagsDoc}
+${hasTrainingButtonAction ? commandTagsDoc : ""}
 
-REGRAS IMPORTANTES:
-- Responda de forma natural e humanizada, como se fosse uma pessoa real digitando.
-- Mantenha respostas curtas e diretas (máximo 3 parágrafos).
-- Use emojis com moderação.
-- NUNCA revele que é uma IA ou bot.
-- Se não souber algo, diga que vai verificar e retornar.
-- Quando o cliente pedir para ver planos/catálogo, use [ENVIAR_CATALOGO].
-- Quando quiser dar opções ao cliente, use [ENVIAR_BOTOES:...] ou [ENVIAR_LISTA:...].`;
+REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
+- Você é um HUMANO real, um consultor de suporte que digita no WhatsApp. NUNCA diga que é IA, bot ou assistente virtual.
+- Responda de forma DIRETA, informal e prestativa. Como um amigo técnico que resolve rápido.
+- Frases CURTAS. Máximo 2-3 linhas por mensagem. Nada de textão.
+- Use emojis com moderação (máximo 1-2 por mensagem).
+- Se não souber algo, diga "vou verificar aqui e já te retorno".
+- NÃO envie botões, listas ou menus interativos a menos que uma instrução de treinamento ESPECÍFICA peça isso explicitamente.
+- Quando o cliente pedir planos/catálogo, use [ENVIAR_CATALOGO] APENAS se não houver instrução de treinamento cobrindo isso.
+- Responda APENAS com texto natural. Sem formatação excessiva, sem bullets, sem listas numeradas.
+- Trate cada conversa como se fosse um atendimento humano real, rápido e resolutivo.`;
 
     // ===== CONVERSATION MEMORY =====
     // Fetch recent messages from this contact (last 24h, max 20 messages)
