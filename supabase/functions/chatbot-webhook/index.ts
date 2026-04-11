@@ -1045,31 +1045,29 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials with cascading resolution: whatsapp_instances → api_settings
+    // Fetch API credentials — prioritize api_settings (user-configured, most reliable)
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
     if (companyIdParam) {
-      // 1. Try whatsapp_instances first (most up-to-date token from connected instance)
-      if (userIdParam) {
+      // 1. Try api_settings first (configured via UI, most reliable token)
+      const { data: apiSettings } = await supabase
+        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+      if (apiSettings?.api_url && apiSettings?.api_token) {
+        companyApiUrl = (apiSettings.api_url as string).replace(/\/$/, "");
+        companyApiToken = apiSettings.api_token as string;
+        console.log("[chatbot-webhook] Token resolved from api_settings (primary)");
+      }
+      // 2. Fallback to whatsapp_instances if api_settings not configured
+      if ((!companyApiUrl || !companyApiToken) && userIdParam) {
         const { data: inst } = await supabase
           .from("whatsapp_instances")
           .select("server_url, instance_token, is_connected")
           .eq("user_id", userIdParam)
           .maybeSingle();
         if (inst?.instance_token && inst?.server_url) {
-          companyApiUrl = inst.server_url.replace(/\/$/, "");
-          companyApiToken = inst.instance_token;
-          console.log(`[chatbot-webhook] Token resolved from whatsapp_instances (connected=${inst.is_connected})`);
-        }
-      }
-      // 2. Fallback to api_settings
-      if (!companyApiUrl || !companyApiToken) {
-        const { data: apiSettings } = await supabase
-          .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
-        if (!companyApiUrl) companyApiUrl = (apiSettings as any)?.api_url || null;
-        if (!companyApiToken) companyApiToken = (apiSettings as any)?.api_token || null;
-        if (companyApiUrl || companyApiToken) {
-          console.log("[chatbot-webhook] Token resolved from api_settings (fallback)");
+          if (!companyApiUrl) companyApiUrl = (inst.server_url as string).replace(/\/$/, "");
+          if (!companyApiToken) companyApiToken = inst.instance_token as string;
+          console.log(`[chatbot-webhook] Token resolved from whatsapp_instances (fallback, connected=${inst.is_connected})`);
         }
       }
     }
