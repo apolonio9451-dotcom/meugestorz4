@@ -809,72 +809,97 @@ export default function Chatbot() {
 
         {/* Schedule Panel */}
         {showSchedulePanel && (
-          <div className="glass-card rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="glass-card rounded-xl p-5 space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">Período de Atividade do Bot</span>
+                <Calendar className="w-5 h-5 text-primary" />
+                <span className="text-sm font-bold text-foreground">Período de Atividade do Agente</span>
               </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant={!businessHoursEnabled ? "default" : "outline"}
-                  size="sm"
-                  className="text-xs h-7 gap-1"
-                  onClick={() => {
-                    setBusinessHoursEnabled(false);
-                    setBusinessDays([0, 1, 2, 3, 4, 5, 6]);
-                  }}
-                >
-                  <Zap className="w-3 h-3" />
-                  24/7
-                </Button>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground">Horário comercial</Label>
-                  <Switch checked={businessHoursEnabled} onCheckedChange={setBusinessHoursEnabled} />
-                </div>
+              <Button
+                variant={!businessHoursEnabled ? "default" : "outline"}
+                size="sm"
+                className={`text-xs h-8 gap-1.5 font-semibold transition-all ${
+                  !businessHoursEnabled
+                    ? "shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
+                    : ""
+                }`}
+                onClick={() => {
+                  setBusinessHoursEnabled(false);
+                  setDailySchedule(DAYS_OF_WEEK.map((d) => ({ day: d.value, active: true, start: "00:00", end: "23:59" })));
+                }}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Ativar 24h
+              </Button>
+            </div>
+
+            {/* Toggle business hours */}
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/40">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-foreground font-medium">Programação Personalizada</span>
               </div>
+              <Switch checked={businessHoursEnabled} onCheckedChange={setBusinessHoursEnabled} />
             </div>
 
             {businessHoursEnabled && (
-              <>
-                <div className="flex flex-wrap gap-4 items-end">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Início</Label>
-                    <Input type="time" value={businessHoursStart} onChange={(e) => setBusinessHoursStart(e.target.value)} className="h-8 text-sm w-32 mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Fim</Label>
-                    <Input type="time" value={businessHoursEnd} onChange={(e) => setBusinessHoursEnd(e.target.value)} className="h-8 text-sm w-32 mt-1" />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 block">Dias ativos</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {DAYS_OF_WEEK.map((day) => (
-                      <button
-                        key={day.value}
-                        onClick={() => toggleDay(day.value)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                          businessDays.includes(day.value)
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-secondary text-muted-foreground border-border hover:border-primary/50"
-                        }`}
-                      >
-                        {day.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <div className="space-y-2">
+                {DAYS_OF_WEEK.map((dayInfo) => {
+                  const schedule = dailySchedule.find((s) => s.day === dayInfo.value) || { day: dayInfo.value, active: false, start: "08:00", end: "18:00" };
+                  const updateDay = (field: string, value: any) => {
+                    setDailySchedule((prev) =>
+                      prev.map((s) => s.day === dayInfo.value ? { ...s, [field]: value } : s)
+                    );
+                  };
+                  return (
+                    <div
+                      key={dayInfo.value}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                        schedule.active
+                          ? "bg-primary/5 border-primary/20"
+                          : "bg-secondary/20 border-border/30 opacity-60"
+                      }`}
+                    >
+                      <Switch
+                        checked={schedule.active}
+                        onCheckedChange={(v) => updateDay("active", v)}
+                      />
+                      <span className={`text-sm font-semibold w-10 ${schedule.active ? "text-foreground" : "text-muted-foreground"}`}>
+                        {dayInfo.label}
+                      </span>
+                      {schedule.active && (
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Input
+                            type="time"
+                            value={schedule.start}
+                            onChange={(e) => updateDay("start", e.target.value)}
+                            className="h-8 text-xs w-[100px] bg-background/50 border-border/40"
+                          />
+                          <span className="text-xs text-muted-foreground">até</span>
+                          <Input
+                            type="time"
+                            value={schedule.end}
+                            onChange={(e) => updateDay("end", e.target.value)}
+                            className="h-8 text-xs w-[100px] bg-background/50 border-border/40"
+                          />
+                        </div>
+                      )}
+                      {!schedule.active && (
+                        <span className="text-xs text-muted-foreground ml-auto">Inativo</span>
+                      )}
+                    </div>
+                  );
+                })}
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1 pt-1">
                   <Info className="w-3 h-3" />
-                  Fora do horário, o bot enviará a mensagem de ausência configurada.
+                  Fora do horário, o bot enviará a mensagem de ausência configurada (fuso: Brasília).
                 </p>
-              </>
+              </div>
             )}
 
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+            <div className="flex justify-end pt-1">
+              <Button size="sm" onClick={handleSaveSettings} disabled={saving} className="gap-1.5">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Salvar Horário
               </Button>
             </div>
