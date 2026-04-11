@@ -399,61 +399,6 @@ export default function WhatsAppView() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Token / API Settings Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="w-5 h-5 text-primary" />
-            Configuração da API
-          </CardTitle>
-          <CardDescription>
-            Configure a URL e o Token da sua instância para envio de mensagens.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {tokenLoaded ? (
-            <>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">URL da API</Label>
-                <Input
-                  type="password"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="https://ipazua.uazapi.com"
-                  className="bg-secondary/50 border-border font-mono text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Token da Instância</Label>
-                <Input
-                  type="password"
-                  value={apiToken}
-                  onChange={(e) => setApiToken(e.target.value)}
-                  placeholder="Cole seu token aqui"
-                  className="bg-secondary/50 border-border font-mono text-sm"
-                />
-                <p className="text-muted-foreground text-xs">
-                  O token é armazenado de forma segura e utilizado apenas pelo servidor para enviar mensagens.
-                </p>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveToken} disabled={savingToken || !apiUrl.trim() || !apiToken.trim()}>
-                  {savingToken ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar Token
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center gap-2 py-4">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Carregando...</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* WhatsApp Instance Card */}
       <Card>
         <CardHeader>
