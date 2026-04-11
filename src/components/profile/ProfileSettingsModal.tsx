@@ -250,7 +250,7 @@ export default function ProfileSettingsModal({
               <Palette className="w-3.5 h-3.5 text-primary" />
               Tema do Sistema
             </Label>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-6 gap-2">
               {themePresets.map((preset) => {
                 const isActive = activeThemeId === preset.id;
                 return (
@@ -259,24 +259,22 @@ export default function ProfileSettingsModal({
                     disabled={preset.locked}
                     onClick={() => handleSelectTheme(preset)}
                     className={cn(
-                      "relative flex flex-col items-center gap-1.5 rounded-lg p-2.5 transition-all border-2",
+                      "relative w-9 h-9 rounded-full overflow-hidden border-2 transition-all duration-200 hover:scale-110 mx-auto",
                       preset.locked
                         ? "opacity-40 cursor-not-allowed border-border"
                         : isActive
-                        ? "border-primary shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
-                        : "border-border hover:border-primary/40"
+                        ? "border-primary ring-2 ring-primary/30 scale-110"
+                        : "border-border/50 hover:border-primary/40"
                     )}
+                    title={preset.name}
                   >
-                    {/* Color dots */}
-                    <div className="flex gap-1">
-                      <div className="w-4 h-4 rounded-full border border-foreground/10" style={{ backgroundColor: preset.colors.primary }} />
-                      <div className="w-4 h-4 rounded-full border border-foreground/10" style={{ backgroundColor: preset.colors.secondary }} />
-                      <div className="w-4 h-4 rounded-full border border-foreground/10" style={{ backgroundColor: preset.colors.background }} />
+                    <div className="absolute inset-0 flex flex-col">
+                      <div className="w-full h-1/2" style={{ backgroundColor: preset.colors.primary }} />
+                      <div className="w-full h-1/2" style={{ backgroundColor: preset.colors.background }} />
                     </div>
-                    <span className="text-[10px] text-muted-foreground font-medium">{preset.name}</span>
                     {isActive && (
-                      <div className="absolute -top-1 -right-1 bg-primary rounded-full p-0.5">
-                        <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                      <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-primary rounded-full flex items-center justify-center translate-x-0.5 -translate-y-0.5 border border-background">
+                        <Check className="w-2 h-2 text-primary-foreground" />
                       </div>
                     )}
                   </button>
