@@ -984,7 +984,7 @@ Deno.serve(async (req: Request) => {
 
     console.log("===== WEBHOOK RECEBIDO =====");
     console.log("company_id:", companyIdParam, "user_id:", userIdParam);
-    console.log("Corpo recebido:", JSON.stringify(body).slice(0, 3000));
+    console.log("CONTEÚDO DO WEBHOOK:", JSON.stringify(body, null, 2).slice(0, 5000));
 
     // ── Handle connection/disconnection events (UAZAPI format: EventType + instance.status) ──
     if (userIdParam) {
