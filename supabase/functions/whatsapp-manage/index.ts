@@ -283,11 +283,46 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Always check real API status instead of trusting DB (DB may be stale after session errors)
       if (inst.is_connected) {
-        return new Response(
-          JSON.stringify({ connected: true }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Verify with the actual API that it's still connected
+        try {
+          const statusRes = await fetch(`${inst.server_url}/instance/me`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", token: inst.instance_token },
+          });
+          if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            const reallyConnected = statusData?.connected === true || statusData?.instance?.status === "connected" || statusData?.status === "connected";
+            if (reallyConnected) {
+              // Re-register webhook just in case it was lost
+              let whCompanyId = "";
+              try {
+                const { data: mRow } = await adminClient
+                  .from("company_memberships").select("company_id")
+                  .eq("user_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+                whCompanyId = mRow?.company_id || "";
+              } catch (_e) {}
+              const refreshWebhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
+              try {
+                await fetch(`${inst.server_url}/webhook`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", token: inst.instance_token },
+                  body: JSON.stringify({ url: refreshWebhookUrl, enabled: true, active: true, byApi: true, addUrlEvents: true, addUrlTypesMessages: true, excludeMessages: ["wasSentByApi", "isGroupYes"], events: ["connection", "messages", "messages_update", "presence"] }),
+                });
+                console.log("[whatsapp-manage] qrcode: webhook refreshed for already-connected instance");
+              } catch (_e) {}
+              // Update webhook URL in DB
+              await adminClient.from("whatsapp_instances").update({ webhook_url: refreshWebhookUrl, last_connection_at: new Date().toISOString() }).eq("user_id", userId);
+              return new Response(JSON.stringify({ connected: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            }
+            // If API says NOT connected, update DB and proceed to QR code flow
+            console.log("[whatsapp-manage] qrcode: DB says connected but API says disconnected, proceeding to reconnect");
+            await adminClient.from("whatsapp_instances").update({ status: "disconnected", is_connected: false }).eq("user_id", userId);
+          }
+        } catch (_e) {
+          console.error("[whatsapp-manage] qrcode: failed to verify instance status:", _e);
+        }
       }
 
       const qrRes = await fetch(`${inst.server_url}/instance/connect`, {
