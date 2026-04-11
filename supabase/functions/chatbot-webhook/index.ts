@@ -1832,19 +1832,37 @@ REGRAS IMPORTANTES:
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("Chatbot webhook error:", error?.message || error);
+    const isSessionErr = error instanceof SessionExpiredError || error?.name === "SessionExpiredError";
+    console.error("Chatbot webhook error:", error?.message || error, isSessionErr ? "[SESSION_EXPIRED]" : "");
     try {
       if (companyIdParam) {
         const supabase2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        
+        // Log session error with actionable message
+        const contextType = isSessionErr ? "session_expired" : "error";
+        const clientName = isSessionErr ? "⚠️ Sessão Expirada" : "Erro";
+        const errorMsg = isSessionErr
+          ? `🔴 TOKEN INVÁLIDO: ${error.message}\n\n➡️ AÇÃO NECESSÁRIA: Acesse Configurações → Instância e reconecte o WhatsApp.\n\n--- Decisões ---\n${decisions.join("\n")}`
+          : `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`;
+
         await supabase2.from("chatbot_logs").insert({
-          company_id: companyIdParam, phone: "unknown", client_name: "Erro",
+          company_id: companyIdParam, phone: "unknown", client_name: clientName,
           message_received: "", message_sent: "",
-          context_type: "error", status: "error",
-          error_message: `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`,
+          context_type: contextType, status: "error",
+          error_message: errorMsg,
         });
+
+        // If session expired, mark instance as disconnected to prevent error loops
+        if (isSessionErr && userIdParam) {
+          await supabase2
+            .from("whatsapp_instances")
+            .update({ status: "disconnected", is_connected: false })
+            .eq("user_id", userIdParam);
+          console.log(`[chatbot-webhook] Marked instance as disconnected for user ${userIdParam} due to session error`);
+        }
       }
     } catch (_) {}
-    return new Response(JSON.stringify({ status: "ok", error: "internal" }), {
+    return new Response(JSON.stringify({ status: "ok", error: isSessionErr ? "session_expired" : "internal" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
