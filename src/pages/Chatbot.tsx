@@ -172,7 +172,7 @@ export default function Chatbot() {
     try {
       // Use resync-webhook to validate real connection + re-register webhook
       const { data: resyncData, error: resyncError } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "resync-webhook" },
+          body: { action: "resync-webhook", company_id: companyId },
       });
 
       if (resyncError) {
@@ -180,7 +180,7 @@ export default function Chatbot() {
         setWebhookDiagnostics({ webhook_registered: false, api_status: resyncError?.message || "Erro na resync" });
         // Fallback to get-or-create
         const { data: manageData } = await supabase.functions.invoke("whatsapp-manage", {
-          body: { action: "get-or-create" },
+          body: { action: "get-or-create", company_id: companyId },
         });
         if (!manageData?.instance) { setInstanceData(null); return; }
         setInstanceData({
@@ -207,7 +207,7 @@ export default function Chatbot() {
       if (connected) {
         try {
           const { data: profileData } = await supabase.functions.invoke("whatsapp-manage", {
-            body: { action: "profile-picture" },
+            body: { action: "profile-picture", company_id: companyId },
           });
           if (profileData) {
             profilePic = profileData.profile_picture || "";
@@ -219,7 +219,7 @@ export default function Chatbot() {
 
       // Also get instance name
       const { data: instData } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "get-or-create" },
+        body: { action: "get-or-create", company_id: companyId },
       });
 
       setInstanceData({
@@ -237,7 +237,7 @@ export default function Chatbot() {
     setResyncingWebhook(true);
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "resync-webhook" },
+        body: { action: "resync-webhook", company_id: companyId },
       });
       if (error) throw error;
       setWebhookDiagnostics({
