@@ -1604,8 +1604,9 @@ Deno.serve(async (req: Request) => {
 
     if (clientData) {
       contextType = "client";
-      clientName = clientData.name;
-      decisions.push(`👤 CLIENTE IDENTIFICADO: ${clientName} (status: ${clientData.status}, phone_db: ${clientData.phone || clientData.whatsapp})`);
+      // WhatsApp agenda name takes priority, then DB name
+      clientName = whatsappContactName || clientData.name;
+      decisions.push(`👤 CLIENTE IDENTIFICADO: ${clientName} (db_name: ${clientData.name}, wa_name: ${whatsappContactName || "N/A"}, status: ${clientData.status})`);
 
       const { data: subData } = await supabase
         .from("client_subscriptions")
