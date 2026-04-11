@@ -38,11 +38,30 @@ async function sendText(apiUrl: string, apiToken: string, to: string, text: stri
     headers: { "Content-Type": "application/json", token: apiToken },
     body: JSON.stringify({ number: to, text: text, linkPreview: true }),
   });
+  const body = await resp.text();
   if (!resp.ok) {
-    const body = await resp.text();
+    // Detect session/auth errors to provide actionable feedback
+    if (resp.status === 401 || isSessionErrorText(body)) {
+      console.error(`[chatbot-webhook] SESSION ERROR on send/text: ${resp.status} - ${body.slice(0, 300)}`);
+      throw new SessionExpiredError(`Sessão expirada (${resp.status}). Reconecte a instância nas Configurações.`);
+    }
     throw new Error(`UAZAPI send/text failed: ${resp.status} - ${body}`);
   }
-  return resp.json();
+  try { return JSON.parse(body); } catch { return { ok: true }; }
+}
+
+class SessionExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionExpiredError";
+  }
+}
+
+function isSessionErrorText(text: string): boolean {
+  const lower = text.toLowerCase();
+  return lower.includes("disconnected") || lower.includes("not connected") ||
+    lower.includes("qr code") || lower.includes("not logged") ||
+    lower.includes("session expired") || lower.includes("invalid token");
 }
 
 async function sendMedia(
@@ -182,8 +201,13 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
     message?.extendedTextMessage?.text ||
     message?.buttonsResponseMessage?.selectedDisplayText ||
     message?.listResponseMessage?.title ||
+    message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
     message?.templateButtonReplyMessage?.selectedDisplayText ||
     message?.editedMessage?.message?.protocolMessage?.editedMessage?.conversation ||
+    message?.imageMessage?.caption ||
+    message?.videoMessage?.caption ||
+    message?.documentMessage?.caption ||
+    message?.audioMessage?.caption ||
     msgData?.body || msgData?.text || "";
   let messageType = "text";
   if (message?.imageMessage) messageType = "image";
@@ -975,14 +999,33 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API settings for AI seller
+    // Fetch API credentials with cascading resolution: whatsapp_instances → api_settings
     let companyApiUrl: string | null = null;
     let companyApiToken: string | null = null;
     if (companyIdParam) {
-      const { data: apiSettings } = await supabase
-        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
-      companyApiUrl = (apiSettings as any)?.api_url || null;
-      companyApiToken = (apiSettings as any)?.api_token || null;
+      // 1. Try whatsapp_instances first (most up-to-date token from connected instance)
+      if (userIdParam) {
+        const { data: inst } = await supabase
+          .from("whatsapp_instances")
+          .select("server_url, instance_token, is_connected")
+          .eq("user_id", userIdParam)
+          .maybeSingle();
+        if (inst?.instance_token && inst?.server_url) {
+          companyApiUrl = inst.server_url.replace(/\/$/, "");
+          companyApiToken = inst.instance_token;
+          console.log(`[chatbot-webhook] Token resolved from whatsapp_instances (connected=${inst.is_connected})`);
+        }
+      }
+      // 2. Fallback to api_settings
+      if (!companyApiUrl || !companyApiToken) {
+        const { data: apiSettings } = await supabase
+          .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+        if (!companyApiUrl) companyApiUrl = (apiSettings as any)?.api_url || null;
+        if (!companyApiToken) companyApiToken = (apiSettings as any)?.api_token || null;
+        if (companyApiUrl || companyApiToken) {
+          console.log("[chatbot-webhook] Token resolved from api_settings (fallback)");
+        }
+      }
     }
 
     // Handle non-text messages
@@ -1084,17 +1127,21 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch API credentials
-    const { data: apiSettings } = await supabase
-      .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).single();
-    if (!apiSettings?.api_url || !apiSettings?.api_token) {
+    // Fetch API credentials — cascading: whatsapp_instances → api_settings
+    let apiUrl = companyApiUrl || "";
+    let apiToken = companyApiToken || "";
+    if (!apiUrl || !apiToken) {
+      const { data: apiSettings } = await supabase
+        .from("api_settings").select("api_url, api_token").eq("company_id", companyIdParam).maybeSingle();
+      if (!apiUrl && apiSettings?.api_url) apiUrl = apiSettings.api_url;
+      if (!apiToken && apiSettings?.api_token) apiToken = apiSettings.api_token;
+    }
+    if (!apiUrl || !apiToken) {
       return new Response(JSON.stringify({ status: "ok", reason: "api_not_configured" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const apiUrl = apiSettings.api_url.replace(/\/$/, "");
-    const apiToken = apiSettings.api_token;
+    apiUrl = apiUrl.replace(/\/$/, "");
     const minDelay = chatSettings.min_delay_seconds ?? 3;
     const maxDelay = chatSettings.max_delay_seconds ?? 6;
 
@@ -1785,19 +1832,37 @@ REGRAS IMPORTANTES:
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("Chatbot webhook error:", error?.message || error);
+    const isSessionErr = error instanceof SessionExpiredError || error?.name === "SessionExpiredError";
+    console.error("Chatbot webhook error:", error?.message || error, isSessionErr ? "[SESSION_EXPIRED]" : "");
     try {
       if (companyIdParam) {
         const supabase2 = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        
+        // Log session error with actionable message
+        const contextType = isSessionErr ? "session_expired" : "error";
+        const clientName = isSessionErr ? "⚠️ Sessão Expirada" : "Erro";
+        const errorMsg = isSessionErr
+          ? `🔴 TOKEN INVÁLIDO: ${error.message}\n\n➡️ AÇÃO NECESSÁRIA: Acesse Configurações → Instância e reconecte o WhatsApp.\n\n--- Decisões ---\n${decisions.join("\n")}`
+          : `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`;
+
         await supabase2.from("chatbot_logs").insert({
-          company_id: companyIdParam, phone: "unknown", client_name: "Erro",
+          company_id: companyIdParam, phone: "unknown", client_name: clientName,
           message_received: "", message_sent: "",
-          context_type: "error", status: "error",
-          error_message: `${error?.message || "Unknown error"}\n\n--- Decisões ---\n${decisions.join("\n")}`,
+          context_type: contextType, status: "error",
+          error_message: errorMsg,
         });
+
+        // If session expired, mark instance as disconnected to prevent error loops
+        if (isSessionErr && userIdParam) {
+          await supabase2
+            .from("whatsapp_instances")
+            .update({ status: "disconnected", is_connected: false })
+            .eq("user_id", userIdParam);
+          console.log(`[chatbot-webhook] Marked instance as disconnected for user ${userIdParam} due to session error`);
+        }
       }
     } catch (_) {}
-    return new Response(JSON.stringify({ status: "ok", error: "internal" }), {
+    return new Response(JSON.stringify({ status: "ok", error: isSessionErr ? "session_expired" : "internal" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
