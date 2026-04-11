@@ -629,11 +629,15 @@ export default function Chatbot() {
                 }`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate max-w-[120px]">
-                  {instanceData?.phone || instanceData?.deviceName || "Instância"}
+                <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">
+                  {instanceData?.deviceName || "Instância"}
                 </p>
                 <p className={`text-[10px] font-medium ${isConnected ? "text-primary" : "text-destructive"}`}>
-                  {isConnected ? "Conectado" : "Desconectado"}
+                  {isConnected
+                    ? instanceData?.phone
+                      ? instanceData.phone.replace(/\D/g, "").replace(/^55(\d{2})(\d{4,5})(\d{4})$/, "+55 $1 $2-$3")
+                      : "Conectado"
+                    : "Desconectado"}
                 </p>
               </div>
               {isConnected ? <Wifi className="w-3.5 h-3.5 text-primary" /> : <WifiOff className="w-3.5 h-3.5 text-destructive" />}
