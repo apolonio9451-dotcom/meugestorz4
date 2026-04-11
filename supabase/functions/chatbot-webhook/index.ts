@@ -190,12 +190,13 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
   const event = (body?.event || body?.EventType || body?.action || "").toString();
   let msgData = body?.data;
   if (Array.isArray(msgData)) msgData = msgData[0];
+  if (!msgData && Array.isArray(body?.messages)) msgData = body.messages[0];
   if (!msgData && body?.key && body?.message) msgData = body;
   if (!msgData) return null;
   const key = msgData?.key || {};
   const message = msgData?.message || {};
   const fromMe = key?.fromMe === true || msgData?.fromMe === true;
-  const remoteJid = key?.remoteJid || "";
+  const remoteJid = key?.remoteJid || msgData?.chatId || msgData?.from || "";
   const messageText = 
     message?.conversation ||
     message?.extendedTextMessage?.text ||
@@ -208,7 +209,7 @@ function extractFromMessagesUpsert(body: any): ExtractedPayload | null {
     message?.videoMessage?.caption ||
     message?.documentMessage?.caption ||
     message?.audioMessage?.caption ||
-    msgData?.body || msgData?.text || "";
+    msgData?.body || msgData?.text || msgData?.caption || "";
   let messageType = "text";
   if (message?.imageMessage) messageType = "image";
   else if (message?.videoMessage) messageType = "video";
@@ -964,7 +965,7 @@ Deno.serve(async (req: Request) => {
     console.log("Dados extraídos:", JSON.stringify({ messageText: messageText.slice(0, 200), senderPhone, fromMe, messageType, eventType }));
 
     // Filter non-message events
-    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels", "messages_update", "chat_labels", "receipt"];
+    const ignoredEvents = ["chats", "status", "connection", "contacts", "groups", "call", "presence", "labels", "messages_update", "chat_labels", "receipt", "history"];
     const eventLower = eventType.toLowerCase();
     if (eventLower && ignoredEvents.some(e => eventLower.includes(e))) {
       console.log("Evento ignorado:", eventType);

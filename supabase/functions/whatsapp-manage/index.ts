@@ -21,6 +21,76 @@ function normalizeToken(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+async function resolveAuthorizedCompanyId(adminClient: ReturnType<typeof createClient>, userId: string, requestedCompanyId?: string) {
+  const normalizedRequested = typeof requestedCompanyId === "string" ? requestedCompanyId.trim() : "";
+
+  if (normalizedRequested) {
+    const { data: requestedMembership } = await adminClient
+      .from("company_memberships")
+      .select("company_id")
+      .eq("user_id", userId)
+      .eq("company_id", normalizedRequested)
+      .limit(1)
+      .maybeSingle();
+
+    if (requestedMembership?.company_id) return requestedMembership.company_id;
+  }
+
+  const { data: membership } = await adminClient
+    .from("company_memberships")
+    .select("company_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return membership?.company_id || "";
+}
+
+async function getLiveConnectionStatus(serverUrl: string, instanceToken: string) {
+  const endpoints = ["/instance/me", "/instance"];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(`${serverUrl}${endpoint}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json", token: instanceToken },
+      });
+
+      const text = await response.text();
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+
+      const connected = response.ok && (
+        json?.connected === true ||
+        json?.status === "connected" ||
+        json?.instance?.status === "connected" ||
+        json?.instance?.state === "open"
+      );
+
+      return {
+        connected,
+        ok: response.ok,
+        status: response.status,
+        raw: text.substring(0, 500),
+      };
+    } catch (_error) {
+      // try next endpoint
+    }
+  }
+
+  return {
+    connected: false,
+    ok: false,
+    status: 0,
+    raw: "Falha ao consultar status da instância",
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -55,7 +125,11 @@ Deno.serve(async (req: Request) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const { action, force_new } = await req.json();
+    const body = await req.json();
+    const action = typeof body?.action === "string" ? body.action : "";
+    const force_new = body?.force_new === true;
+    const requestedCompanyId = typeof body?.company_id === "string" ? body.company_id : "";
+    const resolvedCompanyId = await resolveAuthorizedCompanyId(adminClient, userId, requestedCompanyId);
 
     // =========================================================
     // ACTION: get-or-create
@@ -103,19 +177,11 @@ Deno.serve(async (req: Request) => {
       if (adminToken) tokenCandidates.push(adminToken);
 
       try {
-        const { data: membership } = await adminClient
-          .from("company_memberships")
-          .select("company_id, created_at")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (membership?.company_id) {
+        if (resolvedCompanyId) {
           const { data: apiSettings } = await adminClient
             .from("api_settings")
             .select("api_token")
-            .eq("company_id", membership.company_id)
+            .eq("company_id", resolvedCompanyId)
             .maybeSingle();
 
           const uiToken = normalizeToken((apiSettings as any)?.api_token);
@@ -193,19 +259,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Resolve company_id for the webhook
-      let webhookCompanyId = "";
-      try {
-        const { data: membershipRow } = await adminClient
-          .from("company_memberships")
-          .select("company_id")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        webhookCompanyId = membershipRow?.company_id || "";
-      } catch (_e) {
-        console.error("[whatsapp-manage] Failed to resolve company_id for webhook:", _e);
-      }
+      const webhookCompanyId = resolvedCompanyId;
 
       // Register webhook → chatbot-webhook (handles messages + connection events)
       const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${webhookCompanyId}&user_id=${userId}`;
@@ -269,7 +323,8 @@ Deno.serve(async (req: Request) => {
     // =========================================================
     // ACTION: qrcode
     // =========================================================
-    if (action === "qrcode") {
+    if (action === "qrcode" || action === "reconnect") {
+      const isReconnect = action === "reconnect";
       const { data: inst } = await adminClient
         .from("whatsapp_instances")
         .select("server_url, instance_token, is_connected")
@@ -283,46 +338,40 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Always check real API status instead of trusting DB (DB may be stale after session errors)
-      if (inst.is_connected) {
-        // Verify with the actual API that it's still connected
-        try {
-          const statusRes = await fetch(`${inst.server_url}/instance/me`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json", token: inst.instance_token },
-          });
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            const reallyConnected = statusData?.connected === true || statusData?.instance?.status === "connected" || statusData?.status === "connected";
-            if (reallyConnected) {
-              // Re-register webhook just in case it was lost
-              let whCompanyId = "";
-              try {
-                const { data: mRow } = await adminClient
-                  .from("company_memberships").select("company_id")
-                  .eq("user_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
-                whCompanyId = mRow?.company_id || "";
-              } catch (_e) {}
-              const refreshWebhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
-              try {
-                await fetch(`${inst.server_url}/webhook`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", token: inst.instance_token },
-                  body: JSON.stringify({ url: refreshWebhookUrl, enabled: true, active: true, byApi: true, addUrlEvents: true, addUrlTypesMessages: true, excludeMessages: ["wasSentByApi", "isGroupYes"], events: ["connection", "messages", "messages_update", "presence"] }),
-                });
-                console.log("[whatsapp-manage] qrcode: webhook refreshed for already-connected instance");
-              } catch (_e) {}
-              // Update webhook URL in DB
-              await adminClient.from("whatsapp_instances").update({ webhook_url: refreshWebhookUrl, last_connection_at: new Date().toISOString() }).eq("user_id", userId);
-              return new Response(JSON.stringify({ connected: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-            }
-            // If API says NOT connected, update DB and proceed to QR code flow
-            console.log("[whatsapp-manage] qrcode: DB says connected but API says disconnected, proceeding to reconnect");
-            await adminClient.from("whatsapp_instances").update({ status: "disconnected", is_connected: false }).eq("user_id", userId);
+      // Always check live API status instead of trusting DB
+      if (inst.is_connected || isReconnect) {
+        const liveStatus = await getLiveConnectionStatus(inst.server_url, inst.instance_token);
+        if (liveStatus.connected) {
+          const refreshWebhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${resolvedCompanyId}&user_id=${userId}`;
+          try {
+            await fetch(`${inst.server_url}/webhook`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", token: inst.instance_token },
+              body: JSON.stringify({ url: refreshWebhookUrl, enabled: true, active: true, byApi: true, addUrlEvents: true, addUrlTypesMessages: true, excludeMessages: ["wasSentByApi", "isGroupYes"], events: ["connection", "messages", "messages_update", "presence", "history"] }),
+            });
+          } catch (_e) {
+            // proceed after best-effort webhook refresh
           }
-        } catch (_e) {
-          console.error("[whatsapp-manage] qrcode: failed to verify instance status:", _e);
+
+          await adminClient
+            .from("whatsapp_instances")
+            .update({
+              status: "connected",
+              is_connected: true,
+              webhook_url: refreshWebhookUrl,
+              last_connection_at: new Date().toISOString(),
+            })
+            .eq("user_id", userId);
+
+          return new Response(JSON.stringify({ connected: true, reconnected: isReconnect }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
+
+        await adminClient
+          .from("whatsapp_instances")
+          .update({ status: "disconnected", is_connected: false })
+          .eq("user_id", userId);
       }
 
       const qrRes = await fetch(`${inst.server_url}/instance/connect`, {
@@ -343,19 +392,7 @@ Deno.serve(async (req: Request) => {
       const connected = qrJson?.connected === true || qrJson?.instance?.status === "connected";
       if (connected) {
         // Resolve company_id for webhook
-        let whCompanyId = "";
-        try {
-          const { data: mRow } = await adminClient
-            .from("company_memberships")
-            .select("company_id")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          whCompanyId = mRow?.company_id || "";
-        } catch (_e) {}
-
-        const newWebhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
+        const newWebhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${resolvedCompanyId}&user_id=${userId}`;
 
         await adminClient
           .from("whatsapp_instances")
@@ -541,35 +578,24 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      try {
-        const res = await fetch(`${inst.server_url}/instance`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json", token: inst.instance_token },
-        });
+      const liveStatus = await getLiveConnectionStatus(inst.server_url, inst.instance_token);
 
-        if (res.status === 401) {
-          // Token invalid — mark as disconnected in DB
-          await adminClient
-            .from("whatsapp_instances")
-            .update({ is_connected: false, status: "disconnected" })
-            .eq("user_id", userId);
-
-          return new Response(
-            JSON.stringify({ disconnected: true, status: 401 }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      if (!liveStatus.connected) {
+        await adminClient
+          .from("whatsapp_instances")
+          .update({ is_connected: false, status: "disconnected" })
+          .eq("user_id", userId);
 
         return new Response(
-          JSON.stringify({ disconnected: false, status: res.status }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } catch {
-        return new Response(
-          JSON.stringify({ disconnected: false, status: 0, error: "Falha de rede" }),
+          JSON.stringify({ disconnected: true, status: liveStatus.status, api_status: liveStatus.raw }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      return new Response(
+        JSON.stringify({ disconnected: false, status: liveStatus.status || 200, api_status: liveStatus.raw }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // =========================================================
@@ -590,32 +616,9 @@ Deno.serve(async (req: Request) => {
       }
 
       // Step 1: Validate actual connection status via API
-      let realConnected = false;
-      let apiStatusRaw = "";
-      try {
-        const statusRes = await fetch(`${inst.server_url}/instance`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json", token: inst.instance_token },
-        });
-        if (statusRes.ok) {
-          const statusInfo = await statusRes.json();
-          apiStatusRaw = JSON.stringify(statusInfo).substring(0, 500);
-          realConnected = statusInfo?.instance?.status === "connected" ||
-            statusInfo?.connected === true ||
-            statusInfo?.instance?.state === "open";
-          console.log("[whatsapp-manage] resync: real connection status =", realConnected, apiStatusRaw);
-        } else if (statusRes.status === 401) {
-          console.log("[whatsapp-manage] resync: token invalid (401)");
-          apiStatusRaw = `401 from ${inst.server_url}/instance`;
-        } else {
-          const errText = await statusRes.text();
-          apiStatusRaw = `${statusRes.status}: ${errText.substring(0, 200)}`;
-          console.log("[whatsapp-manage] resync: unexpected status:", apiStatusRaw);
-        }
-      } catch (e: any) {
-        console.error("[whatsapp-manage] resync: status check failed:", e.message);
-        apiStatusRaw = `Error: ${e.message}`;
-      }
+      const liveStatus = await getLiveConnectionStatus(inst.server_url, inst.instance_token);
+      const realConnected = liveStatus.connected;
+      const apiStatusRaw = liveStatus.raw;
 
       // Step 2: Update DB with real status
       await adminClient
@@ -632,19 +635,7 @@ Deno.serve(async (req: Request) => {
       let webhookResponse = "";
       let currentWebhookOnApi = "";
       if (realConnected) {
-        let whCompanyId = "";
-        try {
-          const { data: mRow } = await adminClient
-            .from("company_memberships")
-            .select("company_id")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          whCompanyId = mRow?.company_id || "";
-        } catch (_e) {}
-
-        const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${whCompanyId}&user_id=${userId}`;
+        const webhookUrl = `${supabaseUrl}/functions/v1/chatbot-webhook?company_id=${resolvedCompanyId}&user_id=${userId}`;
 
         try {
           // Step 3a: Check current webhook config on the API

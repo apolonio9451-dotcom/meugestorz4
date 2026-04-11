@@ -145,10 +145,28 @@ export default function WhatsAppView() {
     }
   };
 
+  const clearLocalReconnectState = useCallback(() => {
+    setApiValidationError(null);
+    setQrCode(null);
+    setPolling(false);
+    setProfilePic(null);
+    setProfileName(null);
+    setProfilePhone(null);
+    try {
+      localStorage.removeItem("auth_cache");
+    } catch {
+      // ignore local cache cleanup failures
+    }
+  }, []);
+
   const callManage = useCallback(async (action: string, options?: { forceNew?: boolean }) => {
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action, force_new: options?.forceNew === true },
+        body: {
+          action,
+          force_new: options?.forceNew === true,
+          company_id: companyId,
+        },
       });
 
       if (error) {
@@ -173,7 +191,7 @@ export default function WhatsAppView() {
       toast.error(safeMessage);
       return null;
     }
-  }, []);
+  }, [companyId]);
 
   const fetchProfilePicture = useCallback(async () => {
     const data = await callManage("profile-picture");
@@ -191,6 +209,7 @@ export default function WhatsAppView() {
         prev ? { ...prev, is_connected: true, status: "connected" } : null
       );
       setQrCode(null);
+      fetchProfilePicture();
       toast.success("WhatsApp já está conectado!");
     } else if (data?.qrcode) {
       setQrCode(data.qrcode);
@@ -199,6 +218,30 @@ export default function WhatsAppView() {
 
     setActionLoading(null);
   }, [callManage]);
+
+  const handleReconnect = useCallback(async () => {
+    setActionLoading("reconnect");
+    clearLocalReconnectState();
+
+    const data = await callManage("reconnect");
+
+    if (data?.connected) {
+      setInstance((prev) =>
+        prev ? { ...prev, is_connected: true, status: "connected" } : prev
+      );
+      await fetchProfilePicture();
+      toast.success("Instância validada e re-sincronizada.");
+    } else if (data?.qrcode) {
+      setInstance((prev) =>
+        prev ? { ...prev, is_connected: false, status: "connecting" } : prev
+      );
+      setQrCode(data.qrcode);
+      setPolling(true);
+      toast.success("Escaneie o QR Code para reconectar a instância.");
+    }
+
+    setActionLoading(null);
+  }, [callManage, clearLocalReconnectState, fetchProfilePicture]);
 
   const loadInstance = useCallback(
     async (options?: { forceNew?: boolean; clearCache?: boolean }) => {
@@ -468,6 +511,19 @@ export default function WhatsAppView() {
 
               <div className="flex flex-col gap-2">
                 <Button
+                  variant="secondary"
+                  className="w-full gap-2"
+                  onClick={handleReconnect}
+                  disabled={!!actionLoading}
+                >
+                  {actionLoading === "reconnect" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  Reconectar Instância
+                </Button>
+                <Button
                   variant="outline"
                   className="w-full gap-2 text-amber-500 hover:bg-amber-500/10 border-amber-500/30"
                   onClick={handleDisconnect}
@@ -545,6 +601,20 @@ export default function WhatsAppView() {
                   </p>
                 </div>
               )}
+
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleReconnect}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "reconnect" ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Reconectar Instância
+              </Button>
 
               <Button
                 variant="ghost"
