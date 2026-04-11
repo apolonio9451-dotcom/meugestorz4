@@ -941,7 +941,7 @@ Deno.serve(async (req: Request) => {
         body.status === "CONNECTED" ||
         body.connected === true;
       const isDisconnected =
-        (eventTypeRaw === "connection" && (instanceStatus === "disconnected" || instanceStatus === "connecting")) ||
+        (eventTypeRaw === "connection" && instanceStatus === "disconnected") ||
         eventTypeRaw === "disconnected" ||
         body.status === "DISCONNECTED" ||
         body.connected === false;
