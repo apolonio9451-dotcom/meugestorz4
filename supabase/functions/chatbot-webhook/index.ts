@@ -272,6 +272,13 @@ function extractGenericPayload(body: any): ExtractedPayload {
     body?.message?.text,
     body?.message?.content?.text,
     body?.message?.content?.selectedDisplayText,
+    // UAZAPI ButtonsResponseMessage — selectedDisplayText nested inside Response
+    body?.message?.content?.Response?.SelectedDisplayText,
+    body?.message?.content?.Response?.selectedDisplayText,
+    // UAZAPI list response within content
+    body?.message?.content?.singleSelectReply?.selectedRowId,
+    body?.message?.content?.listResponse?.title,
+    body?.message?.content?.listResponse?.singleSelectReply?.selectedRowId,
     body?.message?.content?.conversation,
     body?.message?.content?.extendedTextMessage?.text,
     body?.message?.convertOptions,
@@ -283,6 +290,8 @@ function extractGenericPayload(body: any): ExtractedPayload {
     body?.message?.listReply?.title,
     body?.message?.listResponseMessage?.title,
     body?.message?.templateButtonReplyMessage?.selectedDisplayText,
+    // UAZAPI chat-level fallback for last message text
+    body?.chat?.wa_lastMessageTextVote,
     body?.text, body?.body,
     body?.data?.text, body?.data?.body,
     body?.data?.message?.text,
@@ -306,12 +315,15 @@ function extractGenericPayload(body: any): ExtractedPayload {
   }
   const msg = body?.message || {};
   const msgType = (msg.messageType || msg.type || "").toLowerCase();
+  // Detect UAZAPI button/list responses via wa_lastMessageType
+  const uazapiMsgType = (body?.chat?.wa_lastMessageType || "").toLowerCase();
   let messageType = "text";
   if (msgType.includes("image") || msg.mediaType === "image") messageType = "image";
   else if (msgType.includes("audio") || msg.mediaType === "audio") messageType = "audio";
   else if (msgType.includes("video") || msg.mediaType === "video") messageType = "video";
   else if (msgType.includes("document") || msg.mediaType === "document") messageType = "document";
   else if (msgType.includes("sticker")) messageType = "sticker";
+  else if (uazapiMsgType.includes("buttonsresponse") || uazapiMsgType.includes("listresponse")) messageType = "text";
   else if (msg.content?.URL && !messageText) {
     const lastType = (body?.chat?.wa_lastMessageType || "").toLowerCase();
     if (lastType.includes("audio")) messageType = "audio";
