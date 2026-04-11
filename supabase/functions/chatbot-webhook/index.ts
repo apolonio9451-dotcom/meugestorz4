@@ -38,11 +38,30 @@ async function sendText(apiUrl: string, apiToken: string, to: string, text: stri
     headers: { "Content-Type": "application/json", token: apiToken },
     body: JSON.stringify({ number: to, text: text, linkPreview: true }),
   });
+  const body = await resp.text();
   if (!resp.ok) {
-    const body = await resp.text();
+    // Detect session/auth errors to provide actionable feedback
+    if (resp.status === 401 || isSessionErrorText(body)) {
+      console.error(`[chatbot-webhook] SESSION ERROR on send/text: ${resp.status} - ${body.slice(0, 300)}`);
+      throw new SessionExpiredError(`Sessão expirada (${resp.status}). Reconecte a instância nas Configurações.`);
+    }
     throw new Error(`UAZAPI send/text failed: ${resp.status} - ${body}`);
   }
-  return resp.json();
+  try { return JSON.parse(body); } catch { return { ok: true }; }
+}
+
+class SessionExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionExpiredError";
+  }
+}
+
+function isSessionErrorText(text: string): boolean {
+  const lower = text.toLowerCase();
+  return lower.includes("disconnected") || lower.includes("not connected") ||
+    lower.includes("qr code") || lower.includes("not logged") ||
+    lower.includes("session expired") || lower.includes("invalid token");
 }
 
 async function sendMedia(
