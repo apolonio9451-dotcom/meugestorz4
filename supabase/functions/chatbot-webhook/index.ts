@@ -1923,6 +1923,9 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
     if (replyText.trim()) {
       decisions.push(`💬 Enviando resposta de texto (${replyText.length} chars)`);
       await doPresence("composing", minDelay, maxDelay);
+      // Humanizing delay — simulate reading + thinking before replying
+      const humanDelay = 800 + Math.random() * 1200; // 0.8-2s extra
+      await sleep(humanDelay);
       await sendText(apiUrl, apiToken, phone, replyText);
     }
 
