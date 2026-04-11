@@ -150,6 +150,7 @@ export default function Chatbot() {
 
   // WhatsApp Instance status
   const [instanceData, setInstanceData] = useState<{ profilePicture?: string; phone?: string; isConnected?: boolean; deviceName?: string } | null>(null);
+  const [resyncingWebhook, setResyncingWebhook] = useState(false);
 
   // Autosave timer for personality
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
