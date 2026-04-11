@@ -1475,12 +1475,54 @@ Deno.serve(async (req: Request) => {
     }
     decisions.push("🧭 Menu automático inicial desativado → fluxo segue para conversa natural com IA");
 
-    // ===== CHECK CLIENT CONTEXT =====
-    const { data: clientData } = await supabase
-      .from("clients").select("id, name, status, company_id")
+    // ===== CLIENT LOOKUP — multi-format phone matching =====
+    // Build phone variations for robust matching
+    const phoneVariations: string[] = [phone];
+    // Without country code (strip leading 55 for Brazil)
+    if (phone.startsWith("55") && phone.length >= 12) {
+      phoneVariations.push(phone.slice(2));
+    }
+    // With country code if missing
+    if (!phone.startsWith("55") && phone.length >= 10) {
+      phoneVariations.push("55" + phone);
+    }
+    // Last 8-9 digits (local number without area code)
+    if (phone.length >= 10) {
+      phoneVariations.push(phone.slice(-9));
+      phoneVariations.push(phone.slice(-8));
+    }
+    const uniqueVariations = [...new Set(phoneVariations)];
+
+    // Try exact matches first, then partial (endsWith) as fallback
+    let clientData: any = null;
+
+    // 1) Exact match on all variations
+    const orConditions = uniqueVariations
+      .flatMap(v => [`phone.eq.${v}`, `whatsapp.eq.${v}`])
+      .join(",");
+    const { data: exactMatch } = await supabase
+      .from("clients").select("id, name, status, company_id, phone, whatsapp")
       .eq("company_id", companyIdParam)
-      .or(`phone.eq.${phone},whatsapp.eq.${phone}`)
+      .or(orConditions)
       .limit(1).maybeSingle();
+
+    if (exactMatch) {
+      clientData = exactMatch;
+    } else {
+      // 2) Partial match — phone ends with the last 9 digits
+      const last9 = phone.slice(-9);
+      if (last9.length === 9) {
+        const { data: partialMatch } = await supabase
+          .from("clients").select("id, name, status, company_id, phone, whatsapp")
+          .eq("company_id", companyIdParam)
+          .or(`phone.like.%${last9},whatsapp.like.%${last9}`)
+          .limit(1).maybeSingle();
+        if (partialMatch) {
+          clientData = partialMatch;
+          decisions.push(`🔍 Match parcial (últimos 9 dígitos): ${last9}`);
+        }
+      }
+    }
 
     let clientContext = "";
     let contextType = "new_contact";
@@ -1494,7 +1536,7 @@ Deno.serve(async (req: Request) => {
     if (clientData) {
       contextType = "client";
       clientName = clientData.name;
-      decisions.push(`👤 Identificado como CLIENTE EXISTENTE: ${clientName} (${clientData.status})`);
+      decisions.push(`👤 CLIENTE IDENTIFICADO: ${clientName} (status: ${clientData.status}, phone_db: ${clientData.phone || clientData.whatsapp})`);
 
       const { data: subData } = await supabase
         .from("client_subscriptions")
@@ -1505,22 +1547,27 @@ Deno.serve(async (req: Request) => {
 
       if (subData) {
         const planName = (subData as any).subscription_plans?.name || "N/A";
-        decisions.push(`📊 Dados: Plano=${planName}, Vencimento=${subData.end_date}, Valor=R$${subData.amount}`);
+        decisions.push(`📊 Plano=${planName}, Vencimento=${subData.end_date}, Valor=R$${subData.amount}`);
         clientContext = `
-CONTEXTO DO CLIENTE:
-- Nome: ${clientName}
-- Status: ${clientData.status}
-- Plano: ${planName}
-- Vencimento: ${subData.end_date}
-- Valor: R$ ${subData.amount}
-Foque em suporte personalizado. Use o nome do cliente. Saúde-o pelo nome.`;
+CONTEXTO DO CLIENTE (DADOS REAIS DO SISTEMA — USE OBRIGATORIAMENTE):
+- Nome do cliente: ${clientName}
+- Status da conta: ${clientData.status}
+- Plano contratado: ${planName}
+- Data de vencimento: ${subData.end_date}
+- Valor do plano: R$ ${subData.amount}
+
+REGRA OBRIGATÓRIA: Você DEVE cumprimentar o cliente pelo nome "${clientName}". Exemplo: "Opa, fala ${clientName.split(" ")[0]}! Tudo certo?"
+Foque em suporte personalizado, renovação e resolução de problemas.
+NÃO apresente a empresa como se fosse a primeira vez — ele já é cliente.`;
       } else {
         clientContext = `
-CONTEXTO DO CLIENTE:
-- Nome: ${clientName}
-- Status: ${clientData.status}
-- Sem assinatura ativa.
-Ofereça ajuda e sugira planos disponíveis.`;
+CONTEXTO DO CLIENTE (DADOS REAIS DO SISTEMA — USE OBRIGATORIAMENTE):
+- Nome do cliente: ${clientName}
+- Status da conta: ${clientData.status}
+- Sem assinatura ativa no momento.
+
+REGRA OBRIGATÓRIA: Cumprimente pelo nome "${clientName.split(" ")[0]}".
+Ofereça ajuda e sugira renovação ou novos planos.`;
       }
 
       // Use custom client instructions if available
@@ -1529,7 +1576,8 @@ Ofereça ajuda e sugira planos disponíveis.`;
         decisions.push("📝 Usando instruções personalizadas para CLIENTE");
       }
     } else {
-      decisions.push("🆕 Identificado como NOVO CONTATO → Não é cliente na base");
+      decisions.push("🆕 NOVO CONTATO → Número não encontrado na base de clientes");
+      decisions.push(`🔍 Variações testadas: ${uniqueVariations.join(", ")}`);
 
       const welcomeMsg = chatSettings.welcome_message?.trim();
       if (welcomeMsg) {
@@ -1537,7 +1585,7 @@ Ofereça ajuda e sugira planos disponíveis.`;
         decisions.push("👋 Welcome message convertida em referência de tom, sem disparo automático");
       }
       clientContext = `
-CONTEXTO: Este é um NOVO CONTATO que não é cliente.
+CONTEXTO: Este é um NOVO CONTATO que NÃO é cliente.
 Foque em vendas: apresente o serviço, benefícios e como contratar.
 Seja persuasivo mas educado.`;
 
