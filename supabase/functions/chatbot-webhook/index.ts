@@ -2072,14 +2072,33 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
       }
     }
 
-    // Send text response (if any remaining after command extraction)
+    // ===================== FRAGMENTADOR DE MENSAGENS (TOQUE HUMANO) =====================
+    // Split AI response into independent messages sent with typing delays
     if (replyText.trim()) {
-      decisions.push(`💬 Enviando resposta de texto (${replyText.length} chars)`);
-      await doPresence("composing", minDelay, maxDelay);
-      // Humanizing delay — simulate reading + thinking before replying
-      const humanDelay = 800 + Math.random() * 1200; // 0.8-2s extra
-      await sleep(humanDelay);
-      await sendText(apiUrl, apiToken, phone, replyText);
+      // Fragment the response: split by double newline (paragraphs) or sentences ending with period
+      const fragments = fragmentMessage(replyText);
+      decisions.push(`💬 Fragmentador: ${fragments.length} fragmento(s) de texto`);
+
+      for (let i = 0; i < fragments.length; i++) {
+        const fragment = fragments[i].trim();
+        if (!fragment) continue;
+
+        // Simulate "composing" presence before each fragment
+        const typingDuration = Math.max(1500, Math.min(fragment.length * 40, 4000)); // 1.5s-4s based on length
+        await simulatePresence(apiUrl, apiToken, phone, "composing", typingDuration);
+
+        // Human delay between fragments (2-3s), skip delay for first fragment
+        if (i > 0) {
+          const interFragmentDelay = 2000 + Math.random() * 1000; // 2-3s
+          await sleep(interFragmentDelay);
+        } else {
+          // First message: small initial thinking delay
+          const thinkDelay = 800 + Math.random() * 700; // 0.8-1.5s
+          await sleep(thinkDelay);
+        }
+
+        await sendText(apiUrl, apiToken, phone, fragment);
+      }
     }
 
     console.log("Mensagem enviada com sucesso!");
