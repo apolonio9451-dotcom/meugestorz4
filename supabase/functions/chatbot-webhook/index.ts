@@ -219,6 +219,72 @@ function cleanJid(value: string): string {
   return trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
 }
 
+// ===================== FRAGMENTADOR DE MENSAGENS =====================
+// Splits AI response into human-like message fragments
+function fragmentMessage(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  // 1. Split by double newline (paragraphs)
+  const paragraphs = trimmed.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+
+  // If we already have multiple paragraphs, use them as fragments
+  if (paragraphs.length >= 2) {
+    // Extract greeting as first isolated fragment if present
+    return extractGreetingFragment(paragraphs);
+  }
+
+  // 2. Single paragraph: try to split by single newline
+  const lines = trimmed.split(/\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length >= 3) {
+    return extractGreetingFragment(lines);
+  }
+
+  // 3. Single block: try splitting by sentence boundaries (. ! ?)
+  // Only split if result is 2-4 fragments and each is meaningful (>10 chars)
+  const sentences = trimmed.match(/[^.!?]+[.!?]+/g);
+  if (sentences && sentences.length >= 2 && sentences.length <= 5) {
+    const groups: string[] = [];
+    let current = "";
+    for (const s of sentences) {
+      if (current.length + s.length > 120 && current.length > 10) {
+        groups.push(current.trim());
+        current = s.trim();
+      } else {
+        current += (current ? " " : "") + s.trim();
+      }
+    }
+    if (current.trim()) groups.push(current.trim());
+    if (groups.length >= 2) {
+      return extractGreetingFragment(groups);
+    }
+  }
+
+  // 4. Short message: send as single fragment
+  return [trimmed];
+}
+
+// Isolate temporal greeting (Bom dia/tarde/noite) as first independent message
+function extractGreetingFragment(fragments: string[]): string[] {
+  if (fragments.length === 0) return fragments;
+
+  const first = fragments[0];
+  // Check if first fragment starts with a greeting pattern
+  const greetingMatch = first.match(/^((?:Boa?\s+(?:dia|tarde|noite)|Ol[aá]|Oi|E\s*a[ií]|Fala)[!,.]?\s*(?:tudo\s+(?:bem|certo|bom)[?!.]?\s*)?)/i);
+  
+  if (greetingMatch && greetingMatch[1]) {
+    const greeting = greetingMatch[1].trim();
+    const remainder = first.slice(greetingMatch[1].length).trim();
+    
+    // Only split if remainder is substantial
+    if (remainder.length > 5) {
+      return [greeting, remainder, ...fragments.slice(1)];
+    }
+  }
+
+  return fragments;
+}
+
 function checkAutoReply(message: string, autoReplies: any[]): any | null {
   const lowerMsg = message.toLowerCase().trim();
   const sorted = [...autoReplies].filter((r) => r.is_active).sort((a, b) => b.priority - a.priority);
