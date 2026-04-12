@@ -1617,14 +1617,33 @@ Deno.serve(async (req: Request) => {
 
       if (subData) {
         const planName = (subData as any).subscription_plans?.name || "N/A";
-        decisions.push(`📊 Plano=${planName}, Vencimento=${subData.end_date}, Valor=R$${subData.amount}`);
+        // Current server date for expiration comparison
+        const now = new Date();
+        const brasiliaOffset = -3 * 60;
+        const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+        const brasiliaTime = new Date(utcMs + brasiliaOffset * 60000);
+        const currentDate = brasiliaTime.toISOString().split("T")[0]; // YYYY-MM-DD
+        const endDate = subData.end_date;
+        const isExpired = endDate < currentDate;
+        const daysUntilExpiry = Math.ceil((new Date(endDate).getTime() - brasiliaTime.getTime()) / (1000 * 60 * 60 * 24));
+        const expiryStatus = isExpired
+          ? `⚠️ VENCIDO há ${Math.abs(daysUntilExpiry)} dias`
+          : daysUntilExpiry <= 3
+            ? `⏰ VENCE EM ${daysUntilExpiry} dia(s) — urgente`
+            : daysUntilExpiry <= 7
+              ? `📅 Vence em ${daysUntilExpiry} dias — atenção`
+              : `✅ Válido por mais ${daysUntilExpiry} dias`;
+
+        decisions.push(`📊 Plano=${planName}, Vencimento=${endDate}, Valor=R$${subData.amount}, Status=${expiryStatus}`);
         clientContext = `
 CONTEXTO DO CLIENTE (DADOS REAIS DO SISTEMA — USE OBRIGATORIAMENTE):
 - Nome do cliente: ${clientName}
 - Status da conta: ${clientData.status}
 - Plano contratado: ${planName}
-- Data de vencimento: ${subData.end_date}
+- Data de vencimento: ${endDate}
 - Valor do plano: R$ ${subData.amount}
+- DATA ATUAL DO SERVIDOR: ${currentDate}
+- SITUAÇÃO DO PLANO: ${expiryStatus}
 
 REGRAS OBRIGATÓRIAS PARA CLIENTE IDENTIFICADO:
 1. Você JÁ SABE o nome do cliente: "${clientName}". Use o primeiro nome "${clientName.split(" ")[0]}" para cumprimentar.
@@ -1632,6 +1651,8 @@ REGRAS OBRIGATÓRIAS PARA CLIENTE IDENTIFICADO:
 3. NUNCA pergunte dados que já estão acima (nome, plano, vencimento). Use-os diretamente.
 4. Foque em suporte personalizado, renovação e resolução de problemas.
 5. NÃO apresente a empresa como se fosse a primeira vez — ele já é cliente.
+${isExpired ? `6. O PLANO ESTÁ VENCIDO! Mencione gentilmente a renovação e ofereça ajuda para renovar. Exemplo: "Vi aqui que seu plano venceu há ${Math.abs(daysUntilExpiry)} dias. Quer que eu te ajude a renovar?"` : ""}
+${!isExpired && daysUntilExpiry <= 7 ? `6. O plano vence em breve (${daysUntilExpiry} dias). Se o cliente mencionar problemas ou renovação, aproveite para lembrar do vencimento próximo.` : ""}
 Exemplo de abertura: "Opa, fala ${clientName.split(" ")[0]}! Tudo certo? Como posso te ajudar?"
 `;
       } else {
