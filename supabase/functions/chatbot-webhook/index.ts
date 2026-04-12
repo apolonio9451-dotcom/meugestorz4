@@ -383,6 +383,12 @@ function parseAiCommands(text: string): AiCommandResult {
     cleanText = cleanText.replace(/\[ENVIAR_MENU\]\s*/gi, "").trim();
   }
 
+  // [ENVIAR_CATALOGO_BUSINESS] - send WhatsApp Business catalog (interactive catalog_message)
+  if (cleanText.includes("[ENVIAR_CATALOGO_BUSINESS]")) {
+    commands.push({ type: "send_catalog_business" });
+    cleanText = cleanText.replace(/\[ENVIAR_CATALOGO_BUSINESS\]\s*/gi, "").trim();
+  }
+
   // [ENVIAR_CATALOGO] - send subscription plans as list
   if (cleanText.includes("[ENVIAR_CATALOGO]")) {
     commands.push({ type: "send_catalog" });
