@@ -1759,7 +1759,8 @@ Para enviar mídia: [ENVIAR_MEDIA:nome_do_arquivo.extensão]`;
 COMANDOS ESPECIAIS (Tags que você pode usar na resposta para executar ações):
 - [ENVIAR_MENU] → Envia o menu interativo configurado
 - [ENVIAR_CATALOGO] → Envia a lista de planos/preços como menu interativo
-- [ENVIAR_BOTOES:Opção 1|Opção 2|Opção 3] → Envia botões rápidos (máx 3)
+- [ENVIAR_CATALOGO_BUSINESS] → Envia o Catálogo da Loja do WhatsApp Business (produtos reais cadastrados)
+- [ENVIAR_BOTOES:Opção 1|Opção 2|Opção 3] → Envia botões rápidos interativos (máx 3)
 - [ENVIAR_LISTA:Item 1|Item 2|Item 3] → Envia um menu de lista expansível
 - [ENVIAR_MEDIA:arquivo.mp3] → Envia mídia da biblioteca
 - [AUDIO:nome] → Atalho para enviar áudio da biblioteca (busca por nome, com ou sem extensão)
@@ -2001,7 +2002,7 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
       explicitCatalogRequest;
 
     if (!allowInteractiveCommands) {
-      const filteredCommands = commands.filter((cmd) => !["send_menu", "send_catalog", "send_buttons", "send_list"].includes(cmd.type));
+      const filteredCommands = commands.filter((cmd) => !["send_menu", "send_catalog", "send_catalog_business", "send_buttons", "send_list"].includes(cmd.type));
       if (filteredCommands.length !== commands.length) {
         decisions.push("🛑 Comandos interativos removidos para evitar botões fantasmas/menus automáticos");
       }
@@ -2023,6 +2024,17 @@ REGRAS DE COMPORTAMENTO (OBRIGATÓRIAS):
                 await sendList(apiUrl, apiToken, phone, chatSettings.interactive_menu_title || "", chatSettings.interactive_menu_body || "Selecione:", chatSettings.interactive_menu_footer || "", chatSettings.interactive_menu_button_text || "Ver Opções", validItems.slice(0, 10));
               }
             } catch (e) { console.error("Falha ao enviar menu via tag:", e); }
+          }
+          break;
+        }
+        case "send_catalog_business": {
+          decisions.push("🎯 IA solicitou [ENVIAR_CATALOGO_BUSINESS] → Enviando catálogo WhatsApp Business");
+          try {
+            await sendCatalogBusiness(apiUrl, apiToken, phone);
+            decisions.push("✅ Catálogo Business enviado com sucesso");
+          } catch (e: any) {
+            console.error("Falha ao enviar catálogo business:", e);
+            decisions.push(`⚠️ Falha no catálogo business: ${e.message?.slice(0, 100)}`);
           }
           break;
         }
