@@ -942,8 +942,10 @@ export default function Clients() {
           case "vence_amanha": return days !== null && days === 1;
           case "a_vencer": return days !== null && days === 3;
           case "followup": {
+            // Show active clients eligible for follow-up: registered any time and follow_up_active still true.
+            // Clients who already received the follow-up have follow_up_active=false and won't appear here.
             const activeDays = getClientActiveDays(c.id);
-            return activeDays !== null && activeDays >= 15 && (c as any).follow_up_active !== false;
+            return activeDays !== null && (c as any).follow_up_active !== false;
           }
           case "suporte": {
             const supportDate = (c as any).support_started_at;
@@ -965,7 +967,7 @@ export default function Clients() {
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
     a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d === 3; }).length,
-    followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && ad >= 15 && (c as any).follow_up_active !== false; }).length,
+    followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && (c as any).follow_up_active !== false; }).length,
     suporte: searchFiltered.filter(c => !!(c as any).support_started_at).length,
   }), [activeClients, excludedClients, searchFiltered, subscriptions, getClientDays, getClientActiveDays]);
 
@@ -1519,7 +1521,7 @@ export default function Clients() {
       {/* Follow-up info text */}
       {mainFilter === "status" && statusSubFilter === "followup" && (
         <p className="text-xs text-muted-foreground bg-cyan-400/5 border border-cyan-400/20 rounded-lg px-3 py-2">
-          📋 <span className="font-semibold text-cyan-400">Follow-up</span> — Exibe clientes ativos com 15 dias ou mais de cadastro. Ideal para acompanhamento e fidelização após o período inicial.
+          📋 <span className="font-semibold text-cyan-400">Follow-up</span> — A mensagem é disparada automaticamente <span className="font-semibold">15 dias após o cadastro</span>. Cada cliente recebe apenas <span className="font-semibold">1 follow-up</span> e sai dessa lista após o envio (sem duplicidade).
         </p>
       )}
 
