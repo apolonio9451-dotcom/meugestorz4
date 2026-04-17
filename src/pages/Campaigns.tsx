@@ -160,6 +160,12 @@ export default function Campaigns() {
   const abortRef = useRef<AbortController | null>(null);
   const pauseRef = useRef(false);
 
+  // Custom dates added by user (not in HOLIDAY_DATES)
+  const [customDates, setCustomDates] = useState<CampaignDate[]>([]);
+  const [newDateOpen, setNewDateOpen] = useState(false);
+  const [newDateName, setNewDateName] = useState("");
+  const [newDateDayMonth, setNewDateDayMonth] = useState("");
+
   const loadPresets = async () => {
     if (!effectiveCompanyId) return;
     setLoading(true);
@@ -172,12 +178,26 @@ export default function Campaigns() {
       toast.error("Erro ao carregar campanhas");
     } else {
       const map: Record<string, Preset> = {};
+      const customs: CampaignDate[] = [];
       (data as any[])?.forEach((p) => {
         const match = HOLIDAY_DATES.find(
           (h) => h.name === p.date_name || h.dayMonth === p.day_month
         );
-        if (match) map[match.key] = p as Preset;
+        if (match) {
+          map[match.key] = p as Preset;
+        } else {
+          const key = `custom_${p.id}`;
+          map[key] = p as Preset;
+          customs.push({
+            key,
+            name: p.date_name,
+            dayMonth: p.day_month,
+            icon: CalendarIcon,
+            custom: true,
+          });
+        }
       });
+      setCustomDates(customs);
       setPresets(map);
     }
     setLoading(false);
@@ -187,6 +207,48 @@ export default function Campaigns() {
     loadPresets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCompanyId]);
+
+  const allDates = [...HOLIDAY_DATES, ...customDates].sort(sortByDate);
+
+  const handleCreateNewDate = async () => {
+    if (!newDateName.trim()) {
+      toast.error("Informe o nome da data");
+      return;
+    }
+    const dmMatch = newDateDayMonth.match(/^(\d{2})\/(\d{2})$/);
+    if (!dmMatch) {
+      toast.error("Use o formato DD/MM (ex: 25/12)");
+      return;
+    }
+    const day = parseInt(dmMatch[1]);
+    const month = parseInt(dmMatch[2]);
+    if (day < 1 || day > 31 || month < 1 || month > 12) {
+      toast.error("Data inválida");
+      return;
+    }
+    if (!effectiveCompanyId) return;
+    const { error } = await supabase
+      .from("campaign_presets" as any)
+      .insert({
+        company_id: effectiveCompanyId,
+        date_name: newDateName.trim(),
+        day_month: newDateDayMonth,
+        message_text: "",
+        target_audience: "Todos",
+        is_configured: false,
+        save_preset: true,
+      });
+    if (error) {
+      toast.error("Erro ao criar data: " + error.message);
+      return;
+    }
+    toast.success("Data criada! Agora configure a mensagem.");
+    setNewDateName("");
+    setNewDateDayMonth("");
+    setNewDateOpen(false);
+    await loadPresets();
+  };
+
 
   const openConfig = (date: CampaignDate) => {
     const existing = presets[date.key];
