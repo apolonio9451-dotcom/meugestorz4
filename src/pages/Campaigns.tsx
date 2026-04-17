@@ -486,7 +486,7 @@ export default function Campaigns() {
             <CalendarIcon className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Campanhas Comemorativas</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Datas Especiais</h1>
             <p className="text-sm text-muted-foreground">
               Configure mensagens para datas especiais e dispare com inteligência anti-ban
             </p>
@@ -497,7 +497,7 @@ export default function Campaigns() {
           className="bg-primary hover:bg-primary/90"
         >
           <Plus className="w-4 h-4 mr-1" />
-          Nova Campanha
+          Nova Data
         </Button>
       </div>
 
