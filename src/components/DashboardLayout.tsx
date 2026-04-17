@@ -77,8 +77,8 @@ const navItems: NavItem[] = [
     icon: Megaphone,
     children: [
       { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
+      { href: "/dashboard/campaigns", label: "Campanhas", icon: Megaphone },
       { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
-      
     ],
   },
   { href: "/dashboard/chatbot", label: "Agente IA", icon: Bot },
