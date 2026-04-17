@@ -42,6 +42,14 @@ import {
   Image as ImageIcon,
   Loader2,
   Clock,
+  Plus,
+  Flag,
+  Cross,
+  Egg,
+  Briefcase,
+  Church,
+  Landmark,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,19 +58,36 @@ type CampaignDate = {
   name: string;
   dayMonth: string;
   icon: any;
+  custom?: boolean;
 };
 
 const HOLIDAY_DATES: CampaignDate[] = [
-  { key: "valentines", name: "Dia dos Namorados", dayMonth: "12/06", icon: Heart },
-  { key: "mothers", name: "Dia das Mães", dayMonth: "10/05", icon: Flower2 },
-  { key: "fathers", name: "Dia dos Pais", dayMonth: "10/08", icon: Gift },
+  { key: "newyear", name: "Ano Novo", dayMonth: "01/01", icon: Sparkles },
+  { key: "carnaval", name: "Carnaval", dayMonth: "17/02", icon: PartyPopper },
   { key: "womens", name: "Dia da Mulher", dayMonth: "08/03", icon: Sparkles },
+  { key: "sextasanta", name: "Sexta-feira Santa", dayMonth: "03/04", icon: Cross },
+  { key: "pascoa", name: "Páscoa", dayMonth: "05/04", icon: Egg },
+  { key: "tiradentes", name: "Tiradentes", dayMonth: "21/04", icon: Flag },
+  { key: "trabalho", name: "Dia do Trabalho", dayMonth: "01/05", icon: Briefcase },
+  { key: "mothers", name: "Dia das Mães", dayMonth: "10/05", icon: Flower2 },
+  { key: "corpuschristi", name: "Corpus Christi", dayMonth: "04/06", icon: Church },
+  { key: "valentines", name: "Dia dos Namorados", dayMonth: "12/06", icon: Heart },
   { key: "saojoao", name: "São João", dayMonth: "24/06", icon: PartyPopper },
+  { key: "fathers", name: "Dia dos Pais", dayMonth: "10/08", icon: Gift },
+  { key: "independencia", name: "Independência do Brasil", dayMonth: "07/09", icon: Flag },
   { key: "childrens", name: "Dia das Crianças", dayMonth: "12/10", icon: Cake },
+  { key: "proclamacao", name: "Proclamação da República", dayMonth: "15/11", icon: Landmark },
+  { key: "consciencianegra", name: "Consciência Negra", dayMonth: "20/11", icon: Star },
   { key: "blackfriday", name: "Black Friday", dayMonth: "29/11", icon: Gift },
   { key: "christmas", name: "Natal", dayMonth: "25/12", icon: Gift },
-  { key: "newyear", name: "Ano Novo", dayMonth: "01/01", icon: Sparkles },
+  { key: "vesperaano", name: "Véspera de Ano Novo", dayMonth: "31/12", icon: Sparkles },
 ];
+
+const sortByDate = (a: CampaignDate, b: CampaignDate) => {
+  const [da, ma] = a.dayMonth.split("/").map(Number);
+  const [db, mb] = b.dayMonth.split("/").map(Number);
+  return ma === mb ? da - db : ma - mb;
+};
 
 type Preset = {
   id: string;
