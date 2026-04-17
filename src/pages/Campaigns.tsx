@@ -480,20 +480,29 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
-          <CalendarIcon className="w-6 h-6 text-primary" />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+            <CalendarIcon className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Campanhas Comemorativas</h1>
+            <p className="text-sm text-muted-foreground">
+              Configure mensagens para datas especiais e dispare com inteligência anti-ban
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Campanhas Comemorativas</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure mensagens para datas especiais e dispare com inteligência anti-ban
-          </p>
-        </div>
+        <Button
+          onClick={() => setNewDateOpen(true)}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Nova Campanha
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {HOLIDAY_DATES.map((date) => {
+        {allDates.map((date) => {
           const preset = presets[date.key];
           const Icon = date.icon;
           return (
