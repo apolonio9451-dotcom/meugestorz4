@@ -42,6 +42,14 @@ import {
   Image as ImageIcon,
   Loader2,
   Clock,
+  Plus,
+  Flag,
+  Cross,
+  Egg,
+  Briefcase,
+  Church,
+  Landmark,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,19 +58,36 @@ type CampaignDate = {
   name: string;
   dayMonth: string;
   icon: any;
+  custom?: boolean;
 };
 
 const HOLIDAY_DATES: CampaignDate[] = [
-  { key: "valentines", name: "Dia dos Namorados", dayMonth: "12/06", icon: Heart },
-  { key: "mothers", name: "Dia das Mães", dayMonth: "10/05", icon: Flower2 },
-  { key: "fathers", name: "Dia dos Pais", dayMonth: "10/08", icon: Gift },
+  { key: "newyear", name: "Ano Novo", dayMonth: "01/01", icon: Sparkles },
+  { key: "carnaval", name: "Carnaval", dayMonth: "17/02", icon: PartyPopper },
   { key: "womens", name: "Dia da Mulher", dayMonth: "08/03", icon: Sparkles },
+  { key: "sextasanta", name: "Sexta-feira Santa", dayMonth: "03/04", icon: Cross },
+  { key: "pascoa", name: "Páscoa", dayMonth: "05/04", icon: Egg },
+  { key: "tiradentes", name: "Tiradentes", dayMonth: "21/04", icon: Flag },
+  { key: "trabalho", name: "Dia do Trabalho", dayMonth: "01/05", icon: Briefcase },
+  { key: "mothers", name: "Dia das Mães", dayMonth: "10/05", icon: Flower2 },
+  { key: "corpuschristi", name: "Corpus Christi", dayMonth: "04/06", icon: Church },
+  { key: "valentines", name: "Dia dos Namorados", dayMonth: "12/06", icon: Heart },
   { key: "saojoao", name: "São João", dayMonth: "24/06", icon: PartyPopper },
+  { key: "fathers", name: "Dia dos Pais", dayMonth: "10/08", icon: Gift },
+  { key: "independencia", name: "Independência do Brasil", dayMonth: "07/09", icon: Flag },
   { key: "childrens", name: "Dia das Crianças", dayMonth: "12/10", icon: Cake },
+  { key: "proclamacao", name: "Proclamação da República", dayMonth: "15/11", icon: Landmark },
+  { key: "consciencianegra", name: "Consciência Negra", dayMonth: "20/11", icon: Star },
   { key: "blackfriday", name: "Black Friday", dayMonth: "29/11", icon: Gift },
   { key: "christmas", name: "Natal", dayMonth: "25/12", icon: Gift },
-  { key: "newyear", name: "Ano Novo", dayMonth: "01/01", icon: Sparkles },
+  { key: "vesperaano", name: "Véspera de Ano Novo", dayMonth: "31/12", icon: Sparkles },
 ];
+
+const sortByDate = (a: CampaignDate, b: CampaignDate) => {
+  const [da, ma] = a.dayMonth.split("/").map(Number);
+  const [db, mb] = b.dayMonth.split("/").map(Number);
+  return ma === mb ? da - db : ma - mb;
+};
 
 type Preset = {
   id: string;
@@ -135,6 +160,12 @@ export default function Campaigns() {
   const abortRef = useRef<AbortController | null>(null);
   const pauseRef = useRef(false);
 
+  // Custom dates added by user (not in HOLIDAY_DATES)
+  const [customDates, setCustomDates] = useState<CampaignDate[]>([]);
+  const [newDateOpen, setNewDateOpen] = useState(false);
+  const [newDateName, setNewDateName] = useState("");
+  const [newDateDayMonth, setNewDateDayMonth] = useState("");
+
   const loadPresets = async () => {
     if (!effectiveCompanyId) return;
     setLoading(true);
@@ -147,12 +178,26 @@ export default function Campaigns() {
       toast.error("Erro ao carregar campanhas");
     } else {
       const map: Record<string, Preset> = {};
+      const customs: CampaignDate[] = [];
       (data as any[])?.forEach((p) => {
         const match = HOLIDAY_DATES.find(
           (h) => h.name === p.date_name || h.dayMonth === p.day_month
         );
-        if (match) map[match.key] = p as Preset;
+        if (match) {
+          map[match.key] = p as Preset;
+        } else {
+          const key = `custom_${p.id}`;
+          map[key] = p as Preset;
+          customs.push({
+            key,
+            name: p.date_name,
+            dayMonth: p.day_month,
+            icon: CalendarIcon,
+            custom: true,
+          });
+        }
       });
+      setCustomDates(customs);
       setPresets(map);
     }
     setLoading(false);
@@ -162,6 +207,48 @@ export default function Campaigns() {
     loadPresets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCompanyId]);
+
+  const allDates = [...HOLIDAY_DATES, ...customDates].sort(sortByDate);
+
+  const handleCreateNewDate = async () => {
+    if (!newDateName.trim()) {
+      toast.error("Informe o nome da data");
+      return;
+    }
+    const dmMatch = newDateDayMonth.match(/^(\d{2})\/(\d{2})$/);
+    if (!dmMatch) {
+      toast.error("Use o formato DD/MM (ex: 25/12)");
+      return;
+    }
+    const day = parseInt(dmMatch[1]);
+    const month = parseInt(dmMatch[2]);
+    if (day < 1 || day > 31 || month < 1 || month > 12) {
+      toast.error("Data inválida");
+      return;
+    }
+    if (!effectiveCompanyId) return;
+    const { error } = await supabase
+      .from("campaign_presets" as any)
+      .insert({
+        company_id: effectiveCompanyId,
+        date_name: newDateName.trim(),
+        day_month: newDateDayMonth,
+        message_text: "",
+        target_audience: "Todos",
+        is_configured: false,
+        save_preset: true,
+      });
+    if (error) {
+      toast.error("Erro ao criar data: " + error.message);
+      return;
+    }
+    toast.success("Data criada! Agora configure a mensagem.");
+    setNewDateName("");
+    setNewDateDayMonth("");
+    setNewDateOpen(false);
+    await loadPresets();
+  };
+
 
   const openConfig = (date: CampaignDate) => {
     const existing = presets[date.key];
@@ -393,20 +480,29 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
-          <CalendarIcon className="w-6 h-6 text-primary" />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+            <CalendarIcon className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Campanhas Comemorativas</h1>
+            <p className="text-sm text-muted-foreground">
+              Configure mensagens para datas especiais e dispare com inteligência anti-ban
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Campanhas Comemorativas</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure mensagens para datas especiais e dispare com inteligência anti-ban
-          </p>
-        </div>
+        <Button
+          onClick={() => setNewDateOpen(true)}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Nova Campanha
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {HOLIDAY_DATES.map((date) => {
+        {allDates.map((date) => {
           const preset = presets[date.key];
           const Icon = date.icon;
           return (
@@ -667,6 +763,50 @@ export default function Campaigns() {
               {send.status === "completed" && (
                 <Button onClick={() => setSendOpen(false)}>Fechar</Button>
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Custom Date Modal */}
+      <Dialog open={newDateOpen} onOpenChange={setNewDateOpen}>
+        <DialogContent className="max-w-md backdrop-blur-xl bg-card/95">
+          <DialogHeader>
+            <DialogTitle>Adicionar Nova Data</DialogTitle>
+            <DialogDescription>
+              Crie uma data personalizada para sua campanha. Depois você poderá configurar imagem e mensagem.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Nome da Data</Label>
+              <Input
+                placeholder="Ex: Aniversário da Loja"
+                value={newDateName}
+                onChange={(e) => setNewDateName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="mb-2 block">Dia/Mês (DD/MM)</Label>
+              <Input
+                placeholder="25/12"
+                value={newDateDayMonth}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                  setNewDateDayMonth(v);
+                }}
+                maxLength={5}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setNewDateOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateNewDate} className="bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-1" />
+                Criar Data
+              </Button>
             </div>
           </div>
         </DialogContent>
