@@ -779,8 +779,38 @@ export default function Campaigns() {
                   )}
                 </div>
               </div>
-              <h3 className="font-semibold text-lg">{date.name}</h3>
-              <p className="text-sm text-muted-foreground mb-3">{date.dayMonth}</p>
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-lg truncate">{date.name}</h3>
+                  <p className="text-sm text-muted-foreground">{date.dayMonth}</p>
+                </div>
+                {/* Quick send buttons (small) */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    title="Teste de envio (admin)"
+                    onClick={() => handleTestSend(date)}
+                    disabled={isTesting || !preset?.is_configured}
+                    className="h-8 w-8 border-border/60"
+                  >
+                    {isTesting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                  </Button>
+                  <Button
+                    size="icon"
+                    title="Iniciar envio manual"
+                    onClick={() => startSending(date)}
+                    disabled={!preset?.is_configured}
+                    className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_12px_-2px_hsl(var(--primary)/0.5)]"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
               {preset?.is_configured && (
                 <p className="text-xs text-muted-foreground mb-3">
                   Público: {preset.target_audience}
