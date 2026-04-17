@@ -960,10 +960,13 @@ Deno.serve(async (req) => {
       const followupTemplate = followupTemplateRows?.[0]?.message ||
         "Olá {primeiro_nome}, {saudacao}! 👋\n\nPassando para saber se está tudo bem com o seu serviço. Como está sua experiência? 😊";
 
+      // Only consider clients registered at least 15 days ago (follow-up window starts on day 15)
+      const fifteenDaysAgoISO = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
+
       const { data: followupClients } = await supabase
         .from("clients")
         .select(`
-          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, follow_up_active,
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, follow_up_active, created_at,
           client_subscriptions (
             end_date, amount, custom_price,
             subscription_plans ( name, price )
@@ -972,6 +975,7 @@ Deno.serve(async (req) => {
         .eq("company_id", companyId)
         .eq("status", "active")
         .eq("follow_up_active", true)
+        .lte("created_at", fifteenDaysAgoISO)
         .or(`ultimo_envio_auto.is.null,ultimo_envio_auto.neq.${today}`);
 
       if (!followupClients || followupClients.length === 0) continue;
@@ -1076,7 +1080,12 @@ Deno.serve(async (req) => {
           });
 
           if (sendResult.ok) {
-            await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
+            // Deactivate follow_up_active so this client never receives another automatic follow-up
+            // (prevents duplicate messages on subsequent days/runs)
+            await supabase
+              .from("clients")
+              .update({ ultimo_envio_auto: today, follow_up_active: false })
+              .eq("id", client.id);
             alreadySentFollowupIds.add(client.id);
             totalSent++;
           } else {
