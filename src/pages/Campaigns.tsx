@@ -767,6 +767,50 @@ export default function Campaigns() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* New Custom Date Modal */}
+      <Dialog open={newDateOpen} onOpenChange={setNewDateOpen}>
+        <DialogContent className="max-w-md backdrop-blur-xl bg-card/95">
+          <DialogHeader>
+            <DialogTitle>Adicionar Nova Data</DialogTitle>
+            <DialogDescription>
+              Crie uma data personalizada para sua campanha. Depois você poderá configurar imagem e mensagem.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Nome da Data</Label>
+              <Input
+                placeholder="Ex: Aniversário da Loja"
+                value={newDateName}
+                onChange={(e) => setNewDateName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="mb-2 block">Dia/Mês (DD/MM)</Label>
+              <Input
+                placeholder="25/12"
+                value={newDateDayMonth}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                  if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                  setNewDateDayMonth(v);
+                }}
+                maxLength={5}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setNewDateOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateNewDate} className="bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-1" />
+                Criar Data
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
