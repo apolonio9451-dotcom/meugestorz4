@@ -1621,9 +1621,26 @@ export default function Clients() {
                 <div className="px-3.5 pt-3.5 pb-2 sm:px-4 sm:pt-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-display font-bold text-foreground text-sm leading-tight truncate">{client.name}</h3>
                         {days !== null && getExpiryBadge(days, isChargePaused)}
+                        {mainFilter === "status" && statusSubFilter === "followup" && (() => {
+                          const ad = getClientActiveDays(client.id);
+                          if (ad === null) return null;
+                          if (ad >= 15) {
+                            return (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-cyan-400/15 text-cyan-400 border border-cyan-400/30">
+                                ✅ Pronto p/ envio
+                              </span>
+                            );
+                          }
+                          const remaining = 15 - ad;
+                          return (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-muted/40 text-muted-foreground border border-border/50">
+                              ⏳ Faltam {remaining}d
+                            </span>
+                          );
+                        })()}
                       </div>
                       {client.iptv_user && (
                         <p className="text-[10px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
