@@ -309,6 +309,56 @@ export type Database = {
           },
         ]
       }
+      campaign_presets: {
+        Row: {
+          company_id: string
+          created_at: string
+          date_name: string
+          day_month: string
+          id: string
+          image_url: string | null
+          is_configured: boolean
+          message_text: string
+          save_preset: boolean
+          target_audience: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          date_name: string
+          day_month: string
+          id?: string
+          image_url?: string | null
+          is_configured?: boolean
+          message_text?: string
+          save_preset?: boolean
+          target_audience?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          date_name?: string
+          day_month?: string
+          id?: string
+          image_url?: string | null
+          is_configured?: boolean
+          message_text?: string
+          save_preset?: boolean
+          target_audience?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_presets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_auto_replies: {
         Row: {
           company_id: string
