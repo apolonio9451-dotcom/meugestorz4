@@ -24,6 +24,8 @@ export type Database = {
           broadcast_api_url: string
           broadcast_instance_name: string
           bulk_send_enabled: boolean
+          campaigns_admin_test_phone: string
+          campaigns_engine_enabled: boolean
           company_id: string
           created_at: string
           id: string
@@ -45,6 +47,8 @@ export type Database = {
           broadcast_api_url?: string
           broadcast_instance_name?: string
           bulk_send_enabled?: boolean
+          campaigns_admin_test_phone?: string
+          campaigns_engine_enabled?: boolean
           company_id: string
           created_at?: string
           id?: string
@@ -66,6 +70,8 @@ export type Database = {
           broadcast_api_url?: string
           broadcast_instance_name?: string
           bulk_send_enabled?: boolean
+          campaigns_admin_test_phone?: string
+          campaigns_engine_enabled?: boolean
           company_id?: string
           created_at?: string
           id?: string
@@ -311,6 +317,7 @@ export type Database = {
       }
       campaign_presets: {
         Row: {
+          automation_enabled: boolean
           company_id: string
           created_at: string
           date_name: string
@@ -318,12 +325,14 @@ export type Database = {
           id: string
           image_url: string | null
           is_configured: boolean
+          last_auto_run_year: number | null
           message_text: string
           save_preset: boolean
           target_audience: string
           updated_at: string
         }
         Insert: {
+          automation_enabled?: boolean
           company_id: string
           created_at?: string
           date_name: string
@@ -331,12 +340,14 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_configured?: boolean
+          last_auto_run_year?: number | null
           message_text?: string
           save_preset?: boolean
           target_audience?: string
           updated_at?: string
         }
         Update: {
+          automation_enabled?: boolean
           company_id?: string
           created_at?: string
           date_name?: string
@@ -344,6 +355,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_configured?: boolean
+          last_auto_run_year?: number | null
           message_text?: string
           save_preset?: boolean
           target_audience?: string

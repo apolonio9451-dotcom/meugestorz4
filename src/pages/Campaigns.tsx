@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,11 @@ import {
   Church,
   Landmark,
   Star,
+  Zap,
+  ZapOff,
+  Send,
+  AlertTriangle,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -98,6 +104,8 @@ type Preset = {
   target_audience: "Homens" | "Mulheres" | "Todos";
   save_preset: boolean;
   is_configured: boolean;
+  automation_enabled: boolean;
+  last_auto_run_year: number | null;
 };
 
 type SendState = {
@@ -138,6 +146,12 @@ export default function Campaigns() {
   const [configOpen, setConfigOpen] = useState(false);
   const [sendingDate, setSendingDate] = useState<CampaignDate | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
+
+  // Master switch + admin test phone
+  const [engineEnabled, setEngineEnabled] = useState(false);
+  const [adminTestPhone, setAdminTestPhone] = useState("");
+  const [savingEngine, setSavingEngine] = useState(false);
+  const [testingDateKey, setTestingDateKey] = useState<string | null>(null);
 
   // Form state
   const [audience, setAudience] = useState<"Homens" | "Mulheres" | "Todos">("Todos");
@@ -203,52 +217,74 @@ export default function Campaigns() {
     setLoading(false);
   };
 
+  const loadEngineSettings = async () => {
+    if (!effectiveCompanyId) return;
+    const { data } = await supabase
+      .from("api_settings")
+      .select("campaigns_engine_enabled, campaigns_admin_test_phone")
+      .eq("company_id", effectiveCompanyId)
+      .maybeSingle();
+    if (data) {
+      setEngineEnabled(!!(data as any).campaigns_engine_enabled);
+      setAdminTestPhone((data as any).campaigns_admin_test_phone || "");
+    }
+  };
+
   useEffect(() => {
     loadPresets();
+    loadEngineSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCompanyId]);
 
   const allDates = [...HOLIDAY_DATES, ...customDates].sort(sortByDate);
 
-  const handleCreateNewDate = async () => {
-    if (!newDateName.trim()) {
-      toast.error("Informe o nome da data");
-      return;
-    }
-    const dmMatch = newDateDayMonth.match(/^(\d{2})\/(\d{2})$/);
-    if (!dmMatch) {
-      toast.error("Use o formato DD/MM (ex: 25/12)");
-      return;
-    }
-    const day = parseInt(dmMatch[1]);
-    const month = parseInt(dmMatch[2]);
-    if (day < 1 || day > 31 || month < 1 || month > 12) {
-      toast.error("Data inválida");
-      return;
-    }
+  const handleToggleEngine = async (next: boolean) => {
     if (!effectiveCompanyId) return;
+    setSavingEngine(true);
+    setEngineEnabled(next);
     const { error } = await supabase
-      .from("campaign_presets" as any)
-      .insert({
-        company_id: effectiveCompanyId,
-        date_name: newDateName.trim(),
-        day_month: newDateDayMonth,
-        message_text: "",
-        target_audience: "Todos",
-        is_configured: false,
-        save_preset: true,
-      });
+      .from("api_settings")
+      .update({ campaigns_engine_enabled: next } as any)
+      .eq("company_id", effectiveCompanyId);
+    setSavingEngine(false);
     if (error) {
-      toast.error("Erro ao criar data: " + error.message);
-      return;
+      toast.error("Erro ao alterar mecanismo");
+      setEngineEnabled(!next);
+    } else {
+      toast.success(next ? "Mecanismo de Campanhas ATIVO" : "Mecanismo desligado");
     }
-    toast.success("Data criada! Agora configure a mensagem.");
-    setNewDateName("");
-    setNewDateDayMonth("");
-    setNewDateOpen(false);
-    await loadPresets();
   };
 
+  const handleSaveAdminPhone = async () => {
+    if (!effectiveCompanyId) return;
+    const { error } = await supabase
+      .from("api_settings")
+      .update({ campaigns_admin_test_phone: adminTestPhone } as any)
+      .eq("company_id", effectiveCompanyId);
+    if (error) toast.error("Erro ao salvar telefone");
+    else toast.success("Telefone admin salvo");
+  };
+
+  const handleToggleAutomation = async (date: CampaignDate, next: boolean) => {
+    const preset = presets[date.key];
+    if (!preset) {
+      toast.error("Configure a data primeiro");
+      return;
+    }
+    const { error } = await supabase
+      .from("campaign_presets" as any)
+      .update({ automation_enabled: next })
+      .eq("id", preset.id);
+    if (error) {
+      toast.error("Erro ao atualizar automação");
+    } else {
+      setPresets((p) => ({
+        ...p,
+        [date.key]: { ...preset, automation_enabled: next },
+      }));
+      toast.success(next ? "Automação ATIVADA" : "Automação desligada");
+    }
+  };
 
   const openConfig = (date: CampaignDate) => {
     const existing = presets[date.key];
@@ -311,24 +347,93 @@ export default function Campaigns() {
     setSaving(false);
   };
 
-  const startSending = async (date: CampaignDate) => {
-    const preset = presets[date.key];
-    if (!preset || !preset.is_configured) {
-      toast.error("Configure a campanha primeiro");
-      return;
-    }
-    if (!effectiveCompanyId) return;
-
-    // Fetch API settings
+  // Get API config + perform a single send via uazapi
+  const getApiConfig = async () => {
+    if (!effectiveCompanyId) return null;
     const { data: api } = await supabase
       .from("api_settings")
-      .select("api_url, api_token, instance_name, uazapi_base_url")
+      .select("api_url, api_token, instance_name, uazapi_base_url, campaigns_engine_enabled")
       .eq("company_id", effectiveCompanyId)
       .maybeSingle();
     const baseUrl = api?.uazapi_base_url || api?.api_url;
     const token = api?.api_token;
     if (!baseUrl || !token) {
       toast.error("Configure a API do WhatsApp em Configurações > Instância");
+      return null;
+    }
+    return { baseUrl, token, engineOn: !!(api as any)?.campaigns_engine_enabled };
+  };
+
+  const sendOne = async (
+    baseUrl: string,
+    token: string,
+    phone: string,
+    text: string,
+    imageUrl: string | null,
+    signal?: AbortSignal,
+  ) => {
+    const endpoint = imageUrl ? "/send/media" : "/send/text";
+    const body: any = imageUrl
+      ? { number: phone, type: "image", file: imageUrl, text }
+      : { number: phone, text };
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", token },
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  };
+
+  const handleTestSend = async (date: CampaignDate) => {
+    const preset = presets[date.key];
+    if (!preset || !preset.is_configured) {
+      toast.error("Configure a campanha primeiro");
+      return;
+    }
+    if (!engineEnabled) {
+      toast.error("⚠️ Mecanismo de Campanhas está DESLIGADO. Ative no topo.");
+      return;
+    }
+    if (!adminTestPhone.trim()) {
+      toast.error("Defina o telefone do administrador no topo (campo Teste)");
+      return;
+    }
+    const cfg = await getApiConfig();
+    if (!cfg) return;
+    const phone = normalizePhone(adminTestPhone);
+    if (phone.length < 12) {
+      toast.error("Telefone admin inválido");
+      return;
+    }
+    setTestingDateKey(date.key);
+    try {
+      const personalized = preset.message_text.replace(/\{nome\}/gi, "Pedro");
+      await sendOne(cfg.baseUrl, cfg.token, phone, personalized, preset.image_url);
+      toast.success("✅ Teste enviado para o administrador");
+    } catch (e: any) {
+      toast.error("Falha no teste: " + e.message);
+    } finally {
+      setTestingDateKey(null);
+    }
+  };
+
+  const startSending = async (date: CampaignDate) => {
+    const preset = presets[date.key];
+    if (!preset || !preset.is_configured) {
+      toast.error("Configure a campanha primeiro");
+      return;
+    }
+    if (!engineEnabled) {
+      toast.error("⚠️ Mecanismo de Campanhas está DESLIGADO. Ative no topo para disparar.");
+      return;
+    }
+    if (!effectiveCompanyId) return;
+
+    const cfg = await getApiConfig();
+    if (!cfg) return;
+    if (!cfg.engineOn) {
+      toast.error("Mecanismo desligado no servidor. Atualize a página.");
       return;
     }
 
@@ -381,6 +486,17 @@ export default function Campaigns() {
       for (let i = 0; i < recipients.length; i++) {
         if (signal.aborted) break;
 
+        // Re-check master switch every iteration (kill switch)
+        const { data: liveApi } = await supabase
+          .from("api_settings")
+          .select("campaigns_engine_enabled")
+          .eq("company_id", effectiveCompanyId)
+          .maybeSingle();
+        if (!(liveApi as any)?.campaigns_engine_enabled) {
+          toast.error("Mecanismo desligado durante o envio. Parando...");
+          break;
+        }
+
         // Pause check
         while (pauseRef.current && !signal.aborted) {
           setSend((s) => ({ ...s, status: "paused" }));
@@ -399,26 +515,7 @@ export default function Campaigns() {
         const personalized = preset.message_text.replace(/\{nome\}/gi, r.name.split(" ")[0]);
 
         try {
-          const endpoint = preset.image_url ? "/send/media" : "/send/text";
-          const body: any = preset.image_url
-            ? {
-                number: r.phone,
-                type: "image",
-                file: preset.image_url,
-                text: personalized,
-              }
-            : { number: r.phone, text: personalized };
-
-          const res = await fetch(`${baseUrl.replace(/\/$/, "")}${endpoint}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              token,
-            },
-            body: JSON.stringify(body),
-            signal,
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await sendOne(cfg.baseUrl, cfg.token, r.phone, personalized, preset.image_url, signal);
           sent++;
         } catch (e) {
           console.error("Send failed:", e);
@@ -461,6 +558,43 @@ export default function Campaigns() {
     }
   };
 
+  // Auto-trigger check (runs once when component mounts and engine is on)
+  useEffect(() => {
+    if (!engineEnabled || !effectiveCompanyId || loading) return;
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, "0");
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const todayDM = `${dd}/${mm}`;
+    const year = today.getFullYear();
+
+    const candidates = allDates.filter((d) => {
+      const p = presets[d.key];
+      return (
+        p &&
+        p.is_configured &&
+        p.automation_enabled &&
+        d.dayMonth === todayDM &&
+        p.last_auto_run_year !== year
+      );
+    });
+    if (candidates.length === 0) return;
+
+    // Pick first; mark as run for the year, then start
+    const target = candidates[0];
+    const preset = presets[target.key];
+    (async () => {
+      const { error } = await supabase
+        .from("campaign_presets" as any)
+        .update({ last_auto_run_year: year })
+        .eq("id", preset.id);
+      if (!error) {
+        toast.info(`🚀 Automação: iniciando ${target.name}`);
+        startSending(target);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engineEnabled, presets, loading]);
+
   const togglePause = () => {
     pauseRef.current = !pauseRef.current;
     setSend((s) => ({ ...s, status: pauseRef.current ? "paused" : "sending" }));
@@ -476,6 +610,45 @@ export default function Campaigns() {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const handleCreateNewDate = async () => {
+    if (!newDateName.trim()) {
+      toast.error("Informe o nome da data");
+      return;
+    }
+    const dmMatch = newDateDayMonth.match(/^(\d{2})\/(\d{2})$/);
+    if (!dmMatch) {
+      toast.error("Use o formato DD/MM (ex: 25/12)");
+      return;
+    }
+    const day = parseInt(dmMatch[1]);
+    const month = parseInt(dmMatch[2]);
+    if (day < 1 || day > 31 || month < 1 || month > 12) {
+      toast.error("Data inválida");
+      return;
+    }
+    if (!effectiveCompanyId) return;
+    const { error } = await supabase
+      .from("campaign_presets" as any)
+      .insert({
+        company_id: effectiveCompanyId,
+        date_name: newDateName.trim(),
+        day_month: newDateDayMonth,
+        message_text: "",
+        target_audience: "Todos",
+        is_configured: false,
+        save_preset: true,
+      });
+    if (error) {
+      toast.error("Erro ao criar data: " + error.message);
+      return;
+    }
+    toast.success("Data criada! Agora configure a mensagem.");
+    setNewDateName("");
+    setNewDateDayMonth("");
+    setNewDateOpen(false);
+    await loadPresets();
   };
 
   return (
@@ -501,10 +674,82 @@ export default function Campaigns() {
         </Button>
       </div>
 
+      {/* Master Switch + Admin Test Phone */}
+      <Card className="p-5 backdrop-blur-xl bg-card/60 border-border/50">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-3 rounded-xl border transition-colors ${
+                engineEnabled
+                  ? "bg-emerald-500/15 border-emerald-500/40"
+                  : "bg-muted/30 border-border/50"
+              }`}
+            >
+              {engineEnabled ? (
+                <Zap className="w-6 h-6 text-emerald-400" />
+              ) : (
+                <ZapOff className="w-6 h-6 text-muted-foreground" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-lg">Mecanismo de Campanhas</h3>
+                <Badge
+                  className={
+                    engineEnabled
+                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                      : "bg-muted/30 text-muted-foreground border-border/50"
+                  }
+                >
+                  {engineEnabled ? "ATIVO" : "DESLIGADO"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Interruptor geral. Se desligado, NENHUM envio (manual ou automático) é processado.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={engineEnabled}
+            onCheckedChange={handleToggleEngine}
+            disabled={savingEngine}
+            className="data-[state=checked]:bg-emerald-500"
+          />
+        </div>
+
+        {!engineEnabled && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-400">
+              O <strong>Mecanismo de Campanhas</strong> precisa estar <strong>ATIVO</strong> para realizar envios.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-end">
+          <div>
+            <Label className="flex items-center gap-2 mb-2 text-sm">
+              <Phone className="w-4 h-4" />
+              Telefone do Administrador (para Teste de Envio)
+            </Label>
+            <Input
+              placeholder="Ex: 5511999999999"
+              value={adminTestPhone}
+              onChange={(e) => setAdminTestPhone(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleSaveAdminPhone} variant="outline">
+            Salvar Telefone
+          </Button>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {allDates.map((date) => {
           const preset = presets[date.key];
           const Icon = date.icon;
+          const automationOn = !!preset?.automation_enabled;
+          const isTesting = testingDateKey === date.key;
           return (
             <Card
               key={date.key}
@@ -514,44 +759,100 @@ export default function Campaigns() {
                 <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
-                {preset?.is_configured ? (
-                  <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Configurado
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    <Circle className="w-3 h-3 mr-1" />
-                    Pendente
-                  </Badge>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  {preset?.is_configured ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Configurado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <Circle className="w-3 h-3 mr-1" />
+                      Pendente
+                    </Badge>
+                  )}
+                  {automationOn && (
+                    <Badge className="bg-cyan-500/15 text-cyan-300 border-cyan-500/40">
+                      <Zap className="w-3 h-3 mr-1" />
+                      Auto
+                    </Badge>
+                  )}
+                </div>
               </div>
               <h3 className="font-semibold text-lg">{date.name}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{date.dayMonth}</p>
+              <p className="text-sm text-muted-foreground mb-3">{date.dayMonth}</p>
               {preset?.is_configured && (
-                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                <p className="text-xs text-muted-foreground mb-3">
                   Público: {preset.target_audience}
                 </p>
               )}
-              <div className="flex gap-2">
+
+              {/* Action buttons */}
+              <div className="space-y-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => openConfig(date)}
-                  className="flex-1"
+                  className="w-full"
                 >
                   <Settings2 className="w-4 h-4 mr-1" />
                   Configurar
                 </Button>
+
                 {preset?.is_configured && (
-                  <Button
-                    size="sm"
-                    onClick={() => startSending(date)}
-                    className="flex-1 bg-primary hover:bg-primary/90"
-                  >
-                    <Play className="w-4 h-4 mr-1" />
-                    Disparar
-                  </Button>
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleTestSend(date)}
+                        disabled={isTesting}
+                        className="bg-muted hover:bg-muted/80 text-foreground border border-border/60"
+                      >
+                        {isTesting ? (
+                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-1" />
+                        )}
+                        Teste
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => startSending(date)}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_18px_-4px_hsl(var(--primary)/0.6)]"
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        Iniciar
+                      </Button>
+                    </div>
+                    <div
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
+                        automationOn
+                          ? "bg-cyan-500/10 border-cyan-500/40"
+                          : "bg-muted/20 border-border/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Zap
+                          className={`w-4 h-4 ${
+                            automationOn ? "text-cyan-300" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span
+                          className={`text-xs font-medium ${
+                            automationOn ? "text-cyan-300" : "text-muted-foreground"
+                          }`}
+                        >
+                          Ativar Automação
+                        </span>
+                      </div>
+                      <Switch
+                        checked={automationOn}
+                        onCheckedChange={(v) => handleToggleAutomation(date, v)}
+                        className="data-[state=checked]:bg-cyan-500"
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             </Card>
