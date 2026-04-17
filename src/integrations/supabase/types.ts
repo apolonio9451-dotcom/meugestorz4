@@ -861,6 +861,7 @@ export type Database = {
           created_at: string
           email: string | null
           follow_up_active: boolean
+          genero: string
           id: string
           iptv_password: string | null
           iptv_user: string | null
@@ -885,6 +886,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           follow_up_active?: boolean
+          genero?: string
           id?: string
           iptv_password?: string | null
           iptv_user?: string | null
@@ -909,6 +911,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           follow_up_active?: boolean
+          genero?: string
           id?: string
           iptv_password?: string | null
           iptv_user?: string | null
