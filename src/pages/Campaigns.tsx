@@ -518,25 +518,8 @@ export default function Campaigns() {
       toast.error("Erro ao carregar clientes");
       return;
     }
-    const recipients = clients
-      .filter((c: any) => {
-        if ((preset.audience_status || "todos") === "todos") return true;
-        const subscriptions = Array.isArray(c.client_subscriptions) ? c.client_subscriptions : [];
-        const latestEndDate = subscriptions
-          .map((s: any) => s?.end_date)
-          .filter(Boolean)
-          .sort()
-          .at(-1);
-        if (!latestEndDate) return false;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(`${latestEndDate}T00:00:00`);
-        const days = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (preset.audience_status === "ativos") return days >= 0;
-        if (preset.audience_status === "vencidos") return days < 0;
-        if (preset.audience_status === "inativos") return days < -30;
-        return true;
-      })
+    const recipients = (clients as CampaignClient[])
+      .filter((c) => matchesCampaignAudience(c, preset))
       .map((c) => ({
         ...c,
         phone: normalizePhone(c.whatsapp || c.phone || ""),
