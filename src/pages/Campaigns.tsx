@@ -574,7 +574,7 @@ export default function Campaigns() {
         .eq("id", preset.id);
       if (!error) {
         toast.info(`🚀 Automação: iniciando ${target.name}`);
-        startSending(target);
+        startSending(target, true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -637,29 +637,30 @@ export default function Campaigns() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
-            <CalendarIcon className="w-6 h-6 text-primary" />
+    <div className="space-y-4 p-4 md:p-5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+            <CalendarIcon className="w-5 h-5 text-primary" />
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Datas Especiais</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure mensagens para datas especiais e dispare com inteligência anti-ban
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold leading-tight">Datas Especiais</h1>
+            <p className="text-xs text-muted-foreground truncate">
+              Mensagens por data, teste e envio manual anti-ban
             </p>
           </div>
         </div>
         <Button
           onClick={() => setNewDateOpen(true)}
-          className="bg-primary hover:bg-primary/90"
+          size="sm"
+          className="h-9 bg-primary hover:bg-primary/90"
         >
-          <Plus className="w-4 h-4 mr-1" />
+          <Plus className="w-3.5 h-3.5 mr-1" />
           Nova Data
         </Button>
       </div>
 
-      <Card className="p-3 md:p-4 backdrop-blur-xl bg-card/60 border-border/50">
+      <Card className="p-2.5 md:p-3 backdrop-blur-xl bg-card/60 border-border/50">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
