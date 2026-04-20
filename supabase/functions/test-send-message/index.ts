@@ -112,6 +112,20 @@ async function trySend(apiUrl: string, apiToken: string, phone: string, messageB
   return { ok: res.ok, status: res.status, body };
 }
 
+async function trySendCampaignMessage(apiUrl: string, apiToken: string, phone: string, messageBody: string, imageUrl?: string | null): Promise<{ ok: boolean; status: number; body: string }> {
+  const endpoint = imageUrl ? `${apiUrl}/send/media` : `${apiUrl}/send/text`;
+  const payload = imageUrl
+    ? { number: phone, type: "image", file: imageUrl, text: messageBody }
+    : { number: phone, text: messageBody, linkPreview: true };
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: getApiHeaders(apiToken),
+    body: JSON.stringify(payload),
+  });
+  const body = await res.text();
+  return { ok: res.ok, status: res.status, body };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
