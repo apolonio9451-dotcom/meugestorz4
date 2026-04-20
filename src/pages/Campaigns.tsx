@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogFooter,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -173,6 +175,15 @@ const countCampaignRecipients = (clients: CampaignClient[], preset: Preset) =>
     return phone.length >= 12 && matchesCampaignAudience(client, preset);
   }).length;
 
+const testPhoneSchema = z
+  .string()
+  .trim()
+  .min(10, "Informe um telefone válido")
+  .max(20, "Telefone muito longo")
+  .regex(/^[\d\s()+-]+$/, "Use apenas números, espaços, parênteses, + ou -")
+  .transform((value) => normalizePhone(value))
+  .refine((value) => value.length >= 12 && value.length <= 13, "Telefone inválido");
+
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -190,6 +201,10 @@ export default function Campaigns() {
   const [configOpen, setConfigOpen] = useState(false);
   const [sendingDate, setSendingDate] = useState<CampaignDate | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testDate, setTestDate] = useState<CampaignDate | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testPhoneError, setTestPhoneError] = useState("");
 
   // Master switch + admin test phone
   const [engineEnabled, setEngineEnabled] = useState(false);
@@ -456,28 +471,41 @@ export default function Campaigns() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   };
 
-  const handleTestSend = async (date: CampaignDate) => {
+  const openTestModal = (date: CampaignDate) => {
     const preset = presets[date.key];
     if (!preset || !preset.is_configured) {
       toast.error("Configure a campanha primeiro");
       return;
     }
-    if (!adminTestPhone.trim()) {
-      toast.error("Defina o telefone do administrador nas configurações de API");
+    setTestDate(date);
+    setTestPhone(adminTestPhone || "");
+    setTestPhoneError("");
+    setTestOpen(true);
+  };
+
+  const handleTestSend = async () => {
+    if (!testDate) return;
+    const date = testDate;
+    const preset = presets[date.key];
+    if (!preset || !preset.is_configured) {
+      toast.error("Configure a campanha primeiro");
+      return;
+    }
+    const parsedPhone = testPhoneSchema.safeParse(testPhone);
+    if (!parsedPhone.success) {
+      setTestPhoneError(parsedPhone.error.issues[0]?.message || "Telefone inválido");
       return;
     }
     const cfg = await getApiConfig();
     if (!cfg) return;
-    const phone = normalizePhone(adminTestPhone);
-    if (phone.length < 12) {
-      toast.error("Telefone admin inválido");
-      return;
-    }
+    const phone = parsedPhone.data;
     setTestingDateKey(date.key);
     try {
       const personalized = preset.message_text.replace(/\{nome\}/gi, "Pedro");
       await sendOne(cfg.baseUrl, cfg.token, phone, personalized, preset.image_url);
-      toast.success("✅ Teste enviado para o administrador");
+      setAdminTestPhone(testPhone.trim());
+      setTestOpen(false);
+      toast.success("✅ Teste enviado");
     } catch (e: any) {
       toast.error("Falha no teste: " + e.message);
     } finally {
@@ -847,7 +875,7 @@ export default function Campaigns() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleTestSend(date)}
+                        onClick={() => openTestModal(date)}
                         disabled={isTesting || !preset?.is_configured}
                         className="h-8 px-2 text-xs bg-muted hover:bg-muted/80 text-foreground border border-border/60"
                       >
@@ -1027,6 +1055,44 @@ export default function Campaigns() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Send Modal */}
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent className="max-w-md backdrop-blur-xl bg-card/95">
+          <DialogHeader>
+            <DialogTitle>Enviar teste: {testDate?.name}</DialogTitle>
+            <DialogDescription>
+              Informe o WhatsApp que receberá apenas esta mensagem de teste.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="mb-2 block">Número para teste</Label>
+              <Input
+                value={testPhone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d\s()+-]/g, "").slice(0, 20);
+                  setTestPhone(value);
+                  setTestPhoneError("");
+                }}
+                placeholder="Ex: 55 11 99999-9999"
+                inputMode="tel"
+                maxLength={20}
+              />
+              {testPhoneError && <p className="mt-1 text-xs text-destructive">{testPhoneError}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(false)} disabled={!!testingDateKey}>
+              Cancelar
+            </Button>
+            <Button onClick={handleTestSend} disabled={!!testingDateKey}>
+              {testingDateKey && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Enviar teste
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
