@@ -679,12 +679,12 @@ export default function Campaigns() {
             <div
               className={`p-1.5 rounded-full border transition-colors ${
                 engineEnabled
-                  ? "bg-emerald-500/15 border-emerald-500/40"
+                  ? "bg-primary/15 border-primary/40"
                   : "bg-muted/30 border-border/50"
               }`}
             >
               {engineEnabled ? (
-                <Zap className="w-4 h-4 text-emerald-400" />
+                <Zap className="w-4 h-4 text-primary" />
               ) : (
                 <ZapOff className="w-4 h-4 text-muted-foreground" />
               )}
@@ -695,7 +695,7 @@ export default function Campaigns() {
                 <Badge
                   className={
                     engineEnabled
-                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                      ? "bg-primary/15 text-primary border-primary/30"
                       : "bg-muted/30 text-muted-foreground border-border/50"
                   }
                 >
@@ -722,7 +722,6 @@ export default function Campaigns() {
             checked={engineEnabled}
             onCheckedChange={handleToggleEngine}
             disabled={savingEngine}
-            className="data-[state=checked]:bg-emerald-500"
           />
         </div>
 
