@@ -380,10 +380,6 @@ export default function Campaigns() {
       toast.error("Configure a campanha primeiro");
       return;
     }
-    if (!engineEnabled) {
-      toast.error("⚠️ Mecanismo de Campanhas está DESLIGADO. Ative no topo.");
-      return;
-    }
     if (!adminTestPhone.trim()) {
       toast.error("Defina o telefone do administrador nas configurações de API");
       return;
@@ -407,21 +403,21 @@ export default function Campaigns() {
     }
   };
 
-  const startSending = async (date: CampaignDate) => {
+  const startSending = async (date: CampaignDate, requireEngine = false) => {
     const preset = presets[date.key];
     if (!preset || !preset.is_configured) {
       toast.error("Configure a campanha primeiro");
       return;
     }
-    if (!engineEnabled) {
-      toast.error("⚠️ Mecanismo de Campanhas está DESLIGADO. Ative no topo para disparar.");
+    if (requireEngine && !engineEnabled) {
+      toast.error("⚠️ Mecanismo de Campanhas está DESLIGADO. Ative no topo para automações.");
       return;
     }
     if (!effectiveCompanyId) return;
 
     const cfg = await getApiConfig();
     if (!cfg) return;
-    if (!cfg.engineOn) {
+    if (requireEngine && !cfg.engineOn) {
       toast.error("Mecanismo desligado no servidor. Atualize a página.");
       return;
     }
