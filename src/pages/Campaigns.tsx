@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,15 @@ type SendState = {
   batchPauseRemaining: number;
 };
 
+type CampaignClient = {
+  id: string;
+  name: string;
+  whatsapp: string | null;
+  phone: string | null;
+  genero: string | null;
+  client_subscriptions?: { end_date: string | null }[];
+};
+
 const BATCH_SIZE = 10;
 const BATCH_PAUSE_MS = 10 * 60 * 1000; // 10 min
 const MIN_DELAY = 8000;
@@ -129,6 +138,40 @@ const normalizePhone = (phone: string) => {
   if (digits.length < 10) return digits;
   return digits.startsWith("55") ? digits : `55${digits}`;
 };
+
+const getLatestSubscriptionDays = (client: CampaignClient) => {
+  const subscriptions = Array.isArray(client.client_subscriptions) ? client.client_subscriptions : [];
+  const latestEndDate = subscriptions
+    .map((s) => s?.end_date)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  if (!latestEndDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDate = new Date(`${latestEndDate}T00:00:00`);
+  return Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const matchesCampaignAudience = (client: CampaignClient, preset: Preset) => {
+  if (preset.target_audience === "Mulheres" && client.genero !== "Feminino") return false;
+  if (preset.target_audience === "Homens" && client.genero !== "Masculino") return false;
+
+  const status = preset.audience_status || "todos";
+  if (status === "todos") return true;
+  const days = getLatestSubscriptionDays(client);
+  if (days === null) return false;
+  if (status === "ativos") return days >= 0;
+  if (status === "vencidos") return days < 0;
+  if (status === "inativos") return days < -30;
+  return true;
+};
+
+const countCampaignRecipients = (clients: CampaignClient[], preset: Preset) =>
+  clients.filter((client) => {
+    const phone = normalizePhone(client.whatsapp || client.phone || "");
+    return phone.length >= 12 && matchesCampaignAudience(client, preset);
+  }).length;
 
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -153,6 +196,7 @@ export default function Campaigns() {
   const [adminTestPhone, setAdminTestPhone] = useState("");
   const [savingEngine, setSavingEngine] = useState(false);
   const [testingDateKey, setTestingDateKey] = useState<string | null>(null);
+  const [campaignClients, setCampaignClients] = useState<CampaignClient[]>([]);
 
   // Form state
   const [audience, setAudience] = useState<"Homens" | "Mulheres" | "Todos">("Todos");
@@ -232,13 +276,46 @@ export default function Campaigns() {
     }
   };
 
+  const loadCampaignClients = async () => {
+    if (!effectiveCompanyId) return;
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, name, whatsapp, phone, genero, client_subscriptions(end_date)")
+      .eq("company_id", effectiveCompanyId)
+      .neq("status", "deleted");
+    if (!error && data) setCampaignClients(data as CampaignClient[]);
+  };
+
   useEffect(() => {
     loadPresets();
     loadEngineSettings();
+    loadCampaignClients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCompanyId]);
 
   const allDates = [...HOLIDAY_DATES, ...customDates].sort(sortByDate);
+
+  const nextAutomationSummary = useMemo(() => {
+    const configuredDates = allDates
+      .map((date) => ({ date, preset: presets[date.key] }))
+      .filter(({ preset }) => preset?.is_configured && preset.automation_enabled)
+      .map(({ date, preset }) => {
+        const [day, month] = date.dayMonth.split("/").map(Number);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextDate = new Date(today.getFullYear(), month - 1, day);
+        if (nextDate < today) nextDate.setFullYear(today.getFullYear() + 1);
+        return {
+          date,
+          preset,
+          nextDate,
+          recipients: countCampaignRecipients(campaignClients, preset),
+        };
+      })
+      .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
+
+    return configuredDates[0] || null;
+  }, [allDates, campaignClients, presets]);
 
   const handleToggleEngine = async (next: boolean) => {
     if (!effectiveCompanyId) return;
@@ -441,25 +518,8 @@ export default function Campaigns() {
       toast.error("Erro ao carregar clientes");
       return;
     }
-    const recipients = clients
-      .filter((c: any) => {
-        if ((preset.audience_status || "todos") === "todos") return true;
-        const subscriptions = Array.isArray(c.client_subscriptions) ? c.client_subscriptions : [];
-        const latestEndDate = subscriptions
-          .map((s: any) => s?.end_date)
-          .filter(Boolean)
-          .sort()
-          .at(-1);
-        if (!latestEndDate) return false;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(`${latestEndDate}T00:00:00`);
-        const days = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (preset.audience_status === "ativos") return days >= 0;
-        if (preset.audience_status === "vencidos") return days < 0;
-        if (preset.audience_status === "inativos") return days < -30;
-        return true;
-      })
+    const recipients = (clients as CampaignClient[])
+      .filter((c) => matchesCampaignAudience(c, preset))
       .map((c) => ({
         ...c,
         phone: normalizePhone(c.whatsapp || c.phone || ""),
@@ -725,6 +785,13 @@ export default function Campaigns() {
           />
         </div>
 
+        {engineEnabled && nextAutomationSummary && (
+          <div className="mt-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-muted-foreground">
+            Próxima data para envio: <strong className="text-foreground">{nextAutomationSummary.date.name}</strong>{" "}
+            <span className="text-primary">{nextAutomationSummary.date.dayMonth}</span> ·{" "}
+            <strong className="text-foreground">{nextAutomationSummary.recipients}</strong> contatos receberão essa mensagem
+          </div>
+        )}
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
