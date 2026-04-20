@@ -471,28 +471,41 @@ export default function Campaigns() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   };
 
-  const handleTestSend = async (date: CampaignDate) => {
+  const openTestModal = (date: CampaignDate) => {
     const preset = presets[date.key];
     if (!preset || !preset.is_configured) {
       toast.error("Configure a campanha primeiro");
       return;
     }
-    if (!adminTestPhone.trim()) {
-      toast.error("Defina o telefone do administrador nas configurações de API");
+    setTestDate(date);
+    setTestPhone(adminTestPhone || "");
+    setTestPhoneError("");
+    setTestOpen(true);
+  };
+
+  const handleTestSend = async () => {
+    if (!testDate) return;
+    const date = testDate;
+    const preset = presets[date.key];
+    if (!preset || !preset.is_configured) {
+      toast.error("Configure a campanha primeiro");
+      return;
+    }
+    const parsedPhone = testPhoneSchema.safeParse(testPhone);
+    if (!parsedPhone.success) {
+      setTestPhoneError(parsedPhone.error.issues[0]?.message || "Telefone inválido");
       return;
     }
     const cfg = await getApiConfig();
     if (!cfg) return;
-    const phone = normalizePhone(adminTestPhone);
-    if (phone.length < 12) {
-      toast.error("Telefone admin inválido");
-      return;
-    }
+    const phone = parsedPhone.data;
     setTestingDateKey(date.key);
     try {
       const personalized = preset.message_text.replace(/\{nome\}/gi, "Pedro");
       await sendOne(cfg.baseUrl, cfg.token, phone, personalized, preset.image_url);
-      toast.success("✅ Teste enviado para o administrador");
+      setAdminTestPhone(testPhone.trim());
+      setTestOpen(false);
+      toast.success("✅ Teste enviado");
     } catch (e: any) {
       toast.error("Falha no teste: " + e.message);
     } finally {
