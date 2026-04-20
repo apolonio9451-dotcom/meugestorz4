@@ -817,7 +817,6 @@ export default function Campaigns() {
                         className="data-[state=checked]:bg-cyan-500"
                       />
                     </div>
-                  </>
                 )}
               </div>
             </Card>
