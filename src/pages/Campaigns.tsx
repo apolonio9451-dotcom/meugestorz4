@@ -201,6 +201,10 @@ export default function Campaigns() {
   const [configOpen, setConfigOpen] = useState(false);
   const [sendingDate, setSendingDate] = useState<CampaignDate | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testDate, setTestDate] = useState<CampaignDate | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testPhoneError, setTestPhoneError] = useState("");
 
   // Master switch + admin test phone
   const [engineEnabled, setEngineEnabled] = useState(false);
