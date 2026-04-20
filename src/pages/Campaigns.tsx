@@ -724,108 +724,72 @@ export default function Campaigns() {
           return (
             <Card
               key={date.key}
-              className="p-5 backdrop-blur-xl bg-card/60 border-border/50 hover:border-primary/40 transition-all group"
+              className="p-4 backdrop-blur-xl bg-card/60 border-border/50 hover:border-primary/40 transition-all group"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
-                  <Icon className="w-5 h-5 text-primary" />
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors shrink-0">
+                  <Icon className="w-4 h-4 text-primary" />
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  {preset?.is_configured ? (
-                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Configurado
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      <Circle className="w-3 h-3 mr-1" />
-                      Pendente
-                    </Badge>
-                  )}
-                  {automationOn && (
-                    <Badge className="bg-cyan-500/15 text-cyan-300 border-cyan-500/40">
-                      <Zap className="w-3 h-3 mr-1" />
-                      Auto
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-lg truncate">{date.name}</h3>
-                  <p className="text-sm text-muted-foreground">{date.dayMonth}</p>
-                </div>
-                {/* Quick send buttons (small) */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    title="Teste de envio (admin)"
-                    onClick={() => handleTestSend(date)}
-                    disabled={isTesting || !preset?.is_configured}
-                    className="h-8 w-8 border-border/60"
-                  >
-                    {isTesting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-base truncate">{date.name}</h3>
+                      <p className="text-xs text-muted-foreground">{date.dayMonth}</p>
+                    </div>
+                    {preset?.is_configured ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shrink-0">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        OK
+                      </Badge>
                     ) : (
-                      <Send className="w-3.5 h-3.5" />
+                      <Badge variant="outline" className="text-muted-foreground shrink-0">
+                        <Circle className="w-3 h-3 mr-1" />
+                        Pendente
+                      </Badge>
                     )}
-                  </Button>
-                  <Button
-                    size="icon"
-                    title="Iniciar envio manual"
-                    onClick={() => startSending(date)}
-                    disabled={!preset?.is_configured}
-                    className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_12px_-2px_hsl(var(--primary)/0.5)]"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                  </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {preset?.is_configured ? `Público: ${preset.target_audience}` : "Configure imagem e legenda"}
+                  </p>
                 </div>
               </div>
-              {preset?.is_configured && (
-                <p className="text-xs text-muted-foreground mb-3">
-                  Público: {preset.target_audience}
-                </p>
-              )}
 
-              {/* Action buttons */}
-              <div className="space-y-2">
+              <div className="mt-3 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => openConfig(date)}
-                  className="w-full"
+                  className="h-8 px-2 text-xs"
                 >
-                  <Settings2 className="w-4 h-4 mr-1" />
-                  Configurar
+                  <Settings2 className="w-3.5 h-3.5 mr-1" />
+                  Editar
                 </Button>
-
-                {preset?.is_configured && (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => handleTestSend(date)}
-                        disabled={isTesting}
-                        className="bg-muted hover:bg-muted/80 text-foreground border border-border/60"
+                        disabled={isTesting || !preset?.is_configured}
+                        className="h-8 px-2 text-xs bg-muted hover:bg-muted/80 text-foreground border border-border/60"
                       >
                         {isTesting ? (
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
                         ) : (
-                          <Send className="w-4 h-4 mr-1" />
+                          <Send className="w-3.5 h-3.5 mr-1" />
                         )}
                         Teste
                       </Button>
                       <Button
                         size="sm"
                         onClick={() => startSending(date)}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_18px_-4px_hsl(var(--primary)/0.6)]"
+                        disabled={!preset?.is_configured}
+                        className="h-8 px-2 text-xs bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_18px_-4px_hsl(var(--primary)/0.6)]"
                       >
-                        <Play className="w-4 h-4 mr-1" />
-                        Iniciar
+                        <Play className="w-3.5 h-3.5 mr-1" />
+                        Enviar
                       </Button>
                     </div>
+                {preset?.is_configured && (
                     <div
                       className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
                         automationOn
