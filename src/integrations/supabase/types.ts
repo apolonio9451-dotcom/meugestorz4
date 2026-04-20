@@ -317,6 +317,7 @@ export type Database = {
       }
       campaign_presets: {
         Row: {
+          audience_status: string
           automation_enabled: boolean
           company_id: string
           created_at: string
@@ -332,6 +333,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audience_status?: string
           automation_enabled?: boolean
           company_id: string
           created_at?: string
@@ -347,6 +349,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience_status?: string
           automation_enabled?: boolean
           company_id?: string
           created_at?: string
