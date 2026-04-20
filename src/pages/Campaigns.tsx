@@ -385,7 +385,7 @@ export default function Campaigns() {
       return;
     }
     if (!adminTestPhone.trim()) {
-      toast.error("Defina o telefone do administrador no topo (campo Teste)");
+      toast.error("Defina o telefone do administrador nas configurações de API");
       return;
     }
     const cfg = await getApiConfig();
