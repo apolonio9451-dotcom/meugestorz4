@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Calendar as CalendarIcon,
   Heart,
@@ -54,7 +55,7 @@ import {
   Zap,
   ZapOff,
   Send,
-  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -660,78 +661,70 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-4 p-4 md:p-5">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-            <CalendarIcon className="w-5 h-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold leading-tight">Datas Especiais</h1>
-            <p className="text-xs text-muted-foreground truncate">
-              Mensagens por data, teste e envio manual anti-ban
-            </p>
-          </div>
-        </div>
+      <div className="flex items-center justify-end">
         <Button
           onClick={() => setNewDateOpen(true)}
           size="sm"
-          className="h-9 bg-primary hover:bg-primary/90"
+          variant="outline"
+          className="h-8 rounded-full border-primary/20 bg-primary/10 px-3 text-xs text-primary shadow-sm hover:bg-primary/15"
         >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Nova Data
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          Nova
         </Button>
       </div>
 
-      <Card className="p-2.5 md:p-3 backdrop-blur-xl bg-card/60 border-border/50">
+      <Card className="p-2.5 backdrop-blur-xl bg-card/60 border-border/50">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div
-              className={`p-2 rounded-lg border transition-colors ${
+              className={`p-1.5 rounded-full border transition-colors ${
                 engineEnabled
-                  ? "bg-emerald-500/15 border-emerald-500/40"
+                  ? "bg-primary/15 border-primary/40"
                   : "bg-muted/30 border-border/50"
               }`}
             >
               {engineEnabled ? (
-                <Zap className="w-4 h-4 text-emerald-400" />
+                <Zap className="w-4 h-4 text-primary" />
               ) : (
                 <ZapOff className="w-4 h-4 text-muted-foreground" />
               )}
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold text-sm md:text-base">Mecanismo de Campanhas</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm truncate">Mecanismo</h3>
                 <Badge
                   className={
                     engineEnabled
-                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                      ? "bg-primary/15 text-primary border-primary/30"
                       : "bg-muted/30 text-muted-foreground border-border/50"
                   }
                 >
                   {engineEnabled ? "ATIVO" : "DESLIGADO"}
                 </Badge>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                      aria-label="Ver informação do mecanismo"
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-72 text-xs leading-relaxed">
+                    O mecanismo ativa somente os disparos automáticos programados. Teste e envio manual continuam liberados mesmo desligado.
+                  </PopoverContent>
+                </Popover>
               </div>
-              <p className="text-xs text-muted-foreground truncate">
-                Liga apenas os disparos automáticos programados.
-              </p>
             </div>
           </div>
           <Switch
             checked={engineEnabled}
             onCheckedChange={handleToggleEngine}
             disabled={savingEngine}
-            className="data-[state=checked]:bg-emerald-500"
           />
         </div>
 
-        {!engineEnabled && (
-          <div className="mt-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-400">
-              O <strong>Mecanismo de Campanhas</strong> precisa estar <strong>ATIVO</strong> apenas para automações; teste e envio manual continuam liberados.
-            </p>
-          </div>
-        )}
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
