@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Calendar as CalendarIcon,
   Heart,
@@ -54,7 +55,7 @@ import {
   Zap,
   ZapOff,
   Send,
-  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 
