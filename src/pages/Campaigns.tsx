@@ -55,7 +55,6 @@ import {
   ZapOff,
   Send,
   AlertTriangle,
-  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -253,16 +252,6 @@ export default function Campaigns() {
     } else {
       toast.success(next ? "Mecanismo de Campanhas ATIVO" : "Mecanismo desligado");
     }
-  };
-
-  const handleSaveAdminPhone = async () => {
-    if (!effectiveCompanyId) return;
-    const { error } = await supabase
-      .from("api_settings")
-      .update({ campaigns_admin_test_phone: adminTestPhone } as any)
-      .eq("company_id", effectiveCompanyId);
-    if (error) toast.error("Erro ao salvar telefone");
-    else toast.success("Telefone admin salvo");
   };
 
   const handleToggleAutomation = async (date: CampaignDate, next: boolean) => {
