@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,15 @@ type SendState = {
   batchPauseRemaining: number;
 };
 
+type CampaignClient = {
+  id: string;
+  name: string;
+  whatsapp: string | null;
+  phone: string | null;
+  genero: string | null;
+  client_subscriptions?: { end_date: string | null }[];
+};
+
 const BATCH_SIZE = 10;
 const BATCH_PAUSE_MS = 10 * 60 * 1000; // 10 min
 const MIN_DELAY = 8000;
@@ -129,6 +138,40 @@ const normalizePhone = (phone: string) => {
   if (digits.length < 10) return digits;
   return digits.startsWith("55") ? digits : `55${digits}`;
 };
+
+const getLatestSubscriptionDays = (client: CampaignClient) => {
+  const subscriptions = Array.isArray(client.client_subscriptions) ? client.client_subscriptions : [];
+  const latestEndDate = subscriptions
+    .map((s) => s?.end_date)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  if (!latestEndDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDate = new Date(`${latestEndDate}T00:00:00`);
+  return Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const matchesCampaignAudience = (client: CampaignClient, preset: Preset) => {
+  if (preset.target_audience === "Mulheres" && client.genero !== "Feminino") return false;
+  if (preset.target_audience === "Homens" && client.genero !== "Masculino") return false;
+
+  const status = preset.audience_status || "todos";
+  if (status === "todos") return true;
+  const days = getLatestSubscriptionDays(client);
+  if (days === null) return false;
+  if (status === "ativos") return days >= 0;
+  if (status === "vencidos") return days < 0;
+  if (status === "inativos") return days < -30;
+  return true;
+};
+
+const countCampaignRecipients = (clients: CampaignClient[], preset: Preset) =>
+  clients.filter((client) => {
+    const phone = normalizePhone(client.whatsapp || client.phone || "");
+    return phone.length >= 12 && matchesCampaignAudience(client, preset);
+  }).length;
 
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
