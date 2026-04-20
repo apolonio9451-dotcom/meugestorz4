@@ -295,6 +295,28 @@ export default function Campaigns() {
 
   const allDates = [...HOLIDAY_DATES, ...customDates].sort(sortByDate);
 
+  const nextAutomationSummary = useMemo(() => {
+    const configuredDates = allDates
+      .map((date) => ({ date, preset: presets[date.key] }))
+      .filter(({ preset }) => preset?.is_configured && preset.automation_enabled)
+      .map(({ date, preset }) => {
+        const [day, month] = date.dayMonth.split("/").map(Number);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextDate = new Date(today.getFullYear(), month - 1, day);
+        if (nextDate < today) nextDate.setFullYear(today.getFullYear() + 1);
+        return {
+          date,
+          preset,
+          nextDate,
+          recipients: countCampaignRecipients(campaignClients, preset),
+        };
+      })
+      .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
+
+    return configuredDates[0] || null;
+  }, [allDates, campaignClients, presets]);
+
   const handleToggleEngine = async (next: boolean) => {
     if (!effectiveCompanyId) return;
     setSavingEngine(true);
