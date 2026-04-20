@@ -857,7 +857,7 @@ export default function Campaigns() {
             <div>
               <Label className="flex items-center gap-2 mb-2">
                 <Users className="w-4 h-4" />
-                Público-alvo
+                Gênero
               </Label>
               <Select value={audience} onValueChange={(v: any) => setAudience(v)}>
                 <SelectTrigger>
@@ -867,6 +867,24 @@ export default function Campaigns() {
                   <SelectItem value="Todos">Todos os clientes</SelectItem>
                   <SelectItem value="Mulheres">Apenas Mulheres</SelectItem>
                   <SelectItem value="Homens">Apenas Homens</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4" />
+                Enviar para
+              </Label>
+              <Select value={audienceStatus} onValueChange={(v: any) => setAudienceStatus(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="ativos">Somente ativos</SelectItem>
+                  <SelectItem value="vencidos">Somente vencidos</SelectItem>
+                  <SelectItem value="inativos">Somente inativos (+30 dias vencido)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
