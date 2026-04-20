@@ -663,26 +663,25 @@ export default function Campaigns() {
         </Button>
       </div>
 
-      {/* Master Switch + Admin Test Phone */}
-      <Card className="p-5 backdrop-blur-xl bg-card/60 border-border/50">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <Card className="p-3 md:p-4 backdrop-blur-xl bg-card/60 border-border/50">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className={`p-3 rounded-xl border transition-colors ${
+              className={`p-2 rounded-lg border transition-colors ${
                 engineEnabled
                   ? "bg-emerald-500/15 border-emerald-500/40"
                   : "bg-muted/30 border-border/50"
               }`}
             >
               {engineEnabled ? (
-                <Zap className="w-6 h-6 text-emerald-400" />
+                <Zap className="w-4 h-4 text-emerald-400" />
               ) : (
-                <ZapOff className="w-6 h-6 text-muted-foreground" />
+                <ZapOff className="w-4 h-4 text-muted-foreground" />
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-lg">Mecanismo de Campanhas</h3>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold text-sm md:text-base">Mecanismo de Campanhas</h3>
                 <Badge
                   className={
                     engineEnabled
@@ -693,8 +692,8 @@ export default function Campaigns() {
                   {engineEnabled ? "ATIVO" : "DESLIGADO"}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Interruptor geral. Se desligado, NENHUM envio (manual ou automático) é processado.
+              <p className="text-xs text-muted-foreground truncate">
+                Controle geral dos envios manuais e automáticos.
               </p>
             </div>
           </div>
@@ -707,30 +706,13 @@ export default function Campaigns() {
         </div>
 
         {!engineEnabled && (
-          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
+          <div className="mt-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-400">
+            <p className="text-xs text-amber-400">
               O <strong>Mecanismo de Campanhas</strong> precisa estar <strong>ATIVO</strong> para realizar envios.
             </p>
           </div>
         )}
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-end">
-          <div>
-            <Label className="flex items-center gap-2 mb-2 text-sm">
-              <Phone className="w-4 h-4" />
-              Telefone do Administrador (para Teste de Envio)
-            </Label>
-            <Input
-              placeholder="Ex: 5511999999999"
-              value={adminTestPhone}
-              onChange={(e) => setAdminTestPhone(e.target.value)}
-            />
-          </div>
-          <Button onClick={handleSaveAdminPhone} variant="outline">
-            Salvar Telefone
-          </Button>
-        </div>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
