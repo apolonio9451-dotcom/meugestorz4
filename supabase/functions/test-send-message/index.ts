@@ -132,12 +132,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phone, category, company_id } = await req.json();
-    console.log("[test-send] Recebido:", { phone, category, company_id });
+    const { phone, category, company_id, message, image_url } = await req.json();
+    console.log("[test-send] Recebido:", { phone, category, company_id, hasCustomMessage: Boolean(message), hasImage: Boolean(image_url) });
 
-    if (!phone || !category || !company_id) {
+    if (!phone || !company_id || (!category && !message)) {
       return new Response(
-        JSON.stringify({ error: "phone, category e company_id são obrigatórios" }),
+        JSON.stringify({ error: "phone, company_id e category ou message são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
