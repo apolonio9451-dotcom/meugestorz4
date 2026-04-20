@@ -1058,6 +1058,44 @@ export default function Campaigns() {
         </DialogContent>
       </Dialog>
 
+      {/* Test Send Modal */}
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent className="max-w-md backdrop-blur-xl bg-card/95">
+          <DialogHeader>
+            <DialogTitle>Enviar teste: {testDate?.name}</DialogTitle>
+            <DialogDescription>
+              Informe o WhatsApp que receberá apenas esta mensagem de teste.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="mb-2 block">Número para teste</Label>
+              <Input
+                value={testPhone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d\s()+-]/g, "").slice(0, 20);
+                  setTestPhone(value);
+                  setTestPhoneError("");
+                }}
+                placeholder="Ex: 55 11 99999-9999"
+                inputMode="tel"
+                maxLength={20}
+              />
+              {testPhoneError && <p className="mt-1 text-xs text-destructive">{testPhoneError}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(false)} disabled={!!testingDateKey}>
+              Cancelar
+            </Button>
+            <Button onClick={handleTestSend} disabled={!!testingDateKey}>
+              {testingDateKey && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Enviar teste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Sending Monitor Modal */}
       <Dialog open={sendOpen} onOpenChange={(o) => !o && send.status === "idle" && setSendOpen(false)}>
         <DialogContent className="max-w-md backdrop-blur-xl bg-card/95">
