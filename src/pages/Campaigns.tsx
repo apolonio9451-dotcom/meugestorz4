@@ -175,6 +175,15 @@ const countCampaignRecipients = (clients: CampaignClient[], preset: Preset) =>
     return phone.length >= 12 && matchesCampaignAudience(client, preset);
   }).length;
 
+const testPhoneSchema = z
+  .string()
+  .trim()
+  .min(10, "Informe um telefone válido")
+  .max(20, "Telefone muito longo")
+  .regex(/^[\d\s()+-]+$/, "Use apenas números, espaços, parênteses, + ou -")
+  .transform((value) => normalizePhone(value))
+  .refine((value) => value.length >= 12 && value.length <= 13, "Telefone inválido");
+
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
