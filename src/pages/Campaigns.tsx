@@ -101,6 +101,7 @@ type Preset = {
   message_text: string;
   image_url: string | null;
   target_audience: "Homens" | "Mulheres" | "Todos";
+  audience_status: "todos" | "ativos" | "vencidos" | "inativos";
   save_preset: boolean;
   is_configured: boolean;
   automation_enabled: boolean;
@@ -154,6 +155,7 @@ export default function Campaigns() {
 
   // Form state
   const [audience, setAudience] = useState<"Homens" | "Mulheres" | "Todos">("Todos");
+  const [audienceStatus, setAudienceStatus] = useState<"todos" | "ativos" | "vencidos" | "inativos">("todos");
   const [messageText, setMessageText] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [savePreset, setSavePreset] = useState(true);
@@ -279,6 +281,7 @@ export default function Campaigns() {
     const existing = presets[date.key];
     setSelectedDate(date);
     setAudience(existing?.target_audience || "Todos");
+    setAudienceStatus(existing?.audience_status || "todos");
     setMessageText(existing?.message_text || "");
     setImageUrl(existing?.image_url || null);
     setSavePreset(existing?.save_preset ?? true);
@@ -320,6 +323,7 @@ export default function Campaigns() {
       message_text: messageText,
       image_url: imageUrl,
       target_audience: audience,
+      audience_status: audienceStatus,
       save_preset: savePreset,
       is_configured: true,
     };
