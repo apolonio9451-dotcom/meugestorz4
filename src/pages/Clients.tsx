@@ -75,7 +75,7 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [serverFilter, setServerFilter] = useState<string>("all");
   const [mainFilter, setMainFilter] = useState<"todos" | "status" | "vencidos" | "pendentes" | "excluidos" | "log">("todos");
-  const [statusSubFilter, setStatusSubFilter] = useState<"ativos" | "vence_hoje" | "vence_amanha" | "a_vencer" | "followup" | "suporte">("ativos");
+  const [statusSubFilter, setStatusSubFilter] = useState<"ativos" | "vence_hoje" | "vence_amanha" | "a_vencer" | "inativos" | "followup" | "suporte">("ativos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
@@ -941,6 +941,7 @@ export default function Clients() {
           case "vence_hoje": return days !== null && days === 0;
           case "vence_amanha": return days !== null && days === 1;
           case "a_vencer": return days !== null && days === 3;
+          case "inativos": return days !== null && days < -30;
           case "followup": {
             // Show active clients eligible for follow-up: registered any time and follow_up_active still true.
             // Clients who already received the follow-up have follow_up_active=false and won't appear here.
@@ -967,6 +968,7 @@ export default function Clients() {
     vence_hoje: searchFiltered.filter(c => getClientDays(c.id) === 0).length,
     vence_amanha: searchFiltered.filter(c => getClientDays(c.id) === 1).length,
     a_vencer: searchFiltered.filter(c => { const d = getClientDays(c.id); return d === 3; }).length,
+    inativos: searchFiltered.filter(c => { const d = getClientDays(c.id); return d !== null && d < -30; }).length,
     followup: searchFiltered.filter(c => { const ad = getClientActiveDays(c.id); return ad !== null && (c as any).follow_up_active !== false; }).length,
     suporte: searchFiltered.filter(c => !!(c as any).support_started_at).length,
   }), [activeClients, excludedClients, searchFiltered, subscriptions, getClientDays, getClientActiveDays]);
@@ -1011,6 +1013,7 @@ export default function Clients() {
     { key: "vence_hoje" as const, label: "Vence Hoje", count: filterCounts.vence_hoje, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
     { key: "vence_amanha" as const, label: "Vence Amanhã", count: filterCounts.vence_amanha, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
     { key: "a_vencer" as const, label: "A Vencer", count: filterCounts.a_vencer, color: "bg-yellow-600/20 text-yellow-500 border-yellow-600/30" },
+    { key: "inativos" as const, label: "Inativos", count: filterCounts.inativos, color: "bg-muted/60 text-muted-foreground border-border/50" },
     { key: "followup" as const, label: "Follow-up", count: filterCounts.followup, color: "bg-cyan-400/20 text-cyan-400 border-cyan-400/50" },
     { key: "suporte" as const, label: "Suporte", count: filterCounts.suporte, color: "bg-violet-400/20 text-violet-400 border-violet-400/50" },
   ];
@@ -1038,6 +1041,7 @@ export default function Clients() {
 
   const getDaysLabel = (days: number, pauseLabel: string | null = null) => {
     if (pauseLabel) return pauseLabel;
+    if (days < -30) return "Inativo";
     if (days < 0) return "Vencido";
     if (days === 0) return "Vence hoje";
     if (days === 1) return "1 dia restante";
@@ -1046,6 +1050,7 @@ export default function Clients() {
 
   const getExpiryBadge = (days: number, paused: boolean = false) => {
     if (paused) return <Badge className="bg-muted/60 text-muted-foreground border-border/50 text-[10px] font-bold uppercase">Vencido · Pausado</Badge>;
+    if (days < -30) return <Badge className="bg-muted/70 text-muted-foreground border-border/60 text-[10px] font-bold uppercase">Inativo</Badge>;
     if (days < 0) return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] font-bold uppercase">Vencido</Badge>;
     if (days === 0) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
     if (days === 1) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
