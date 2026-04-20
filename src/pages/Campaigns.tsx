@@ -196,6 +196,7 @@ export default function Campaigns() {
   const [adminTestPhone, setAdminTestPhone] = useState("");
   const [savingEngine, setSavingEngine] = useState(false);
   const [testingDateKey, setTestingDateKey] = useState<string | null>(null);
+  const [campaignClients, setCampaignClients] = useState<CampaignClient[]>([]);
 
   // Form state
   const [audience, setAudience] = useState<"Homens" | "Mulheres" | "Todos">("Todos");
@@ -275,9 +276,20 @@ export default function Campaigns() {
     }
   };
 
+  const loadCampaignClients = async () => {
+    if (!effectiveCompanyId) return;
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, name, whatsapp, phone, genero, client_subscriptions(end_date)")
+      .eq("company_id", effectiveCompanyId)
+      .neq("status", "deleted");
+    if (!error && data) setCampaignClients(data as CampaignClient[]);
+  };
+
   useEffect(() => {
     loadPresets();
     loadEngineSettings();
+    loadCampaignClients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveCompanyId]);
 
