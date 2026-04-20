@@ -112,18 +112,32 @@ async function trySend(apiUrl: string, apiToken: string, phone: string, messageB
   return { ok: res.ok, status: res.status, body };
 }
 
+async function trySendCampaignMessage(apiUrl: string, apiToken: string, phone: string, messageBody: string, imageUrl?: string | null): Promise<{ ok: boolean; status: number; body: string }> {
+  const endpoint = imageUrl ? `${apiUrl}/send/media` : `${apiUrl}/send/text`;
+  const payload = imageUrl
+    ? { number: phone, type: "image", file: imageUrl, text: messageBody }
+    : { number: phone, text: messageBody, linkPreview: true };
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: getApiHeaders(apiToken),
+    body: JSON.stringify(payload),
+  });
+  const body = await res.text();
+  return { ok: res.ok, status: res.status, body };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { phone, category, company_id } = await req.json();
-    console.log("[test-send] Recebido:", { phone, category, company_id });
+    const { phone, category, company_id, message, image_url } = await req.json();
+    console.log("[test-send] Recebido:", { phone, category, company_id, hasCustomMessage: Boolean(message), hasImage: Boolean(image_url) });
 
-    if (!phone || !category || !company_id) {
+    if (!phone || !company_id || (!category && !message)) {
       return new Response(
-        JSON.stringify({ error: "phone, category e company_id são obrigatórios" }),
+        JSON.stringify({ error: "phone, company_id e category ou message são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -209,7 +223,7 @@ Deno.serve(async (req) => {
     const todayDate = new Date();
     const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    const messageBody = replacePlaceholders(template, {
+    const messageBody = message ? String(message).slice(0, 4000) : replacePlaceholders(template, {
       saudacao: getGreeting(),
       dia_semana: getDayOfWeek(),
       dia: getDayOfMonth(),
@@ -234,7 +248,9 @@ Deno.serve(async (req) => {
     for (const candidate of tokensToTry) {
       console.log(`[test-send] Tentando token ${candidate.label} (${candidate.token.substring(0, 8)}...)`);
       try {
-        const result = await trySend(apiUrl, candidate.token, normalizedPhone, messageBody);
+        const result = message
+          ? await trySendCampaignMessage(apiUrl, candidate.token, normalizedPhone, messageBody, image_url ? String(image_url).slice(0, 1000) : null)
+          : await trySend(apiUrl, candidate.token, normalizedPhone, messageBody);
         console.log(`[test-send] Resultado com ${candidate.label}: status=${result.status} ok=${result.ok} body=${result.body.slice(0, 200)}`);
 
         if (result.ok) {

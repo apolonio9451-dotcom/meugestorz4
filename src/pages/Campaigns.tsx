@@ -471,6 +471,19 @@ export default function Campaigns() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   };
 
+  const getFunctionErrorMessage = async (error: any) => {
+    let message = error?.message || "Não foi possível enviar o teste.";
+    try {
+      if (error?.context && typeof error.context.json === "function") {
+        const body = await error.context.json();
+        message = body?.error || message;
+      }
+    } catch {
+      // Keep safe fallback message
+    }
+    return message;
+  };
+
   const openTestModal = (date: CampaignDate) => {
     const preset = presets[date.key];
     if (!preset || !preset.is_configured) {
@@ -496,13 +509,20 @@ export default function Campaigns() {
       setTestPhoneError(parsedPhone.error.issues[0]?.message || "Telefone inválido");
       return;
     }
-    const cfg = await getApiConfig();
-    if (!cfg) return;
     const phone = parsedPhone.data;
     setTestingDateKey(date.key);
     try {
       const personalized = preset.message_text.replace(/\{nome\}/gi, "Pedro");
-      await sendOne(cfg.baseUrl, cfg.token, phone, personalized, preset.image_url);
+      const { data, error } = await supabase.functions.invoke("test-send-message", {
+        body: {
+          phone,
+          company_id: effectiveCompanyId,
+          message: personalized,
+          image_url: preset.image_url,
+        },
+      });
+      if (error) throw new Error(await getFunctionErrorMessage(error));
+      if (data?.error) throw new Error(data.error);
       setAdminTestPhone(testPhone.trim());
       setTestOpen(false);
       toast.success("✅ Teste enviado");
