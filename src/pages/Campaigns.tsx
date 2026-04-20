@@ -785,6 +785,13 @@ export default function Campaigns() {
           />
         </div>
 
+        {engineEnabled && nextAutomationSummary && (
+          <div className="mt-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-muted-foreground">
+            Próxima data para envio: <strong className="text-foreground">{nextAutomationSummary.date.name}</strong>{" "}
+            <span className="text-primary">{nextAutomationSummary.date.dayMonth}</span> ·{" "}
+            <strong className="text-foreground">{nextAutomationSummary.recipients}</strong> contatos receberão essa mensagem
+          </div>
+        )}
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
