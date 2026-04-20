@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
     const todayDate = new Date();
     const diffDays = Math.round((endDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    const messageBody = replacePlaceholders(template, {
+    const messageBody = message ? String(message).slice(0, 4000) : replacePlaceholders(template, {
       saudacao: getGreeting(),
       dia_semana: getDayOfWeek(),
       dia: getDayOfMonth(),
@@ -248,7 +248,9 @@ Deno.serve(async (req) => {
     for (const candidate of tokensToTry) {
       console.log(`[test-send] Tentando token ${candidate.label} (${candidate.token.substring(0, 8)}...)`);
       try {
-        const result = await trySend(apiUrl, candidate.token, normalizedPhone, messageBody);
+        const result = message
+          ? await trySendCampaignMessage(apiUrl, candidate.token, normalizedPhone, messageBody, image_url ? String(image_url).slice(0, 1000) : null)
+          : await trySend(apiUrl, candidate.token, normalizedPhone, messageBody);
         console.log(`[test-send] Resultado com ${candidate.label}: status=${result.status} ok=${result.ok} body=${result.body.slice(0, 200)}`);
 
         if (result.ok) {
