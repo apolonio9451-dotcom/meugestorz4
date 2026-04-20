@@ -875,7 +875,7 @@ export default function Campaigns() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleTestSend(date)}
+                        onClick={() => openTestModal(date)}
                         disabled={isTesting || !preset?.is_configured}
                         className="h-8 px-2 text-xs bg-muted hover:bg-muted/80 text-foreground border border-border/60"
                       >
