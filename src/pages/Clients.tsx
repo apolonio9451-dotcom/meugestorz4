@@ -1041,6 +1041,7 @@ export default function Clients() {
 
   const getDaysLabel = (days: number, pauseLabel: string | null = null) => {
     if (pauseLabel) return pauseLabel;
+    if (days < -30) return "Inativo";
     if (days < 0) return "Vencido";
     if (days === 0) return "Vence hoje";
     if (days === 1) return "1 dia restante";
@@ -1049,6 +1050,7 @@ export default function Clients() {
 
   const getExpiryBadge = (days: number, paused: boolean = false) => {
     if (paused) return <Badge className="bg-muted/60 text-muted-foreground border-border/50 text-[10px] font-bold uppercase">Vencido · Pausado</Badge>;
+    if (days < -30) return <Badge className="bg-muted/70 text-muted-foreground border-border/60 text-[10px] font-bold uppercase">Inativo</Badge>;
     if (days < 0) return <Badge className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] font-bold uppercase">Vencido</Badge>;
     if (days === 0) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Hoje</Badge>;
     if (days === 1) return <Badge className="bg-warning/15 text-warning border-warning/30 text-[10px] font-bold uppercase">Vence Amanhã</Badge>;
