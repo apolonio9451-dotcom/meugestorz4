@@ -471,6 +471,19 @@ export default function Campaigns() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
   };
 
+  const getFunctionErrorMessage = async (error: any) => {
+    let message = error?.message || "Não foi possível enviar o teste.";
+    try {
+      if (error?.context && typeof error.context.json === "function") {
+        const body = await error.context.json();
+        message = body?.error || message;
+      }
+    } catch {
+      // Keep safe fallback message
+    }
+    return message;
+  };
+
   const openTestModal = (date: CampaignDate) => {
     const preset = presets[date.key];
     if (!preset || !preset.is_configured) {
