@@ -426,10 +426,10 @@ export default function Campaigns() {
       return;
     }
 
-    // Fetch clients filtered by gender
+    // Fetch clients filtered by gender and subscription status
     let q = supabase
       .from("clients")
-      .select("id, name, whatsapp, phone, genero")
+      .select("id, name, whatsapp, phone, genero, client_subscriptions(end_date)")
       .eq("company_id", effectiveCompanyId)
       .neq("status", "deleted");
     if (preset.target_audience === "Mulheres") q = q.eq("genero", "Feminino");
@@ -441,6 +441,24 @@ export default function Campaigns() {
       return;
     }
     const recipients = clients
+      .filter((c: any) => {
+        if ((preset.audience_status || "todos") === "todos") return true;
+        const subscriptions = Array.isArray(c.client_subscriptions) ? c.client_subscriptions : [];
+        const latestEndDate = subscriptions
+          .map((s: any) => s?.end_date)
+          .filter(Boolean)
+          .sort()
+          .at(-1);
+        if (!latestEndDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = new Date(`${latestEndDate}T00:00:00`);
+        const days = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (preset.audience_status === "ativos") return days >= 0;
+        if (preset.audience_status === "vencidos") return days < 0;
+        if (preset.audience_status === "inativos") return days < -30;
+        return true;
+      })
       .map((c) => ({
         ...c,
         phone: normalizePhone(c.whatsapp || c.phone || ""),
