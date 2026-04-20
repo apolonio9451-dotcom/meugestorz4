@@ -726,14 +726,6 @@ export default function Campaigns() {
           />
         </div>
 
-        {!engineEnabled && (
-          <div className="mt-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-400">
-              O <strong>Mecanismo de Campanhas</strong> precisa estar <strong>ATIVO</strong> apenas para automações; teste e envio manual continuam liberados.
-            </p>
-          </div>
-        )}
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
