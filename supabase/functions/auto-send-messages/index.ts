@@ -547,9 +547,13 @@ Deno.serve(async (req) => {
       const intervalMs = latestConfig.sendIntervalSeconds * 1000;
       const overdueChargePauseEnabled = latestConfig.overdueChargePauseEnabled;
       const overdueChargePauseDays = latestConfig.overdueChargePauseDays;
+      const overdueSendsPerCycle = latestConfig.overdueSendsPerCycle;
+      const overdueCycleCooldownDays = latestConfig.overdueCycleCooldownDays;
+      const overdueMaxCycles = latestConfig.overdueMaxCycles;
+      const overdueInactiveAfterDays = latestConfig.overdueInactiveAfterDays;
 
       console.log(
-        `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}`
+        `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}, regra-vencidos=${overdueSendsPerCycle}x/${overdueCycleCooldownDays}d, ciclos=${overdueMaxCycles}, inativar=${overdueInactiveAfterDays}d`
       );
 
       const workingToken = await resolveWorkingApiToken(apiUrl, latestConfig.apiTokens);
