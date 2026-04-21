@@ -627,10 +627,10 @@ Deno.serve(async (req) => {
       const todayDate = new Date(today + "T00:00:00");
 
       // Anti-spam vencidos: 2 envios seguidos, pausa 3 dias, máximo 2 ciclos
-      const OVERDUE_MAX_STREAK = 2;
-      const OVERDUE_COOLDOWN_DAYS = 3;
-      const OVERDUE_MAX_CYCLES = 2;
-      const INACTIVE_AFTER_DAYS = 30;
+      const OVERDUE_MAX_STREAK = overdueSendsPerCycle;
+      const OVERDUE_COOLDOWN_DAYS = overdueCycleCooldownDays;
+      const OVERDUE_MAX_CYCLES = overdueMaxCycles;
+      const INACTIVE_AFTER_DAYS = overdueInactiveAfterDays;
 
       for (const client of clients) {
         if (failedClientIdsToday.has(client.id)) continue;
