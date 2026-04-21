@@ -593,7 +593,7 @@ Deno.serve(async (req) => {
       const { data: clients } = await supabase
         .from("clients")
         .select(`
-          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note,
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note, overdue_charge_streak, overdue_charge_resume_date,
           client_subscriptions (
             end_date, amount, custom_price,
             subscription_plans ( name, price )
