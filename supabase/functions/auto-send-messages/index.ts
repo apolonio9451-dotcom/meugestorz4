@@ -698,7 +698,7 @@ Deno.serve(async (req) => {
         console.log(`[auto-send] 🚷 ${inactivatedClientIds.length} cliente(s) marcado(s) como inativo(s) (30+ dias vencidos)`);
       }
 
-      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Pausados anti-spam: ${antiSpamPausedClients}. Categorias: ${JSON.stringify(
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Pausados anti-spam: ${antiSpamPausedClients}. Limite de ciclos atingido: ${cycleLimitReachedClients}. Inativados: ${inactivatedClientIds.length}. Categorias: ${JSON.stringify(
         sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
       )}`);
 
