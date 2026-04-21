@@ -609,7 +609,12 @@ Deno.serve(async (req) => {
       const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
       let pausedOverdueClients = 0;
       let manuallyPausedClients = 0;
+      let antiSpamPausedClients = 0;
       const todayDate = new Date(today + "T00:00:00");
+
+      // Anti-spam config para vencidos: 2 envios seguidos, pausa 3 dias, repete
+      const OVERDUE_MAX_STREAK = 2;
+      const OVERDUE_COOLDOWN_DAYS = 3;
 
       for (const client of clients) {
         if (failedClientIdsToday.has(client.id)) continue;
