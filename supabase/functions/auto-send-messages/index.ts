@@ -195,6 +195,10 @@ type LatestDispatchConfig = {
   sendIntervalSeconds: number;
   overdueChargePauseEnabled: boolean;
   overdueChargePauseDays: number;
+  overdueSendsPerCycle: number;
+  overdueCycleCooldownDays: number;
+  overdueMaxCycles: number;
+  overdueInactiveAfterDays: number;
   winbackPaused: boolean;
   autoSendHour: number;
   autoSendMinute: number;
