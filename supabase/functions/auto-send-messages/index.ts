@@ -794,24 +794,31 @@ Deno.serve(async (req) => {
           if (sendResult.ok) {
             const updatePayload: Record<string, any> = { ultimo_envio_auto: today };
 
-            // Anti-spam vencidos: incrementa streak; ao atingir o limite, agenda cooldown e zera
+            // Anti-spam vencidos: incrementa streak; ao completar, agenda cooldown e fecha o ciclo
             if (category === "vencidos") {
               const currentStreak = Number((client as any).overdue_charge_streak ?? 0);
+              const currentCycles = Number((client as any).overdue_charge_cycles ?? 0);
               const newStreak = currentStreak + 1;
               if (newStreak >= OVERDUE_MAX_STREAK) {
                 const resume = new Date(todayDate);
                 resume.setDate(resume.getDate() + OVERDUE_COOLDOWN_DAYS);
                 updatePayload.overdue_charge_streak = 0;
                 updatePayload.overdue_charge_resume_date = resume.toISOString().slice(0, 10);
+                updatePayload.overdue_charge_cycles = currentCycles + 1;
               } else {
                 updatePayload.overdue_charge_streak = newStreak;
                 updatePayload.overdue_charge_resume_date = null;
               }
             } else {
               // Outras categorias resetam o ciclo anti-spam de vencidos
-              if ((client as any).overdue_charge_streak || (client as any).overdue_charge_resume_date) {
+              if (
+                (client as any).overdue_charge_streak ||
+                (client as any).overdue_charge_resume_date ||
+                (client as any).overdue_charge_cycles
+              ) {
                 updatePayload.overdue_charge_streak = 0;
                 updatePayload.overdue_charge_resume_date = null;
+                updatePayload.overdue_charge_cycles = 0;
               }
             }
 
