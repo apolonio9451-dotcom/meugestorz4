@@ -593,7 +593,7 @@ Deno.serve(async (req) => {
       const { data: clients } = await supabase
         .from("clients")
         .select(`
-          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note,
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note, overdue_charge_streak, overdue_charge_resume_date,
           client_subscriptions (
             end_date, amount, custom_price,
             subscription_plans ( name, price )
@@ -609,7 +609,12 @@ Deno.serve(async (req) => {
       const sendQueue: Array<{ client: any; category: string; sub: any; plan: any; diffDays: number }> = [];
       let pausedOverdueClients = 0;
       let manuallyPausedClients = 0;
+      let antiSpamPausedClients = 0;
       const todayDate = new Date(today + "T00:00:00");
+
+      // Anti-spam config para vencidos: 2 envios seguidos, pausa 3 dias, repete
+      const OVERDUE_MAX_STREAK = 2;
+      const OVERDUE_COOLDOWN_DAYS = 3;
 
       for (const client of clients) {
         if (failedClientIdsToday.has(client.id)) continue;
@@ -647,13 +652,25 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Anti-spam vencidos: respeita cooldown de 3 dias após 2 envios consecutivos
+        if (category === "vencidos" && !hasResumeOverride) {
+          const resumeDateRaw = (client as any).overdue_charge_resume_date as string | null;
+          if (resumeDateRaw) {
+            const resumeDate = new Date(resumeDateRaw + "T00:00:00");
+            if (todayDate.getTime() < resumeDate.getTime()) {
+              antiSpamPausedClients++;
+              continue;
+            }
+          }
+        }
+
         const template = templates[category];
         if (!template) continue;
 
         sendQueue.push({ client, category, sub, plan, diffDays });
       }
 
-      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Categorias: ${JSON.stringify(
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Pausados anti-spam: ${antiSpamPausedClients}. Categorias: ${JSON.stringify(
         sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
       )}`);
 
@@ -747,7 +764,30 @@ Deno.serve(async (req) => {
           });
 
           if (sendResult.ok) {
-            await supabase.from("clients").update({ ultimo_envio_auto: today }).eq("id", client.id);
+            const updatePayload: Record<string, any> = { ultimo_envio_auto: today };
+
+            // Anti-spam vencidos: incrementa streak; ao atingir o limite, agenda cooldown e zera
+            if (category === "vencidos") {
+              const currentStreak = Number((client as any).overdue_charge_streak ?? 0);
+              const newStreak = currentStreak + 1;
+              if (newStreak >= OVERDUE_MAX_STREAK) {
+                const resume = new Date(todayDate);
+                resume.setDate(resume.getDate() + OVERDUE_COOLDOWN_DAYS);
+                updatePayload.overdue_charge_streak = 0;
+                updatePayload.overdue_charge_resume_date = resume.toISOString().slice(0, 10);
+              } else {
+                updatePayload.overdue_charge_streak = newStreak;
+                updatePayload.overdue_charge_resume_date = null;
+              }
+            } else {
+              // Outras categorias resetam o ciclo anti-spam de vencidos
+              if ((client as any).overdue_charge_streak || (client as any).overdue_charge_resume_date) {
+                updatePayload.overdue_charge_streak = 0;
+                updatePayload.overdue_charge_resume_date = null;
+              }
+            }
+
+            await supabase.from("clients").update(updatePayload).eq("id", client.id);
             totalSent++;
             console.log(`[auto-send] ✅ ${client.name} (${category}) enviado`);
           } else {
