@@ -249,7 +249,7 @@ async function fetchLatestDispatchConfig(
 ): Promise<LatestDispatchConfig> {
   const { data } = await supabase
     .from("api_settings")
-    .select("api_url, api_token, pix_key, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, winback_paused, auto_send_hour, auto_send_minute")
+    .select("api_url, api_token, pix_key, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, overdue_sends_per_cycle, overdue_cycle_cooldown_days, overdue_max_cycles, overdue_inactive_after_days, winback_paused, auto_send_hour, auto_send_minute")
     .eq("company_id", companyId)
     .maybeSingle();
 
@@ -308,6 +308,10 @@ async function fetchLatestDispatchConfig(
     sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
     overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),
     overdueChargePauseDays: Math.min(90, Math.max(1, Number(row.overdue_charge_pause_days ?? 10))),
+    overdueSendsPerCycle: Math.min(7, Math.max(1, Number(row.overdue_sends_per_cycle ?? 2))),
+    overdueCycleCooldownDays: Math.min(15, Math.max(1, Number(row.overdue_cycle_cooldown_days ?? 3))),
+    overdueMaxCycles: Math.min(10, Math.max(1, Number(row.overdue_max_cycles ?? 2))),
+    overdueInactiveAfterDays: Math.min(180, Math.max(7, Number(row.overdue_inactive_after_days ?? 30))),
     winbackPaused: Boolean(row.winback_paused ?? false),
     autoSendHour: Number(row.auto_send_hour ?? 8),
     autoSendMinute: Number(row.auto_send_minute ?? 0),
