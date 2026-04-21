@@ -652,6 +652,18 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Anti-spam vencidos: respeita cooldown de 3 dias após 2 envios consecutivos
+        if (category === "vencidos" && !hasResumeOverride) {
+          const resumeDateRaw = (client as any).overdue_charge_resume_date as string | null;
+          if (resumeDateRaw) {
+            const resumeDate = new Date(resumeDateRaw + "T00:00:00");
+            if (todayDate.getTime() < resumeDate.getTime()) {
+              antiSpamPausedClients++;
+              continue;
+            }
+          }
+        }
+
         const template = templates[category];
         if (!template) continue;
 
