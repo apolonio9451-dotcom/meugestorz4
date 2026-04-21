@@ -932,6 +932,7 @@ export type Database = {
           iptv_user: string | null
           name: string
           notes: string | null
+          overdue_charge_cycles: number
           overdue_charge_resume_date: string | null
           overdue_charge_streak: number
           phone: string | null
@@ -959,6 +960,7 @@ export type Database = {
           iptv_user?: string | null
           name: string
           notes?: string | null
+          overdue_charge_cycles?: number
           overdue_charge_resume_date?: string | null
           overdue_charge_streak?: number
           phone?: string | null
@@ -986,6 +988,7 @@ export type Database = {
           iptv_user?: string | null
           name?: string
           notes?: string | null
+          overdue_charge_cycles?: number
           overdue_charge_resume_date?: string | null
           overdue_charge_streak?: number
           phone?: string | null
