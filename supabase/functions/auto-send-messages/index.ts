@@ -651,9 +651,24 @@ Deno.serve(async (req) => {
         if (!category) continue;
         if (disabledCategories.has(category)) continue;
 
+        // Inativar automaticamente após 30 dias vencido
+        if (category === "vencidos" && Math.abs(diffDays) >= INACTIVE_AFTER_DAYS) {
+          inactivatedClientIds.push(client.id);
+          continue;
+        }
+
         if (category === "vencidos" && overdueChargePauseEnabled && Math.abs(diffDays) > overdueChargePauseDays && !hasResumeOverride) {
           pausedOverdueClients++;
           continue;
+        }
+
+        // Limite de 2 ciclos completos de cobrança de vencido
+        if (category === "vencidos" && !hasResumeOverride) {
+          const cycles = Number((client as any).overdue_charge_cycles ?? 0);
+          if (cycles >= OVERDUE_MAX_CYCLES) {
+            cycleLimitReachedClients++;
+            continue;
+          }
         }
 
         // Anti-spam vencidos: respeita cooldown de 3 dias após 2 envios consecutivos
@@ -672,6 +687,15 @@ Deno.serve(async (req) => {
         if (!template) continue;
 
         sendQueue.push({ client, category, sub, plan, diffDays });
+      }
+
+      // Marca clientes vencidos há 30+ dias como inativos
+      if (inactivatedClientIds.length > 0) {
+        await supabase
+          .from("clients")
+          .update({ status: "inactive" })
+          .in("id", inactivatedClientIds);
+        console.log(`[auto-send] 🚷 ${inactivatedClientIds.length} cliente(s) marcado(s) como inativo(s) (30+ dias vencidos)`);
       }
 
       console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Pausados anti-spam: ${antiSpamPausedClients}. Categorias: ${JSON.stringify(
