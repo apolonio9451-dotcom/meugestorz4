@@ -195,6 +195,10 @@ type LatestDispatchConfig = {
   sendIntervalSeconds: number;
   overdueChargePauseEnabled: boolean;
   overdueChargePauseDays: number;
+  overdueSendsPerCycle: number;
+  overdueCycleCooldownDays: number;
+  overdueMaxCycles: number;
+  overdueInactiveAfterDays: number;
   winbackPaused: boolean;
   autoSendHour: number;
   autoSendMinute: number;
@@ -245,7 +249,7 @@ async function fetchLatestDispatchConfig(
 ): Promise<LatestDispatchConfig> {
   const { data } = await supabase
     .from("api_settings")
-    .select("api_url, api_token, pix_key, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, winback_paused, auto_send_hour, auto_send_minute")
+    .select("api_url, api_token, pix_key, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, overdue_sends_per_cycle, overdue_cycle_cooldown_days, overdue_max_cycles, overdue_inactive_after_days, winback_paused, auto_send_hour, auto_send_minute")
     .eq("company_id", companyId)
     .maybeSingle();
 
@@ -304,6 +308,10 @@ async function fetchLatestDispatchConfig(
     sendIntervalSeconds: Math.max(2, Number(row.send_interval_seconds ?? 60)),
     overdueChargePauseEnabled: Boolean(row.overdue_charge_pause_enabled ?? true),
     overdueChargePauseDays: Math.min(90, Math.max(1, Number(row.overdue_charge_pause_days ?? 10))),
+    overdueSendsPerCycle: Math.min(7, Math.max(1, Number(row.overdue_sends_per_cycle ?? 2))),
+    overdueCycleCooldownDays: Math.min(15, Math.max(1, Number(row.overdue_cycle_cooldown_days ?? 3))),
+    overdueMaxCycles: Math.min(10, Math.max(1, Number(row.overdue_max_cycles ?? 2))),
+    overdueInactiveAfterDays: Math.min(180, Math.max(7, Number(row.overdue_inactive_after_days ?? 30))),
     winbackPaused: Boolean(row.winback_paused ?? false),
     autoSendHour: Number(row.auto_send_hour ?? 8),
     autoSendMinute: Number(row.auto_send_minute ?? 0),
@@ -501,7 +509,7 @@ Deno.serve(async (req) => {
 
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, overdue_sends_per_cycle, overdue_cycle_cooldown_days, overdue_max_cycles, overdue_inactive_after_days");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
@@ -539,9 +547,13 @@ Deno.serve(async (req) => {
       const intervalMs = latestConfig.sendIntervalSeconds * 1000;
       const overdueChargePauseEnabled = latestConfig.overdueChargePauseEnabled;
       const overdueChargePauseDays = latestConfig.overdueChargePauseDays;
+      const overdueSendsPerCycle = latestConfig.overdueSendsPerCycle;
+      const overdueCycleCooldownDays = latestConfig.overdueCycleCooldownDays;
+      const overdueMaxCycles = latestConfig.overdueMaxCycles;
+      const overdueInactiveAfterDays = latestConfig.overdueInactiveAfterDays;
 
       console.log(
-        `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}`
+        `[auto-send] Processando empresa ${companyId}, intervalo=${intervalMs}ms, pausa=${overdueChargePauseEnabled ? `on>${overdueChargePauseDays}d` : "off"}, regra-vencidos=${overdueSendsPerCycle}x/${overdueCycleCooldownDays}d, ciclos=${overdueMaxCycles}, inativar=${overdueInactiveAfterDays}d`
       );
 
       const workingToken = await resolveWorkingApiToken(apiUrl, latestConfig.apiTokens);
@@ -615,10 +627,10 @@ Deno.serve(async (req) => {
       const todayDate = new Date(today + "T00:00:00");
 
       // Anti-spam vencidos: 2 envios seguidos, pausa 3 dias, máximo 2 ciclos
-      const OVERDUE_MAX_STREAK = 2;
-      const OVERDUE_COOLDOWN_DAYS = 3;
-      const OVERDUE_MAX_CYCLES = 2;
-      const INACTIVE_AFTER_DAYS = 30;
+      const OVERDUE_MAX_STREAK = overdueSendsPerCycle;
+      const OVERDUE_COOLDOWN_DAYS = overdueCycleCooldownDays;
+      const OVERDUE_MAX_CYCLES = overdueMaxCycles;
+      const INACTIVE_AFTER_DAYS = overdueInactiveAfterDays;
 
       for (const client of clients) {
         if (failedClientIdsToday.has(client.id)) continue;

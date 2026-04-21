@@ -2,9 +2,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { SlidersHorizontal } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import DataBackupExport from "@/components/settings/DataBackupExport";
+import OverdueRulesSection from "@/components/settings/OverdueRulesSection";
 
 export default function GeneralSettings() {
-  const { userRole } = useAuth();
+  const { userRole, effectiveCompanyId } = useAuth();
   const isOwner = userRole === "Proprietário";
 
   if (!isOwner) {
@@ -26,9 +27,10 @@ export default function GeneralSettings() {
           Configuração Geral
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Backup de dados e avisos do sistema
+          Backup, régua de cobrança e avisos do sistema
         </p>
       </div>
+      <OverdueRulesSection companyId={effectiveCompanyId} />
       <DataBackupExport />
       <AnnouncementManager />
     </div>

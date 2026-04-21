@@ -32,6 +32,10 @@ export type Database = {
           instance_name: string
           overdue_charge_pause_days: number
           overdue_charge_pause_enabled: boolean
+          overdue_cycle_cooldown_days: number
+          overdue_inactive_after_days: number
+          overdue_max_cycles: number
+          overdue_sends_per_cycle: number
           pix_key: string
           send_interval_seconds: number
           uazapi_base_url: string
@@ -55,6 +59,10 @@ export type Database = {
           instance_name?: string
           overdue_charge_pause_days?: number
           overdue_charge_pause_enabled?: boolean
+          overdue_cycle_cooldown_days?: number
+          overdue_inactive_after_days?: number
+          overdue_max_cycles?: number
+          overdue_sends_per_cycle?: number
           pix_key?: string
           send_interval_seconds?: number
           uazapi_base_url?: string
@@ -78,6 +86,10 @@ export type Database = {
           instance_name?: string
           overdue_charge_pause_days?: number
           overdue_charge_pause_enabled?: boolean
+          overdue_cycle_cooldown_days?: number
+          overdue_inactive_after_days?: number
+          overdue_max_cycles?: number
+          overdue_sends_per_cycle?: number
           pix_key?: string
           send_interval_seconds?: number
           uazapi_base_url?: string
