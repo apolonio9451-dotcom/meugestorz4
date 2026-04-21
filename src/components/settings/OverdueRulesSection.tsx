@@ -5,22 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Save, Loader2, AlarmClockOff, Info } from "lucide-react";
+import { Save, Loader2, AlarmClockOff, Info, Send, Pause, RotateCw, UserX } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   companyId: string | null;
 }
 
-// Validação rigorosa server/client-side dos parâmetros
 const rulesSchema = z.object({
-  sendsPerCycle: z.coerce.number().int().min(1, "Mínimo 1").max(7, "Máximo 7"),
-  cooldownDays: z.coerce.number().int().min(1, "Mínimo 1").max(15, "Máximo 15"),
-  maxCycles: z.coerce.number().int().min(1, "Mínimo 1").max(10, "Máximo 10"),
-  inactiveAfterDays: z.coerce.number().int().min(7, "Mínimo 7").max(180, "Máximo 180"),
+  sendsPerCycle: z.coerce.number().int().min(1, "Mín 1").max(7, "Máx 7"),
+  cooldownDays: z.coerce.number().int().min(1, "Mín 1").max(15, "Máx 15"),
+  maxCycles: z.coerce.number().int().min(1, "Mín 1").max(10, "Máx 10"),
+  inactiveAfterDays: z.coerce.number().int().min(7, "Mín 7").max(180, "Máx 180"),
 });
 
 const DEFAULTS = { sendsPerCycle: 2, cooldownDays: 3, maxCycles: 2, inactiveAfterDays: 30 };
+
+const FIELDS = [
+  { key: "sendsPerCycle", label: "Envios/ciclo", icon: Send, suffix: "x", min: 1, max: 7,
+    tip: "Dias seguidos enviando cobrança antes da pausa." },
+  { key: "cooldownDays", label: "Pausa", icon: Pause, suffix: "d", min: 1, max: 15,
+    tip: "Dias sem cobrança após cada ciclo." },
+  { key: "maxCycles", label: "Ciclos máx.", icon: RotateCw, suffix: "x", min: 1, max: 10,
+    tip: "Após esse número de ciclos, a cobrança para." },
+  { key: "inactiveAfterDays", label: "Inativar", icon: UserX, suffix: "d", min: 7, max: 180,
+    tip: "Dias vencidos para marcar como inativo." },
+] as const;
 
 export default function OverdueRulesSection({ companyId }: Props) {
   const [loading, setLoading] = useState(true);
@@ -98,105 +108,108 @@ export default function OverdueRulesSection({ companyId }: Props) {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="glass-card rounded-xl p-6 space-y-6">
-        <div>
-          <h2 className="text-lg font-display font-semibold text-foreground flex items-center gap-2">
-            <AlarmClockOff className="h-5 w-5 text-primary" />
-            Régua de Cobrança Anti-Spam
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Defina o ritmo de cobrança para clientes vencidos.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field
-            label="Envios por ciclo"
-            tooltip="Quantos dias seguidos a mensagem de cobrança será enviada antes de uma pausa."
-            value={values.sendsPerCycle}
-            onChange={(v) => setValues({ ...values, sendsPerCycle: v })}
-            min={1} max={7} suffix="envios"
-            error={errors.sendsPerCycle}
-          />
-          <Field
-            label="Pausa entre ciclos"
-            tooltip="Quantos dias o cliente fica sem receber cobrança após cada ciclo."
-            value={values.cooldownDays}
-            onChange={(v) => setValues({ ...values, cooldownDays: v })}
-            min={1} max={15} suffix="dias"
-            error={errors.cooldownDays}
-          />
-          <Field
-            label="Máximo de ciclos"
-            tooltip="Após esse número de ciclos completos, a cobrança automática para."
-            value={values.maxCycles}
-            onChange={(v) => setValues({ ...values, maxCycles: v })}
-            min={1} max={10} suffix="ciclos"
-            error={errors.maxCycles}
-          />
-          <Field
-            label="Inativar após"
-            tooltip="Dias vencidos para marcar o cliente como inativo automaticamente."
-            value={values.inactiveAfterDays}
-            onChange={(v) => setValues({ ...values, inactiveAfterDays: v })}
-            min={7} max={180} suffix="dias"
-            error={errors.inactiveAfterDays}
-          />
-        </div>
-
-        <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          Resumo: <strong className="text-foreground">{values.sendsPerCycle}</strong> envios seguidos →
-          pausa de <strong className="text-foreground">{values.cooldownDays}</strong> dias → repete por até{" "}
-          <strong className="text-foreground">{values.maxCycles}</strong> ciclos
-          (<strong className="text-foreground">{totalSends}</strong> envios no total).
-          Após <strong className="text-foreground">{values.inactiveAfterDays}</strong> dias vencido, vira inativo.
-        </div>
-
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Salvar régua
+      <div className="glass-card rounded-xl p-5 space-y-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <AlarmClockOff className="h-4.5 w-4.5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-display font-semibold text-foreground leading-tight">
+                Régua de Cobrança
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ritmo anti-spam para clientes vencidos
+              </p>
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saving} size="sm" className="shrink-0">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1.5" /> : <Save className="h-3.5 w-3.5 sm:mr-1.5" />}
+            <span className="hidden sm:inline">Salvar</span>
           </Button>
+        </div>
+
+        {/* Compact grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {FIELDS.map((f) => {
+            const Icon = f.icon;
+            const value = values[f.key];
+            const err = errors[f.key];
+            return (
+              <div
+                key={f.key}
+                className={`group rounded-lg border bg-secondary/30 p-3 transition-colors ${
+                  err ? "border-destructive/60" : "border-border/60 hover:border-primary/40"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <Label className="text-xs font-medium text-foreground truncate">{f.label}</Label>
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground/60 cursor-help shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[200px] text-xs">{f.tip}</TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={f.min}
+                    max={f.max}
+                    value={Number.isFinite(value) ? value : ""}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      setValues({ ...values, [f.key]: Number.isFinite(n) ? n : 0 });
+                    }}
+                    className="h-9 px-2 bg-background/50 border-border/60 text-base font-semibold tabular-nums focus-visible:ring-1"
+                  />
+                  <span className="text-xs text-muted-foreground font-medium">{f.suffix}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground/70 mt-1">
+                  {err || `${f.min}–${f.max}`}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Compact summary */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs">
+          <span className="text-muted-foreground">Fluxo:</span>
+          <Pill>{values.sendsPerCycle} envios</Pill>
+          <Arrow />
+          <Pill>{values.cooldownDays}d pausa</Pill>
+          <Arrow />
+          <Pill>×{values.maxCycles} ciclos</Pill>
+          <span className="text-muted-foreground">=</span>
+          <Pill highlight>{totalSends} envios totais</Pill>
+          <span className="text-muted-foreground hidden sm:inline">•</span>
+          <span className="text-muted-foreground">
+            inativo após <strong className="text-foreground">{values.inactiveAfterDays}d</strong>
+          </span>
         </div>
       </div>
     </TooltipProvider>
   );
 }
 
-function Field({
-  label, tooltip, value, onChange, min, max, suffix, error,
-}: {
-  label: string; tooltip: string; value: number;
-  onChange: (v: number) => void; min: number; max: number; suffix: string; error?: string;
-}) {
+function Pill({ children, highlight }: { children: React.ReactNode; highlight?: boolean }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-        {label}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-xs">{tooltip}</TooltipContent>
-        </Tooltip>
-      </Label>
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          value={Number.isFinite(value) ? value : ""}
-          onChange={(e) => {
-            const n = parseInt(e.target.value, 10);
-            onChange(Number.isFinite(n) ? n : 0);
-          }}
-          className="bg-secondary/50 border-border max-w-[120px]"
-        />
-        <span className="text-xs text-muted-foreground">{suffix}</span>
-      </div>
-      <p className="text-xs text-muted-foreground">Permitido: {min}–{max}</p>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded font-semibold tabular-nums ${
+        highlight ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+      }`}
+    >
+      {children}
+    </span>
   );
+}
+
+function Arrow() {
+  return <span className="text-muted-foreground/60">→</span>;
 }
