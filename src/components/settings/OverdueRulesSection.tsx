@@ -106,6 +106,25 @@ export default function OverdueRulesSection({ companyId }: Props) {
 
   const totalSends = values.sendsPerCycle * values.maxCycles;
 
+  // Build day-by-day timeline preview
+  type Step = { day: number; type: "send" | "pause" | "inactive"; label: string };
+  const timeline: Step[] = [];
+  let day = 1;
+  for (let c = 0; c < values.maxCycles; c++) {
+    for (let s = 0; s < values.sendsPerCycle; s++) {
+      timeline.push({ day, type: "send", label: `Envio ${s + 1}` });
+      day++;
+    }
+    if (c < values.maxCycles - 1) {
+      for (let p = 0; p < values.cooldownDays; p++) {
+        timeline.push({ day, type: "pause", label: "Pausa" });
+        day++;
+      }
+    }
+  }
+  // Inactivation marker (clamped to a reasonable display max)
+  const inactiveDay = values.inactiveAfterDays;
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="glass-card rounded-xl p-5 space-y-5">
