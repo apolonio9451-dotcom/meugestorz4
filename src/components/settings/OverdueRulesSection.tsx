@@ -106,6 +106,25 @@ export default function OverdueRulesSection({ companyId }: Props) {
 
   const totalSends = values.sendsPerCycle * values.maxCycles;
 
+  // Build day-by-day timeline preview
+  type Step = { day: number; type: "send" | "pause" | "inactive"; label: string };
+  const timeline: Step[] = [];
+  let day = 1;
+  for (let c = 0; c < values.maxCycles; c++) {
+    for (let s = 0; s < values.sendsPerCycle; s++) {
+      timeline.push({ day, type: "send", label: `Envio ${s + 1}` });
+      day++;
+    }
+    if (c < values.maxCycles - 1) {
+      for (let p = 0; p < values.cooldownDays; p++) {
+        timeline.push({ day, type: "pause", label: "Pausa" });
+        day++;
+      }
+    }
+  }
+  // Inactivation marker (clamped to a reasonable display max)
+  const inactiveDay = values.inactiveAfterDays;
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="glass-card rounded-xl p-5 space-y-5">
@@ -192,6 +211,69 @@ export default function OverdueRulesSection({ companyId }: Props) {
           <span className="text-muted-foreground">
             inativo após <strong className="text-foreground">{values.inactiveAfterDays}d</strong>
           </span>
+        </div>
+
+        {/* Visual day-by-day timeline */}
+        <div className="rounded-lg border border-border/60 bg-secondary/20 p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground">Prévia do fluxo (dia a dia)</span>
+            <div className="flex items-center gap-2.5 text-[10px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-sm bg-primary" /> Envio
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-sm bg-muted-foreground/40" /> Pausa
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2 w-2 rounded-sm bg-destructive" /> Inativo
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            {timeline.map((s, i) => (
+              <Tooltip key={i}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={`relative h-9 w-9 rounded-md border flex flex-col items-center justify-center text-[10px] font-bold tabular-nums transition-transform hover:scale-110 cursor-default ${
+                      s.type === "send"
+                        ? "bg-primary/15 border-primary/40 text-primary"
+                        : "bg-muted/40 border-border/50 text-muted-foreground"
+                    }`}
+                  >
+                    <span className="leading-none">D{s.day}</span>
+                    <span className="text-[8px] opacity-70 leading-none mt-0.5">
+                      {s.type === "send" ? "✉" : "—"}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Dia {s.day}: {s.label}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+            {inactiveDay > day - 1 && (
+              <>
+                <div className="flex items-center px-1 text-muted-foreground/60 text-xs">…</div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="relative h-9 px-2 min-w-[3rem] rounded-md border border-destructive/40 bg-destructive/10 text-destructive flex flex-col items-center justify-center text-[10px] font-bold tabular-nums">
+                      <span className="leading-none">D{inactiveDay}</span>
+                      <span className="text-[8px] opacity-80 leading-none mt-0.5">inativo</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Dia {inactiveDay}: cliente vira Inativo automaticamente
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
+
+          <p className="text-[10px] text-muted-foreground/80">
+            Total de <strong className="text-foreground">{day - 1} dias</strong> de cobrança ativa
+            ({totalSends} mensagens) antes da parada automática.
+          </p>
         </div>
       </div>
     </TooltipProvider>
