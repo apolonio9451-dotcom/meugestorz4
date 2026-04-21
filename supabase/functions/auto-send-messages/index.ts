@@ -509,7 +509,7 @@ Deno.serve(async (req) => {
 
     const { data: apiConfigs } = await supabase
       .from("api_settings")
-      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days");
+      .select("company_id, api_url, api_token, auto_send_hour, auto_send_minute, pix_key, winback_paused, send_interval_seconds, overdue_charge_pause_enabled, overdue_charge_pause_days, overdue_sends_per_cycle, overdue_cycle_cooldown_days, overdue_max_cycles, overdue_inactive_after_days");
 
     if (!apiConfigs || apiConfigs.length === 0) {
       return new Response(
