@@ -802,9 +802,16 @@ export default function Clients() {
       .eq("id", sub.id);
     if (error) toast.error(error.message);
     else {
+      // Reseta ciclo anti-spam de cobrança e reativa o cliente
+      await supabase.from("clients").update({
+        status: "active",
+        overdue_charge_streak: 0,
+        overdue_charge_resume_date: null,
+        overdue_charge_cycles: 0,
+      } as any).eq("id", clientId);
       const client = clients.find(c => c.id === clientId);
       await logActivity("renovação", client?.name || "", clientId, `Renovado +${months} mês(es)${!paid ? " (pgto pendente)" : ""}`);
-      toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs();
+      toast.success(`Renovado por +${months} mês(es)!`); fetchSubscriptions(); fetchActivityLogs(); fetchClients();
       if (client?.whatsapp) {
         setRenewSuccess({ clientId, clientName: client.name, whatsapp: client.whatsapp, newEndDate: format(newEnd, "dd/MM/yyyy") });
       }
@@ -830,9 +837,16 @@ export default function Clients() {
       .eq("id", sub.id);
     if (error) toast.error(error.message);
     else {
+      // Reseta ciclo anti-spam de cobrança e reativa o cliente
+      await supabase.from("clients").update({
+        status: "active",
+        overdue_charge_streak: 0,
+        overdue_charge_resume_date: null,
+        overdue_charge_cycles: 0,
+      } as any).eq("id", clientId);
       const client = clients.find(c => c.id === clientId);
       await logActivity("renovação", client?.name || "", clientId, `Renovado para dia ${dayOfMonth}${!paid ? " (pgto pendente)" : ""}`);
-      toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); fetchActivityLogs();
+      toast.success(`Renovado para dia ${dayOfMonth} do próximo mês!`); fetchSubscriptions(); fetchActivityLogs(); fetchClients();
       if (client?.whatsapp) {
         setRenewSuccess({ clientId, clientName: client.name, whatsapp: client.whatsapp, newEndDate: format(newEnd, "dd/MM/yyyy") });
       }

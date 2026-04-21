@@ -593,7 +593,7 @@ Deno.serve(async (req) => {
       const { data: clients } = await supabase
         .from("clients")
         .select(`
-          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note, overdue_charge_streak, overdue_charge_resume_date,
+          id, name, whatsapp, phone, server, iptv_user, iptv_password, ultimo_envio_auto, charge_pause_until, charge_pause_note, overdue_charge_streak, overdue_charge_resume_date, overdue_charge_cycles,
           client_subscriptions (
             end_date, amount, custom_price,
             subscription_plans ( name, price )
@@ -610,11 +610,15 @@ Deno.serve(async (req) => {
       let pausedOverdueClients = 0;
       let manuallyPausedClients = 0;
       let antiSpamPausedClients = 0;
+      let cycleLimitReachedClients = 0;
+      const inactivatedClientIds: string[] = [];
       const todayDate = new Date(today + "T00:00:00");
 
-      // Anti-spam config para vencidos: 2 envios seguidos, pausa 3 dias, repete
+      // Anti-spam vencidos: 2 envios seguidos, pausa 3 dias, máximo 2 ciclos
       const OVERDUE_MAX_STREAK = 2;
       const OVERDUE_COOLDOWN_DAYS = 3;
+      const OVERDUE_MAX_CYCLES = 2;
+      const INACTIVE_AFTER_DAYS = 30;
 
       for (const client of clients) {
         if (failedClientIdsToday.has(client.id)) continue;
@@ -647,9 +651,24 @@ Deno.serve(async (req) => {
         if (!category) continue;
         if (disabledCategories.has(category)) continue;
 
+        // Inativar automaticamente após 30 dias vencido
+        if (category === "vencidos" && Math.abs(diffDays) >= INACTIVE_AFTER_DAYS) {
+          inactivatedClientIds.push(client.id);
+          continue;
+        }
+
         if (category === "vencidos" && overdueChargePauseEnabled && Math.abs(diffDays) > overdueChargePauseDays && !hasResumeOverride) {
           pausedOverdueClients++;
           continue;
+        }
+
+        // Limite de 2 ciclos completos de cobrança de vencido
+        if (category === "vencidos" && !hasResumeOverride) {
+          const cycles = Number((client as any).overdue_charge_cycles ?? 0);
+          if (cycles >= OVERDUE_MAX_CYCLES) {
+            cycleLimitReachedClients++;
+            continue;
+          }
         }
 
         // Anti-spam vencidos: respeita cooldown de 3 dias após 2 envios consecutivos
@@ -670,7 +689,16 @@ Deno.serve(async (req) => {
         sendQueue.push({ client, category, sub, plan, diffDays });
       }
 
-      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Pausados anti-spam: ${antiSpamPausedClients}. Categorias: ${JSON.stringify(
+      // Marca clientes vencidos há 30+ dias como inativos
+      if (inactivatedClientIds.length > 0) {
+        await supabase
+          .from("clients")
+          .update({ status: "inactive" })
+          .in("id", inactivatedClientIds);
+        console.log(`[auto-send] 🚷 ${inactivatedClientIds.length} cliente(s) marcado(s) como inativo(s) (30+ dias vencidos)`);
+      }
+
+      console.log(`[auto-send] Fila de envio: ${sendQueue.length} clientes. Pausados manualmente: ${manuallyPausedClients}. Pausados por limite: ${pausedOverdueClients}. Pausados anti-spam: ${antiSpamPausedClients}. Limite de ciclos atingido: ${cycleLimitReachedClients}. Inativados: ${inactivatedClientIds.length}. Categorias: ${JSON.stringify(
         sendQueue.reduce((acc: Record<string, number>, item) => { acc[item.category] = (acc[item.category] || 0) + 1; return acc; }, {})
       )}`);
 
@@ -766,24 +794,31 @@ Deno.serve(async (req) => {
           if (sendResult.ok) {
             const updatePayload: Record<string, any> = { ultimo_envio_auto: today };
 
-            // Anti-spam vencidos: incrementa streak; ao atingir o limite, agenda cooldown e zera
+            // Anti-spam vencidos: incrementa streak; ao completar, agenda cooldown e fecha o ciclo
             if (category === "vencidos") {
               const currentStreak = Number((client as any).overdue_charge_streak ?? 0);
+              const currentCycles = Number((client as any).overdue_charge_cycles ?? 0);
               const newStreak = currentStreak + 1;
               if (newStreak >= OVERDUE_MAX_STREAK) {
                 const resume = new Date(todayDate);
                 resume.setDate(resume.getDate() + OVERDUE_COOLDOWN_DAYS);
                 updatePayload.overdue_charge_streak = 0;
                 updatePayload.overdue_charge_resume_date = resume.toISOString().slice(0, 10);
+                updatePayload.overdue_charge_cycles = currentCycles + 1;
               } else {
                 updatePayload.overdue_charge_streak = newStreak;
                 updatePayload.overdue_charge_resume_date = null;
               }
             } else {
               // Outras categorias resetam o ciclo anti-spam de vencidos
-              if ((client as any).overdue_charge_streak || (client as any).overdue_charge_resume_date) {
+              if (
+                (client as any).overdue_charge_streak ||
+                (client as any).overdue_charge_resume_date ||
+                (client as any).overdue_charge_cycles
+              ) {
                 updatePayload.overdue_charge_streak = 0;
                 updatePayload.overdue_charge_resume_date = null;
+                updatePayload.overdue_charge_cycles = 0;
               }
             }
 
