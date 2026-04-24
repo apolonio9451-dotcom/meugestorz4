@@ -1054,7 +1054,7 @@ async function recordMassBroadcastIncoming(
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    await supabase.from("mass_broadcast_logs").insert({
+    await (supabase.from("mass_broadcast_logs") as any).insert({
       campaign_id: recipient.campaign_id,
       recipient_id: recipient.id,
       company_id: payload.companyId,
