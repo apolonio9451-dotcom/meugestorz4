@@ -34,6 +34,8 @@ const ResellerPanel = lazy(() => import("@/pages/ResellerPanel"));
 const Chatbot = lazy(() => import("@/pages/Chatbot"));
 const GeneralSettings = lazy(() => import("@/pages/GeneralSettings"));
 const Campaigns = lazy(() => import("@/pages/Campaigns"));
+const BannerGenerator = lazy(() => import("@/pages/BannerGenerator"));
+
 
 const PageLoader = () => (
   <div className="flex flex-col gap-4 p-6">
@@ -83,6 +85,8 @@ const App = () => (
             <Route path="/dashboard/winback" element={<DashboardRoute><PlanGate feature="Repescagem"><WinBack /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
             <Route path="/dashboard/campaigns" element={<DashboardRoute><Campaigns /></DashboardRoute>} />
+            <Route path="/dashboard/banner-generator" element={<DashboardRoute><BannerGenerator /></DashboardRoute>} />
+
             
             <Route path="/dashboard/resellers" element={<DashboardRoute><PlanGate feature="Revendedores"><Resellers /></PlanGate></DashboardRoute>} />
             
