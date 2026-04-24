@@ -28,6 +28,7 @@ export type Database = {
           campaigns_engine_enabled: boolean
           company_id: string
           created_at: string
+          football_api_key: string | null
           id: string
           instance_name: string
           overdue_charge_pause_days: number
@@ -55,6 +56,7 @@ export type Database = {
           campaigns_engine_enabled?: boolean
           company_id: string
           created_at?: string
+          football_api_key?: string | null
           id?: string
           instance_name?: string
           overdue_charge_pause_days?: number
@@ -82,6 +84,7 @@ export type Database = {
           campaigns_engine_enabled?: boolean
           company_id?: string
           created_at?: string
+          football_api_key?: string | null
           id?: string
           instance_name?: string
           overdue_charge_pause_days?: number
