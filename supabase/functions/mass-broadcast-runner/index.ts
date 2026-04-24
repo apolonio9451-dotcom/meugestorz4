@@ -264,8 +264,8 @@ async function updateCampaignCounters(
   const total = patch.total_recipients ?? campaign.total_recipients;
   const shouldComplete = total > 0 && nextProcessed >= total;
 
-  await supabase
-    .from("mass_broadcast_campaigns")
+  await (supabase
+    .from("mass_broadcast_campaigns") as any)
     .update({
       ...patch,
       status: shouldComplete ? "completed" : (patch.status ?? campaign.status),
@@ -412,80 +412,10 @@ Deno.serve(async (req) => {
             company_id: recipient.company_id, phone, step: "offer",
             status: "error", message: "", error_message: errorMessage,
           });
-          await updateCampaignCounters(supabase, campaign.id, (c) => ({
+          await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
             processed_recipients: c.processed_recipients + 1,
             failure_count: c.failure_count + 1,
           }));
-          consecutiveErrors[campaign.id] = (consecutiveErrors[campaign.id] || 0) + 1;
-          failed += 1;
-          processed += 1;
-          continue;
-        }
-
-        // ═══ SKIP SAVED CONTACTS: If number is in instance address book, skip ═══
-        if (savedContacts.size > 0 && savedContacts.has(phone)) {
-          console.log(`[mass-broadcast] Skipping ${phone} — saved in instance contacts`);
-          await supabase
-            .from("mass_broadcast_recipients")
-            .update({
-              status: "skipped",
-              error_message: "Contato salvo na agenda da instância — envio bloqueado",
-              last_attempt_at: new Date().toISOString(),
-            })
-            .eq("id", recipient.id);
-
-          await insertLog(supabase, {
-            campaign_id: campaign.id,
-            recipient_id: recipient.id,
-            company_id: recipient.company_id,
-            phone,
-            step: "skip_contact",
-            status: "skipped",
-            message: "Contato encontrado na agenda da instância. Envio bloqueado automaticamente.",
-            error_message: null,
-          });
-
-          await updateCampaignCounters(supabase, campaign.id, (c) => ({
-            processed_recipients: c.processed_recipients + 1,
-          }));
-
-          processed += 1;
-          continue;
-        }
-
-        try {
-          const latestCredentials = await fetchLatestCampaignCredentials(supabase as any, recipient.company_id);
-          if (latestCredentials.apiUrl && latestCredentials.apiToken) {
-            credentials = latestCredentials;
-          }
-
-          const latestValidation = await validateCampaignToken(credentials.apiUrl, credentials.apiToken);
-          if (!latestValidation.ok && latestValidation.status === 401) {
-            await supabase
-              .from("mass_broadcast_campaigns")
-              .update({ status: "paused" })
-              .eq("id", campaign.id);
-
-            await insertLog(supabase, {
-              campaign_id: campaign.id,
-              recipient_id: recipient.id,
-              company_id: recipient.company_id,
-              phone,
-              step: "auth_error",
-              status: "error",
-              message: SESSION_EXPIRED_MESSAGE,
-              error_message: "401 - Token inválido",
-            });
-
-            await supabase
-              .from("mass_broadcast_recipients")
-              .update({ status: "failed", error_message: FRIENDLY_CONNECTION_ERROR, last_attempt_at: new Date().toISOString() })
-              .eq("id", recipient.id);
-
-            await updateCampaignCounters(supabase, campaign.id, (c) => ({
-              processed_recipients: c.processed_recipients + 1,
-              failure_count: c.failure_count + 1,
-            }));
 
             consecutiveErrors[campaign.id] = MAX_CONSECUTIVE_ERRORS;
             failed += 1;
@@ -551,7 +481,7 @@ Deno.serve(async (req) => {
             status: "success", message: message.substring(0, 200), error_message: null,
           });
 
-          await updateCampaignCounters(supabase, campaign.id, (c) => ({
+          await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
             processed_recipients: c.processed_recipients + 1,
             success_count: c.success_count + 1,
           }));
@@ -584,7 +514,7 @@ Deno.serve(async (req) => {
               error_message: "401 - Token inválido",
             });
 
-            await updateCampaignCounters(supabase, campaign.id, (c) => ({
+            await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
               processed_recipients: c.processed_recipients + 1,
               failure_count: c.failure_count + 1,
             }));
@@ -609,10 +539,10 @@ Deno.serve(async (req) => {
             error_message: FRIENDLY_CONNECTION_ERROR,
           });
 
-          await updateCampaignCounters(supabase, campaign.id, (c) => ({
-            processed_recipients: c.processed_recipients + 1,
-            failure_count: c.failure_count + 1,
-          }));
+            await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
+              processed_recipients: c.processed_recipients + 1,
+              failure_count: c.failure_count + 1,
+            }));
 
           // ═══ Track consecutive errors ═══
           consecutiveErrors[campaign.id] = (consecutiveErrors[campaign.id] || 0) + 1;
