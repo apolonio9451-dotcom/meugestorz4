@@ -2005,6 +2005,54 @@ export type Database = {
           },
         ]
       }
+      sports_matches: {
+        Row: {
+          away_logo: string | null
+          away_team: string
+          channels: string[] | null
+          created_at: string
+          external_id: number | null
+          home_logo: string | null
+          home_team: string
+          id: string
+          league_logo: string | null
+          league_name: string | null
+          match_date: string
+          match_time: string
+          updated_at: string
+        }
+        Insert: {
+          away_logo?: string | null
+          away_team: string
+          channels?: string[] | null
+          created_at?: string
+          external_id?: number | null
+          home_logo?: string | null
+          home_team: string
+          id?: string
+          league_logo?: string | null
+          league_name?: string | null
+          match_date: string
+          match_time: string
+          updated_at?: string
+        }
+        Update: {
+          away_logo?: string | null
+          away_team?: string
+          channels?: string[] | null
+          created_at?: string
+          external_id?: number | null
+          home_logo?: string | null
+          home_team?: string
+          id?: string
+          league_logo?: string | null
+          league_name?: string | null
+          match_date?: string
+          match_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           company_id: string
