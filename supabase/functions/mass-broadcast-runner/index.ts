@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
           .in("status", ["queued", "running"]);
 
         for (const campaignRow of (activeCampaigns || [])) {
-          await supabase.from("mass_broadcast_campaigns").update({ status: "paused" }).eq("id", (campaignRow as any).id);
+          await (supabase.from("mass_broadcast_campaigns") as any).update({ status: "paused" }).eq("id", (campaignRow as any).id);
           await insertLog(supabase, {
             campaign_id: (campaignRow as any).id,
             recipient_id: null,
@@ -372,139 +372,10 @@ Deno.serve(async (req) => {
 
         // ═══ AUTO-PAUSE: If 5 consecutive errors, pause campaign ═══
         if ((consecutiveErrors[campaign.id] || 0) >= MAX_CONSECUTIVE_ERRORS) {
-          await supabase
-            .from("mass_broadcast_campaigns")
+          await (supabase
+            .from("mass_broadcast_campaigns") as any)
             .update({ status: "paused" })
             .eq("id", campaign.id);
-          // Push remaining pending recipients to far future
-          await supabase
-            .from("mass_broadcast_recipients")
-            .update({ next_action_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() })
-            .eq("campaign_id", campaign.id)
-            .eq("status", "pending");
-          await insertLog(supabase, {
-            campaign_id: campaign.id, recipient_id: recipient.id,
-            company_id: recipient.company_id, phone: "", step: "auto_pause",
-            status: "error",
-            message: `⛔ Disparo pausado: ${MAX_CONSECUTIVE_ERRORS} erros seguidos. Verifique sua conexão ou instância.`,
-            error_message: null,
-          });
-          continue;
-        }
-
-        // Mark campaign as running if queued
-        if (campaign.status === "queued") {
-          await supabase
-            .from("mass_broadcast_campaigns")
-            .update({ status: "running", started_at: new Date().toISOString() })
-            .eq("id", campaign.id);
-        }
-
-        const phone = normalizePhone(recipient.normalized_phone || recipient.phone);
-        if (phone.length < 10) {
-          const errorMessage = "Telefone inválido após sanitização.";
-          await supabase
-            .from("mass_broadcast_recipients")
-            .update({ status: "failed", error_message: errorMessage, last_attempt_at: new Date().toISOString() })
-            .eq("id", recipient.id);
-          await insertLog(supabase, {
-            campaign_id: campaign.id, recipient_id: recipient.id,
-            company_id: recipient.company_id, phone, step: "offer",
-            status: "error", message: "", error_message: errorMessage,
-          });
-          await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
-            processed_recipients: c.processed_recipients + 1,
-            failure_count: c.failure_count + 1,
-          }));
-
-            consecutiveErrors[campaign.id] = MAX_CONSECUTIVE_ERRORS;
-            failed += 1;
-            processed += 1;
-            continue;
-          }
-
-          // ═══ ANTI-BAN: Simulate typing before sending ═══
-          const message = String(recipient.offer_template || "").trim();
-          if (!message) throw new Error("Mensagem vazia para este contato.");
-
-          await simulateTyping(credentials.apiUrl, credentials.apiToken, phone);
-
-          const sentAt = new Date().toISOString();
-          await sendTextMessage(credentials.apiUrl, credentials.apiToken, phone, message);
-
-          // Calculate delay for the NEXT recipient in queue
-          const delay = clampDelayRange(campaign.message_delay_min_seconds, campaign.message_delay_max_seconds);
-          let nextDelay = randomDelaySeconds(delay.min, delay.max);
-
-          // ═══ ANTI-BAN: Batch pause every N messages ═══
-          const newProcessed = campaign.processed_recipients + 1;
-          if (shouldBatchPause(newProcessed)) {
-            nextDelay = BATCH_PAUSE_SECONDS;
-            await insertLog(supabase, {
-              campaign_id: campaign.id, recipient_id: recipient.id,
-              company_id: recipient.company_id, phone, step: "batch_pause",
-              status: "success", message: `☕ Pausa de segurança: ${BATCH_PAUSE_SECONDS}s após ${newProcessed} mensagens`,
-              error_message: null,
-            });
-          }
-
-          await supabase
-            .from("mass_broadcast_recipients")
-            .update({
-              status: "sent",
-              current_step: "done",
-              sent_offer_at: sentAt,
-              last_attempt_at: sentAt,
-              error_message: null,
-            })
-            .eq("id", recipient.id);
-
-          // Set delay on the next pending recipient
-          const { data: nextRecipients } = await supabase
-            .from("mass_broadcast_recipients")
-            .select("id")
-            .eq("campaign_id", campaign.id)
-            .eq("status", "pending")
-            .order("next_action_at", { ascending: true })
-            .limit(1);
-
-          if (nextRecipients?.length) {
-            await supabase
-              .from("mass_broadcast_recipients")
-              .update({ next_action_at: new Date(Date.now() + nextDelay * 1000).toISOString() })
-              .eq("id", (nextRecipients[0] as any).id);
-          }
-
-          await insertLog(supabase, {
-            campaign_id: campaign.id, recipient_id: recipient.id,
-            company_id: recipient.company_id, phone, step: "offer",
-            status: "success", message: message.substring(0, 200), error_message: null,
-          });
-
-          await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
-            processed_recipients: c.processed_recipients + 1,
-            success_count: c.success_count + 1,
-          }));
-
-          // ═══ Reset consecutive error counter on success ═══
-          consecutiveErrors[campaign.id] = 0;
-          success += 1;
-          processed += 1;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          const httpStatus = (error as any)?.httpStatus;
-
-          // ═══ 401 DETECTION: Immediately pause campaign on auth failure ═══
-          if (httpStatus === 401) {
-            await supabase
-              .from("mass_broadcast_recipients")
-              .update({ status: "failed", error_message: "Erro de Conexão", last_attempt_at: new Date().toISOString() })
-              .eq("id", recipient.id);
-
-            await supabase
-              .from("mass_broadcast_campaigns")
-              .update({ status: "paused" })
-              .eq("id", campaign.id);
 
             await insertLog(supabase, {
               campaign_id: campaign.id, recipient_id: recipient.id,
@@ -527,8 +398,8 @@ Deno.serve(async (req) => {
           }
 
           // ═══ SINGLE ATTEMPT: Mark as failed permanently, skip immediately ═══
-          await supabase
-            .from("mass_broadcast_recipients")
+          await (supabase
+            .from("mass_broadcast_recipients") as any)
             .update({ status: "failed", error_message: FRIENDLY_CONNECTION_ERROR, last_attempt_at: new Date().toISOString() })
             .eq("id", recipient.id);
 
