@@ -737,6 +737,9 @@ Deno.serve(async (req) => {
           : { ok: false as const, error: CONNECTION_ERROR_MESSAGE };
 
         if (!currentApiUrl || !currentWorkingToken.ok) {
+          const apiErrorBody = !currentWorkingToken.ok && 'errorBody' in currentWorkingToken ? currentWorkingToken.errorBody : undefined;
+          const apiErrorMessage = !currentWorkingToken.ok && 'error' in currentWorkingToken ? currentWorkingToken.error : CONNECTION_ERROR_MESSAGE;
+          
           await supabase.from("auto_send_logs").insert({
             company_id: companyId,
             client_id: client.id,
@@ -744,8 +747,8 @@ Deno.serve(async (req) => {
             category,
             status: "failed",
             error_message: formatApiError(
-              currentWorkingToken.ok ? CONNECTION_ERROR_MESSAGE : currentWorkingToken.error,
-              currentWorkingToken.ok ? undefined : currentWorkingToken.errorBody,
+              apiErrorMessage,
+              apiErrorBody,
             ),
             phone: normalizePhone(client.whatsapp || client.phone || ""),
             message_sent: "",
