@@ -377,25 +377,27 @@ Deno.serve(async (req) => {
             .update({ status: "paused" })
             .eq("id", campaign.id);
 
-            await insertLog(supabase, {
-              campaign_id: campaign.id, recipient_id: recipient.id,
-              company_id: recipient.company_id, phone, step: "auth_error",
-              status: "error",
-              message: SESSION_EXPIRED_MESSAGE,
-              error_message: "401 - Token inválido",
-            });
+          await insertLog(supabase, {
+            campaign_id: campaign.id,
+            recipient_id: recipient.id,
+            company_id: recipient.company_id,
+            phone,
+            step: "auth_error",
+            status: "error",
+            message: SESSION_EXPIRED_MESSAGE,
+            error_message: "401 - Token inválido",
+          });
 
-            await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
-              processed_recipients: c.processed_recipients + 1,
-              failure_count: c.failure_count + 1,
-            }));
+          await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
+            processed_recipients: c.processed_recipients + 1,
+            failure_count: c.failure_count + 1,
+          }));
 
-            // Skip all remaining recipients for this company
-            consecutiveErrors[campaign.id] = MAX_CONSECUTIVE_ERRORS;
-            failed += 1;
-            processed += 1;
-            continue;
-          }
+          consecutiveErrors[campaign.id] = MAX_CONSECUTIVE_ERRORS;
+          failed += 1;
+          processed += 1;
+          continue;
+        }
 
           // ═══ SINGLE ATTEMPT: Mark as failed permanently, skip immediately ═══
           await (supabase
