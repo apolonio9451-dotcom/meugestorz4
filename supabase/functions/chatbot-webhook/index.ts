@@ -812,7 +812,7 @@ async function recordMassBroadcastIncoming(
     })
     .eq("id", conversation.id);
 
-  await supabase.from("mass_broadcast_logs").insert({
+  await (supabase.from("mass_broadcast_logs") as any).insert({
     campaign_id: recipient.campaign_id,
     recipient_id: recipient.id,
     company_id: payload.companyId,
@@ -821,7 +821,7 @@ async function recordMassBroadcastIncoming(
     status: "success",
     message: `[LOG] Mensagem recebida de ${normalizedPhone}`,
     error_message: null,
-  } as any);
+  });
 
   if (isHumanTakeover || !apiUrl || !apiToken || payload.messageType !== "text" || !payload.message.trim()) {
     return { conversation_status: nextStatus, ai_handled: false };
@@ -830,7 +830,7 @@ async function recordMassBroadcastIncoming(
   let aiHandled = false;
 
   try {
-    await supabase.from("mass_broadcast_logs").insert({
+    await (supabase.from("mass_broadcast_logs") as any).insert({
       campaign_id: recipient.campaign_id,
       recipient_id: recipient.id,
       company_id: payload.companyId,
@@ -839,7 +839,7 @@ async function recordMassBroadcastIncoming(
       status: "processing",
       message: "[LOG] Processando resposta via IA...",
       error_message: null,
-    } as any);
+    });
 
     const isNegative = await detectNegativeIntent(payload.message);
     if (isNegative) {
@@ -873,7 +873,7 @@ async function recordMassBroadcastIncoming(
         .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt })
         .eq("id", conversation.id);
 
-      await supabase.from("mass_broadcast_logs").insert({
+      await (supabase.from("mass_broadcast_logs") as any).insert({
         campaign_id: recipient.campaign_id,
         recipient_id: recipient.id,
         company_id: payload.companyId,
@@ -882,7 +882,7 @@ async function recordMassBroadcastIncoming(
         status: "success",
         message: apologyMsg,
         error_message: "Cliente sinalizou desinteresse",
-      } as any);
+      });
 
       return { conversation_status: "not_interested", ai_handled: true };
     }
@@ -980,7 +980,7 @@ async function recordMassBroadcastIncoming(
         })
         .eq("id", conversation.id);
 
-      await supabase.from("mass_broadcast_logs").insert({
+      await (supabase.from("mass_broadcast_logs") as any).insert({
         campaign_id: recipient.campaign_id,
         recipient_id: recipient.id,
         company_id: payload.companyId,
@@ -989,7 +989,7 @@ async function recordMassBroadcastIncoming(
         status: "success",
         message: "[LOG] Oferta e CTA de Teste Grátis enviados.",
         error_message: null,
-      } as any);
+      });
 
       aiHandled = true;
     } else {
@@ -1038,7 +1038,7 @@ async function recordMassBroadcastIncoming(
           })
           .eq("id", conversation.id);
 
-        await supabase.from("mass_broadcast_logs").insert({
+        await (supabase.from("mass_broadcast_logs") as any).insert({
           campaign_id: recipient.campaign_id,
           recipient_id: recipient.id,
           company_id: payload.companyId,
@@ -1047,7 +1047,7 @@ async function recordMassBroadcastIncoming(
           status: "success",
           message: `✅ Resposta enviada com sucesso para ${normalizedPhone} via IA.`,
           error_message: null,
-        } as any);
+        });
 
         aiHandled = true;
       }
