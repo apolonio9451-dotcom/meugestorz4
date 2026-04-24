@@ -4,11 +4,12 @@ import AnimatedPage from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Check, X } from "lucide-react";
+import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Upload, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -32,17 +33,33 @@ interface Match {
 }
 
 const BannerGenerator = () => {
+  const { effectiveCompanyId } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [customChannels, setCustomChannels] = useState("");
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMatches();
-  }, []);
+    fetchBrandLogo();
+  }, [effectiveCompanyId]);
+
+  const fetchBrandLogo = async () => {
+    if (!effectiveCompanyId) return;
+    const { data } = await supabase
+      .from("company_settings")
+      .select("brand_logo_url")
+      .eq("company_id", effectiveCompanyId)
+      .maybeSingle();
+    if (data?.brand_logo_url) {
+      setBrandLogo(data.brand_logo_url);
+    }
+  };
 
   const fetchMatches = async () => {
     try {
@@ -131,6 +148,41 @@ const BannerGenerator = () => {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !effectiveCompanyId) return;
+
+    try {
+      setUploadingLogo(true);
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${effectiveCompanyId}/brand-logo-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("company-assets")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("company-assets")
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from("company_settings")
+        .update({ brand_logo_url: publicUrl } as any)
+        .eq("company_id", effectiveCompanyId);
+
+      if (updateError) throw updateError;
+
+      setBrandLogo(publicUrl);
+      toast.success("Logo atualizada com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao subir logo: " + error.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   return (
     <AnimatedPage>
       <div className="space-y-6">
@@ -143,15 +195,79 @@ const BannerGenerator = () => {
               Crie banners profissionais para os jogos de hoje.
             </p>
           </div>
-          <Button 
-            onClick={handleRefresh} 
-            disabled={fetching}
-            className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
-            {fetching ? "Atualizando..." : "Sincronizar Jogos"}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleRefresh} 
+              disabled={fetching}
+              variant="outline"
+              className="border-primary/50 text-primary hover:bg-primary/10"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
+              {fetching ? "Sincronizando..." : "Sincronizar Jogos"}
+            </Button>
+          </div>
         </div>
+
+        {/* Brand Settings Section */}
+        <Card className="glass-card border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-primary" />
+              Configurações de Marca
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col md:flex-row items-center gap-6">
+            <div className="relative group w-32 h-32 rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center bg-zinc-900/50 overflow-hidden">
+              {brandLogo ? (
+                <>
+                  <img src={brandLogo} alt="Logo" className="w-full h-full object-contain p-2" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button 
+                      variant="destructive" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => setBrandLogo(null)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-2">
+                  <ImageIcon className="w-8 h-8 text-primary/30 mx-auto mb-1" />
+                  <span className="text-[10px] text-muted-foreground italic">Sem Logo</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-1 space-y-4 text-center md:text-left">
+              <div>
+                <h4 className="text-sm font-medium">Sua Logo Personalizada</h4>
+                <p className="text-xs text-muted-foreground">Aparecerá automaticamente no topo dos seus banners.</p>
+              </div>
+              <div className="flex items-center justify-center md:justify-start gap-3">
+                <Button 
+                  asChild 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={uploadingLogo}
+                  className="bg-primary/10 border-primary/30 hover:bg-primary/20"
+                >
+                  <label className="cursor-pointer">
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploadingLogo ? "Enviando..." : "Upload Logo"}
+                    <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                  </label>
+                </Button>
+                {!brandLogo && (
+                  <span className="text-[10px] text-blue-400 animate-pulse font-medium">
+                    Usando padrão TV MAX
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -264,11 +380,17 @@ const BannerGenerator = () => {
                   </div>
 
                   {/* Header / Logo */}
-                  <div className="relative z-10 flex flex-col items-center gap-1">
-                    <div className="text-xl font-black italic tracking-tighter bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                      TV MAX
-                    </div>
-                    <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                  <div className="relative z-10 flex flex-col items-center gap-2 w-full">
+                    {brandLogo ? (
+                      <img src={brandLogo} alt="Logo" className="h-16 w-auto object-contain max-w-[80%]" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="text-2xl font-black italic tracking-tighter bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                          TV MAX
+                        </div>
+                        <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Teams Section */}

@@ -52,26 +52,26 @@ Deno.serve(async (req) => {
 
     const allMatches = [];
 
-    for (const league of LEAGUES) {
-      console.log(`Fetching ${league.name}...`);
-      const response = await fetch(
-        `https://v3.football.api-sports.io/fixtures?league=${league.id}&season=${new Date().getFullYear()}&date=${today}`,
-        {
-          method: "GET",
-          headers: {
-            "x-rapidapi-host": "v3.football.api-sports.io",
-            "x-rapidapi-key": apiKey,
-          },
-        }
-      );
+    // Ligas solicitadas
+    const TARGET_LEAGUES = [71, 72, 2, 13, 39, 140, 135, 78, 61];
 
-      const data = await response.json();
-      if (data.response) {
-        allMatches.push(...data.response);
+    console.log(`Fetching from RapidAPI...`);
+    const response = await fetch(
+      `https://api-football-v1.p.rapidapi.com/v3/fixtures?date=${today}`,
+      {
+        method: "GET",
+        headers: {
+          "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+          "x-rapidapi-key": apiKey,
+        },
       }
-      
-      // Respect rate limits if necessary, though 10 req/min is usually okay for free tier
-      // await new Promise(r => setTimeout(r, 100));
+    );
+
+    const data = await response.json();
+    if (data.response) {
+      // Filtrar apenas as ligas alvo
+      const filtered = data.response.filter((m: any) => TARGET_LEAGUES.includes(m.league.id));
+      allMatches.push(...filtered);
     }
 
     console.log(`Total matches found: ${allMatches.length}`);
