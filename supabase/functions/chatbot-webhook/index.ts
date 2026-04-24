@@ -671,7 +671,7 @@ async function ensureCampaignConversation(
     return existingConversation;
   }
 
-  const { data: createdConversation } = await supabase
+  const { data: createdConversation, error: insertError } = await supabase
     .from("mass_broadcast_conversations")
     .insert({
       company_id: payload.companyId,
@@ -684,9 +684,14 @@ async function ensureCampaignConversation(
       has_reply: false,
       last_message_at: payload.timestamp,
       last_outgoing_at: payload.timestamp,
-    })
+    } as any)
     .select("id, conversation_status")
-    .single<{ id: string; conversation_status: string }>();
+    .single();
+
+  if (insertError) {
+    console.error("Error creating conversation:", insertError);
+    throw insertError;
+  }
 
   return createdConversation as { id: string; conversation_status: string };
 }
@@ -794,7 +799,7 @@ async function recordMassBroadcastIncoming(
     message: payload.message,
     delivery_status: "received",
     created_at: nowIso,
-  });
+  } as any);
 
   await supabase
     .from("mass_broadcast_conversations")
@@ -816,7 +821,7 @@ async function recordMassBroadcastIncoming(
     status: "success",
     message: `[LOG] Mensagem recebida de ${normalizedPhone}`,
     error_message: null,
-  });
+  } as any);
 
   if (isHumanTakeover || !apiUrl || !apiToken || payload.messageType !== "text" || !payload.message.trim()) {
     return { conversation_status: nextStatus, ai_handled: false };
@@ -834,7 +839,7 @@ async function recordMassBroadcastIncoming(
       status: "processing",
       message: "[LOG] Processando resposta via IA...",
       error_message: null,
-    });
+    } as any);
 
     const isNegative = await detectNegativeIntent(payload.message);
     if (isNegative) {
@@ -856,7 +861,7 @@ async function recordMassBroadcastIncoming(
         message: apologyMsg,
         delivery_status: "sent",
         created_at: sentAt,
-      });
+      } as any);
 
       await supabase
         .from("mass_broadcast_recipients")
@@ -930,7 +935,7 @@ async function recordMassBroadcastIncoming(
         message: immediateReply,
         delivery_status: "sent",
         created_at: offerSentAt,
-      });
+      } as any);
 
       await sleep(5000);
       await sendText(apiUrl, apiToken, normalizedPhone, MASS_BROADCAST_CLOSING_MESSAGE);
@@ -950,7 +955,7 @@ async function recordMassBroadcastIncoming(
         message: MASS_BROADCAST_CLOSING_MESSAGE,
         delivery_status: "sent",
         created_at: ctaSentAt,
-      });
+      } as any);
 
       const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
       await supabase
