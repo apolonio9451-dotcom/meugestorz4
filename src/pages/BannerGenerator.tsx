@@ -1,0 +1,365 @@
+import { useState, useEffect, useRef } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import AnimatedPage from "@/components/AnimatedPage";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Check, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import html2canvas from "html2canvas";
+
+interface Match {
+  id: string;
+  home_team: string;
+  away_team: string;
+  home_logo: string;
+  away_logo: string;
+  match_time: string;
+  league_name: string;
+  channels: string[];
+}
+
+const BannerGenerator = () => {
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [customChannels, setCustomChannels] = useState("");
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  const fetchMatches = async () => {
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("sports_matches")
+        .select("*")
+        .eq("match_date", today)
+        .order("match_time", { ascending: true });
+
+      if (error) throw error;
+      setMatches(data || []);
+    } catch (error: any) {
+      toast.error("Erro ao buscar jogos: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setFetching(true);
+      const { data, error } = await supabase.functions.invoke("fetch-sports-matches");
+      if (error) throw error;
+      
+      toast.success(`${data.count} jogos atualizados!`);
+      fetchMatches();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar jogos: " + error.message);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const openEditor = (match: Match) => {
+    setSelectedMatch(match);
+    setCustomChannels(match.channels?.join(", ") || "");
+    setIsEditorOpen(true);
+  };
+
+  const downloadBanner = async () => {
+    if (!bannerRef.current) return;
+    try {
+      const canvas = await html2canvas(bannerRef.current, {
+        useCORS: true,
+        scale: 2,
+        backgroundColor: null,
+      });
+      const link = document.createElement("a");
+      link.download = `banner-${selectedMatch?.home_team}-vs-${selectedMatch?.away_team}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      toast.success("Banner baixado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao gerar imagem");
+    }
+  };
+
+  const shareOnWhatsApp = async () => {
+    if (!bannerRef.current) return;
+    try {
+      const canvas = await html2canvas(bannerRef.current, {
+        useCORS: true,
+        scale: 2,
+        backgroundColor: null,
+      });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "banner.png", { type: "image/png" });
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "Banner de Jogo",
+            });
+          } catch (e) {
+            toast.error("Erro ao compartilhar");
+          }
+        } else {
+          toast.info("Compartilhamento não suportado neste navegador. Baixe a imagem.");
+        }
+      });
+    } catch (error) {
+      toast.error("Erro ao preparar imagem");
+    }
+  };
+
+  return (
+    <AnimatedPage>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              Gerador de Banners
+            </h1>
+            <p className="text-muted-foreground">
+              Crie banners profissionais para os jogos de hoje.
+            </p>
+          </div>
+          <Button 
+            onClick={handleRefresh} 
+            disabled={fetching}
+            className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
+            {fetching ? "Atualizando..." : "Sincronizar Jogos"}
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-40 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : matches.length === 0 ? (
+          <Card className="border-dashed border-2 bg-muted/50">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <ImageIcon className="w-12 h-12 text-muted-foreground mb-4" />
+              <p className="text-xl font-medium">Nenhum jogo encontrado para hoje</p>
+              <p className="text-muted-foreground mb-6">Tente sincronizar com a API de futebol.</p>
+              <Button onClick={handleRefresh}>Sincronizar Agora</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {matches.map((match) => (
+              <Card key={match.id} className="overflow-hidden glass-card hover:border-primary/50 transition-all group">
+                <CardHeader className="pb-2 space-y-0">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                      {match.league_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(match.match_time), "HH:mm")}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <div className="flex flex-col items-center gap-2 flex-1 text-center">
+                      <img src={match.home_logo} alt={match.home_team} className="w-12 h-12 object-contain drop-shadow-md" />
+                      <span className="text-xs font-bold line-clamp-1">{match.home_team}</span>
+                    </div>
+                    <div className="text-lg font-black text-muted-foreground/30 italic">VS</div>
+                    <div className="flex flex-col items-center gap-2 flex-1 text-center">
+                      <img src={match.away_logo} alt={match.away_team} className="w-12 h-12 object-contain drop-shadow-md" />
+                      <span className="text-xs font-bold line-clamp-1">{match.away_team}</span>
+                    </div>
+                  </div>
+                  
+                  {match.channels && match.channels.length > 0 && (
+                    <div className="text-[10px] text-muted-foreground mb-4 flex items-center gap-1 flex-wrap">
+                      <span className="font-semibold text-primary/70">Transmissão:</span>
+                      {match.channels.map((ch, i) => (
+                        <span key={i} className="bg-muted px-1.5 py-0.5 rounded">{ch}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button 
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
+                    onClick={() => openEditor(match)}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Configurar Banner
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-blue-400">Personalizar Banner</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="channels">Canais de Transmissão</Label>
+                  <Input 
+                    id="channels" 
+                    value={customChannels} 
+                    onChange={(e) => setCustomChannels(e.target.value)}
+                    placeholder="Ex: Globo, Premiere, ESPN"
+                    className="bg-zinc-900 border-zinc-800"
+                  />
+                  <p className="text-[10px] text-zinc-500 italic">Separe os canais por vírgula.</p>
+                </div>
+                
+                <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10 space-y-3">
+                  <h4 className="text-sm font-semibold text-blue-400">Dicas TV MAX</h4>
+                  <ul className="text-xs space-y-2 text-zinc-400">
+                    <li>• O template é otimizado para Status de WhatsApp (9:16).</li>
+                    <li>• Use canais conhecidos para atrair mais clientes.</li>
+                    <li>• O banner já inclui seu CTA fixo de 4K.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Banner Preview Area */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="text-sm font-medium text-zinc-400 mb-2">Prévia (WhatsApp Status)</div>
+                <div 
+                  ref={bannerRef}
+                  className="w-[280px] h-[498px] bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 rounded-xl overflow-hidden relative shadow-2xl shadow-blue-500/20 border border-zinc-800 flex flex-col items-center justify-between p-8"
+                  style={{
+                    background: "radial-gradient(circle at center, #1a1a2e 0%, #0a0a0c 100%)"
+                  }}
+                >
+                  {/* Decorative Elements */}
+                  <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                    <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full" />
+                    <div className="absolute bottom-[-10%] left-[-10%] w-40 h-40 bg-purple-600/10 blur-[80px] rounded-full" />
+                  </div>
+
+                  {/* Header / Logo */}
+                  <div className="relative z-10 flex flex-col items-center gap-1">
+                    <div className="text-xl font-black italic tracking-tighter bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                      TV MAX
+                    </div>
+                    <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
+                  </div>
+
+                  {/* Teams Section */}
+                  <div className="relative z-10 flex flex-col items-center w-full gap-6">
+                    <div className="flex flex-col items-center gap-4 w-full">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full scale-150" />
+                        <img 
+                          src={selectedMatch?.home_logo} 
+                          className="w-24 h-24 object-contain relative z-10" 
+                          alt="Home" 
+                        />
+                      </div>
+                      <div className="text-lg font-bold text-white tracking-wide uppercase text-center leading-tight">
+                        {selectedMatch?.home_team}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full justify-center">
+                       <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-blue-500/50" />
+                       <div className="text-2xl font-black italic text-zinc-600">VS</div>
+                       <div className="h-[2px] flex-1 bg-gradient-to-l from-transparent to-purple-500/50" />
+                    </div>
+
+                    <div className="flex flex-col items-center gap-4 w-full">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-full scale-150" />
+                        <img 
+                          src={selectedMatch?.away_logo} 
+                          className="w-24 h-24 object-contain relative z-10" 
+                          alt="Away" 
+                        />
+                      </div>
+                      <div className="text-lg font-bold text-white tracking-wide uppercase text-center leading-tight">
+                        {selectedMatch?.away_team}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info Section */}
+                  <div className="relative z-10 flex flex-col items-center gap-6 w-full mt-4">
+                    <div className="flex flex-col items-center">
+                      <div className="text-sm font-semibold text-blue-400 mb-1">{selectedMatch?.league_name}</div>
+                      <div className="text-3xl font-black text-white drop-shadow-lg">
+                        {selectedMatch && format(new Date(selectedMatch.match_time), "HH:mm")}
+                      </div>
+                      <div className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">
+                        {selectedMatch && format(new Date(selectedMatch.match_time), "dd 'de' MMMM", { locale: ptBR })}
+                      </div>
+                    </div>
+
+                    {customChannels && (
+                      <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full text-center">
+                        <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Onde Assistir</div>
+                        <div className="text-xs font-bold text-zinc-200">
+                          {customChannels}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer CTA */}
+                    <div className="flex flex-col items-center gap-2 mt-4">
+                      <div className="bg-blue-600 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-tighter animate-pulse shadow-lg shadow-blue-600/50">
+                        Assine agora e assista em 4K
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => setIsEditorOpen(false)}>
+                Cancelar
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="bg-blue-600/10 border-blue-600/30 text-blue-400 hover:bg-blue-600/20" onClick={shareOnWhatsApp}>
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Compartilhar
+                </Button>
+                <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={downloadBanner}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar PNG
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AnimatedPage>
+  );
+};
+
+export default BannerGenerator;
