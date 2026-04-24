@@ -50,7 +50,9 @@ import {
   Lock,
   AlertTriangle,
   SlidersHorizontal,
+  Image as ImageIcon,
 } from "lucide-react";
+
 
 type NavItem = {
   href?: string;
@@ -79,7 +81,9 @@ const navItems: NavItem[] = [
       { href: "/dashboard/marketing", label: "Marketing", icon: Megaphone },
       { href: "/dashboard/campaigns", label: "Datas Especiais", icon: Megaphone },
       { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
+      { href: "/dashboard/banner-generator", label: "Gerador de Banners", icon: ImageIcon },
     ],
+
   },
   { href: "/dashboard/chatbot", label: "Agente IA", icon: Bot },
   { href: "/dashboard/resellers", label: "Gestão de Acesso", icon: UserCog, adminOnly: true },
