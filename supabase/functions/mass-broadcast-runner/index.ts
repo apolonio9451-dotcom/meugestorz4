@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -242,8 +242,8 @@ async function sendTextMessage(apiUrl: string, apiToken: string, number: string,
   return { ok: true, status: response.status };
 }
 
-async function insertLog(supabase: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
-  await supabase.from("mass_broadcast_logs").insert(payload);
+async function insertLog(supabase: any, payload: Record<string, unknown>) {
+  await (supabase.from("mass_broadcast_logs") as any).insert(payload);
 }
 
 async function updateCampaignCounters(
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
     for (const settings of apiSettings) {
       if (processed >= MAX_PER_RUN) break;
       const companyId = settings.company_id;
-      let credentials = await fetchLatestCampaignCredentials(supabase, companyId);
+      let credentials = await fetchLatestCampaignCredentials(supabase as any, companyId);
       if (!credentials.apiUrl || !credentials.apiToken) continue;
 
       // Fetch saved contacts once per company run
@@ -454,7 +454,7 @@ Deno.serve(async (req) => {
         }
 
         try {
-          const latestCredentials = await fetchLatestCampaignCredentials(supabase, recipient.company_id);
+          const latestCredentials = await fetchLatestCampaignCredentials(supabase as any, recipient.company_id);
           if (latestCredentials.apiUrl && latestCredentials.apiToken) {
             credentials = latestCredentials;
           }

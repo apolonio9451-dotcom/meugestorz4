@@ -801,8 +801,8 @@ async function recordMassBroadcastIncoming(
     created_at: nowIso,
   } as any);
 
-  await supabase
-    .from("mass_broadcast_conversations")
+  await (supabase
+    .from("mass_broadcast_conversations") as any)
     .update({
       conversation_status: nextStatus,
       has_reply: true,
@@ -812,7 +812,7 @@ async function recordMassBroadcastIncoming(
     })
     .eq("id", conversation.id);
 
-  await supabase.from("mass_broadcast_logs").insert({
+  await (supabase.from("mass_broadcast_logs") as any).insert({
     campaign_id: recipient.campaign_id,
     recipient_id: recipient.id,
     company_id: payload.companyId,
@@ -821,7 +821,7 @@ async function recordMassBroadcastIncoming(
     status: "success",
     message: `[LOG] Mensagem recebida de ${normalizedPhone}`,
     error_message: null,
-  } as any);
+  });
 
   if (isHumanTakeover || !apiUrl || !apiToken || payload.messageType !== "text" || !payload.message.trim()) {
     return { conversation_status: nextStatus, ai_handled: false };
@@ -830,7 +830,7 @@ async function recordMassBroadcastIncoming(
   let aiHandled = false;
 
   try {
-    await supabase.from("mass_broadcast_logs").insert({
+    await (supabase.from("mass_broadcast_logs") as any).insert({
       campaign_id: recipient.campaign_id,
       recipient_id: recipient.id,
       company_id: payload.companyId,
@@ -839,7 +839,7 @@ async function recordMassBroadcastIncoming(
       status: "processing",
       message: "[LOG] Processando resposta via IA...",
       error_message: null,
-    } as any);
+    });
 
     const isNegative = await detectNegativeIntent(payload.message);
     if (isNegative) {
@@ -863,17 +863,17 @@ async function recordMassBroadcastIncoming(
         created_at: sentAt,
       } as any);
 
-      await supabase
-        .from("mass_broadcast_recipients")
+      await (supabase
+        .from("mass_broadcast_recipients") as any)
         .update({ status: "failed", current_step: "not_interested", error_message: "Cliente não interessado", last_attempt_at: sentAt })
         .eq("id", recipient.id);
 
-      await supabase
-        .from("mass_broadcast_conversations")
+      await (supabase
+        .from("mass_broadcast_conversations") as any)
         .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt })
         .eq("id", conversation.id);
 
-      await supabase.from("mass_broadcast_logs").insert({
+      await (supabase.from("mass_broadcast_logs") as any).insert({
         campaign_id: recipient.campaign_id,
         recipient_id: recipient.id,
         company_id: payload.companyId,
@@ -958,8 +958,8 @@ async function recordMassBroadcastIncoming(
       } as any);
 
       const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      await supabase
-        .from("mass_broadcast_recipients")
+      await (supabase
+        .from("mass_broadcast_recipients") as any)
         .update({
           status: "processing",
           current_step: "conversing",
@@ -970,8 +970,8 @@ async function recordMassBroadcastIncoming(
         })
         .eq("id", recipient.id);
 
-      await supabase
-        .from("mass_broadcast_conversations")
+      await (supabase
+        .from("mass_broadcast_conversations") as any)
         .update({
           conversation_status: "bot_active",
           has_reply: true,
@@ -980,7 +980,7 @@ async function recordMassBroadcastIncoming(
         })
         .eq("id", conversation.id);
 
-      await supabase.from("mass_broadcast_logs").insert({
+      await (supabase.from("mass_broadcast_logs") as any).insert({
         campaign_id: recipient.campaign_id,
         recipient_id: recipient.id,
         company_id: payload.companyId,
@@ -1014,11 +1014,11 @@ async function recordMassBroadcastIncoming(
           message: followUpReply,
           delivery_status: "sent",
           created_at: sentAt,
-        });
+        } as any);
 
         const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-        await supabase
-          .from("mass_broadcast_recipients")
+        await (supabase
+          .from("mass_broadcast_recipients") as any)
           .update({
             status: "processing",
             current_step: "conversing",
@@ -1028,8 +1028,8 @@ async function recordMassBroadcastIncoming(
           })
           .eq("id", recipient.id);
 
-        await supabase
-          .from("mass_broadcast_conversations")
+        await (supabase
+          .from("mass_broadcast_conversations") as any)
           .update({
             conversation_status: "bot_active",
             has_reply: true,
@@ -1038,7 +1038,7 @@ async function recordMassBroadcastIncoming(
           })
           .eq("id", conversation.id);
 
-        await supabase.from("mass_broadcast_logs").insert({
+        await (supabase.from("mass_broadcast_logs") as any).insert({
           campaign_id: recipient.campaign_id,
           recipient_id: recipient.id,
           company_id: payload.companyId,
@@ -1054,7 +1054,7 @@ async function recordMassBroadcastIncoming(
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    await supabase.from("mass_broadcast_logs").insert({
+    await (supabase.from("mass_broadcast_logs") as any).insert({
       campaign_id: recipient.campaign_id,
       recipient_id: recipient.id,
       company_id: payload.companyId,
