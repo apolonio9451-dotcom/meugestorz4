@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Coins } from "lucide-react";
 
 interface Plan {
   id: string;
@@ -18,6 +18,7 @@ interface Plan {
   duration_days: number;
   description: string;
   is_active: boolean;
+  credit_cost: number;
 }
 
 export default function Plans() {
@@ -30,7 +31,7 @@ export default function Plans() {
   const fetchPlans = async () => {
     if (!companyId) return;
     const { data } = await supabase.from("subscription_plans").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
-    setPlans(data || []);
+    setPlans((data || []).map(p => ({ ...p, credit_cost: p.credit_cost || 0 })) as Plan[]);
   };
 
   useEffect(() => { fetchPlans(); }, [companyId]);
@@ -44,6 +45,7 @@ export default function Plans() {
       name: form.get("name") as string,
       price: parseFloat(form.get("price") as string),
       duration_days: parseInt(form.get("duration_days") as string),
+      credit_cost: parseInt(form.get("credit_cost") as string) || 0,
       description: form.get("description") as string,
       is_active: true,
       company_id: companyId,
@@ -104,6 +106,14 @@ export default function Plans() {
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>Custo em Créditos (Consumo)</Label>
+                <div className="relative">
+                  <Coins className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input name="credit_cost" type="number" min="0" placeholder="Ex: 1" className="pl-9" defaultValue={editing?.credit_cost || 1} />
+                </div>
+                <p className="text-[10px] text-muted-foreground">Quantos créditos este plano consome do seu custo total.</p>
+              </div>
+              <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Input name="description" defaultValue={editing?.description || ""} />
               </div>
@@ -138,7 +148,10 @@ export default function Plans() {
                 <div className="text-3xl font-bold font-display text-foreground">
                   R$ {Number(plan.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{plan.duration_days} dias</p>
+                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                  <span>{plan.duration_days} dias</span>
+                  <span className="flex items-center gap-1"><Coins className="w-3 h-3" /> {plan.credit_cost} créd.</span>
+                </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
                   <Switch checked={plan.is_active} onCheckedChange={() => toggleActive(plan)} />
                   <span className="text-sm text-muted-foreground">Ativo</span>
