@@ -28,9 +28,22 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const apiKey = Deno.env.get("FOOTBALL_API_KEY");
+    let apiKey = Deno.env.get("FOOTBALL_API_KEY");
+    
     if (!apiKey) {
-      throw new Error("FOOTBALL_API_KEY not set");
+      // Try to get from api_settings table (first one that has it)
+      const { data: settings } = await supabase
+        .from("api_settings")
+        .select("football_api_key")
+        .not("football_api_key", "is", null)
+        .limit(1)
+        .maybeSingle();
+      
+      apiKey = settings?.football_api_key;
+    }
+
+    if (!apiKey) {
+      throw new Error("FOOTBALL_API_KEY not set in secrets or api_settings");
     }
 
     const today = new Date().toISOString().split("T")[0];
