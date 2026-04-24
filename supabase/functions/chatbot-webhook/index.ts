@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -801,15 +801,15 @@ async function recordMassBroadcastIncoming(
     created_at: nowIso,
   } as any);
 
-  await (supabase
-    .from("mass_broadcast_conversations") as any)
+  await supabase
+    .from("mass_broadcast_conversations")
     .update({
       conversation_status: nextStatus,
       has_reply: true,
       last_message_at: nowIso,
       last_incoming_at: nowIso,
       recipient_id: recipient.id,
-    })
+    } as any)
     .eq("id", conversation.id);
 
   await supabase.from("mass_broadcast_logs").insert({
@@ -863,14 +863,14 @@ async function recordMassBroadcastIncoming(
         created_at: sentAt,
       } as any);
 
-      await (supabase
-        .from("mass_broadcast_recipients") as any)
-        .update({ status: "failed", current_step: "not_interested", error_message: "Cliente não interessado", last_attempt_at: sentAt })
+      await supabase
+        .from("mass_broadcast_recipients")
+        .update({ status: "failed", current_step: "not_interested", error_message: "Cliente não interessado", last_attempt_at: sentAt } as any)
         .eq("id", recipient.id);
 
-      await (supabase
-        .from("mass_broadcast_conversations") as any)
-        .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt })
+      await supabase
+        .from("mass_broadcast_conversations")
+        .update({ conversation_status: "not_interested", last_outgoing_at: sentAt, last_message_at: sentAt } as any)
         .eq("id", conversation.id);
 
       await supabase.from("mass_broadcast_logs").insert({
@@ -958,8 +958,8 @@ async function recordMassBroadcastIncoming(
       } as any);
 
       const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      await (supabase
-        .from("mass_broadcast_recipients") as any)
+      await supabase
+        .from("mass_broadcast_recipients")
         .update({
           status: "processing",
           current_step: "conversing",
@@ -967,17 +967,17 @@ async function recordMassBroadcastIncoming(
           last_attempt_at: ctaSentAt,
           next_action_at: nextActionAt,
           error_message: null,
-        })
+        } as any)
         .eq("id", recipient.id);
 
-      await (supabase
-        .from("mass_broadcast_conversations") as any)
+      await supabase
+        .from("mass_broadcast_conversations")
         .update({
           conversation_status: "bot_active",
           has_reply: true,
           last_outgoing_at: ctaSentAt,
           last_message_at: ctaSentAt,
-        })
+        } as any)
         .eq("id", conversation.id);
 
       await supabase.from("mass_broadcast_logs").insert({
@@ -1017,25 +1017,25 @@ async function recordMassBroadcastIncoming(
         } as any);
 
         const nextActionAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-        await (supabase
-          .from("mass_broadcast_recipients") as any)
+        await supabase
+          .from("mass_broadcast_recipients")
           .update({
             status: "processing",
             current_step: "conversing",
             last_attempt_at: sentAt,
             next_action_at: nextActionAt,
             error_message: null,
-          })
+          } as any)
           .eq("id", recipient.id);
 
-        await (supabase
-          .from("mass_broadcast_conversations") as any)
+        await supabase
+          .from("mass_broadcast_conversations")
           .update({
             conversation_status: "bot_active",
             has_reply: true,
             last_outgoing_at: sentAt,
             last_message_at: sentAt,
-          })
+          } as any)
           .eq("id", conversation.id);
 
         await supabase.from("mass_broadcast_logs").insert({
