@@ -3,6 +3,8 @@ import { SlidersHorizontal } from "lucide-react";
 import AnnouncementManager from "@/components/announcements/AnnouncementManager";
 import DataBackupExport from "@/components/settings/DataBackupExport";
 import OverdueRulesSection from "@/components/settings/OverdueRulesSection";
+import SportsSettingsSection from "@/components/settings/SportsSettingsSection";
+
 
 export default function GeneralSettings() {
   const { userRole, effectiveCompanyId } = useAuth();
@@ -31,7 +33,9 @@ export default function GeneralSettings() {
         </p>
       </div>
       <OverdueRulesSection companyId={effectiveCompanyId} />
+      <SportsSettingsSection companyId={effectiveCompanyId} />
       <DataBackupExport />
+
       <AnnouncementManager />
     </div>
   );
