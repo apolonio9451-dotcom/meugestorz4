@@ -454,7 +454,7 @@ Deno.serve(async (req) => {
         }
 
         try {
-          const latestCredentials = await fetchLatestCampaignCredentials(supabase, recipient.company_id);
+          const latestCredentials = await fetchLatestCampaignCredentials(supabase as any, recipient.company_id);
           if (latestCredentials.apiUrl && latestCredentials.apiToken) {
             credentials = latestCredentials;
           }
