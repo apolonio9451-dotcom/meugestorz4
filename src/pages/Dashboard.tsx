@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DollarSign, TrendingUp, CalendarDays, Users, Target, MessageCircle, UserPlus, FileText, Server, UserCheck, UserX } from "lucide-react";
+import { DollarSign, TrendingUp, CalendarDays, Users, Target, MessageCircle, UserPlus, FileText, Server, UserCheck, UserX, Coins } from "lucide-react";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -21,13 +21,17 @@ async function fetchDashboardData(companyId: string) {
   const next7 = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
   const next30 = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
 
-  const [clientsRes, subsRes] = await Promise.all([
+  const [clientsRes, subsRes, plansRes] = await Promise.all([
     supabase.from("clients").select("id, status, name, server").eq("company_id", companyId),
-    supabase.from("client_subscriptions").select("id, payment_status, amount, start_date, end_date, client_id").eq("company_id", companyId),
+    supabase.from("client_subscriptions").select("id, payment_status, amount, start_date, end_date, client_id, plan_id").eq("company_id", companyId),
+    supabase.from("subscription_plans").select("id, credit_cost").eq("company_id", companyId),
   ]);
 
   const clients = clientsRes.data || [];
   const subs = subsRes.data || [];
+  const plans = plansRes.data || [];
+
+  const planCreditMap = new Map(plans.map(p => [p.id, Number(p.credit_cost || 0)]));
 
   const paidSubs = subs.filter((s) => s.payment_status === "paid");
   const todayPaid = paidSubs.filter((s) => s.start_date === today);
@@ -59,6 +63,10 @@ async function fetchDashboardData(companyId: string) {
     }
   });
 
+  // Calculate total costs based on plan credit_cost
+  const totalCreditsUsed = paidSubs.reduce((sum, s) => sum + (s.plan_id ? (planCreditMap.get(s.plan_id) || 0) : 0), 0);
+  const monthCreditsUsed = monthPaid.reduce((sum, s) => sum + (s.plan_id ? (planCreditMap.get(s.plan_id) || 0) : 0), 0);
+
   return {
     stats: {
       todayRevenue: todayPaid.reduce((sum, s) => sum + Number(s.amount), 0),
@@ -74,6 +82,8 @@ async function fetchDashboardData(companyId: string) {
       leadsConverted: 0,
       openInvoices: pendingSubs.length,
       totalInvoices: subs.length,
+      totalCreditsUsed,
+      monthCreditsUsed,
     },
     recentPayments: monthPaid.slice(0, 5).map((s) => ({
       client: clientMap.get(s.client_id) || "—",
@@ -105,6 +115,7 @@ export default function Dashboard() {
     todayRevenue: 0, todayPayments: 0, monthRevenue: 0, monthPayments: 0,
     forecast30d: 0, forecastInvoices: 0, activeClients: 0, totalClients: 0,
     leadsNew: 0, leadsContact: 0, leadsConverted: 0, openInvoices: 0, totalInvoices: 0,
+    totalCreditsUsed: 0, monthCreditsUsed: 0,
   };
   const recentPayments = data?.recentPayments ?? [];
   const upcomingInvoices = data?.upcomingInvoices ?? [];
@@ -115,14 +126,14 @@ export default function Dashboard() {
   const topCards = [
     { title: "Ganhos hoje", value: fmt(stats.todayRevenue), sub: `${stats.todayPayments} pagamento(s)`, icon: DollarSign, iconColor: "text-green-400" },
     { title: "Ganhos do mês", value: fmt(stats.monthRevenue), sub: `${stats.monthPayments} pagamento(s)`, icon: TrendingUp, iconColor: "text-blue-400" },
-    { title: "Previsão 30d", value: fmt(stats.forecast30d), sub: `${stats.forecastInvoices} fatura(s)`, icon: CalendarDays, iconColor: "text-orange-400" },
+    { title: "Custo (Créditos)", value: String(stats.totalCreditsUsed), sub: `${stats.monthCreditsUsed} este mês`, icon: Coins, iconColor: "text-yellow-500" },
     { title: "Clientes ativos", value: String(stats.activeClients), sub: `de ${stats.totalClients} total`, icon: Users, iconColor: "text-muted-foreground" },
   ];
 
   const bottomCards = [
+    { title: "Previsão 30d", value: fmt(stats.forecast30d), sub: `${stats.forecastInvoices} fatura(s)`, icon: CalendarDays, iconColor: "text-orange-400" },
     { title: "Leads novos", value: String(stats.leadsNew), sub: "Este mês", icon: Target, iconColor: "text-green-400" },
     { title: "Em contato", value: String(stats.leadsContact), sub: "Este mês", icon: MessageCircle, iconColor: "text-yellow-400" },
-    { title: "Convertidos", value: String(stats.leadsConverted), sub: "Este mês", icon: UserPlus, iconColor: "text-muted-foreground" },
     { title: "Faturas abertas", value: String(stats.openInvoices), sub: `${stats.totalInvoices} total`, icon: FileText, iconColor: "text-muted-foreground" },
   ];
 
