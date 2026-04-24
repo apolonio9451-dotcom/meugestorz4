@@ -84,7 +84,7 @@ function resolveApiToken(dbToken?: string | null): string {
 }
 
 async function getCompanyInstanceToken(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
 ): Promise<string> {
   const { data: memberships } = await supabase
@@ -110,7 +110,7 @@ async function getCompanyInstanceToken(
 }
 
 async function fetchLatestCampaignCredentials(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
 ): Promise<{ apiUrl: string; apiToken: string }> {
   const { data } = await supabase
@@ -127,7 +127,6 @@ async function fetchLatestCampaignCredentials(
   };
 }
 
-/** Detect session/disconnection errors from API response */
 function isSessionError(responseText: string, httpStatus: number): boolean {
   if (httpStatus === 401) return true;
   try {
@@ -159,7 +158,6 @@ async function validateCampaignToken(apiUrl: string, apiToken: string): Promise<
   }
 }
 
-/** Simulate "composing" presence before sending */
 async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
   const durationMs = Math.floor(Math.random() * 2001) + 3000;
   try {
@@ -174,11 +172,6 @@ async function simulateTyping(apiUrl: string, apiToken: string, phone: string) {
   }
 }
 
-/**
- * Fetch all contacts saved in the WhatsApp instance's address book.
- * Returns a Set of normalized phone numbers (digits only).
- * Falls back to an empty set on any error so the broadcast is never blocked.
- */
 async function fetchInstanceContacts(apiUrl: string, apiToken: string): Promise<Set<string>> {
   const contacts = new Set<string>();
   const endpoints = ["/contacts/all", "/contacts"];
@@ -207,15 +200,10 @@ async function fetchInstanceContacts(apiUrl: string, apiToken: string): Promise<
       }
 
       if (contacts.size > 0) {
-        console.log(`[mass-broadcast] Loaded ${contacts.size} instance contacts from ${endpoint}`);
         return contacts;
       }
-    } catch (err) {
-      console.log(`[mass-broadcast] Failed to fetch contacts from ${endpoint}: ${String(err)}`);
-    }
+    } catch { /* ignore error */ }
   }
-
-  console.log("[mass-broadcast] No contacts fetched from instance (will send to all)");
   return contacts;
 }
 
@@ -227,7 +215,6 @@ async function sendTextMessage(apiUrl: string, apiToken: string, number: string,
   });
   const body = await response.text();
 
-  // Detect WhatsApp disconnected even on 2xx
   if (isSessionError(body, response.status)) {
     const error = new Error(SESSION_EXPIRED_MESSAGE);
     (error as any).httpStatus = 401;
@@ -247,7 +234,7 @@ async function insertLog(supabase: any, payload: Record<string, unknown>) {
 }
 
 async function updateCampaignCounters(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   campaignId: string,
   updater: (campaign: CampaignRow) => Partial<CampaignRow>,
 ) {
@@ -255,11 +242,11 @@ async function updateCampaignCounters(
     .from("mass_broadcast_campaigns")
     .select("id, name, status, offer_templates, message_delay_min_seconds, message_delay_max_seconds, total_recipients, processed_recipients, success_count, failure_count")
     .eq("id", campaignId)
-    .single<CampaignRow>();
+    .single();
 
   if (!campaign) return null;
 
-  const patch = updater(campaign);
+  const patch = updater(campaign as CampaignRow);
   const nextProcessed = patch.processed_recipients ?? campaign.processed_recipients;
   const total = patch.total_recipients ?? campaign.total_recipients;
   const shouldComplete = total > 0 && nextProcessed >= total;
@@ -277,7 +264,6 @@ async function updateCampaignCounters(
   return campaign;
 }
 
-/** Check if batch pause is needed (every BATCH_PAUSE_EVERY messages) */
 function shouldBatchPause(processedCount: number): boolean {
   return processedCount > 0 && processedCount % BATCH_PAUSE_EVERY === 0;
 }
@@ -292,7 +278,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Only process companies with bulk_send_enabled
     const { data: apiSettings } = await supabase
       .from("api_settings")
       .select("company_id, api_url, api_token, broadcast_api_url, broadcast_api_token, bulk_send_enabled")
@@ -308,18 +293,15 @@ Deno.serve(async (req) => {
     let success = 0;
     let failed = 0;
 
-    // ═══ SKIP-ON-ERROR: Track consecutive errors per campaign ═══
     const consecutiveErrors: Record<string, number> = {};
-    // ═══ SKIP-SAVED-CONTACTS: Cache instance contacts per company ═══
     const instanceContactsCache: Record<string, Set<string>> = {};
 
     for (const settings of apiSettings) {
       if (processed >= MAX_PER_RUN) break;
       const companyId = settings.company_id;
-      let credentials = await fetchLatestCampaignCredentials(supabase as any, companyId);
+      let credentials = await fetchLatestCampaignCredentials(supabase, companyId);
       if (!credentials.apiUrl || !credentials.apiToken) continue;
 
-      // Fetch saved contacts once per company run
       if (!instanceContactsCache[companyId]) {
         instanceContactsCache[companyId] = await fetchInstanceContacts(credentials.apiUrl, credentials.apiToken);
       }
@@ -359,68 +341,48 @@ Deno.serve(async (req) => {
         .order("next_action_at", { ascending: true })
         .limit(MAX_PER_RUN - processed);
 
-      for (const recipient of (recipients as RecipientRow[] | null) || []) {
+      for (const recipient of (recipients || []) as RecipientRow[]) {
         if (processed >= MAX_PER_RUN) break;
 
-        const { data: campaign } = await supabase
+        const { data: campaignData } = await supabase
           .from("mass_broadcast_campaigns")
           .select("id, name, status, offer_templates, message_delay_min_seconds, message_delay_max_seconds, total_recipients, processed_recipients, success_count, failure_count")
           .eq("id", recipient.campaign_id)
-          .single<CampaignRow>();
+          .single();
 
+        const campaign = campaignData as CampaignRow | null;
         if (!campaign || campaign.status === "completed" || campaign.status === "paused") continue;
 
-        // ═══ AUTO-PAUSE: If 5 consecutive errors, pause campaign ═══
         if ((consecutiveErrors[campaign.id] || 0) >= MAX_CONSECUTIVE_ERRORS) {
-          await (supabase
-            .from("mass_broadcast_campaigns") as any)
-            .update({ status: "paused" })
-            .eq("id", campaign.id);
-
-          await insertLog(supabase, {
-            campaign_id: campaign.id,
-            recipient_id: recipient.id,
-            company_id: recipient.company_id,
-            phone,
-            step: "auth_error",
-            status: "error",
-            message: SESSION_EXPIRED_MESSAGE,
-            error_message: "401 - Token inválido",
-          });
-
-          await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
-            processed_recipients: c.processed_recipients + 1,
-            failure_count: c.failure_count + 1,
-          }));
-
-          consecutiveErrors[campaign.id] = MAX_CONSECUTIVE_ERRORS;
-          failed += 1;
-          processed += 1;
+          await (supabase.from("mass_broadcast_campaigns") as any).update({ status: "paused" }).eq("id", campaign.id);
           continue;
         }
 
-          // ═══ SINGLE ATTEMPT: Mark as failed permanently, skip immediately ═══
-          await (supabase
-            .from("mass_broadcast_recipients") as any)
-            .update({ status: "failed", error_message: FRIENDLY_CONNECTION_ERROR, last_attempt_at: new Date().toISOString() })
-            .eq("id", recipient.id);
+        const phone = normalizePhone(recipient.normalized_phone || recipient.phone);
+        
+        try {
+          if (savedContacts.has(phone)) {
+             await (supabase.from("mass_broadcast_recipients") as any).update({ status: "skipped" }).eq("id", recipient.id);
+             processed++;
+             continue;
+          }
 
-          await insertLog(supabase, {
-            campaign_id: campaign.id, recipient_id: recipient.id,
-            company_id: recipient.company_id, phone, step: "offer",
-            status: "error", message: recipient.offer_template || "",
-            error_message: FRIENDLY_CONNECTION_ERROR,
-          });
+          await simulateTyping(credentials.apiUrl, credentials.apiToken, phone);
+          await sendTextMessage(credentials.apiUrl, credentials.apiToken, phone, recipient.offer_template);
 
-            await updateCampaignCounters(supabase, campaign.id, (c: any) => ({
-              processed_recipients: c.processed_recipients + 1,
-              failure_count: c.failure_count + 1,
-            }));
-
-          // ═══ Track consecutive errors ═══
+          await (supabase.from("mass_broadcast_recipients") as any).update({ status: "sent" }).eq("id", recipient.id);
+          await updateCampaignCounters(supabase, campaign.id, (c) => ({ processed_recipients: c.processed_recipients + 1, success_count: c.success_count + 1 }));
+          
+          success++;
+          processed++;
+          consecutiveErrors[campaign.id] = 0;
+        } catch (err) {
+          await (supabase.from("mass_broadcast_recipients") as any).update({ status: "failed" }).eq("id", recipient.id);
+          await updateCampaignCounters(supabase, campaign.id, (c) => ({ processed_recipients: c.processed_recipients + 1, failure_count: c.failure_count + 1 }));
+          
+          failed++;
+          processed++;
           consecutiveErrors[campaign.id] = (consecutiveErrors[campaign.id] || 0) + 1;
-          failed += 1;
-          processed += 1;
         }
       }
     }
