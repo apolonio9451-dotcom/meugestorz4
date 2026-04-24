@@ -2009,6 +2009,7 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          credit_cost: number | null
           description: string | null
           duration_days: number
           id: string
@@ -2020,6 +2021,7 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          credit_cost?: number | null
           description?: string | null
           duration_days?: number
           id?: string
@@ -2031,6 +2033,7 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          credit_cost?: number | null
           description?: string | null
           duration_days?: number
           id?: string
