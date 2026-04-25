@@ -155,13 +155,13 @@ const BannerGenerator = () => {
   const shareOnWhatsApp = async () => {
     if (!selectedMatch) return;
     try {
-      const matchData: MatchData = {
-        ...selectedMatch,
-        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
-      };
+      const isDaily = selectedMatch.id === "daily";
+      const matchesToDraw = isDaily 
+        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek, selectedTemplate);
+      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
       
       const response = await fetch(dataUrl);
       const blob = await response.blob();
