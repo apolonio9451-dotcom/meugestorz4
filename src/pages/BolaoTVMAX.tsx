@@ -346,7 +346,7 @@ const BolaoTVMAX = () => {
                       Mas atenção: este prêmio é exclusivo para <span className="text-orange-500 font-bold uppercase">Assinantes TV MAX Ativos</span>. Não perca a chance de ganhar no próximo desafio, assine agora e valide seu cadastro!
                     </p>
                     <Button 
-                      onClick={() => window.open('https://wa.me/5500000000000?text=Quero%20ser%20assinante%20TV%20MAX%20para%20participar%20do%20Bolão!', '_blank')}
+                      onClick={() => window.open(`https://api.whatsapp.com/send?phone=${supportPhone || '55'}&text=Quero%20ser%20assinante%20TV%20MAX%20para%20participar%20do%20Bolão!`, '_blank')}
                       className="w-full bg-orange-500 hover:bg-orange-600 h-14 font-black uppercase tracking-widest text-black shadow-lg shadow-orange-500/20"
                     >
                       <MessageSquare className="w-5 h-5 mr-2" /> Falar com Suporte para Assinar
