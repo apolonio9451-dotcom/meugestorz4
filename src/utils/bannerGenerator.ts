@@ -250,6 +250,3 @@ export const generateBannerCanvas = async (
 
   return canvas.toDataURL("image/png");
 };
-
-  return canvas.toDataURL("image/png");
-};
