@@ -23,167 +23,178 @@ export const generateBannerCanvas = async (
 
   if (!ctx) throw new Error("Could not get canvas context");
 
-  // 1. Load all images first
+  // Helper to load images
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
-      img.onerror = reject;
+      img.onerror = () => {
+        // Fallback for failed images - return a 1x1 transparent pixel
+        const fallback = new Image();
+        fallback.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        resolve(fallback);
+      };
       img.src = src;
     });
   };
 
+  // Helper to adjust time to Brasília (UTC-3)
+  const formatBrasiliaTime = (isoString: string) => {
+    const date = new Date(isoString);
+    // Force UTC-3
+    const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+    const brasiliaDate = new Date(utc + (3600000 * -3));
+    return brasiliaDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  };
+
   const stadiumUrl = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=1080";
+  
+  // Load background and logo
   const [bgImg, logoImg] = await Promise.all([
     loadImage(stadiumUrl),
-    brandLogo ? loadImage(brandLogo).catch(() => null) : Promise.resolve(null),
+    brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
   ]);
 
-  // 2. Draw Background
+  // 1. Draw Background
   ctx.drawImage(bgImg, 0, 0, width, height);
-  // Dark overlay
-  ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-  ctx.fillRect(0, 0, width, height);
   
-  // Add some blur effect (simulated since native filter can be slow/buggy on some browsers)
-  // Actually, standard Canvas filter works well enough if applied before drawing
-  // but for simplicity and compatibility, we'll just use a dark gradient overlay
+  // Dark overlay gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "rgba(0, 0, 30, 0.8)");
-  gradient.addColorStop(0.5, "rgba(10, 10, 20, 0.9)");
+  gradient.addColorStop(0, "rgba(0, 0, 20, 0.85)");
+  gradient.addColorStop(0.5, "rgba(5, 5, 10, 0.9)");
   gradient.addColorStop(1, "rgba(0, 0, 0, 0.95)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
+
+  // 2. Watermark "TV MAX" (Subtle)
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.font = "bold 150px Montserrat, sans-serif";
+  ctx.fillStyle = "#FFFFFF";
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate(-Math.PI / 4);
+  ctx.textAlign = "center";
+  ctx.fillText("TV MAX", 0, 0);
+  ctx.fillText("TV MAX", -400, 400);
+  ctx.fillText("TV MAX", 400, -400);
+  ctx.restore();
 
   // 3. Draw Header
   ctx.textAlign = "center";
   ctx.fillStyle = "#FFFFFF";
   
   // "JOGOS" title
-  ctx.font = "bold 120px Montserrat, sans-serif";
-  ctx.fillText("JOGOS", width / 2, 250);
+  ctx.font = "bold 140px Montserrat, sans-serif";
+  ctx.shadowColor = "rgba(59, 130, 246, 0.5)";
+  ctx.shadowBlur = 20;
+  ctx.fillText("JOGOS", width / 2, 280);
+  ctx.shadowBlur = 0;
   
   // Day of week
-  ctx.font = "italic 40px Montserrat, sans-serif";
+  ctx.font = "italic 50px Montserrat, sans-serif";
   ctx.fillStyle = "#3b82f6"; // blue-500
-  ctx.fillText(dayOfWeek.toUpperCase(), width / 2, 310);
+  ctx.fillText(dayOfWeek.toUpperCase(), width / 2, 350);
 
   // 4. Draw Brand Logo (Top Right)
-  if (logoImg) {
-    const logoWidth = 200;
+  if (logoImg && logoImg.width > 1) {
+    const logoWidth = 180;
     const aspectRatio = logoImg.height / logoImg.width;
     const logoHeight = logoWidth * aspectRatio;
-    ctx.drawImage(logoImg, width - logoWidth - 50, 50, logoWidth, logoHeight);
+    ctx.drawImage(logoImg, width - logoWidth - 60, 60, logoWidth, logoHeight);
   } else {
-    // Default TV MAX logo if none provided
+    // Default TV MAX logo text
     ctx.font = "black italic 60px Montserrat, sans-serif";
     ctx.textAlign = "right";
     ctx.fillStyle = "#3b82f6";
-    ctx.fillText("TV MAX", width - 50, 100);
+    ctx.fillText("TV MAX", width - 60, 110);
   }
 
   // 5. Draw Matches
-  const startY = 450;
-  const rowHeight = 220;
-  const maxMatches = 5; // Limit to fit in banner
+  const startY = 550;
+  const rowHeight = 240;
+  const maxMatches = 5;
   const matchesToDraw = matches.slice(0, maxMatches);
 
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];
     const y = startY + i * rowHeight;
 
-    // Draw separator line
-    if (i > 0) {
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(100, y - 50);
-      ctx.lineTo(width - 100, y - 50);
-      ctx.stroke();
+    // Draw row background (subtle)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.beginPath();
+    ctx.roundRect(80, y - 80, width - 160, rowHeight - 40, 20);
+    ctx.fill();
+
+    const [homeShield, awayShield] = await Promise.all([
+      loadImage(match.home_logo),
+      loadImage(match.away_logo),
+    ]);
+
+    const shieldSize = 120;
+    const centerX = width / 2;
+
+    // Home Shield
+    if (homeShield && homeShield.width > 1) {
+      ctx.drawImage(homeShield, centerX - 420, y - 60, shieldSize, shieldSize);
+    }
+    
+    // Home Name
+    ctx.textAlign = "right";
+    ctx.font = "bold 42px Montserrat, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(match.home_team.toUpperCase(), centerX - 120, y + 15);
+
+    // "X"
+    ctx.textAlign = "center";
+    ctx.font = "italic 55px Montserrat, sans-serif";
+    ctx.fillStyle = "rgba(59, 130, 246, 0.6)";
+    ctx.fillText("X", centerX, y + 15);
+
+    // Away Name
+    ctx.textAlign = "left";
+    ctx.font = "bold 42px Montserrat, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(match.away_team.toUpperCase(), centerX + 120, y + 15);
+
+    // Away Shield
+    if (awayShield && awayShield.width > 1) {
+      ctx.drawImage(awayShield, centerX + 300, y - 60, shieldSize, shieldSize);
     }
 
-    // Load team shields (this should ideally be pre-loaded)
-    try {
-      const [homeShield, awayShield] = await Promise.all([
-        loadImage(match.home_logo).catch(() => null),
-        loadImage(match.away_logo).catch(() => null),
-      ]);
-
-      const shieldSize = 100;
-      const centerX = width / 2;
-
-      // Home Shield
-      if (homeShield) {
-        ctx.drawImage(homeShield, centerX - 400, y - 50, shieldSize, shieldSize);
-      }
-      
-      // Home Name
-      ctx.textAlign = "right";
-      ctx.font = "bold 40px Montserrat, sans-serif";
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.home_team.toUpperCase(), centerX - 120, y + 15);
-
-      // "X"
-      ctx.textAlign = "center";
-      ctx.font = "italic 50px Montserrat, sans-serif";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-      ctx.fillText("X", centerX, y + 15);
-
-      // Away Name
-      ctx.textAlign = "left";
-      ctx.font = "bold 40px Montserrat, sans-serif";
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.away_team.toUpperCase(), centerX + 120, y + 15);
-
-      // Away Shield
-      if (awayShield) {
-        ctx.drawImage(awayShield, centerX + 300, y - 50, shieldSize, shieldSize);
-      }
-
-      // Time and Channels
-      ctx.textAlign = "center";
-      ctx.font = "500 30px Montserrat, sans-serif";
-      ctx.fillStyle = "#94a3b8"; // slate-400
-      const timeStr = match.match_time.split("T")[1]?.substring(0, 5) || "";
-      const channelsStr = match.channels?.join(" | ") || "";
-      ctx.fillText(`${timeStr} | ${channelsStr}`, centerX, y + 70);
-
-    } catch (e) {
-      console.error("Error drawing match", e);
-    }
+    // Time and Channels
+    ctx.textAlign = "center";
+    ctx.font = "500 34px Montserrat, sans-serif";
+    ctx.fillStyle = "#94a3b8"; // slate-400
+    const timeStr = formatBrasiliaTime(match.match_time);
+    const channelsStr = match.channels && match.channels.length > 0 
+      ? ` | ${match.channels.join(" & ")}` 
+      : "";
+    ctx.fillText(`${timeStr}${channelsStr}`, centerX, y + 85);
   }
 
   // 6. Draw Footer CTA
   ctx.textAlign = "center";
-  const footerY = height - 150;
+  const footerY = height - 180;
   
-  // Rounded button background for CTA
   const ctaText = "ASSINE AGORA E ASSISTA EM 4K";
-  ctx.font = "bold 35px Montserrat, sans-serif";
+  ctx.font = "bold 38px Montserrat, sans-serif";
   const textWidth = ctx.measureText(ctaText).width;
-  const padding = 40;
+  const padding = 50;
   
   ctx.fillStyle = "#2563eb"; // blue-600
   const btnWidth = textWidth + padding * 2;
-  const btnHeight = 70;
+  const btnHeight = 85;
   const btnX = (width - btnWidth) / 2;
-  const btnY = footerY - 45;
+  const btnY = footerY - 55;
   
-  // Draw rounded rect
-  const radius = 35;
+  // Draw rounded rect with glow
+  ctx.shadowColor = "rgba(37, 99, 235, 0.5)";
+  ctx.shadowBlur = 25;
   ctx.beginPath();
-  ctx.moveTo(btnX + radius, btnY);
-  ctx.lineTo(btnX + btnWidth - radius, btnY);
-  ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + radius);
-  ctx.lineTo(btnX + btnWidth, btnY + btnHeight - radius);
-  ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - radius, btnY + btnHeight);
-  ctx.lineTo(btnX + radius, btnY + btnHeight);
-  ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - radius);
-  ctx.lineTo(btnX, btnY + radius);
-  ctx.quadraticCurveTo(btnX, btnY, btnX + radius, btnY);
-  ctx.closePath();
+  ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 42.5);
   ctx.fill();
+  ctx.shadowBlur = 0;
 
   ctx.fillStyle = "#FFFFFF";
   ctx.fillText(ctaText, width / 2, footerY);
