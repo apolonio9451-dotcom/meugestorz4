@@ -170,13 +170,15 @@ export const generateBannerCanvas = async (
     ctx.fillStyle = config.dayOfWeek.color;
     const timeStr = formatBrasiliaTime(match.match_time);
     
-    // Draw horizontal line or separator
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(centerX - 400, y + 110);
-    ctx.lineTo(centerX + 400, y + 110);
-    ctx.stroke();
+    // Draw horizontal line or separator ONLY IF NOT CUSTOM BACKGROUND
+    if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(centerX - 400, y + 110);
+      ctx.lineTo(centerX + 400, y + 110);
+      ctx.stroke();
+    }
 
     const channelsStr = match.channels && match.channels.length > 0 
       ? match.channels.join(" | ") 
