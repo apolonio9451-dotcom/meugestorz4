@@ -88,6 +88,8 @@ const App = () => (
             <Route path="/dashboard/marketing" element={<DashboardRoute><Marketing /></DashboardRoute>} />
             <Route path="/dashboard/campaigns" element={<DashboardRoute><Campaigns /></DashboardRoute>} />
             <Route path="/dashboard/banner-generator" element={<DashboardRoute><BannerGenerator /></DashboardRoute>} />
+            <Route path="/dashboard/bolao" element={<DashboardRoute><BolaoAdmin /></DashboardRoute>} />
+            <Route path="/portal-cliente" element={<CustomerPortal />} />
 
             
             <Route path="/dashboard/resellers" element={<DashboardRoute><PlanGate feature="Revendedores"><Resellers /></PlanGate></DashboardRoute>} />
