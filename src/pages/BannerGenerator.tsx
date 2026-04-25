@@ -60,7 +60,7 @@ const BannerGenerator = () => {
         channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
       };
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek, selectedTemplate);
       setPreviewUrl(dataUrl);
     } catch (error) {
       console.error("Error generating preview", error);
