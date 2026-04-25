@@ -236,7 +236,16 @@ const BannerGenerator = () => {
         : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
+      const currentTemplate = templates.find(t => t.id === selectedTemplateId);
+
+      const dataUrl = await generateBannerCanvas(
+        matchesToDraw, 
+        brandLogo, 
+        dayOfWeek, 
+        selectedTemplateId,
+        currentTemplate?.background_url,
+        currentTemplate?.config
+      );
       
       const response = await fetch(dataUrl);
       const blob = await response.blob();
@@ -269,9 +278,10 @@ const BannerGenerator = () => {
     };
     setSelectedMatch(dailyMock);
     setCustomChannels("");
-    setSelectedTemplate(1);
+    setSelectedTemplateId("default");
     setIsEditorOpen(true);
   };
+
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
