@@ -133,7 +133,7 @@ const BannerGenerator = () => {
       };
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek, selectedTemplate);
       
       const link = document.createElement("a");
       link.download = `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
