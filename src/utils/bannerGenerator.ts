@@ -146,9 +146,14 @@ export const generateBannerCanvas = async (
       loadImage(match.away_logo),
     ]);
 
-    // 1. ZONA VERDE (HORÁRIO) - Superior
+    // 1. ZONA VERDE (HORÁRIO) - Cobertura de limpeza e texto
     const timeY = yCenter - 65;
     const timeStr = formatBrasiliaTime(match.match_time);
+    
+    // Opcional: Desenhar fundo se o template tiver texto fixo
+    // ctx.fillStyle = "#054523"; 
+    // ctx.fillRect(canvasCenterX - 100, timeY - 30, 200, 50);
+
     ctx.textAlign = "center";
     ctx.font = "bold 38px Montserrat, sans-serif";
     ctx.fillStyle = "#FFFFFF";
@@ -161,6 +166,11 @@ export const generateBannerCanvas = async (
     ctx.fillText("VS", canvasCenterX, yCenter + 20);
 
     // 3. ZONA PRETA (NOMES E ESCUDOS) - Central
+    // Cobertura de limpeza (opcional, mas garante que placeholders sumam)
+    // ctx.fillStyle = "#000000";
+    // ctx.fillRect(100, yCenter - 40, 350, 80); // Lado Esquerdo
+    // ctx.fillRect(width - 450, yCenter - 40, 350, 80); // Lado Direito
+
     // Escudo Casa (Extremidade Esquerda)
     const shieldY = yCenter - (shieldSize / 2) + 5;
     const homeShieldX = 130; 
@@ -194,6 +204,10 @@ export const generateBannerCanvas = async (
     const transmissionY = yCenter + 95;
     const transmission = match.channels && match.channels.length > 0 ? match.channels.join(" | ") : "ONDE ASSISTIR";
     
+    // Cobertura de limpeza (opcional)
+    // ctx.fillStyle = "#FFFFFF";
+    // ctx.fillRect(canvasCenterX - 200, transmissionY - 30, 400, 50);
+
     ctx.textAlign = "center";
     ctx.font = "bold 30px Montserrat, sans-serif";
     ctx.fillStyle = "#000033"; // Cor escura para contraste no branco
