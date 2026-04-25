@@ -35,10 +35,23 @@ const BolaoTVMAX = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [guesses, setGuesses] = useState<Record<string, { home: string, away: string }>>({});
   const [existingGuess, setExistingGuess] = useState<any>(null);
+  const [supportPhone, setSupportPhone] = useState("");
 
   useEffect(() => {
     fetchActiveChallenge();
+    fetchSupportPhone();
   }, []);
+
+  const fetchSupportPhone = async () => {
+    // Get from company_settings
+    const { data } = await supabase.rpc("get_support_whatsapp_public"); // I might need a public RPC or just query settings if RLS allows
+    if (!data) {
+        const { data: settings } = await supabase.from('company_settings').select('support_whatsapp').limit(1).maybeSingle();
+        if (settings?.support_whatsapp) setSupportPhone(settings.support_whatsapp);
+    } else {
+        setSupportPhone(data as string);
+    }
+  };
 
   const fetchActiveChallenge = async () => {
     const { data: challengeData } = await supabase
