@@ -77,156 +77,179 @@ export const generateBannerCanvas = async (
     brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
   ]);
 
-  // 1. Draw Background (FIRST LAYER)
+  // 1. Draw Background & Base Layer
   ctx.drawImage(bgImg, 0, 0, width, height);
   
-  // Apply dark overlay if not custom template or if custom template is default
   if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+    // Dark textured background simulation
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, "rgba(0, 0, 20, 0.9)");
-    gradient.addColorStop(0.5, "rgba(5, 5, 10, 0.95)");
-    gradient.addColorStop(1, "rgba(0, 0, 0, 1)");
+    gradient.addColorStop(0, "#0a0a1a");
+    gradient.addColorStop(0.5, "#050510");
+    gradient.addColorStop(1, "#000000");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
+
+    // Subtle texture (dots)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
+    for (let i = 0; i < width; i += 40) {
+      for (let j = 0; j < height; j += 40) {
+        ctx.fillRect(i, j, 2, 2);
+      }
+    }
   }
 
-  // 2. HEADER - "JOGOS DE HOJE" + DATA (image_10.png style)
-  const headerY = 220;
+  // 2. HEADER - Professional Clean Title
+  const headerY = 200;
   ctx.textAlign = "center";
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 90px Montserrat, sans-serif";
   
   const today = new Date();
-  const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-  const formattedDate = today.toLocaleDateString('pt-BR', options).toUpperCase();
-  
-  let mainTitle = `JOGOS DE HOJE - ${formattedDate}`;
-  if (pageInfo && pageInfo.total > 1) {
-    mainTitle += ` (${pageInfo.current}/${pageInfo.total})`;
-  }
-  
-  // Clean header area to avoid overlaps
-  ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+  const dayName = today.toLocaleDateString('pt-BR', { weekday: 'long' }).toUpperCase();
+  const dayNum = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const year = today.getFullYear();
+  const fullDateStr = `JOGOS DE HOJE - ${dayName}, ${dayNum} DE ${year}`;
+
+  // Header cleaning box
+  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
   ctx.fillRect(50, headerY - 80, width - 100, 160);
-  
+
+  ctx.font = "bold 70px Montserrat, sans-serif";
   ctx.fillStyle = "#FFFFFF";
-  ctx.fillText(mainTitle, width / 2, headerY + 20);
+  ctx.fillText(fullDateStr, width / 2, headerY + 15);
+
+  if (pageInfo && pageInfo.total > 1) {
+    ctx.font = "bold 30px Montserrat, sans-serif";
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillText(`PÁGINA ${pageInfo.current} / ${pageInfo.total}`, width / 2, headerY + 70);
+  }
 
   // 3. LOGO TV MAX
   if (logoImg && logoImg.width > 1) {
-    const logoW = 180;
+    const logoW = 160;
     const aspectRatio = logoImg.height / logoImg.width;
     const logoH = logoW * aspectRatio;
-    ctx.drawImage(logoImg, width - logoW - 60, 60, logoW, logoH);
+    ctx.drawImage(logoImg, width - logoW - 60, 40, logoW, logoH);
   }
 
-  // 4. GRID DE JOGOS (Cordenadas Ajustadas por Zona)
-  const startY = 520; // Ajustado para não colidir com o cabeçalho
+  // 4. MATCH GRID - 5 COLUMN STRUCTURE
+  const startY = 450;
   const rowHeight = 220;
-  const shieldSize = 80; 
-  const nameMaxWidth = 300; 
-  const zonePadding = 120; // Column-based separation like image_10.png
-
-  const getAutoShrinkFontSize = (text: string, maxWidth: number, baseSize: number) => {
-    ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
-    let size = baseSize;
-    while (ctx.measureText(text.toUpperCase()).width > maxWidth && size > 16) {
-      size--;
-      ctx.font = `bold ${size}px Montserrat, sans-serif`;
-    }
-    return size;
-  };
+  const shieldSize = 80;
+  const leagueLogoSize = 60;
+  const nameMaxWidth = 250;
 
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i];
     const yCenter = startY + i * rowHeight;
     const canvasCenterX = width / 2;
 
-    const [homeShield, awayShield] = await Promise.all([
+    const [homeShield, awayShield, leagueLogo] = await Promise.all([
       loadImage(match.home_logo),
       loadImage(match.away_logo),
+      match.league_logo ? loadImage(match.league_logo) : Promise.resolve(null),
     ]);
 
-    // --- 5-COLUMN STRUCTURE (image_10.png) ---
-    
-    // Column 1: League Logo & Time (Left)
-    const col1X = 60;
-    const timeStr = formatBrasiliaTime(match.match_time);
-    ctx.textAlign = "left";
-    ctx.font = "bold 36px Montserrat, sans-serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(timeStr, col1X + 70, yCenter + 15);
-    // Note: League logo would be drawn at col1X if match.league_logo was available
+    // Draw row "Frame/Molde" (Neon Glow Effect)
+    const frameWidth = width - 100;
+    const frameHeight = rowHeight - 20;
+    const frameX = 50;
+    const frameY = yCenter - (frameHeight / 2);
 
-    // Column 2: Home Team (Mandante)
-    const col2ShieldX = 260;
-    if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, col2ShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
+    // Frame cleaning
+    ctx.fillStyle = "rgba(10, 10, 30, 0.8)";
+    ctx.beginPath();
+    ctx.roundRect(frameX, frameY, frameWidth, frameHeight, 15);
+    ctx.fill();
+
+    // Neon border
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; // Blue neon
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // --- COLUMN 1: LEAGUE & TIME ---
+    const col1X = 80;
+    if (leagueLogo && leagueLogo.width > 1) {
+      ctx.drawImage(leagueLogo, col1X, yCenter - (leagueLogoSize / 2), leagueLogoSize, leagueLogoSize);
     }
-    const homeNameSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 38);
-    ctx.font = `bold ${homeNameSize}px Montserrat, sans-serif`;
+    ctx.textAlign = "left";
+    ctx.font = "bold 34px Montserrat, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(formatBrasiliaTime(match.match_time), col1X + 75, yCenter + 12);
+
+    // --- COLUMN 2: HOME TEAM ---
+    const col2X = 260;
+    if (homeShield && homeShield.width > 1) {
+      ctx.drawImage(homeShield, col2X, yCenter - (shieldSize / 2), shieldSize, shieldSize);
+    }
+    const homeNameFontSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 36);
+    ctx.font = `bold ${homeNameFontSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.home_team.toUpperCase(), col2ShieldX + shieldSize + 20, yCenter + 15);
+    ctx.fillText(match.home_team.toUpperCase(), col2X + shieldSize + 20, yCenter + 12);
 
-    // Column 3: VS (Center)
+    // --- COLUMN 3: VS ---
     ctx.textAlign = "center";
-    ctx.font = "italic bold 48px Montserrat, sans-serif";
+    ctx.font = "italic bold 42px Montserrat, sans-serif";
     ctx.fillStyle = "#3b82f6";
-    ctx.fillText("VS", canvasCenterX, yCenter + 15);
+    ctx.fillText("VS", canvasCenterX, yCenter + 12);
 
-    // Column 4: Away Team (Visitante)
-    const col4NameX = canvasCenterX + 60;
-    const awayNameSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 38);
-    ctx.font = `bold ${awayNameSize}px Montserrat, sans-serif`;
+    // --- COLUMN 4: AWAY TEAM ---
+    const col4X = canvasCenterX + 60;
+    const awayNameFontSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 36);
+    ctx.font = `bold ${awayNameFontSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.away_team.toUpperCase(), col4NameX, yCenter + 15);
-    
+    ctx.fillText(match.away_team.toUpperCase(), col4X, yCenter + 12);
+
     const awayNameWidth = ctx.measureText(match.away_team.toUpperCase()).width;
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, col4NameX + awayNameWidth + 20, yCenter - (shieldSize / 2), shieldSize, shieldSize);
+      ctx.drawImage(awayShield, col4X + awayNameWidth + 20, yCenter - (shieldSize / 2), shieldSize, shieldSize);
     }
 
-    // Column 5: Channels (Right)
-    const col5X = width - 180;
+    // --- COLUMN 5: CHANNELS ---
+    const col5X = width - 220;
     if (match.channels && match.channels.length > 0) {
       ctx.textAlign = "center";
-      ctx.font = "bold 24px Montserrat, sans-serif";
-      ctx.fillStyle = "#FFFFFF";
-      // Draw first 2 channels stacked if multiple
-      match.channels.slice(0, 2).forEach((channel, idx) => {
-        ctx.fillText(channel.toUpperCase(), col5X + 80, yCenter - 5 + (idx * 35));
+      ctx.font = "bold 22px Montserrat, sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      // Stack up to 3 channels
+      match.channels.slice(0, 3).forEach((channel, idx) => {
+        const offset = (idx - (Math.min(match.channels.length, 3) - 1) / 2) * 35;
+        ctx.fillText(channel.toUpperCase(), col5X + 100, yCenter + offset + 8);
       });
     }
   }
 
-  // 5. FOOTER - image_10.png exact replication
+  // 5. FOOTER - Exactly as image_10.png
   const footerY = 1850;
   
-  // "ASSINE JÁ!" Button (Left)
+  // Left: "ASSINE JÁ!" Button
   const btnX = 60;
-  const btnW = 240;
-  const btnH = 70;
+  const btnW = 220;
+  const btnH = 65;
   ctx.fillStyle = "#2563eb";
   ctx.beginPath();
   ctx.roundRect(btnX, footerY - 45, btnW, btnH, 10);
   ctx.fill();
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 30px Montserrat, sans-serif";
+  ctx.font = "bold 28px Montserrat, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("ASSINE JÁ!", btnX + (btnW / 2), footerY);
 
-  // Center Text
-  ctx.font = "500 24px Montserrat, sans-serif";
+  // Center: Text
+  ctx.textAlign = "center";
+  ctx.font = "500 22px Montserrat, sans-serif";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
   ctx.fillText("ASSISTA EM QUALQUER DISPOSITIVO", width / 2, footerY);
 
-  // Device Icons (Right) - Simplified placeholders for standard devices
-  const iconText = "SAMSUNG | LG | ROKU | GOOGLE | FIRE TV | ANDROID";
-  ctx.font = "bold 20px Montserrat, sans-serif";
+  // Right: Device List
+  const deviceText = "SAMSUNG | LG | ROKU | GOOGLE | FIRE TV | ANDROID | XIAOMI";
+  ctx.font = "bold 18px Montserrat, sans-serif";
   ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-  ctx.fillText(iconText, width - 60, footerY);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+  ctx.fillText(deviceText, width - 60, footerY);
+
+  return canvas.toDataURL("image/png");
+};
 
   return canvas.toDataURL("image/png");
 };
