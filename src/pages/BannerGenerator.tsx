@@ -421,97 +421,16 @@ const BannerGenerator = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="text-sm font-medium text-zinc-400 mb-2">Prévia (WhatsApp Status)</div>
                 <div 
-                  ref={bannerRef}
-                  className="w-[280px] h-[498px] bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 rounded-xl overflow-hidden relative shadow-2xl shadow-blue-500/20 border border-zinc-800 flex flex-col items-center justify-between p-8"
-                  style={{
-                    background: "radial-gradient(circle at center, #1a1a2e 0%, #0a0a0c 100%)"
-                  }}
+                  className="w-[280px] h-[498px] bg-zinc-900 rounded-xl overflow-hidden relative shadow-2xl shadow-blue-500/20 border border-zinc-800 flex items-center justify-center"
                 >
-                  {/* Decorative Elements */}
-                  <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                    <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-blue-600/10 blur-[80px] rounded-full" />
-                    <div className="absolute bottom-[-10%] left-[-10%] w-40 h-40 bg-purple-600/10 blur-[80px] rounded-full" />
-                  </div>
-
-                  {/* Header / Logo */}
-                  <div className="relative z-10 flex flex-col items-center gap-2 w-full">
-                    {brandLogo ? (
-                      <img src={brandLogo} alt="Logo" className="h-16 w-auto object-contain max-w-[80%]" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="text-2xl font-black italic tracking-tighter bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                          TV MAX
-                        </div>
-                        <div className="h-[1px] w-12 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Teams Section */}
-                  <div className="relative z-10 flex flex-col items-center w-full gap-6">
-                    <div className="flex flex-col items-center gap-4 w-full">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full scale-150" />
-                        <img 
-                          src={selectedMatch?.home_logo} 
-                          className="w-24 h-24 object-contain relative z-10" 
-                          alt="Home" 
-                        />
-                      </div>
-                      <div className="text-lg font-bold text-white tracking-wide uppercase text-center leading-tight">
-                        {selectedMatch?.home_team}
-                      </div>
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+                      <span className="text-xs text-muted-foreground">Gerando prévia...</span>
                     </div>
-
-                    <div className="flex items-center gap-4 w-full justify-center">
-                       <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent to-blue-500/50" />
-                       <div className="text-2xl font-black italic text-zinc-600">VS</div>
-                       <div className="h-[2px] flex-1 bg-gradient-to-l from-transparent to-purple-500/50" />
-                    </div>
-
-                    <div className="flex flex-col items-center gap-4 w-full">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-full scale-150" />
-                        <img 
-                          src={selectedMatch?.away_logo} 
-                          className="w-24 h-24 object-contain relative z-10" 
-                          alt="Away" 
-                        />
-                      </div>
-                      <div className="text-lg font-bold text-white tracking-wide uppercase text-center leading-tight">
-                        {selectedMatch?.away_team}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Info Section */}
-                  <div className="relative z-10 flex flex-col items-center gap-6 w-full mt-4">
-                    <div className="flex flex-col items-center">
-                      <div className="text-sm font-semibold text-blue-400 mb-1">{selectedMatch?.league_name}</div>
-                      <div className="text-3xl font-black text-white drop-shadow-lg">
-                        {selectedMatch && format(new Date(selectedMatch.match_time), "HH:mm")}
-                      </div>
-                      <div className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1">
-                        {selectedMatch && format(new Date(selectedMatch.match_time), "dd 'de' MMMM", { locale: ptBR })}
-                      </div>
-                    </div>
-
-                    {customChannels && (
-                      <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full text-center">
-                        <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Onde Assistir</div>
-                        <div className="text-xs font-bold text-zinc-200">
-                          {customChannels}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Footer CTA */}
-                    <div className="flex flex-col items-center gap-2 mt-4">
-                      <div className="bg-blue-600 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-tighter animate-pulse shadow-lg shadow-blue-600/50">
-                        Assine agora e assista em 4K
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
