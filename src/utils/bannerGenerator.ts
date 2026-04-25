@@ -94,8 +94,10 @@ export const generateBannerCanvas = async (
   
   // "JOGOS" title
   ctx.font = "bold 140px Montserrat, sans-serif";
-  ctx.shadowColor = "rgba(59, 130, 246, 0.5)";
-  ctx.shadowBlur = 20;
+  const titleColor = templateId === 2 ? "#d8b4fe" : "#FFFFFF"; // purple-300 for template 2
+  ctx.fillStyle = titleColor;
+  ctx.shadowColor = templateId === 2 ? "rgba(168, 85, 247, 0.8)" : "rgba(59, 130, 246, 0.5)";
+  ctx.shadowBlur = 30;
   ctx.fillText("JOGOS", width / 2, 280);
   ctx.shadowBlur = 0;
   
