@@ -6,6 +6,7 @@ export interface MatchData {
   away_logo: string;
   match_time: string;
   league_name: string;
+  league_logo?: string;
   channels: string[];
 }
 
