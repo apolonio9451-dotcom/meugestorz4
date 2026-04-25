@@ -46,11 +46,16 @@ export const TemplateConfigPanel = ({ companyId, onTemplateCreated, templates }:
       const fileExt = file.name.split(".").pop();
       const filePath = `${companyId}/bg-template-${Math.random()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log("Subindo arquivo para:", filePath);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("company-assets")
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Erro no upload do storage:", uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from("company-assets")
@@ -59,7 +64,8 @@ export const TemplateConfigPanel = ({ companyId, onTemplateCreated, templates }:
       setNewTemplate(prev => ({ ...prev, background_url: publicUrl }));
       toast.success("Fundo enviado com sucesso!");
     } catch (error: any) {
-      toast.error("Erro ao subir fundo: " + error.message);
+      console.error("Erro completo:", error);
+      toast.error("Erro ao subir fundo: " + (error.error_description || error.message || "Erro desconhecido"));
     } finally {
       setUploading(false);
     }
