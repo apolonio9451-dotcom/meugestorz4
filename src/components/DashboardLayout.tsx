@@ -103,6 +103,40 @@ const navItems: NavItem[] = [
   },
 ];
 
+const ShareBolaoButton = () => {
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/palpites`;
+    const shareText = "⚽ Desafio Bolão TV MAX! 🏆 Você acha que entende de futebol? Tente acertar os placares de hoje e ganhe prêmios! Participe aqui:";
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Bolão TV MAX",
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + " " + shareUrl)}`;
+      window.open(whatsappUrl, "_blank");
+    }
+  };
+
+  return (
+    <button
+      onClick={handleShare}
+      className="flex items-center gap-3 px-3 py-3.5 lg:py-2.5 w-full rounded-xl lg:rounded-lg text-base lg:text-sm font-bold transition-all duration-300 group relative overflow-hidden bg-zinc-900 border border-primary/20 hover:border-primary/50 text-primary shadow-[0_0_15px_rgba(0,242,255,0.1)] hover:shadow-[0_0_20px_rgba(0,242,255,0.2)]"
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Trophy className="w-5 h-5 animate-pulse" />
+      <span className="relative z-10 uppercase tracking-tighter italic">Compartilhar Bolão</span>
+      <Share2 className="w-4 h-4 ml-auto relative z-10" />
+    </button>
+  );
+};
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { signOut, user, companyId, effectiveCompanyId, userRole, resellerCredits, planType, effectivePlanType, isTrial, session, loading } = useAuth();
   const { isGhostMode, ghostName, ghostCompanyId, exitGhostMode } = useGhostMode();
