@@ -186,7 +186,7 @@ const BannerGenerator = () => {
     try {
       const isDaily = selectedMatch.id === "daily";
       const currentTemplate = templates.find(t => t.id === selectedTemplateId);
-      const maxPerPage = currentTemplate?.config?.matches?.maxPerPage || 8;
+      const maxPerPage = currentTemplate?.config?.matches?.maxPerPage || 6;
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
       
