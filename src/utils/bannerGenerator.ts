@@ -176,10 +176,8 @@ export const generateBannerCanvas = async (
       ctx.fillStyle = "rgba(59, 130, 246, 0.8)";
       ctx.fillText("VS", centerX, y + 20);
     } else {
-      // Default list layout
-      if (homeShield && homeShield.width > 1) {
-        ctx.drawImage(homeShield, centerX - 420, y - 60, shieldSize, shieldSize);
-      }
+      // List layout based on image_5d9d11.jpg
+      // No shields here, they are drawn below beside the names
       
       // Style like image_5d9d11.jpg
       ctx.textAlign = "center";
