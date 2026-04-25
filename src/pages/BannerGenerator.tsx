@@ -61,7 +61,7 @@ const BannerGenerator = () => {
     if (isEditorOpen && selectedMatch) {
       updatePreview();
     }
-  }, [isEditorOpen, selectedMatch, selectedTemplateId, matches]);
+  }, [isEditorOpen, selectedMatch, selectedTemplateId, matches, hideFrames, hideHeaderBox]);
 
   const updatePreview = async () => {
     if (!selectedMatch) return;
