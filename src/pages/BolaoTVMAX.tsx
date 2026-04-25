@@ -258,8 +258,8 @@ const BolaoTVMAX = () => {
           {step === "form" && (
             <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle className="text-lg text-center font-bold">Quase lá!</CardTitle>
-                <p className="text-center text-zinc-500 text-sm italic">Você ainda não é assinante TV MAX. Participe como convidado:</p>
+                <CardTitle className="text-lg text-center font-bold">Boas-vindas ao Bolão!</CardTitle>
+                <p className="text-center text-zinc-500 text-sm italic">Informe seu nome para identificarmos seu palpite:</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
