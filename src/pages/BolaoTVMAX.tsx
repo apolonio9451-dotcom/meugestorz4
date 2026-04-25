@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Trophy, Send, CheckCircle2, Lock, Smartphone, User, History, Share2, MessageSquare } from "lucide-react";
+import { Trophy, Send, CheckCircle2, Lock, Smartphone, User, History, Share2, MessageSquare, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -14,6 +14,9 @@ interface Match {
   id: string;
   home_team: string;
   away_team: string;
+  home_logo?: string;
+  away_logo?: string;
+  league_name?: string;
   match_time: string;
   match_date: string;
 }
@@ -296,38 +299,71 @@ const BolaoTVMAX = () => {
 
               <div className="space-y-4">
                 {matches.map((match) => (
-                  <div key={match.id} className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
-                    <div className="bg-zinc-900/50 p-2 text-center border-b border-zinc-800">
-                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                  <Card key={match.id} className="bg-zinc-950/40 border-zinc-800/50 backdrop-blur-sm overflow-hidden transition-all hover:border-primary/30 group">
+                    <div className="bg-zinc-900/80 p-2 text-center border-b border-zinc-800/50 flex items-center justify-between px-4">
+                      <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                        {match.league_name || "FUTEBOL PROFISSIONAL"}
+                      </span>
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
                         {format(new Date(match.match_time), "HH:mm", { locale: ptBR })}
                       </span>
                     </div>
-                    <div className="p-4 flex items-center justify-between gap-4">
-                      <div className="flex-1 text-right">
-                        <p className="text-sm font-black truncate">{match.home_team}</p>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Time Casa */}
+                        <div className="flex-1 flex flex-col items-center gap-2 text-center min-w-0">
+                          <div className="w-12 h-12 relative group-hover:scale-110 transition-transform">
+                            <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img 
+                              src={match.home_logo || "/placeholder.svg"} 
+                              alt={match.home_team} 
+                              className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" 
+                            />
+                          </div>
+                          <p className="text-[10px] font-black uppercase tracking-tight leading-tight h-7 flex items-center justify-center overflow-hidden">
+                            {match.home_team}
+                          </p>
+                        </div>
+
+                        {/* Placar */}
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="text" 
+                            inputMode="numeric"
+                            value={guesses[match.id]?.home || ""}
+                            onChange={(e) => handleGuessChange(match.id, 'home', e.target.value)}
+                            className="w-12 h-14 text-center font-black text-2xl bg-zinc-900/50 border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary/50 p-0 rounded-xl"
+                            placeholder="-"
+                          />
+                          <span className="text-zinc-700 font-black italic text-sm">X</span>
+                          <Input 
+                            type="text" 
+                            inputMode="numeric"
+                            value={guesses[match.id]?.away || ""}
+                            onChange={(e) => handleGuessChange(match.id, 'away', e.target.value)}
+                            className="w-12 h-14 text-center font-black text-2xl bg-zinc-900/50 border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary/50 p-0 rounded-xl"
+                            placeholder="-"
+                          />
+                        </div>
+
+                        {/* Time Fora */}
+                        <div className="flex-1 flex flex-col items-center gap-2 text-center min-w-0">
+                          <div className="w-12 h-12 relative group-hover:scale-110 transition-transform">
+                            <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <img 
+                              src={match.away_logo || "/placeholder.svg"} 
+                              alt={match.away_team} 
+                              className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" 
+                            />
+                          </div>
+                          <p className="text-[10px] font-black uppercase tracking-tight leading-tight h-7 flex items-center justify-center overflow-hidden">
+                            {match.away_team}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          type="text" 
-                          inputMode="numeric"
-                          value={guesses[match.id]?.home || ""}
-                          onChange={(e) => handleGuessChange(match.id, 'home', e.target.value)}
-                          className="w-12 h-12 text-center font-black text-xl bg-zinc-900 border-zinc-800 p-0"
-                        />
-                        <span className="text-zinc-600 font-black italic">x</span>
-                        <Input 
-                          type="text" 
-                          inputMode="numeric"
-                          value={guesses[match.id]?.away || ""}
-                          onChange={(e) => handleGuessChange(match.id, 'away', e.target.value)}
-                          className="w-12 h-12 text-center font-black text-xl bg-zinc-900 border-zinc-800 p-0"
-                        />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="text-sm font-black truncate">{match.away_team}</p>
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
 
