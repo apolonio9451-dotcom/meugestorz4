@@ -45,8 +45,6 @@ Deno.serve(async (req) => {
 
     const allMatches = [];
 
-    const allMatches = [];
-
     console.log(`Fetching from RapidAPI...`);
     // Note: We need to use the endpoint that includes broadcasters if possible
     // but the standard fixtures endpoint sometimes has them in specific plans.
