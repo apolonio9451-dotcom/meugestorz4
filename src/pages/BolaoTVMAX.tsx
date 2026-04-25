@@ -109,7 +109,11 @@ const BolaoTVMAX = () => {
   };
 
   const checkExistingGuess = async (phoneNumber: string) => {
-    if (!challenge) return;
+    if (!challenge) {
+      toast.error("Não há nenhum desafio ativo no momento. Tente novamente mais tarde.");
+      setLoading(false);
+      return;
+    }
 
     const { data } = await supabase
       .from("bolao_guesses")
