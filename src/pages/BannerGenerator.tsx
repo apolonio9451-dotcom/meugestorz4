@@ -509,8 +509,6 @@ const BannerGenerator = () => {
                   </div>
                 </div>
 
-                <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 mb-6">
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Curadoria de Jogos</Label>
@@ -545,30 +543,14 @@ const BannerGenerator = () => {
                         </div>
                         <Input 
                           defaultValue={match.channels?.join(", ")}
-                          placeholder="Ex: Premiere, Globo"
-                          className="h-9 text-[11px] font-bold bg-zinc-950 border-zinc-800 focus:border-primary/50 uppercase"
                           onChange={(e) => updateMatchChannel(idx, e.target.value)}
+                          className="h-10 bg-zinc-950 border-zinc-800 focus:border-primary/50 text-[10px] font-bold uppercase tracking-widest"
                         />
                       </div>
-                      
-                      {match.channels && match.channels.length > 0 && (
-                        <div className="mt-2 flex items-center gap-1">
-                          <div className="w-1 h-1 rounded-full bg-green-500" />
-                          <span className="text-[8px] font-bold text-green-500 uppercase tracking-widest">
-                            Transmissão Detectada: {match.channels[0]}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-            
-            <div className="p-4 bg-zinc-900/80 border-t border-zinc-800 flex justify-center gap-4">
-               <Button variant="ghost" className="text-zinc-500 text-[10px] font-black uppercase tracking-widest hover:text-white" onClick={shareOnWhatsApp}>
-                 <Share2 className="w-4 h-4 mr-2" /> Compartilhar Preview
-               </Button>
             </div>
           </DialogContent>
         </Dialog>
