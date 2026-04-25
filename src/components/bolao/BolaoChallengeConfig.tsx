@@ -4,26 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Trophy, Plus, Trash2, Save, Calendar, CheckCircle2, RefreshCw, Wand2, Users, Gamepad2, Eye } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Trophy, CheckCircle2, RefreshCw, Wand2, Users, Gamepad2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { generateVictoryBanner } from "@/utils/victoryBannerGenerator";
 
-interface Match {
-  id: string;
-  home_team: string;
-  away_team: string;
-  match_time: string;
-  match_date: string;
-}
-
 export const BolaoChallengeConfig = () => {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatchIds, setSelectedMatchIds] = useState<string[]>([]); // Keep for legacy if needed by other components, but unused now
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false); // Keep to avoid breaking other parts of code if any
-
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -34,7 +20,6 @@ export const BolaoChallengeConfig = () => {
   const [activeChallengeMatches, setActiveChallengeMatches] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchMatches();
     fetchActiveChallenge();
     fetchBrandLogo();
   }, []);
@@ -46,24 +31,6 @@ export const BolaoChallengeConfig = () => {
       .limit(1)
       .maybeSingle();
     if (data?.brand_logo_url) setBrandLogo(data.brand_logo_url);
-  };
-
-  const fetchMatches = async () => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const { data, error } = await supabase
-        .from("sports_matches")
-        .select("id, home_team, away_team, match_time, match_date")
-        .gte("match_date", today)
-        .order("match_time", { ascending: true });
-
-      if (error) throw error;
-      setMatches(data || []);
-    } catch (error: any) {
-      toast.error("Erro ao buscar jogos: " + error.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const fetchActiveChallenge = async () => {
@@ -82,10 +49,10 @@ export const BolaoChallengeConfig = () => {
       setWinnersCount(0);
       setActiveChallengeMatches([]);
     }
+    setLoading(false);
   };
 
   const fetchChallengeStats = async (challengeId: string, matchIds: string[]) => {
-    // Fetch participants count
     const { count: pCount } = await supabase
       .from("bolao_guesses")
       .select("*", { count: 'exact', head: true })
@@ -93,7 +60,6 @@ export const BolaoChallengeConfig = () => {
     
     setParticipantCount(pCount || 0);
 
-    // Fetch winners count
     const { count: wCount } = await supabase
       .from("bolao_guesses")
       .select("*", { count: 'exact', head: true })
@@ -102,7 +68,6 @@ export const BolaoChallengeConfig = () => {
     
     setWinnersCount(wCount || 0);
 
-    // Fetch match details for the active challenge
     const { data: activeMatches } = await supabase
       .from("sports_matches")
       .select("*")
@@ -130,7 +95,6 @@ export const BolaoChallengeConfig = () => {
     if (!existingChallenge) return;
     setChecking(true);
     try {
-      // 1. Fetch results for matches in the challenge
       const { data: results } = await supabase
         .from("sports_matches")
         .select("id, home_score, away_score")
@@ -143,7 +107,6 @@ export const BolaoChallengeConfig = () => {
         }
       });
 
-      // 2. Fetch all guesses for this challenge
       const { data: guesses } = await supabase
         .from("bolao_guesses")
         .select("*")
@@ -172,7 +135,6 @@ export const BolaoChallengeConfig = () => {
         if (isWinner) {
           winnersCount++;
           
-          // Re-verify client status
           const { data: clientStatus } = await supabase
             .from("clients")
             .select("status")
@@ -184,10 +146,8 @@ export const BolaoChallengeConfig = () => {
             ? 'GANHADOR CONFIRMADO - LIBERAR PRÊMIO' 
             : 'QUASE GANHADOR - POTENCIAL CLIENTE';
 
-          // Generate Victory Banner
           const dataUrl = await generateVictoryBanner(guess.participant_name, brandLogo);
           
-          // Upload to storage
           const blob = await (await fetch(dataUrl)).blob();
           const fileName = `${guess.id}/victory.png`;
           const { error: uploadError } = await supabase.storage
@@ -200,7 +160,6 @@ export const BolaoChallengeConfig = () => {
             .from("bolao-celebrations")
             .getPublicUrl(fileName);
 
-          // Update guess status and notification
           await supabase
             .from("bolao_guesses")
             .update({ 
@@ -224,7 +183,6 @@ export const BolaoChallengeConfig = () => {
 
   return (
     <div className="space-y-6">
-      {/* Resumo do Bolão (Reflexo da Área do Cliente) */}
       {existingChallenge && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="glass-card border-primary/20 bg-zinc-950/50">
@@ -265,7 +223,6 @@ export const BolaoChallengeConfig = () => {
         </div>
       )}
 
-      {/* Visão do Cliente (Jogos Ativos) */}
       {existingChallenge && activeChallengeMatches.length > 0 && (
         <Card className="glass-card border-primary/10 bg-zinc-900/30">
           <CardHeader>
@@ -301,7 +258,7 @@ export const BolaoChallengeConfig = () => {
               <RefreshCw className="w-6 h-6 text-primary" />
               Sincronização com API
             </CardTitle>
-            <p className="text-sm text-zinc-400 mt-1">A API organiza automaticamente os jogos do Brasileirão, Copa do Brasil e Libertadores.</p>
+            <p className="text-sm text-zinc-400 mt-1">A API organiza automaticamente os jogos do Brasileirão, Copa do Brasil e Libertadores de hoje e amanhã.</p>
           </div>
           <Button 
             onClick={syncMatches} 
@@ -339,7 +296,6 @@ export const BolaoChallengeConfig = () => {
           </CardContent>
         </Card>
       )}
-
     </div>
   );
 };
