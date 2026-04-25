@@ -122,11 +122,12 @@ export const generateBannerCanvas = async (
 
   // 5. Draw Matches
   const isSingleMatch = matches.length === 1;
-  const maxMatches = templateId === 3 ? 1 : 5;
+  const isDaily = matches.length > 1;
+  const maxMatches = templateId === 3 ? 1 : (isDaily ? 6 : 1);
   const matchesToDraw = matches.slice(0, maxMatches);
   
-  const rowHeight = 320; // Increased spacing for list items
-  const startY = isSingleMatch && templateId === 3 ? 900 : 580;
+  const rowHeight = isDaily ? 220 : 320; 
+  const startY = templateId === 3 ? 900 : (isDaily ? 500 : 700);
 
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];
@@ -179,42 +180,45 @@ export const generateBannerCanvas = async (
       // List layout based on image_5d9d11.jpg
       // No shields here, they are drawn below beside the names
       
-      // Style like image_5d9d11.jpg
+      // Style like image_5d9d11.jpg - no shields drawn here for list layout
       ctx.textAlign = "center";
       
+      const homeName = match.home_team.length > 15 ? match.home_team.substring(0, 15) + "..." : match.home_team;
+      const awayName = match.away_team.length > 15 ? match.away_team.substring(0, 15) + "..." : match.away_team;
+
       // Home Name
-      ctx.font = "bold 52px Montserrat, sans-serif";
+      ctx.font = "bold 44px Montserrat, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.home_team.toUpperCase(), centerX - 280, y + 15);
+      ctx.fillText(homeName.toUpperCase(), centerX - 260, y + 15);
 
       // VS in middle
-      ctx.font = "italic 48px Montserrat, sans-serif";
+      ctx.font = "italic 40px Montserrat, sans-serif";
       ctx.fillStyle = "#3b82f6";
       ctx.fillText("VS", centerX, y + 15);
 
       // Away Name
-      ctx.font = "bold 52px Montserrat, sans-serif";
+      ctx.font = "bold 44px Montserrat, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.away_team.toUpperCase(), centerX + 280, y + 15);
+      ctx.fillText(awayName.toUpperCase(), centerX + 260, y + 15);
 
-      // Shields beside names
+      // Shields beside names (Smaller for list)
       if (homeShield && homeShield.width > 1) {
-        ctx.drawImage(homeShield, centerX - 530, y - 65, 130, 130);
+        ctx.drawImage(homeShield, centerX - 480, y - 50, 100, 100);
       }
       if (awayShield && awayShield.width > 1) {
-        ctx.drawImage(awayShield, centerX + 400, y - 65, 130, 130);
+        ctx.drawImage(awayShield, centerX + 380, y - 50, 100, 100);
       }
     }
 
     // Time and Channels
     ctx.textAlign = "center";
-    ctx.font = templateId === 3 ? "bold 44px Montserrat, sans-serif" : "bold 38px Montserrat, sans-serif";
+    ctx.font = templateId === 3 ? "bold 44px Montserrat, sans-serif" : "bold 34px Montserrat, sans-serif";
     ctx.fillStyle = templateId === 2 ? "#d8b4fe" : "#3b82f6"; // Primary blue for transmission
     const timeStr = formatBrasiliaTime(match.match_time);
     const channelsStr = match.channels && match.channels.length > 0 
       ? ` | ${match.channels.join(" & ")}` 
       : "";
-    ctx.fillText(`${timeStr}${channelsStr}`, centerX, templateId === 3 ? y + 300 : y + 110);
+    ctx.fillText(`${timeStr}${channelsStr}`, centerX, templateId === 3 ? y + 300 : y + 90);
   }
 
   // 6. Draw Footer CTA

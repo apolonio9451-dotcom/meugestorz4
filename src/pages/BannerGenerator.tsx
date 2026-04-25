@@ -123,7 +123,7 @@ const BannerGenerator = () => {
   const openEditor = (match: Match) => {
     setSelectedMatch(match);
     setCustomChannels(match.channels?.join(", ") || "");
-    setSelectedTemplate(match.id === "daily" ? 1 : 3); // Default to Card Único for single match
+    setSelectedTemplate(3); // Default to Card Único for single match edit
     setIsEditorOpen(true);
   };
 
@@ -253,7 +253,7 @@ const BannerGenerator = () => {
               className="bg-purple-600/10 border-purple-600/30 text-purple-400 hover:bg-purple-600/20"
             >
               <Download className="w-4 h-4 mr-2" />
-              Banner do Dia
+              Gerar Banner com Lista de Jogos
             </Button>
             <Button 
               onClick={handleRefresh} 
@@ -383,8 +383,8 @@ const BannerGenerator = () => {
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
                     onClick={() => openEditor(match)}
                   >
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    Gerar e Baixar Banner
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar Jogo Individual
                   </Button>
                 </CardContent>
               </Card>
