@@ -130,16 +130,19 @@ const BannerGenerator = () => {
   const downloadBanner = async () => {
     if (!selectedMatch) return;
     try {
-      const matchData: MatchData = {
-        ...selectedMatch,
-        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
-      };
+      const isDaily = selectedMatch.id === "daily";
+      const matchesToDraw = isDaily 
+        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek, selectedTemplate);
+      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
       
       const link = document.createElement("a");
-      link.download = `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
+      const filename = isDaily 
+        ? `jogos-do-dia-${format(new Date(), "dd-MM")}.png`
+        : `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
+      link.download = filename;
       link.href = dataUrl;
       link.click();
       toast.success("Banner baixado com sucesso!");
