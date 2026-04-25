@@ -115,7 +115,7 @@ const BolaoTVMAX = () => {
       .from("bolao_guesses")
       .select("*")
       .eq("challenge_id", challenge.id)
-      .eq("participant_phone", phoneNumber)
+      .eq("participant_phone", phoneNumber.replace(/\D/g, ''))
       .maybeSingle();
 
     if (data) {
