@@ -125,10 +125,32 @@ export const generateBannerCanvas = async (
     }
   }
 
-  // 5. Matches
+  // 5. Matches - Structured Layout with Grid Logic
   const maxMatches = config.matches.maxPerPage;
   const matchesToDraw = matches.slice(0, maxMatches);
   
+  // Grid layout definitions
+  const shieldWidth = config.matches.shieldSize;
+  const nameWidth = 220; // Reserved width for team names
+  const vsWidth = 60;    // Reserved width for "VS"
+  const infoWidth = 250;  // Reserved width for Time and Channels
+  const spacing = 15;     // Space between columns
+  
+  // Calculate total row width to center it
+  const totalRowWidth = (shieldWidth * 2) + (nameWidth * 2) + vsWidth + infoWidth + (spacing * 5);
+  const rowStartX = (width - totalRowWidth) / 2;
+
+  const truncateText = (text: string, maxWidth: number, font: string) => {
+    ctx.font = font;
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    
+    let truncated = text;
+    while (truncated.length > 0 && ctx.measureText(truncated + "...").width > maxWidth) {
+      truncated = truncated.slice(0, -1);
+    }
+    return truncated + "...";
+  };
+
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];
     const y = config.matches.startY + i * config.matches.rowHeight;
@@ -138,59 +160,75 @@ export const generateBannerCanvas = async (
       loadImage(match.away_logo),
     ]);
 
-    const centerX = width / 2;
-    
-    // Names
-    ctx.textAlign = "center";
-    ctx.font = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
-    ctx.fillStyle = "#FFFFFF";
-    
-    const homeName = match.home_team.length > 12 ? match.home_team.substring(0, 12) + "..." : match.home_team;
-    const awayName = match.away_team.length > 12 ? match.away_team.substring(0, 12) + "..." : match.away_team;
+    // Column offsets
+    const col1X = rowStartX;                                          // Shield 1
+    const col2X = col1X + shieldWidth + spacing;                      // Name 1
+    const col3X = col2X + nameWidth + spacing;                        // "VS"
+    const col4X = col3X + vsWidth + spacing;                          // Name 2
+    const col5X = col4X + nameWidth + spacing;                        // Shield 2
+    const col6X = col5X + shieldWidth + spacing;                      // Info (Time/Channel)
 
-    ctx.fillText(homeName.toUpperCase(), centerX - 240, y + 15);
-    ctx.font = `italic ${config.matches.nameFontSize - 4}px Montserrat, sans-serif`;
-    ctx.fillStyle = config.dayOfWeek.color;
-    ctx.fillText("VS", centerX, y + 15);
-    ctx.font = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(awayName.toUpperCase(), centerX + 240, y + 15);
+    const nameFont = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
+    const infoFont = `bold ${config.matches.infoFontSize}px Montserrat, sans-serif`;
+    const vsFont = `italic ${config.matches.nameFontSize - 4}px Montserrat, sans-serif`;
 
-    // Shields
-    const sSize = config.matches.shieldSize;
+    // 1. Shield 1
     if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, centerX - 420, y - 50, sSize, sSize);
-    }
-    if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, centerX + 310, y - 50, sSize, sSize);
+      ctx.drawImage(homeShield, col1X, y - (shieldWidth / 2), shieldWidth, shieldWidth);
     }
 
-    // Time/Info
-    ctx.font = `bold ${config.matches.infoFontSize}px Montserrat, sans-serif`;
+    // 2. Name 1 (Aligned Right)
+    ctx.textAlign = "right";
+    ctx.font = nameFont;
+    ctx.fillStyle = "#FFFFFF";
+    const homeName = truncateText(match.home_team.toUpperCase(), nameWidth, nameFont);
+    ctx.fillText(homeName, col2X + nameWidth, y + 15);
+
+    // 3. "VS" (Centered)
+    ctx.textAlign = "center";
+    ctx.font = vsFont;
     ctx.fillStyle = config.dayOfWeek.color;
+    ctx.fillText("VS", col3X + (vsWidth / 2), y + 15);
+
+    // 4. Name 2 (Aligned Left)
+    ctx.textAlign = "left";
+    ctx.font = nameFont;
+    ctx.fillStyle = "#FFFFFF";
+    const awayName = truncateText(match.away_team.toUpperCase(), nameWidth, nameFont);
+    ctx.fillText(awayName, col4X, y + 15);
+
+    // 5. Shield 2
+    if (awayShield && awayShield.width > 1) {
+      ctx.drawImage(awayShield, col5X, y - (shieldWidth / 2), shieldWidth, shieldWidth);
+    }
+
+    // 6. Info (Time and Channels)
+    ctx.textAlign = "left";
     const timeStr = formatBrasiliaTime(match.match_time);
+    const channelsStr = match.channels && match.channels.length > 0 
+      ? match.channels[0] // Just take the first one or first two to keep it clean
+      : "";
     
-    // Draw horizontal line or separator ONLY IF NOT CUSTOM BACKGROUND
+    ctx.font = infoFont;
+    ctx.fillStyle = config.dayOfWeek.color;
+    ctx.fillText(timeStr, col6X, y - 5);
+    
+    if (channelsStr) {
+      ctx.font = `italic ${config.matches.infoFontSize - 6}px Montserrat, sans-serif`;
+      ctx.fillStyle = "#AAAAAA";
+      const displayChannel = truncateText(channelsStr.toUpperCase(), infoWidth, ctx.font);
+      ctx.fillText(displayChannel, col6X, y + 35);
+    }
+
+    // Optional separator
     if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(centerX - 400, y + 110);
-      ctx.lineTo(centerX + 400, y + 110);
+      ctx.moveTo(rowStartX, y + (config.matches.rowHeight / 2));
+      ctx.lineTo(rowStartX + totalRowWidth, y + (config.matches.rowHeight / 2));
       ctx.stroke();
     }
-
-    const channelsStr = match.channels && match.channels.length > 0 
-      ? match.channels.join(" | ") 
-      : "TRANSMISSÃO A DEFINIR";
-    
-    ctx.font = `bold ${config.matches.infoFontSize}px Montserrat, sans-serif`;
-    ctx.fillStyle = config.dayOfWeek.color;
-    ctx.fillText(timeStr, centerX, y + 65);
-    
-    ctx.font = `italic ${config.matches.infoFontSize - 4}px Montserrat, sans-serif`;
-    ctx.fillStyle = "#AAAAAA";
-    ctx.fillText(channelsStr.toUpperCase(), centerX, y + 100);
   }
 
   // 6. Footer - ONLY DRAW IF NOT CUSTOM BACKGROUND
