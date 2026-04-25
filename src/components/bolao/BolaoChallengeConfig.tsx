@@ -250,6 +250,76 @@ export const BolaoChallengeConfig = () => {
 
   return (
     <div className="space-y-6">
+      {/* Resumo do Bolão (Reflexo da Área do Cliente) */}
+      {existingChallenge && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="glass-card border-primary/20 bg-zinc-950/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Participantes</p>
+                <p className="text-2xl font-black text-white">{participantCount}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card border-yellow-500/20 bg-zinc-950/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Ganhadores</p>
+                <p className="text-2xl font-black text-white">{winnersCount}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card border-green-500/20 bg-zinc-950/50">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                <Gamepad2 className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Jogos no Bolão</p>
+                <p className="text-2xl font-black text-white">{activeChallengeMatches.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Visão do Cliente (Jogos Ativos) */}
+      {existingChallenge && activeChallengeMatches.length > 0 && (
+        <Card className="glass-card border-primary/10 bg-zinc-900/30">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold flex items-center gap-2 text-zinc-400">
+              <Eye className="w-4 h-4" /> VISÃO DO CLIENTE (JOGOS ATIVOS)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+              {activeChallengeMatches.map(match => (
+                <div key={match.id} className="bg-zinc-950/50 border border-zinc-800 rounded-xl p-3 text-center space-y-2">
+                  <p className="text-[8px] font-black text-primary uppercase tracking-tighter">
+                    {format(new Date(match.match_time), "HH:mm", { locale: ptBR })}
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <img src={match.home_logo} className="w-6 h-6 object-contain" alt="" />
+                    <span className="text-[10px] font-black truncate max-w-[40px]">{match.home_team}</span>
+                    <span className="text-[8px] text-zinc-600">x</span>
+                    <span className="text-[10px] font-black truncate max-w-[40px]">{match.away_team}</span>
+                    <img src={match.away_logo} className="w-6 h-6 object-contain" alt="" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="glass-card border-primary/20 bg-zinc-950/50 backdrop-blur-xl">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
