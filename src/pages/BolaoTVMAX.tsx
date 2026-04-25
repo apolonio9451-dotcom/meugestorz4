@@ -114,6 +114,7 @@ const BolaoTVMAX = () => {
 
     if (data) {
       setExistingGuess(data);
+      setIsClient(data.is_client);
       setStep("success");
     } else {
       setStep("betting");
