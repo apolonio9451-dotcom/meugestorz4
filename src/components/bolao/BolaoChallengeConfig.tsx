@@ -114,6 +114,86 @@ export const BolaoChallengeConfig = () => {
     }
   };
 
+  const checkWinners = async () => {
+    if (!existingChallenge) return;
+    setChecking(true);
+    try {
+      // 1. Fetch results for matches in the challenge
+      const { data: results } = await supabase
+        .from("sports_matches")
+        .select("id, home_score, away_score")
+        .in("id", existingChallenge.match_ids);
+
+      const resultMap: Record<string, { home: number; away: number }> = {};
+      results?.forEach(r => {
+        if (r.home_score !== null && r.away_score !== null) {
+          resultMap[r.id] = { home: r.home_score, away: r.away_score };
+        }
+      });
+
+      // 2. Fetch all guesses for this challenge
+      const { data: guesses } = await supabase
+        .from("bolao_guesses")
+        .select("*")
+        .eq("challenge_id", existingChallenge.id)
+        .eq("status", "pending");
+
+      if (!guesses || guesses.length === 0) {
+        toast.info("Nenhum palpite pendente para verificar.");
+        return;
+      }
+
+      let winnersCount = 0;
+
+      for (const guess of guesses) {
+        const participantGuesses = guess.guesses as any[];
+        let isWinner = true;
+
+        for (const pg of participantGuesses) {
+          const result = resultMap[pg.match_id];
+          if (!result || pg.home_score !== result.home || pg.away_score !== result.away) {
+            isWinner = false;
+            break;
+          }
+        }
+
+        if (isWinner) {
+          winnersCount++;
+          // Generate Victory Banner
+          const dataUrl = await generateVictoryBanner(guess.participant_name, brandLogo);
+          
+          // Upload to storage
+          const blob = await (await fetch(dataUrl)).blob();
+          const fileName = `${guess.id}/victory.png`;
+          const { error: uploadError } = await supabase.storage
+            .from("bolao-celebrations")
+            .upload(fileName, blob, { upsert: true });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("bolao-celebrations")
+            .getPublicUrl(fileName);
+
+          // Update guess status
+          await supabase
+            .from("bolao_guesses")
+            .update({ status: "winner", celebration_image_url: publicUrl } as any)
+            .eq("id", guess.id);
+        } else {
+           // Optional: mark as loser if all games are finished
+           // For now just keep as pending until manually verified or logic expanded
+        }
+      }
+
+      toast.success(`${winnersCount} ganhadores identificados e artes geradas!`);
+    } catch (error: any) {
+      toast.error("Erro ao verificar ganhadores: " + error.message);
+    } finally {
+      setChecking(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="glass-card border-primary/20 bg-zinc-950/50 backdrop-blur-xl">
