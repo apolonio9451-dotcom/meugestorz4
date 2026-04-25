@@ -26,7 +26,7 @@ const ensureSuccess = (error: { message: string } | null, context: string) => {
   if (error) throw new Error(`${context}: ${error.message}`);
 };
 
-async function cleanupOrphanCompany(adminClient: ReturnType<typeof createClient>, companyId: string) {
+async function cleanupOrphanCompany(adminClient: any, companyId: string) {
   const { count, error: countError } = await adminClient
     .from("company_memberships")
     .select("id", { count: "exact", head: true })
