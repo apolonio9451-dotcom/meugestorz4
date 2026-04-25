@@ -35,6 +35,8 @@ const Chatbot = lazy(() => import("@/pages/Chatbot"));
 const GeneralSettings = lazy(() => import("@/pages/GeneralSettings"));
 const Campaigns = lazy(() => import("@/pages/Campaigns"));
 const BannerGenerator = lazy(() => import("@/pages/BannerGenerator"));
+const BolaoAdmin = lazy(() => import("@/pages/BolaoAdmin"));
+const CustomerPortal = lazy(() => import("@/pages/CustomerPortal"));
 
 
 const PageLoader = () => (
