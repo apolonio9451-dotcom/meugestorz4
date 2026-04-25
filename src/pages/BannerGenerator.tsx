@@ -111,6 +111,7 @@ const BannerGenerator = () => {
       
       toast.success(`${data.count} jogos atualizados!`);
       fetchMatches();
+      setSelectedTemplate(1); // Reset template to default on sync
     } catch (error: any) {
       toast.error("Erro ao atualizar jogos: " + error.message);
     } finally {
