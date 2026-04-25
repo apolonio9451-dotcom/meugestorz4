@@ -159,6 +159,19 @@ export const BolaoChallengeConfig = () => {
 
         if (isWinner) {
           winnersCount++;
+          
+          // Re-verify client status
+          const { data: clientStatus } = await supabase
+            .from("clients")
+            .select("status")
+            .eq("phone", guess.participant_phone)
+            .maybeSingle();
+          
+          const isActiveClient = clientStatus?.status === 'active';
+          const adminNotification = isActiveClient 
+            ? 'GANHADOR CONFIRMADO - LIBERAR PRÊMIO' 
+            : 'QUASE GANHADOR - POTENCIAL CLIENTE';
+
           // Generate Victory Banner
           const dataUrl = await generateVictoryBanner(guess.participant_name, brandLogo);
           
@@ -175,10 +188,15 @@ export const BolaoChallengeConfig = () => {
             .from("bolao-celebrations")
             .getPublicUrl(fileName);
 
-          // Update guess status
+          // Update guess status and notification
           await supabase
             .from("bolao_guesses")
-            .update({ status: "winner", celebration_image_url: publicUrl } as any)
+            .update({ 
+              status: "winner", 
+              celebration_image_url: publicUrl,
+              is_client: isActiveClient,
+              admin_notification: adminNotification
+            } as any)
             .eq("id", guess.id);
         } else {
            // Optional: mark as loser if all games are finished

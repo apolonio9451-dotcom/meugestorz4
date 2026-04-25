@@ -349,36 +349,42 @@ export type Database = {
       }
       bolao_guesses: {
         Row: {
+          admin_notification: string | null
           celebration_image_url: string | null
           challenge_id: string
           client_id: string | null
           created_at: string | null
           guesses: Json
           id: string
+          is_client: boolean | null
           participant_name: string
           participant_phone: string
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          admin_notification?: string | null
           celebration_image_url?: string | null
           challenge_id: string
           client_id?: string | null
           created_at?: string | null
           guesses: Json
           id?: string
+          is_client?: boolean | null
           participant_name: string
           participant_phone: string
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          admin_notification?: string | null
           celebration_image_url?: string | null
           challenge_id?: string
           client_id?: string | null
           created_at?: string | null
           guesses?: Json
           id?: string
+          is_client?: boolean | null
           participant_name?: string
           participant_phone?: string
           status?: string | null
@@ -400,6 +406,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bolao_leads: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
       }
       bot_training_rules: {
         Row: {

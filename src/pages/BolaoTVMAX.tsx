@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Trophy, Send, CheckCircle2, Lock, Smartphone, User, History } from "lucide-react";
+import { Trophy, Send, CheckCircle2, Lock, Smartphone, User, History, Share2, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -29,15 +29,29 @@ const BolaoTVMAX = () => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [challenge, setChallenge] = useState<any>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [guesses, setGuesses] = useState<Record<string, { home: string, away: string }>>({});
   const [existingGuess, setExistingGuess] = useState<any>(null);
+  const [supportPhone, setSupportPhone] = useState("");
 
   useEffect(() => {
     fetchActiveChallenge();
+    fetchSupportPhone();
   }, []);
+
+  const fetchSupportPhone = async () => {
+    try {
+      const { data: settings } = await supabase.from('company_settings').select('support_whatsapp').limit(1).maybeSingle();
+      if (settings?.support_whatsapp) {
+        setSupportPhone(settings.support_whatsapp.replace(/\D/g, ''));
+      }
+    } catch (e) {
+      console.error("Error fetching support phone:", e);
+    }
+  };
 
   const fetchActiveChallenge = async () => {
     const { data: challengeData } = await supabase
@@ -68,15 +82,17 @@ const BolaoTVMAX = () => {
       // 1. Check if client exists in 'clients' table
       const { data: clientData } = await supabase
         .from("clients")
-        .select("id, name")
+        .select("id, name, status")
         .eq("phone", phone)
         .maybeSingle();
 
       if (clientData) {
         setName(clientData.name || "");
+        setIsClient(clientData.status === 'active');
         checkExistingGuess(phone);
       } else {
         // 2. Not a client, ask for name (Lead flow)
+        setIsClient(false);
         setStep("form");
       }
     } catch (error: any) {
@@ -98,6 +114,7 @@ const BolaoTVMAX = () => {
 
     if (data) {
       setExistingGuess(data);
+      setIsClient(data.is_client);
       setStep("success");
     } else {
       setStep("betting");
@@ -157,7 +174,8 @@ const BolaoTVMAX = () => {
           participant_phone: phone,
           participant_name: name,
           guesses: formattedGuesses,
-          status: "pending"
+          status: "pending",
+          is_client: isClient
         } as any)
         .select()
         .single();
@@ -313,9 +331,30 @@ const BolaoTVMAX = () => {
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500/10 rounded-full border border-green-500/20 mb-4 animate-pulse">
                   <CheckCircle2 className="w-10 h-10 text-green-500" />
                 </div>
-                <h2 className="text-2xl font-black text-white">PALPITES REGISTRADOS!</h2>
+                <h2 className="text-2xl font-black text-white italic tracking-tighter">PALPITES REGISTRADOS!</h2>
                 <p className="text-zinc-500 text-sm">Boa sorte! Agora é só torcer.</p>
               </div>
+
+              {/* Strategic Message for Non-Clients who Win */}
+              {existingGuess.status === 'winner' && !existingGuess.is_client && (
+                <Card className="bg-orange-500/10 border-orange-500/50 border-2 overflow-hidden shadow-[0_0_30px_rgba(249,115,22,0.1)]">
+                  <CardContent className="p-6 text-center space-y-4">
+                    <Trophy className="w-12 h-12 text-orange-500 mx-auto animate-bounce" />
+                    <h3 className="text-xl font-black italic uppercase text-white leading-tight">
+                      🔥 Você mitou e acertou tudo!
+                    </h3>
+                    <p className="text-sm text-zinc-300 font-medium">
+                      Mas atenção: este prêmio é exclusivo para <span className="text-orange-500 font-bold uppercase">Assinantes TV MAX Ativos</span>. Não perca a chance de ganhar no próximo desafio, assine agora e valide seu cadastro!
+                    </p>
+                    <Button 
+                      onClick={() => window.open(`https://api.whatsapp.com/send?phone=${supportPhone || '55'}&text=Quero%20ser%20assinante%20TV%20MAX%20para%20participar%20do%20Bolão!`, '_blank')}
+                      className="w-full bg-orange-500 hover:bg-orange-600 h-14 font-black uppercase tracking-widest text-black shadow-lg shadow-orange-500/20"
+                    >
+                      <MessageSquare className="w-5 h-5 mr-2" /> Falar com Suporte para Assinar
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Betting Ticket View */}
               <div className="relative bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
@@ -330,6 +369,9 @@ const BolaoTVMAX = () => {
                   <div className="text-center">
                     <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Competidor</p>
                     <p className="text-xl font-black uppercase text-white">{existingGuess.participant_name}</p>
+                    {existingGuess.is_client && (
+                      <span className="mt-1 inline-block px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[8px] font-black uppercase tracking-widest border border-primary/30">Assinante VIP</span>
+                    )}
                   </div>
                 </div>
 
@@ -356,13 +398,29 @@ const BolaoTVMAX = () => {
                 </div>
               </div>
 
-              <div className="text-center p-6 bg-zinc-950/80 border border-zinc-800 rounded-2xl">
-                <History className="w-5 h-5 text-zinc-600 mx-auto mb-2" />
-                <p className="text-xs font-bold text-zinc-500 uppercase">Acompanhe os resultados no nosso WhatsApp!</p>
-              </div>
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={() => {
+                    const shareText = `⚽ Acabei de enviar meus palpites no Bolão TV MAX! 🏆 Tente acertar os placares de hoje e ganhe prêmios! Participe aqui: ${window.location.origin}/palpites`;
+                    if (navigator.share) {
+                      navigator.share({ title: 'Bolão TV MAX', text: shareText, url: window.location.href });
+                    } else {
+                      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+                    }
+                  }}
+                  className="w-full bg-primary hover:bg-primary/80 h-14 font-black uppercase tracking-widest text-black"
+                >
+                  <Share2 className="w-5 h-5 mr-2" /> Compartilhar Bolão
+                </Button>
 
-              <div className="bg-zinc-900/50 p-4 rounded-xl text-center">
-                <p className="text-xs text-zinc-400">Tire um print do seu ticket acima e guarde para conferência.</p>
+                <div className="text-center p-6 bg-zinc-950/80 border border-zinc-800 rounded-2xl">
+                  <History className="w-5 h-5 text-zinc-600 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-zinc-500 uppercase">Acompanhe os resultados no nosso WhatsApp!</p>
+                </div>
+
+                <div className="bg-zinc-900/50 p-4 rounded-xl text-center">
+                  <p className="text-xs text-zinc-400">Tire um print do seu ticket acima e guarde para conferência.</p>
+                </div>
               </div>
             </div>
           )}
