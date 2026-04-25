@@ -131,10 +131,18 @@ export const generateBannerCanvas = async (
     const y = startY + i * rowHeight;
 
     // Draw row background (subtle)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.fillStyle = templateId === 2 
+      ? "rgba(168, 85, 247, 0.05)" 
+      : "rgba(255, 255, 255, 0.03)";
     ctx.beginPath();
-    ctx.roundRect(80, y - 80, width - 160, rowHeight - 40, 20);
+    ctx.roundRect(80, y - 100, width - 160, rowHeight, 30);
     ctx.fill();
+    
+    if (templateId === 2) {
+      ctx.strokeStyle = "rgba(168, 85, 247, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     const [homeShield, awayShield] = await Promise.all([
       loadImage(match.home_logo),
