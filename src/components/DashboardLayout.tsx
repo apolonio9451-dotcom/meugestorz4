@@ -52,6 +52,7 @@ import {
   SlidersHorizontal,
   Image as ImageIcon,
   Trophy,
+  Share2,
 } from "lucide-react";
 
 
