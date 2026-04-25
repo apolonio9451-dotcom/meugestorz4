@@ -6,17 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const LEAGUES = [
-  { id: 71, name: "Brasileirão Série A" },
-  { id: 72, name: "Brasileirão Série B" },
-  { id: 2, name: "Champions League" },
-  { id: 13, name: "Libertadores" },
-  { id: 39, name: "Premier League" },
-  { id: 140, name: "La Liga" },
-  { id: 135, name: "Serie A" },
-  { id: 78, name: "Bundesliga" },
-  { id: 61, name: "Ligue 1" },
-];
+const TARGET_LEAGUES = [71, 72, 2, 13, 39, 140, 135, 78, 61, 73]; // Added 73 for Copa do Brasil
+
+const getAutoChannels = (leagueId: number, leagueName: string) => {
+  const name = leagueName.toLowerCase();
+  // Fixed mapping based on league ID or Name
+  if (leagueId === 71 || name.includes("brasileirão série a")) return ["Premiere", "Globo", "SporTV"];
+  if (leagueId === 72 || name.includes("brasileirão série b")) return ["Premiere", "SporTV", "Band"];
+  if (leagueId === 2 || name.includes("champions league")) return ["Max", "TNT"];
+  if (leagueId === 13 || name.includes("libertadores")) return ["Globo", "ESPN", "Paramount+"];
+  if (leagueId === 73 || name.includes("copa do brasil")) return ["Prime Video", "Globo", "SporTV"];
+  if (name.includes("premier league") || name.includes("la liga") || name.includes("serie a") || name.includes("bundesliga") || name.includes("ligue 1")) return ["ESPN", "Star+"];
+  return ["TV MAX"];
+};
+
+function cleanChannelName(name: string): string {
+  if (!name) return "";
+  let clean = name.split(/\s(RJ|SP|MG|RS|PR|SC|GO|BA|PE|CE|MT|MS|PA|AM|ES|AL|SE|PB|RN|MA|PI|RO|AC|AP|TO|RR|DF)/i)[0];
+  clean = clean.replace(/\s\d+$/g, ""); // Remove numbers at the end like "Premiere 4"
+  return clean.trim();
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
