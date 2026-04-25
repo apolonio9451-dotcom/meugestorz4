@@ -129,9 +129,9 @@ export const generateBannerCanvas = async (
   const maxMatches = config.matches.maxPerPage;
   const matchesToDraw = matches.slice(0, maxMatches);
   
-  const shieldSize = 100; // Rigidly set to 100px
-  const rowHeight = 250; // Rigid height per row
-  const startY = 400; // Starting Y position
+  const shieldSize = 120; // Aumentado para 120px para melhor visibilidade
+  const rowHeight = 240; // Altura por linha
+  const startY = 420; // Posição Y inicial
 
   const getDynamicFontSize = (text: string, maxWidth: number, baseSize: number) => {
     ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
