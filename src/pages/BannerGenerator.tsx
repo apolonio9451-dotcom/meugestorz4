@@ -42,7 +42,29 @@ const BannerGenerator = () => {
   const [customChannels, setCustomChannels] = useState("");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isEditorOpen && selectedMatch) {
+      updatePreview();
+    }
+  }, [isEditorOpen, selectedMatch, customChannels, brandLogo]);
+
+  const updatePreview = async () => {
+    if (!selectedMatch) return;
+    try {
+      const matchData: MatchData = {
+        ...selectedMatch,
+        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
+      };
+      const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
+      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      setPreviewUrl(dataUrl);
+    } catch (error) {
+      console.error("Error generating preview", error);
+    }
+  };
 
   useEffect(() => {
     fetchMatches();
