@@ -383,8 +383,8 @@ const BannerGenerator = () => {
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
                     onClick={() => openEditor(match)}
                   >
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    Gerar e Baixar Banner
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar Jogo Individual
                   </Button>
                 </CardContent>
               </Card>
