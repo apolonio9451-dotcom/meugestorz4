@@ -212,13 +212,13 @@ export const generateBannerCanvas = async (
 
     // Time and Channels
     ctx.textAlign = "center";
-    ctx.font = templateId === 3 ? "bold 44px Montserrat, sans-serif" : "bold 38px Montserrat, sans-serif";
+    ctx.font = templateId === 3 ? "bold 44px Montserrat, sans-serif" : "bold 34px Montserrat, sans-serif";
     ctx.fillStyle = templateId === 2 ? "#d8b4fe" : "#3b82f6"; // Primary blue for transmission
     const timeStr = formatBrasiliaTime(match.match_time);
     const channelsStr = match.channels && match.channels.length > 0 
       ? ` | ${match.channels.join(" & ")}` 
       : "";
-    ctx.fillText(`${timeStr}${channelsStr}`, centerX, templateId === 3 ? y + 300 : y + 110);
+    ctx.fillText(`${timeStr}${channelsStr}`, centerX, templateId === 3 ? y + 300 : y + 90);
   }
 
   // 6. Draw Footer CTA
