@@ -123,11 +123,11 @@ export const generateBannerCanvas = async (
   // 5. Draw Matches
   const isSingleMatch = matches.length === 1;
   const isDaily = matches.length > 1;
-  const maxMatches = templateId === 3 ? 1 : (isDaily ? 6 : 1);
+  const maxMatches = templateId === 3 ? 1 : (isDaily ? 8 : 1);
   const matchesToDraw = matches.slice(0, maxMatches);
   
-  const rowHeight = isDaily ? 220 : 320; 
-  const startY = templateId === 3 ? 900 : (isDaily ? 500 : 700);
+  const rowHeight = isDaily ? 180 : 320; 
+  const startY = templateId === 3 ? 900 : (isDaily ? 420 : 700);
 
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];

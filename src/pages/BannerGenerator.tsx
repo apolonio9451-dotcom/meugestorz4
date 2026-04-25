@@ -379,13 +379,42 @@ const BannerGenerator = () => {
                     </div>
                   )}
 
-                  <Button 
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
-                    onClick={() => openEditor(match)}
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Editar Jogo Individual
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="border-primary/20 text-primary hover:bg-primary/10"
+                      onClick={() => openEditor(match)}
+                    >
+                      <Edit2 className="w-3 h-3 mr-1.5" />
+                      Personalizar
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
+                      onClick={async () => {
+                        try {
+                          const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
+                          const dataUrl = await generateBannerCanvas(
+                            [{ ...match, channels: match.channels || [] }], 
+                            brandLogo, 
+                            dayOfWeek, 
+                            3 // Modelo 3 (Card Único)
+                          );
+                          const link = document.createElement("a");
+                          link.download = `banner-${match.home_team}-vs-${match.away_team}.png`;
+                          link.href = dataUrl;
+                          link.click();
+                          toast.success("Banner baixado!");
+                        } catch (error) {
+                          toast.error("Erro ao gerar banner");
+                        }
+                      }}
+                    >
+                      <Download className="w-3 h-3 mr-1.5" />
+                      Baixar PNG
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
