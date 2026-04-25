@@ -2139,11 +2139,13 @@ export type Database = {
       sports_matches: {
         Row: {
           away_logo: string | null
+          away_score: number | null
           away_team: string
           channels: string[] | null
           created_at: string
           external_id: number | null
           home_logo: string | null
+          home_score: number | null
           home_team: string
           id: string
           league_id: number | null
@@ -2155,11 +2157,13 @@ export type Database = {
         }
         Insert: {
           away_logo?: string | null
+          away_score?: number | null
           away_team: string
           channels?: string[] | null
           created_at?: string
           external_id?: number | null
           home_logo?: string | null
+          home_score?: number | null
           home_team: string
           id?: string
           league_id?: number | null
@@ -2171,11 +2175,13 @@ export type Database = {
         }
         Update: {
           away_logo?: string | null
+          away_score?: number | null
           away_team?: string
           channels?: string[] | null
           created_at?: string
           external_id?: number | null
           home_logo?: string | null
+          home_score?: number | null
           home_team?: string
           id?: string
           league_id?: number | null
