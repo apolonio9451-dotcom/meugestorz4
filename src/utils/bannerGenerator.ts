@@ -87,18 +87,18 @@ export const generateBannerCanvas = async (
 
   // 2. Configuration
   const config: TemplateConfig = dynamicConfig || {
-    title: { x: 540, y: 280, fontSize: 140, color: "#FFFFFF", text: "JOGOS" },
-    dayOfWeek: { x: 540, y: 350, fontSize: 50, color: "#3b82f6" },
+    title: { x: 540, y: 220, fontSize: 160, color: "#FFFFFF", text: "HOJE NA TV" },
+    dayOfWeek: { x: 540, y: 300, fontSize: 60, color: "#3b82f6" },
     logo: { x: 840, y: 60, width: 180 },
     matches: {
-      startY: 450,
-      rowHeight: 220,
-      shieldSize: 100,
-      nameFontSize: 44,
+      startY: 420,
+      rowHeight: 210,
+      shieldSize: 110,
+      nameFontSize: 46,
       infoFontSize: 34,
       maxPerPage: 6
     },
-    footer: { y: 1740, text: "ASSINE AGORA E ASSISTA EM 4K", bgColor: "#2563eb" }
+    footer: { y: 1780, text: "ASSINE AGORA E ASSISTA EM 4K", bgColor: "#2563eb" }
   };
 
   // 3. Header
