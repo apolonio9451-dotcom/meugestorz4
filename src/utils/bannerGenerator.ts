@@ -34,7 +34,7 @@ export const generateBannerCanvas = async (
   pageInfo?: { current: number; total: number }
 ): Promise<string> => {
   const width = 1080;
-  const height = 1920;
+  const height = 1920; // 9:16 Aspect Ratio (Exact Template Dimension)
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
