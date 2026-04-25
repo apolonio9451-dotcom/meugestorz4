@@ -37,6 +37,7 @@ const Campaigns = lazy(() => import("@/pages/Campaigns"));
 const BannerGenerator = lazy(() => import("@/pages/BannerGenerator"));
 const BolaoAdmin = lazy(() => import("@/pages/BolaoAdmin"));
 const BolaoTVMAX = lazy(() => import("@/pages/BolaoTVMAX"));
+const CustomerPortal = lazy(() => import("@/pages/CustomerPortal"));
 
 
 const PageLoader = () => (
