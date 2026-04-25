@@ -54,6 +54,8 @@ const BannerGenerator = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("generator");
+  const [hideFrames, setHideFrames] = useState(false);
+  const [hideHeaderBox, setHideHeaderBox] = useState(false);
 
   useEffect(() => {
     if (isEditorOpen && selectedMatch) {
