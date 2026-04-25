@@ -62,9 +62,16 @@ export const generateBannerCanvas = async (
   
   // Dark overlay gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, "rgba(0, 0, 20, 0.85)");
-  gradient.addColorStop(0.5, "rgba(5, 5, 10, 0.9)");
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0.95)");
+  if (templateId === 2) {
+    // Neon purple/blue gradient
+    gradient.addColorStop(0, "rgba(20, 0, 40, 0.9)");
+    gradient.addColorStop(0.5, "rgba(30, 0, 60, 0.95)");
+    gradient.addColorStop(1, "rgba(10, 0, 20, 0.98)");
+  } else {
+    gradient.addColorStop(0, "rgba(0, 0, 20, 0.85)");
+    gradient.addColorStop(0.5, "rgba(5, 5, 10, 0.9)");
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0.95)");
+  }
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
