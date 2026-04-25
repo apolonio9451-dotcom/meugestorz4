@@ -12,7 +12,8 @@ export interface MatchData {
 export const generateBannerCanvas = async (
   matches: MatchData[],
   brandLogo: string | null,
-  dayOfWeek: string
+  dayOfWeek: string,
+  templateId: number = 1
 ): Promise<string> => {
   const width = 1080;
   const height = 1920;
