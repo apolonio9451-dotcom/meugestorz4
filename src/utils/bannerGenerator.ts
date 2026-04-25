@@ -32,7 +32,8 @@ export const generateBannerCanvas = async (
   templateId: number | string = 1,
   backgroundUrl?: string,
   dynamicConfig?: TemplateConfig,
-  pageInfo?: { current: number; total: number }
+  pageInfo?: { current: number; total: number },
+  customSettings?: { hideFrames?: boolean; hideHeaderBox?: boolean }
 ): Promise<string> => {
   const width = 1080;
   const height = 1920; // 9:16 Aspect Ratio (Exact Template Dimension)
