@@ -200,22 +200,32 @@ export const generateBannerCanvas = async (
     }
   }
 
-  // 5. FOOTER - Persistence of Design
-  const footerY = 1820;
-  ctx.textAlign = "center";
-  ctx.font = "bold 34px Montserrat, sans-serif";
-  const footerText = "ASSINE AGORA E NÃO PERCA NENHUM LANCE";
+  // 5. FOOTER - image_10.png exact replication
+  const footerY = 1850;
   
-  // QR Code / CTA Button Style
-  const btnWidth = 700;
-  const btnHeight = 90;
+  // "ASSINE JÁ!" Button (Left)
+  const btnX = 60;
+  const btnW = 240;
+  const btnH = 70;
   ctx.fillStyle = "#2563eb";
   ctx.beginPath();
-  ctx.roundRect((width - btnWidth) / 2, footerY - 60, btnWidth, btnHeight, 45);
+  ctx.roundRect(btnX, footerY - 45, btnW, btnH, 10);
   ctx.fill();
-
   ctx.fillStyle = "#FFFFFF";
-  ctx.fillText(footerText, width / 2, footerY);
+  ctx.font = "bold 30px Montserrat, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("ASSINE JÁ!", btnX + (btnW / 2), footerY);
+
+  // Center Text
+  ctx.font = "500 24px Montserrat, sans-serif";
+  ctx.fillText("ASSISTA EM QUALQUER DISPOSITIVO", width / 2, footerY);
+
+  // Device Icons (Right) - Simplified placeholders for standard devices
+  const iconText = "SAMSUNG | LG | ROKU | GOOGLE | FIRE TV | ANDROID";
+  ctx.font = "bold 20px Montserrat, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.fillText(iconText, width - 60, footerY);
 
   return canvas.toDataURL("image/png");
 };
