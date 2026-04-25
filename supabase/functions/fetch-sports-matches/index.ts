@@ -6,17 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const LEAGUES = [
-  { id: 71, name: "Brasileirão Série A" },
-  { id: 72, name: "Brasileirão Série B" },
-  { id: 2, name: "Champions League" },
-  { id: 13, name: "Libertadores" },
-  { id: 39, name: "Premier League" },
-  { id: 140, name: "La Liga" },
-  { id: 135, name: "Serie A" },
-  { id: 78, name: "Bundesliga" },
-  { id: 61, name: "Ligue 1" },
-];
+const TARGET_LEAGUES = [71, 72, 2, 13, 39, 140, 135, 78, 61, 73]; // Added 73 for Copa do Brasil
+
+const getAutoChannels = (leagueId: number, leagueName: string) => {
+  const name = leagueName.toLowerCase();
+  // Fixed mapping based on league ID or Name
+  if (leagueId === 71 || name.includes("brasileirão série a")) return ["Premiere", "Globo", "SporTV"];
+  if (leagueId === 72 || name.includes("brasileirão série b")) return ["Premiere", "SporTV", "Band"];
+  if (leagueId === 2 || name.includes("champions league")) return ["Max", "TNT"];
+  if (leagueId === 13 || name.includes("libertadores")) return ["Globo", "ESPN", "Paramount+"];
+  if (leagueId === 73 || name.includes("copa do brasil")) return ["Prime Video", "Globo", "SporTV"];
+  if (name.includes("premier league") || name.includes("la liga") || name.includes("serie a") || name.includes("bundesliga") || name.includes("ligue 1")) return ["ESPN", "Star+"];
+  return ["TV MAX"];
+};
+
+function cleanChannelName(name: string): string {
+  if (!name) return "";
+  let clean = name.split(/\s(RJ|SP|MG|RS|PR|SC|GO|BA|PE|CE|MT|MS|PA|AM|ES|AL|SE|PB|RN|MA|PI|RO|AC|AP|TO|RR|DF)/i)[0];
+  clean = clean.replace(/\s\d+$/g, ""); // Remove numbers at the end like "Premiere 4"
+  return clean.trim();
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,10 +45,9 @@ Deno.serve(async (req) => {
 
     const allMatches = [];
 
-    // Ligas solicitadas
-    const TARGET_LEAGUES = [71, 72, 2, 13, 39, 140, 135, 78, 61];
-
     console.log(`Fetching from RapidAPI...`);
+    // Note: We need to use the endpoint that includes broadcasters if possible
+    // but the standard fixtures endpoint sometimes has them in specific plans.
     const response = await fetch(
       `https://api-football-v1.p.rapidapi.com/v3/fixtures?date=${today}`,
       {
@@ -60,27 +68,21 @@ Deno.serve(async (req) => {
 
     console.log(`Total matches found: ${allMatches.length}`);
 
-    const getAutoChannels = (leagueName: string) => {
-      const name = leagueName.toLowerCase();
-      if (name.includes("brasileirão")) return ["Premiere", "Globo"];
-      if (name.includes("champions league")) return ["Max", "TNT"];
-      if (name.includes("libertadores")) return ["Globo", "ESPN", "Paramount+"];
-      if (name.includes("premier league")) return ["ESPN", "Star+"];
-      if (name.includes("la liga") || name.includes("serie a") || name.includes("bundesliga") || name.includes("ligue 1")) return ["ESPN", "Star+"];
-      return ["TV MAX"];
-    };
-
     const upsertData = allMatches.map((m) => {
-      // Extract channels from API if available, otherwise use defaults
-      let matchChannels = [];
-      // Some API versions or data plans might include broadcasters
+      // Extract channels from API if available
+      let matchChannels: string[] = [];
+      
+      // Broadcasters can sometimes be found in the fixture object in certain API subscriptions
       if (m.fixture.broadcasters && Array.isArray(m.fixture.broadcasters)) {
-        matchChannels = m.fixture.broadcasters.map((b: any) => b.name);
+        matchChannels = m.fixture.broadcasters.map((b: any) => cleanChannelName(b.name));
       }
       
       if (matchChannels.length === 0) {
-        matchChannels = getAutoChannels(m.league.name);
+        matchChannels = getAutoChannels(m.league.id, m.league.name);
       }
+
+      // Remove duplicates
+      matchChannels = [...new Set(matchChannels)];
 
       return {
         external_id: m.fixture.id,
