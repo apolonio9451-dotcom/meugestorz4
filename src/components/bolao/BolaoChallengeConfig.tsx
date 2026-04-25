@@ -263,9 +263,20 @@ export const BolaoChallengeConfig = () => {
                 <p className="text-xs text-zinc-500">{existingChallenge.match_ids.length} jogos selecionados</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-400 hover:bg-red-500/10">
-              <Trash2 className="w-4 h-4 mr-2" /> Encerrar
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={checkWinners} 
+                disabled={checking}
+                variant="outline" 
+                className="border-green-500/50 text-green-500 hover:bg-green-500/10 font-bold"
+              >
+                {checking ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                Verificar Ganhadores
+              </Button>
+              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                <Trash2 className="w-4 h-4 mr-2" /> Encerrar
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
