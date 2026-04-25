@@ -149,7 +149,7 @@ export const generateBannerCanvas = async (
       loadImage(match.away_logo),
     ]);
 
-    const shieldSize = 120;
+    const shieldSize = templateId === 3 ? 240 : (templateId === 2 ? 150 : 120);
     const centerX = width / 2;
 
     // Home Shield
