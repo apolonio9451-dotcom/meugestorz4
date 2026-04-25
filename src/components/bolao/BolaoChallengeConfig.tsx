@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Trophy, Plus, Trash2, Save, Calendar, CheckCircle2, RefreshCw, Wand2 } from "lucide-react";
+import { Trophy, Plus, Trash2, Save, Calendar, CheckCircle2, RefreshCw, Wand2, Users, Gamepad2, Eye } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
