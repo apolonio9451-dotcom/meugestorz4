@@ -270,12 +270,28 @@ const BolaoTVMAX = () => {
 
           {step === "betting" && (
             <div className="space-y-6">
-              <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase">Bem-vindo(a),</p>
-                  <p className="font-black text-primary">{name || "Palpiteiro"}</p>
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={() => {
+                    const shareText = `⚽ Desafio Bolão TV MAX! 🏆 Você acha que entende de futebol? Tente acertar os placares de hoje e ganhe prêmios! Participe aqui: ${window.location.origin}/palpites`;
+                    if (navigator.share) {
+                      navigator.share({ title: 'Bolão TV MAX', text: shareText, url: window.location.origin + '/palpites' });
+                    } else {
+                      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+                    }
+                  }}
+                  className="w-full bg-zinc-900 border border-primary/20 hover:border-primary/50 text-primary h-12 font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(0,242,255,0.1)]"
+                >
+                  <Share2 className="w-5 h-5 mr-2 animate-pulse" /> Compartilhar Bolão
+                </Button>
+
+                <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase">Bem-vindo(a),</p>
+                    <p className="font-black text-primary">{name || "Palpiteiro"}</p>
+                  </div>
+                  <Trophy className="w-8 h-8 text-yellow-500" />
                 </div>
-                <Trophy className="w-8 h-8 text-yellow-500" />
               </div>
 
               <div className="space-y-4">
