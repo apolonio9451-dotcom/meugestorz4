@@ -2062,6 +2062,7 @@ export type Database = {
           home_logo: string | null
           home_team: string
           id: string
+          league_id: number | null
           league_logo: string | null
           league_name: string | null
           match_date: string
@@ -2077,6 +2078,7 @@ export type Database = {
           home_logo?: string | null
           home_team: string
           id?: string
+          league_id?: number | null
           league_logo?: string | null
           league_name?: string | null
           match_date: string
@@ -2092,6 +2094,7 @@ export type Database = {
           home_logo?: string | null
           home_team?: string
           id?: string
+          league_id?: number | null
           league_logo?: string | null
           league_name?: string | null
           match_date?: string
