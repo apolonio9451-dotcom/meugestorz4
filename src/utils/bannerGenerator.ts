@@ -121,10 +121,10 @@ export const generateBannerCanvas = async (
 
   // 4. GRID DE JOGOS (Cordenadas Ajustadas por Zona)
   const startY = 520; // Ajustado para não colidir com o cabeçalho
-  const rowHeight = 210;
-  const shieldSize = 50; // Reduzido conforme solicitado
-  const nameMaxWidth = 360; 
-  const zonePadding = 100; // Maior recuo do VS central
+  const rowHeight = 220;
+  const shieldSize = 80; 
+  const nameMaxWidth = 300; 
+  const zonePadding = 120; // Column-based separation like image_10.png
 
   const getAutoShrinkFontSize = (text: string, maxWidth: number, baseSize: number) => {
     ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
