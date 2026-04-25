@@ -69,15 +69,17 @@ const BolaoTVMAX = () => {
       // 1. Check if client exists in 'clients' table
       const { data: clientData } = await supabase
         .from("clients")
-        .select("id, name")
+        .select("id, name, status")
         .eq("phone", phone)
         .maybeSingle();
 
       if (clientData) {
         setName(clientData.name || "");
+        setIsClient(clientData.status === 'active');
         checkExistingGuess(phone);
       } else {
         // 2. Not a client, ask for name (Lead flow)
+        setIsClient(false);
         setStep("form");
       }
     } catch (error: any) {
