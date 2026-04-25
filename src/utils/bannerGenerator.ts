@@ -161,22 +161,24 @@ export const generateBannerCanvas = async (
       match.league_logo ? loadImage(match.league_logo) : Promise.resolve(null),
     ]);
 
-    // Draw row "Frame/Molde" (Neon Glow Effect)
-    const frameWidth = width - 100;
-    const frameHeight = rowHeight - 20;
-    const frameX = 50;
-    const frameY = yCenter - (frameHeight / 2);
+    // Draw row "Frame/Molde" (Only if not hidden)
+    if (!customSettings?.hideFrames) {
+      const frameWidth = width - 100;
+      const frameHeight = rowHeight - 20;
+      const frameX = 50;
+      const frameY = yCenter - (frameHeight / 2);
 
-    // Frame cleaning
-    ctx.fillStyle = "rgba(10, 10, 30, 0.8)";
-    ctx.beginPath();
-    ctx.roundRect(frameX, frameY, frameWidth, frameHeight, 15);
-    ctx.fill();
+      // Frame cleaning
+      ctx.fillStyle = "rgba(10, 10, 30, 0.8)";
+      ctx.beginPath();
+      ctx.roundRect(frameX, frameY, frameWidth, frameHeight, 15);
+      ctx.fill();
 
-    // Neon border
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; // Blue neon
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      // Neon border
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; // Blue neon
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     // --- COLUMN 1: LEAGUE & TIME ---
     const col1X = 80;
