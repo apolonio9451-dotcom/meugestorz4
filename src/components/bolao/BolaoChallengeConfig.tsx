@@ -20,10 +20,9 @@ interface Match {
 
 export const BolaoChallengeConfig = () => {
   const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatchIds, setSelectedMatchIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [existingChallenge, setExistingChallenge] = useState<any>(null);
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [participantCount, setParticipantCount] = useState(0);
