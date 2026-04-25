@@ -127,11 +127,30 @@ const BannerGenerator = () => {
       const { data, error } = await supabase
         .from("sports_matches")
         .select("*")
-        .eq("match_date", today)
-        .order("match_time", { ascending: true });
+        .eq("match_date", today);
 
       if (error) throw error;
-      setMatches(data || []);
+      
+      // Filter by league priority and sort
+      const priorityLeagues = [71, 13, 11, 73, 2, 3, 39, 140, 135, 78, 61, 72];
+      const sortedMatches = (data || []).sort((a, b) => {
+        const indexA = priorityLeagues.indexOf(a.league_id);
+        const indexB = priorityLeagues.indexOf(b.league_id);
+        
+        // If both in priority, sort by priority
+        if (indexA !== -1 && indexB !== -1) {
+          if (indexA !== indexB) return indexA - indexB;
+        } else if (indexA !== -1) {
+          return -1;
+        } else if (indexB !== -1) {
+          return 1;
+        }
+        
+        // Secondary sort by time
+        return new Date(a.match_time).getTime() - new Date(b.match_time).getTime();
+      });
+
+      setMatches(sortedMatches);
     } catch (error: any) {
       toast.error("Erro ao buscar jogos: " + error.message);
     } finally {
@@ -167,7 +186,7 @@ const BannerGenerator = () => {
     try {
       const isDaily = selectedMatch.id === "daily";
       const currentTemplate = templates.find(t => t.id === selectedTemplateId);
-      const maxPerPage = currentTemplate?.config?.matches?.maxPerPage || 8;
+      const maxPerPage = currentTemplate?.config?.matches?.maxPerPage || 6;
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
       

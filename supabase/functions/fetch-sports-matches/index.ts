@@ -6,16 +6,31 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const TARGET_LEAGUES = [71, 72, 2, 13, 39, 140, 135, 78, 61, 73]; // Added 73 for Copa do Brasil
+const TARGET_LEAGUES = [
+  71, // Brasileirão Série A
+  72, // Brasileirão Série B
+  13, // Libertadores
+  11, // Sul-Americana
+  73, // Copa do Brasil
+  2,  // Champions League
+  3,  // Europa League
+  39, // Premier League
+  140, // La Liga
+  135, // Serie A
+  78,  // Bundesliga
+  61   // Ligue 1
+];
 
 const getAutoChannels = (leagueId: number, leagueName: string) => {
   const name = leagueName.toLowerCase();
   // Fixed mapping based on league ID or Name
-  if (leagueId === 71 || name.includes("brasileirão série a")) return ["Premiere", "Globo", "SporTV"];
-  if (leagueId === 72 || name.includes("brasileirão série b")) return ["Premiere", "SporTV", "Band"];
-  if (leagueId === 2 || name.includes("champions league")) return ["Max", "TNT"];
+  if (leagueId === 71 || name.includes("brasileirão série a")) return ["Globo", "Premiere", "SporTV"];
   if (leagueId === 13 || name.includes("libertadores")) return ["Globo", "ESPN", "Paramount+"];
-  if (leagueId === 73 || name.includes("copa do brasil")) return ["Prime Video", "Globo", "SporTV"];
+  if (leagueId === 11 || name.includes("sul-americana")) return ["ESPN", "Star+", "SBT"];
+  if (leagueId === 73 || name.includes("copa do brasil")) return ["Globo", "Prime Video", "SporTV"];
+  if (leagueId === 2 || name.includes("champions league")) return ["TNT", "Max", "SBT"];
+  if (leagueId === 3 || name.includes("europa league")) return ["ESPN", "Star+"];
+  if (leagueId === 72 || name.includes("brasileirão série b")) return ["Premiere", "SporTV", "Band"];
   if (name.includes("premier league") || name.includes("la liga") || name.includes("serie a") || name.includes("bundesliga") || name.includes("ligue 1")) return ["ESPN", "Star+"];
   return ["TV MAX"];
 };
@@ -95,6 +110,7 @@ Deno.serve(async (req) => {
         league_name: m.league.name,
         league_logo: m.league.logo,
         channels: matchChannels,
+        league_id: m.league.id,
         updated_at: new Date().toISOString(),
       };
     });

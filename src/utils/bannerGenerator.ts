@@ -167,10 +167,26 @@ export const generateBannerCanvas = async (
     ctx.font = `bold ${config.matches.infoFontSize}px Montserrat, sans-serif`;
     ctx.fillStyle = config.dayOfWeek.color;
     const timeStr = formatBrasiliaTime(match.match_time);
+    
+    // Draw horizontal line or separator
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 400, y + 110);
+    ctx.lineTo(centerX + 400, y + 110);
+    ctx.stroke();
+
     const channelsStr = match.channels && match.channels.length > 0 
-      ? ` | ${match.channels.join(" & ")}` 
-      : "";
-    ctx.fillText(`${timeStr}${channelsStr}`, centerX, y + 90);
+      ? match.channels.join(" | ") 
+      : "TRANSMISSÃO A DEFINIR";
+    
+    ctx.font = `bold ${config.matches.infoFontSize}px Montserrat, sans-serif`;
+    ctx.fillStyle = config.dayOfWeek.color;
+    ctx.fillText(timeStr, centerX, y + 65);
+    
+    ctx.font = `italic ${config.matches.infoFontSize - 4}px Montserrat, sans-serif`;
+    ctx.fillStyle = "#AAAAAA";
+    ctx.fillText(channelsStr.toUpperCase(), centerX, y + 100);
   }
 
   // 6. Footer
