@@ -101,26 +101,28 @@ export const generateBannerCanvas = async (
     footer: { y: 1780, text: "ASSINE AGORA E ASSISTA EM 4K", bgColor: "#2563eb" }
   };
 
-  // 3. Header
-  ctx.textAlign = "center";
-  ctx.fillStyle = config.title.color;
-  ctx.font = `bold ${config.title.fontSize}px Montserrat, sans-serif`;
-  
-  let titleText = config.title.text;
-  if (pageInfo && pageInfo.total > 1) {
-    titleText += ` (${pageInfo.current}/${pageInfo.total})`;
-  }
-  ctx.fillText(titleText, config.title.x, config.title.y);
-  
-  ctx.font = `italic ${config.dayOfWeek.fontSize}px Montserrat, sans-serif`;
-  ctx.fillStyle = config.dayOfWeek.color;
-  ctx.fillText(dayOfWeek.toUpperCase(), config.dayOfWeek.x, config.dayOfWeek.y);
+  // 3. Header - ONLY DRAW IF NOT CUSTOM BACKGROUND
+  if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = config.title.color;
+    ctx.font = `bold ${config.title.fontSize}px Montserrat, sans-serif`;
+    
+    let titleText = config.title.text;
+    if (pageInfo && pageInfo.total > 1) {
+      titleText += ` (${pageInfo.current}/${pageInfo.total})`;
+    }
+    ctx.fillText(titleText, config.title.x, config.title.y);
+    
+    ctx.font = `italic ${config.dayOfWeek.fontSize}px Montserrat, sans-serif`;
+    ctx.fillStyle = config.dayOfWeek.color;
+    ctx.fillText(dayOfWeek.toUpperCase(), config.dayOfWeek.x, config.dayOfWeek.y);
 
-  // 4. Logo
-  if (logoImg && logoImg.width > 1) {
-    const aspectRatio = logoImg.height / logoImg.width;
-    const logoHeight = config.logo.width * aspectRatio;
-    ctx.drawImage(logoImg, config.logo.x, config.logo.y, config.logo.width, logoHeight);
+    // 4. Logo
+    if (logoImg && logoImg.width > 1) {
+      const aspectRatio = logoImg.height / logoImg.width;
+      const logoHeight = config.logo.width * aspectRatio;
+      ctx.drawImage(logoImg, config.logo.x, config.logo.y, config.logo.width, logoHeight);
+    }
   }
 
   // 5. Matches
