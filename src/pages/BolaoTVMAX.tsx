@@ -179,7 +179,7 @@ const BolaoTVMAX = () => {
         .from("bolao_guesses")
         .insert({
           challenge_id: challenge.id,
-          participant_phone: phone,
+          participant_phone: phone.replace(/\D/g, ''),
           participant_name: name,
           guesses: formattedGuesses,
           status: "pending",
