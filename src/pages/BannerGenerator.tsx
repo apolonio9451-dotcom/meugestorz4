@@ -194,7 +194,8 @@ const BannerGenerator = () => {
             selectedTemplateId,
             currentTemplate?.background_url,
             currentTemplate?.config,
-            { current: i + 1, total: totalPages }
+            { current: i + 1, total: totalPages },
+            { hideFrames, hideHeaderBox }
           );
           
           const link = document.createElement("a");
