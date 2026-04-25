@@ -421,98 +421,65 @@ const BannerGenerator = () => {
                 </CardContent>
               </Card>
 
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-40 w-full rounded-xl" />
-                  ))}
-                </div>
-              ) : matches.length === 0 ? (
-                <Card className="border-dashed border-2 bg-muted/50">
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <ImageIcon className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-xl font-medium">Nenhum jogo encontrado para hoje</p>
-                    <p className="text-muted-foreground mb-6">Tente sincronizar com a API de futebol.</p>
-                    <Button onClick={handleRefresh}>Sincronizar Agora</Button>
-                  </CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card className="overflow-hidden glass-card hover:border-primary/50 transition-all group relative border-2 border-blue-500/50">
+                  <div className="aspect-[9/16] relative bg-zinc-900">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-blue-900/40 to-black/80">
+                      <ImageIcon className="w-16 h-16 text-blue-400 mb-4" />
+                      <h3 className="text-xl font-bold mb-2">Padrão TV MAX</h3>
+                      <p className="text-sm text-muted-foreground mb-6">Modelo oficial com fundo de estádio e cores da marca.</p>
+                      <Button 
+                        className="w-full bg-blue-600 hover:bg-blue-700 font-bold"
+                        onClick={openDailyEditor}
+                        disabled={loading || matches.length === 0}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Gerar com este Modelo
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {matches.map((match) => (
-                    <Card key={match.id} className="overflow-hidden glass-card hover:border-primary/50 transition-all group">
-                      <CardHeader className="pb-2 space-y-0">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-                            {match.league_name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(match.match_time), "HH:mm")}
-                          </span>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between gap-4 mb-4">
-                          <div className="flex flex-col items-center gap-2 flex-1 text-center">
-                            <img src={match.home_logo} alt={match.home_team} className="w-12 h-12 object-contain drop-shadow-md" />
-                            <span className="text-xs font-bold line-clamp-1">{match.home_team}</span>
-                          </div>
-                          <div className="text-lg font-black text-muted-foreground/30 italic">VS</div>
-                          <div className="flex flex-col items-center gap-2 flex-1 text-center">
-                            <img src={match.away_logo} alt={match.away_team} className="w-12 h-12 object-contain drop-shadow-md" />
-                            <span className="text-xs font-bold line-clamp-1">{match.away_team}</span>
-                          </div>
-                        </div>
-                        
-                        {match.channels && match.channels.length > 0 && (
-                          <div className="text-[10px] text-muted-foreground mb-4 flex items-center gap-1 flex-wrap">
-                            <span className="font-semibold text-primary/70">Transmissão:</span>
-                            {match.channels.map((ch, i) => (
-                              <span key={i} className="bg-muted px-1.5 py-0.5 rounded">{ch}</span>
-                            ))}
-                          </div>
-                        )}
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            className="border-primary/20 text-primary hover:bg-primary/10"
-                            onClick={() => openEditor(match)}
-                          >
-                            <Edit2 className="w-3 h-3 mr-1.5" />
-                            Personalizar
-                          </Button>
-                          <Button 
-                            size="sm"
-                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
-                            onClick={async () => {
-                              try {
-                                const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-                                const dataUrl = await generateBannerCanvas(
-                                  [{ ...match, channels: match.channels || [] }], 
-                                  brandLogo, 
-                                  dayOfWeek, 
-                                  "default"
-                                );
-                                const link = document.createElement("a");
-                                link.download = `banner-${match.home_team}-vs-${match.away_team}.png`;
-                                link.href = dataUrl;
-                                link.click();
-                                toast.success("Banner baixado!");
-                              } catch (error) {
-                                toast.error("Erro ao gerar banner");
-                              }
-                            }}
-                          >
-                            <Download className="w-3 h-3 mr-1.5" />
-                            Baixar PNG
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                {templates.map((template) => (
+                  <Card key={template.id} className="overflow-hidden glass-card hover:border-primary/50 transition-all group relative">
+                    <div className="aspect-[9/16] relative bg-zinc-900">
+                      <img 
+                        src={template.background_url} 
+                        alt={template.name} 
+                        className="w-full h-full object-cover opacity-60" 
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black/40">
+                        <h3 className="text-xl font-bold mb-2">{template.name}</h3>
+                        <p className="text-sm text-zinc-300 mb-6">Personalizado: {template.config.matches.maxPerPage} jogos por página.</p>
+                        <Button 
+                          className="w-full bg-purple-600 hover:bg-purple-700 font-bold"
+                          onClick={() => {
+                            const dailyMock: Match = {
+                              id: "daily",
+                              home_team: "",
+                              away_team: "",
+                              home_logo: "",
+                              away_logo: "",
+                              match_time: new Date().toISOString(),
+                              league_name: "Geral",
+                              channels: []
+                            };
+                            setSelectedMatch(dailyMock);
+                            setCustomChannels("");
+                            setSelectedTemplateId(template.id);
+                            setIsEditorOpen(true);
+                          }}
+                          disabled={loading || matches.length === 0}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Gerar com este Modelo
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
             </TabsContent>
 
             <TabsContent value="templates">
