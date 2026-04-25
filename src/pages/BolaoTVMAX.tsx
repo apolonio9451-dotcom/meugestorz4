@@ -82,7 +82,7 @@ const BolaoTVMAX = () => {
 
     setLoading(true);
     try {
-      // 1. Check if client exists in 'clients' table
+      // 1. Check if exists in 'clients' table (Active subscribers)
       const { data: clientData } = await supabase
         .from("clients")
         .select("id, name, status")
@@ -93,8 +93,22 @@ const BolaoTVMAX = () => {
         setName(clientData.name || "");
         setIsClient(clientData.status === 'active');
         checkExistingGuess(phone);
+        return;
+      }
+
+      // 2. Check if exists in 'bolao_leads' table (Returning guests)
+      const { data: leadData } = await supabase
+        .from("bolao_leads")
+        .select("name")
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (leadData) {
+        setName(leadData.name || "");
+        setIsClient(false);
+        checkExistingGuess(phone);
       } else {
-        // 2. Not a client, ask for name (Lead flow)
+        // 3. New visitor, ask for name
         setIsClient(false);
         setStep("form");
       }
@@ -244,8 +258,8 @@ const BolaoTVMAX = () => {
           {step === "form" && (
             <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle className="text-lg text-center font-bold">Quase lá!</CardTitle>
-                <p className="text-center text-zinc-500 text-sm italic">Você ainda não é assinante TV MAX. Participe como convidado:</p>
+                <CardTitle className="text-lg text-center font-bold">Boas-vindas ao Bolão!</CardTitle>
+                <p className="text-center text-zinc-500 text-sm italic">Informe seu nome para identificarmos seu palpite:</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
