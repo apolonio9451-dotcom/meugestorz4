@@ -89,27 +89,27 @@ export const generateBannerCanvas = async (
     ctx.fillRect(0, 0, width, height);
   }
 
-  // 2. HEADER - Clean and Legible
+  // 2. HEADER - "JOGOS DE HOJE" + DATA
   const headerY = 220;
   ctx.textAlign = "center";
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 110px Montserrat, sans-serif";
+  ctx.font = "bold 90px Montserrat, sans-serif";
   
-  let mainTitle = "JOGOS DO DIA";
+  const today = new Date();
+  const dayName = today.toLocaleDateString('pt-BR', { weekday: 'long' }).toUpperCase();
+  const dayNum = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  
+  let mainTitle = `JOGOS DE HOJE - ${dayName}, ${dayNum}`;
   if (pageInfo && pageInfo.total > 1) {
     mainTitle += ` (${pageInfo.current}/${pageInfo.total})`;
   }
-  ctx.fillText(mainTitle, width / 2, headerY);
-
-  // Date and Day of Week - Automated
-  const today = new Date();
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
-  const formattedDate = today.toLocaleDateString('pt-BR', options).toUpperCase();
-  const subTitle = `${dayOfWeek.toUpperCase()}, ${formattedDate}`;
   
-  ctx.font = "500 42px Montserrat, sans-serif";
-  ctx.fillStyle = "#3b82f6"; // Primary blue for highlight
-  ctx.fillText(subTitle, width / 2, headerY + 70);
+  // Limpar área do cabeçalho caso o template tenha texto fixo
+  ctx.fillStyle = "rgba(0, 0, 0, 0.8)"; // Cobertura escura para placeholders
+  ctx.fillRect(100, headerY - 100, width - 200, 200);
+  
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillText(mainTitle, width / 2, headerY);
 
   // 3. LOGO TV MAX
   if (logoImg && logoImg.width > 1) {
@@ -122,9 +122,9 @@ export const generateBannerCanvas = async (
   // 4. GRID DE JOGOS (Cordenadas Ajustadas por Zona)
   const startY = 520; // Ajustado para não colidir com o cabeçalho
   const rowHeight = 210;
-  const shieldSize = 100;
+  const shieldSize = 50; // Reduzido conforme solicitado
   const nameMaxWidth = 360; 
-  const zonePadding = 80; // Espaço de segurança do centro (VS)
+  const zonePadding = 100; // Maior recuo do VS central
 
   const getAutoShrinkFontSize = (text: string, maxWidth: number, baseSize: number) => {
     ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
@@ -146,54 +146,72 @@ export const generateBannerCanvas = async (
       loadImage(match.away_logo),
     ]);
 
-    // ZONA CENTRAL (10%): VS
-    ctx.textAlign = "center";
-    ctx.font = "italic bold 56px Montserrat, sans-serif";
-    ctx.fillStyle = "#3b82f6";
-    ctx.fillText("VS", canvasCenterX, yCenter + 15);
+    // 1. ZONA VERDE (HORÁRIO) - Cobertura de limpeza e texto
+    const timeY = yCenter - 65;
+    const timeStr = formatBrasiliaTime(match.match_time);
+    
+    // Opcional: Desenhar fundo se o template tiver texto fixo
+    // ctx.fillStyle = "#054523"; 
+    // ctx.fillRect(canvasCenterX - 100, timeY - 30, 200, 50);
 
-    // ZONA ESQUERDA (40%): [ESCUDO] + [NOME]
-    // O nome fica alinhado à direita, encostando na margem do VS
-    const leftNameRightEdge = canvasCenterX - zonePadding; 
+    ctx.textAlign = "center";
+    ctx.font = "bold 38px Montserrat, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(timeStr, canvasCenterX, timeY);
+
+    // 2. ZONA CENTRAL: VS
+    ctx.textAlign = "center";
+    ctx.font = "italic bold 52px Montserrat, sans-serif";
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillText("VS", canvasCenterX, yCenter + 20);
+
+    // 3. ZONA PRETA (NOMES E ESCUDOS) - Central
+    // Cobertura de limpeza (opcional, mas garante que placeholders sumam)
+    // ctx.fillStyle = "#000000";
+    // ctx.fillRect(100, yCenter - 40, 350, 80); // Lado Esquerdo
+    // ctx.fillRect(width - 450, yCenter - 40, 350, 80); // Lado Direito
+
+    // Escudo Casa (Extremidade Esquerda)
+    const shieldY = yCenter - (shieldSize / 2) + 5;
+    const homeShieldX = 130; 
+    if (homeShield && homeShield.width > 1) {
+      ctx.drawImage(homeShield, homeShieldX, shieldY, shieldSize, shieldSize);
+    }
+
+    // Nome Casa (Alinhado à Direita, sem encostar no VS)
+    const leftNameRightEdge = canvasCenterX - zonePadding;
     const homeNameSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 44);
     ctx.font = `bold ${homeNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.home_team.toUpperCase(), leftNameRightEdge, yCenter + 15);
+    ctx.fillText(match.home_team.toUpperCase(), leftNameRightEdge, yCenter + 20);
 
-    // Escudo Casa - Fica à esquerda do nome
-    const homeNameWidth = ctx.measureText(match.home_team.toUpperCase()).width;
-    const homeShieldX = leftNameRightEdge - homeNameWidth - shieldSize - 30;
-    if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, homeShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
-    }
-
-    // ZONA DIREITA (40%): [NOME] + [ESCUDO]
-    // O nome fica alinhado à esquerda, encostando na margem do VS
-    const rightNameLeftEdge = canvasCenterX + zonePadding; 
+    // Nome Fora (Alinhado à Esquerda, sem encostar no VS)
+    const rightNameLeftEdge = canvasCenterX + zonePadding;
     const awayNameSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 44);
     ctx.font = `bold ${awayNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.away_team.toUpperCase(), rightNameLeftEdge, yCenter + 15);
+    ctx.fillText(match.away_team.toUpperCase(), rightNameLeftEdge, yCenter + 20);
 
-    // Escudo Fora - Fica à direita do nome
-    const awayNameWidth = ctx.measureText(match.away_team.toUpperCase()).width;
-    const awayShieldX = rightNameLeftEdge + awayNameWidth + 30;
+    // Escudo Fora (Extremidade Direita)
+    const awayShieldX = width - 130 - shieldSize;
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, awayShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
+      ctx.drawImage(awayShield, awayShieldX, shieldY, shieldSize, shieldSize);
     }
 
-    // INFORMAÇÕES DINÂMICAS: HORÁRIO | TRANSMISSÃO
-    const infoY = yCenter + 85;
-    const timeStr = formatBrasiliaTime(match.match_time);
+    // 4. ZONA BRANCA (TRANSMISSÃO) - Inferior
+    const transmissionY = yCenter + 95;
     const transmission = match.channels && match.channels.length > 0 ? match.channels.join(" | ") : "ONDE ASSISTIR";
-    const infoText = `${timeStr} | ${transmission}`.toUpperCase();
     
+    // Cobertura de limpeza (opcional)
+    // ctx.fillStyle = "#FFFFFF";
+    // ctx.fillRect(canvasCenterX - 200, transmissionY - 30, 400, 50);
+
     ctx.textAlign = "center";
-    ctx.font = "600 28px Montserrat, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.fillText(infoText, canvasCenterX, infoY);
+    ctx.font = "bold 30px Montserrat, sans-serif";
+    ctx.fillStyle = "#000033"; // Cor escura para contraste no branco
+    ctx.fillText(transmission.toUpperCase(), canvasCenterX, transmissionY);
   }
 
   // 5. FOOTER - Persistence of Design
