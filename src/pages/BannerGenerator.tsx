@@ -83,7 +83,8 @@ const BannerGenerator = () => {
         selectedTemplateId,
         currentTemplate?.background_url,
         currentTemplate?.config,
-        isDaily ? { current: 1, total: Math.ceil(matches.length / maxPerPage) } : undefined
+        isDaily ? { current: 1, total: Math.ceil(matches.length / maxPerPage) } : undefined,
+        { hideFrames, hideHeaderBox }
       );
       setPreviewUrl(dataUrl);
     } catch (error) {
