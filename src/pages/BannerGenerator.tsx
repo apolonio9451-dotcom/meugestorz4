@@ -39,6 +39,7 @@ const BannerGenerator = () => {
   const [fetching, setFetching] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<number>(1);
   const [customChannels, setCustomChannels] = useState("");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -49,17 +50,18 @@ const BannerGenerator = () => {
     if (isEditorOpen && selectedMatch) {
       updatePreview();
     }
-  }, [isEditorOpen, selectedMatch, customChannels, brandLogo]);
+  }, [isEditorOpen, selectedMatch, customChannels, brandLogo, selectedTemplate]);
 
   const updatePreview = async () => {
     if (!selectedMatch) return;
     try {
-      const matchData: MatchData = {
-        ...selectedMatch,
-        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
-      };
+      const isDaily = selectedMatch.id === "daily";
+      const matchesToDraw = isDaily 
+        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
+      
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
       setPreviewUrl(dataUrl);
     } catch (error) {
       console.error("Error generating preview", error);
@@ -110,6 +112,7 @@ const BannerGenerator = () => {
       
       toast.success(`${data.count} jogos atualizados!`);
       fetchMatches();
+      setSelectedTemplate(1); // Reset template to default on sync
     } catch (error: any) {
       toast.error("Erro ao atualizar jogos: " + error.message);
     } finally {
@@ -120,22 +123,26 @@ const BannerGenerator = () => {
   const openEditor = (match: Match) => {
     setSelectedMatch(match);
     setCustomChannels(match.channels?.join(", ") || "");
+    setSelectedTemplate(match.id === "daily" ? 1 : 3); // Default to Card Único for single match
     setIsEditorOpen(true);
   };
 
   const downloadBanner = async () => {
     if (!selectedMatch) return;
     try {
-      const matchData: MatchData = {
-        ...selectedMatch,
-        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
-      };
+      const isDaily = selectedMatch.id === "daily";
+      const matchesToDraw = isDaily 
+        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
       
       const link = document.createElement("a");
-      link.download = `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
+      const filename = isDaily 
+        ? `jogos-do-dia-${format(new Date(), "dd-MM")}.png`
+        : `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
+      link.download = filename;
       link.href = dataUrl;
       link.click();
       toast.success("Banner baixado com sucesso!");
@@ -148,13 +155,13 @@ const BannerGenerator = () => {
   const shareOnWhatsApp = async () => {
     if (!selectedMatch) return;
     try {
-      const matchData: MatchData = {
-        ...selectedMatch,
-        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
-      };
+      const isDaily = selectedMatch.id === "daily";
+      const matchesToDraw = isDaily 
+        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
       
       const response = await fetch(dataUrl);
       const blob = await response.blob();
@@ -173,24 +180,22 @@ const BannerGenerator = () => {
     }
   };
 
-  const downloadDailyBanner = async () => {
+  const openDailyEditor = () => {
     if (matches.length === 0) return;
-    try {
-      const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas(matches.map(m => ({
-        ...m,
-        channels: m.channels || []
-      })), brandLogo, dayOfWeek);
-      
-      const link = document.createElement("a");
-      link.download = `jogos-do-dia-${format(new Date(), "dd-MM")}.png`;
-      link.href = dataUrl;
-      link.click();
-      toast.success("Banner geral baixado com sucesso!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao gerar banner geral");
-    }
+    const dailyMock: Match = {
+      id: "daily",
+      home_team: "",
+      away_team: "",
+      home_logo: "",
+      away_logo: "",
+      match_time: new Date().toISOString(),
+      league_name: "Geral",
+      channels: []
+    };
+    setSelectedMatch(dailyMock);
+    setCustomChannels("");
+    setSelectedTemplate(1);
+    setIsEditorOpen(true);
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,7 +247,7 @@ const BannerGenerator = () => {
           </div>
           <div className="flex gap-2">
             <Button 
-              onClick={downloadDailyBanner}
+              onClick={openDailyEditor}
               disabled={loading || matches.length === 0}
               variant="outline"
               className="bg-purple-600/10 border-purple-600/30 text-purple-400 hover:bg-purple-600/20"
@@ -394,7 +399,34 @@ const BannerGenerator = () => {
             </DialogHeader>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-zinc-300">Escolha o Modelo</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { id: 1, name: "Lista Vertical", desc: "Clássico TV MAX" },
+                      { id: 2, name: "Moderno Neon", desc: "Estilo Gamer" },
+                      { id: 3, name: "Card Único", desc: "Destaque" }
+                    ].map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => setSelectedTemplate(tpl.id)}
+                        className={`p-3 rounded-lg border-2 transition-all text-left space-y-1 ${
+                          selectedTemplate === tpl.id 
+                            ? "border-blue-500 bg-blue-500/10" 
+                            : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
+                        }`}
+                      >
+                        <div className={`text-[10px] font-bold uppercase ${selectedTemplate === tpl.id ? "text-blue-400" : "text-zinc-500"}`}>
+                          Modelo {tpl.id}
+                        </div>
+                        <div className="text-xs font-semibold">{tpl.name}</div>
+                        <div className="text-[9px] text-zinc-500 line-clamp-1">{tpl.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="channels">Canais de Transmissão</Label>
                   <Input 
@@ -411,8 +443,8 @@ const BannerGenerator = () => {
                   <h4 className="text-sm font-semibold text-blue-400">Dicas TV MAX</h4>
                   <ul className="text-xs space-y-2 text-zinc-400">
                     <li>• O template é otimizado para Status de WhatsApp (9:16).</li>
-                    <li>• Use canais conhecidos para atrair mais clientes.</li>
-                    <li>• O banner já inclui seu CTA fixo de 4K.</li>
+                    <li>• O Modelo 1 é ideal para listas. O Modelo 3 para jogos grandes.</li>
+                    <li>• O banner já inclui sua marca personalizada no topo.</li>
                   </ul>
                 </div>
               </div>
