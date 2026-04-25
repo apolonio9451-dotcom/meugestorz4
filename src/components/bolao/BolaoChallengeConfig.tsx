@@ -73,7 +73,40 @@ export const BolaoChallengeConfig = () => {
     if (data) {
       setExistingChallenge(data);
       setSelectedMatchIds(data.match_ids);
+      fetchChallengeStats(data.id, data.match_ids);
+    } else {
+      setExistingChallenge(null);
+      setParticipantCount(0);
+      setWinnersCount(0);
+      setActiveChallengeMatches([]);
     }
+  };
+
+  const fetchChallengeStats = async (challengeId: string, matchIds: string[]) => {
+    // Fetch participants count
+    const { count: pCount } = await supabase
+      .from("bolao_guesses")
+      .select("*", { count: 'exact', head: true })
+      .eq("challenge_id", challengeId);
+    
+    setParticipantCount(pCount || 0);
+
+    // Fetch winners count
+    const { count: wCount } = await supabase
+      .from("bolao_guesses")
+      .select("*", { count: 'exact', head: true })
+      .eq("challenge_id", challengeId)
+      .eq("status", "winner");
+    
+    setWinnersCount(wCount || 0);
+
+    // Fetch match details for the active challenge
+    const { data: activeMatches } = await supabase
+      .from("sports_matches")
+      .select("*")
+      .in("id", matchIds);
+    
+    setActiveChallengeMatches(activeMatches || []);
   };
 
   const toggleMatch = (id: string) => {
