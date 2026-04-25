@@ -14,6 +14,9 @@ interface Match {
   id: string;
   home_team: string;
   away_team: string;
+  home_logo?: string;
+  away_logo?: string;
+  league_name?: string;
   match_time: string;
   match_date: string;
 }
