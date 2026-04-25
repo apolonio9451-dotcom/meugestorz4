@@ -155,7 +155,7 @@ const BannerGenerator = () => {
       };
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek, selectedTemplate);
       
       const response = await fetch(dataUrl);
       const blob = await response.blob();
