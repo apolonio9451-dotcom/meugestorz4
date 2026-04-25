@@ -109,10 +109,12 @@ export const generateBannerCanvas = async (
   const year = today.getFullYear();
   const fullDateStr = `JOGOS DE HOJE - ${dayName}, ${dayNum} DE ${year}`;
 
-  // Header cleaning box
-  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-  ctx.fillRect(50, headerY - 80, width - 100, 160);
-
+  // Header cleaning box (only if requested)
+  if (!customSettings?.hideHeaderBox) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(50, headerY - 80, width - 100, 160);
+  }
+  
   ctx.font = "bold 70px Montserrat, sans-serif";
   ctx.fillStyle = "#FFFFFF";
   ctx.fillText(fullDateStr, width / 2, headerY + 15);
