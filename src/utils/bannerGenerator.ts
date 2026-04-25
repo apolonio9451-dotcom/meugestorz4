@@ -133,18 +133,19 @@ export const generateBannerCanvas = async (
     const y = startY + i * rowHeight;
 
     if (templateId !== 3) {
-      // Draw row background (subtle)
-      ctx.fillStyle = templateId === 2 
-        ? "rgba(168, 85, 247, 0.05)" 
-        : "rgba(255, 255, 255, 0.03)";
-      ctx.beginPath();
-      ctx.roundRect(80, y - 100, width - 160, rowHeight, 30);
-      ctx.fill();
+      // Draw row background (more distinct, closer to example)
+      const bgGradient = ctx.createLinearGradient(80, 0, width - 80, 0);
+      bgGradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+      bgGradient.addColorStop(0.5, templateId === 2 ? "rgba(168, 85, 247, 0.1)" : "rgba(255, 255, 255, 0.05)");
+      bgGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(80, y - 110, width - 160, rowHeight - 20);
       
       if (templateId === 2) {
         ctx.strokeStyle = "rgba(168, 85, 247, 0.2)";
         ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.strokeRect(80, y - 110, width - 160, rowHeight - 20);
       }
     }
 
