@@ -160,7 +160,8 @@ const BolaoTVMAX = () => {
           participant_phone: phone,
           participant_name: name,
           guesses: formattedGuesses,
-          status: "pending"
+          status: "pending",
+          is_client: isClient
         } as any)
         .select()
         .single();
