@@ -220,6 +220,15 @@ const BannerGenerator = () => {
           </div>
           <div className="flex gap-2">
             <Button 
+              onClick={downloadDailyBanner}
+              disabled={loading || matches.length === 0}
+              variant="outline"
+              className="bg-purple-600/10 border-purple-600/30 text-purple-400 hover:bg-purple-600/20"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Banner do Dia
+            </Button>
+            <Button 
               onClick={handleRefresh} 
               disabled={fetching}
               variant="outline"
