@@ -29,6 +29,7 @@ const BolaoTVMAX = () => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [challenge, setChallenge] = useState<any>(null);
   const [matches, setMatches] = useState<Match[]>([]);
