@@ -65,12 +65,14 @@ const BannerGenerator = () => {
     if (!selectedMatch) return;
     try {
       const isDaily = selectedMatch.id === "daily";
+      const currentTemplate = templates.find(t => t.id === selectedTemplateId);
+      const maxPerPage = currentTemplate?.config?.matches?.maxPerPage || 6;
+      
       const matchesToDraw = isDaily 
-        ? matches.slice(0, 6).map(m => ({ ...m, channels: m.channels || [] }))
+        ? matches.slice(0, maxPerPage).map(m => ({ ...m, channels: m.channels || [] }))
         : [{ ...selectedMatch, channels: selectedMatch.channels || [] }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const currentTemplate = templates.find(t => t.id === selectedTemplateId);
       
       const dataUrl = await generateBannerCanvas(
         matchesToDraw, 
@@ -78,7 +80,8 @@ const BannerGenerator = () => {
         dayOfWeek, 
         selectedTemplateId,
         currentTemplate?.background_url,
-        currentTemplate?.config
+        currentTemplate?.config,
+        isDaily ? { current: 1, total: Math.ceil(matches.length / maxPerPage) } : undefined
       );
       setPreviewUrl(dataUrl);
     } catch (error) {
