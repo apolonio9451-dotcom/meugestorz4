@@ -61,7 +61,7 @@ const BannerGenerator = () => {
     if (isEditorOpen && selectedMatch) {
       updatePreview();
     }
-  }, [isEditorOpen, selectedMatch, customChannels, brandLogo, selectedTemplate]);
+  }, [isEditorOpen, selectedMatch, customChannels, brandLogo, selectedTemplateId]);
 
   const updatePreview = async () => {
     if (!selectedMatch) return;
@@ -72,7 +72,16 @@ const BannerGenerator = () => {
         : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
+      const currentTemplate = templates.find(t => t.id === selectedTemplateId);
+      
+      const dataUrl = await generateBannerCanvas(
+        matchesToDraw, 
+        brandLogo, 
+        dayOfWeek, 
+        selectedTemplateId,
+        currentTemplate?.background_url,
+        currentTemplate?.config
+      );
       setPreviewUrl(dataUrl);
     } catch (error) {
       console.error("Error generating preview", error);
@@ -82,7 +91,20 @@ const BannerGenerator = () => {
   useEffect(() => {
     fetchMatches();
     fetchBrandLogo();
+    fetchTemplates();
   }, [effectiveCompanyId]);
+
+  const fetchTemplates = async () => {
+    if (!effectiveCompanyId) return;
+    const { data, error } = await supabase
+      .from("banner_templates")
+      .select("*")
+      .eq("company_id", effectiveCompanyId);
+    
+    if (data) {
+      setTemplates(data as any);
+    }
+  };
 
   const fetchBrandLogo = async () => {
     if (!effectiveCompanyId) return;
@@ -123,7 +145,7 @@ const BannerGenerator = () => {
       
       toast.success(`${data.count} jogos atualizados!`);
       fetchMatches();
-      setSelectedTemplate(1); // Reset template to default on sync
+      setSelectedTemplateId("default");
     } catch (error: any) {
       toast.error("Erro ao atualizar jogos: " + error.message);
     } finally {
@@ -134,7 +156,7 @@ const BannerGenerator = () => {
   const openEditor = (match: Match) => {
     setSelectedMatch(match);
     setCustomChannels(match.channels?.join(", ") || "");
-    setSelectedTemplate(3); // Default to Card Único for single match edit
+    setSelectedTemplateId("default"); 
     setIsEditorOpen(true);
   };
 
@@ -142,26 +164,66 @@ const BannerGenerator = () => {
     if (!selectedMatch) return;
     try {
       const isDaily = selectedMatch.id === "daily";
-      const matchesToDraw = isDaily 
-        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
-        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
+      const currentTemplate = templates.find(t => t.id === selectedTemplateId);
+      const maxPerPage = currentTemplate?.config?.matches?.maxPerPage || 8;
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas(matchesToDraw, brandLogo, dayOfWeek, selectedTemplate);
       
-      const link = document.createElement("a");
-      const filename = isDaily 
-        ? `jogos-do-dia-${format(new Date(), "dd-MM")}.png`
-        : `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
-      link.download = filename;
-      link.href = dataUrl;
-      link.click();
-      toast.success("Banner baixado com sucesso!");
+      if (isDaily && matches.length > maxPerPage) {
+        // Multi-page logic
+        const totalPages = Math.ceil(matches.length / maxPerPage);
+        for (let i = 0; i < totalPages; i++) {
+          const start = i * maxPerPage;
+          const end = start + maxPerPage;
+          const matchesSlice = matches.slice(start, end).map(m => ({ ...m, channels: m.channels || [] }));
+          
+          const dataUrl = await generateBannerCanvas(
+            matchesSlice, 
+            brandLogo, 
+            dayOfWeek, 
+            selectedTemplateId,
+            currentTemplate?.background_url,
+            currentTemplate?.config,
+            { current: i + 1, total: totalPages }
+          );
+          
+          const link = document.createElement("a");
+          link.download = `jogos-do-dia-${format(new Date(), "dd-MM")}-parte-${i + 1}.png`;
+          link.href = dataUrl;
+          link.click();
+          // Small delay to avoid browser blocking multiple downloads
+          await new Promise(r => setTimeout(r, 500));
+        }
+        toast.success(`${totalPages} imagens geradas com sucesso!`);
+      } else {
+        const matchesToDraw = isDaily 
+          ? matches.map(m => ({ ...m, channels: m.channels || [] }))
+          : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
+        
+        const dataUrl = await generateBannerCanvas(
+          matchesToDraw, 
+          brandLogo, 
+          dayOfWeek, 
+          selectedTemplateId,
+          currentTemplate?.background_url,
+          currentTemplate?.config
+        );
+        
+        const link = document.createElement("a");
+        const filename = isDaily 
+          ? `jogos-do-dia-${format(new Date(), "dd-MM")}.png`
+          : `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
+        link.download = filename;
+        link.href = dataUrl;
+        link.click();
+        toast.success("Banner baixado com sucesso!");
+      }
     } catch (error) {
       console.error(error);
       toast.error("Erro ao gerar imagem");
     }
   };
+
 
   const shareOnWhatsApp = async () => {
     if (!selectedMatch) return;
