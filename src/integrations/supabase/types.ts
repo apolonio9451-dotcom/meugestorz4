@@ -276,6 +276,47 @@ export type Database = {
         }
         Relationships: []
       }
+      banner_templates: {
+        Row: {
+          background_url: string
+          company_id: string
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          background_url: string
+          company_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          background_url?: string
+          company_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banner_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_training_rules: {
         Row: {
           action_config: Json
