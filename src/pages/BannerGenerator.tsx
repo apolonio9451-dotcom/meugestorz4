@@ -427,8 +427,13 @@ const BannerGenerator = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="channels">Canais de Transmissão</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="channels" className="text-sm font-semibold">Canais de Transmissão</Label>
+                    <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">
+                      Detectado Automaticamente
+                    </span>
+                  </div>
                   <Input 
                     id="channels" 
                     value={customChannels} 
@@ -436,7 +441,7 @@ const BannerGenerator = () => {
                     placeholder="Ex: Globo, Premiere, ESPN"
                     className="bg-zinc-900 border-zinc-800"
                   />
-                  <p className="text-[10px] text-zinc-500 italic">Separe os canais por vírgula.</p>
+                  <p className="text-[10px] text-zinc-500 italic">Sugestão inteligente carregada. Edite se necessário.</p>
                 </div>
                 
                 <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10 space-y-3">
