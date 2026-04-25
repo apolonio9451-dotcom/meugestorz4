@@ -145,16 +145,16 @@ export const generateBannerCanvas = async (
     ctx.font = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
     ctx.fillStyle = "#FFFFFF";
     
-    const homeName = match.home_team.length > 15 ? match.home_team.substring(0, 15) + "..." : match.home_team;
-    const awayName = match.away_team.length > 15 ? match.away_team.substring(0, 15) + "..." : match.away_team;
+    const homeName = match.home_team.length > 12 ? match.home_team.substring(0, 12) + "..." : match.home_team;
+    const awayName = match.away_team.length > 12 ? match.away_team.substring(0, 12) + "..." : match.away_team;
 
-    ctx.fillText(homeName.toUpperCase(), centerX - 260, y + 15);
+    ctx.fillText(homeName.toUpperCase(), centerX - 240, y + 15);
     ctx.font = `italic ${config.matches.nameFontSize - 4}px Montserrat, sans-serif`;
     ctx.fillStyle = config.dayOfWeek.color;
     ctx.fillText("VS", centerX, y + 15);
     ctx.font = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(awayName.toUpperCase(), centerX + 260, y + 15);
+    ctx.fillText(awayName.toUpperCase(), centerX + 240, y + 15);
 
     // Shields
     const sSize = config.matches.shieldSize;
