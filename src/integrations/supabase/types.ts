@@ -2572,6 +2572,7 @@ export type Database = {
         Args: { _client_id: string; _company_id: string }
         Returns: boolean
       }
+      check_bolao_access: { Args: { p_phone: string }; Returns: Json }
       get_reseller_account_plans: {
         Args: { _company_id: string }
         Returns: {
