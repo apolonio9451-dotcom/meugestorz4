@@ -294,57 +294,21 @@ export const BolaoChallengeConfig = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-yellow-500" />
-              Configurar Desafio do Dia
+              <RefreshCw className="w-6 h-6 text-primary" />
+              Sincronização com API
             </CardTitle>
-            <p className="text-sm text-zinc-400 mt-1">Selecione 4 a 6 jogos para o Bolão TV MAX</p>
+            <p className="text-sm text-zinc-400 mt-1">A API organiza automaticamente os jogos do Brasileirão, Copa do Brasil e Libertadores.</p>
           </div>
           <Button 
-            onClick={saveChallenge} 
-            disabled={saving || selectedMatchIds.length === 0}
-            className="bg-primary hover:bg-primary/80"
+            onClick={syncMatches} 
+            disabled={syncing}
+            variant="outline"
+            className="border-primary/50 text-primary hover:bg-primary/10 font-bold"
           >
-            {saving ? "Salvando..." : <><Save className="w-4 h-4 mr-2" /> Ativar Desafio</>}
+            {syncing ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Sincronizar Agora
           </Button>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {matches.map(match => (
-              <div 
-                key={match.id}
-                onClick={() => toggleMatch(match.id)}
-                className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                  selectedMatchIds.includes(match.id) 
-                    ? "bg-primary/10 border-primary shadow-[0_0_15px_rgba(0,242,255,0.1)]" 
-                    : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    {format(new Date(match.match_time), "HH:mm", { locale: ptBR })}
-                  </span>
-                  <Checkbox checked={selectedMatchIds.includes(match.id)} />
-                </div>
-                <div className="text-sm font-black flex flex-col gap-1">
-                  <div className="flex justify-between items-center">
-                    <span className="truncate">{match.home_team}</span>
-                    <span className="text-zinc-600 text-[10px]">CASA</span>
-                  </div>
-                  <div className="text-primary text-center my-1 italic font-serif">vs</div>
-                  <div className="flex justify-between items-center">
-                    <span className="truncate">{match.away_team}</span>
-                    <span className="text-zinc-600 text-[10px]">FORA</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {matches.length === 0 && (
-              <div className="col-span-full py-12 text-center text-zinc-500">
-                Nenhum jogo encontrado para hoje ou amanhã.
-              </div>
-            )}
-          </div>
-        </CardContent>
       </Card>
       
       {existingChallenge && (
@@ -353,8 +317,8 @@ export const BolaoChallengeConfig = () => {
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <div>
-                <p className="text-sm font-bold text-white">Desafio Ativo: {existingChallenge.title}</p>
-                <p className="text-xs text-zinc-500">{existingChallenge.match_ids.length} jogos selecionados</p>
+                <p className="text-sm font-bold text-white">Status do Bolão: ATIVO</p>
+                <p className="text-xs text-zinc-500">Pronto para receber palpites dos clientes</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -367,13 +331,11 @@ export const BolaoChallengeConfig = () => {
                 {checking ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
                 Verificar Ganhadores
               </Button>
-              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-400 hover:bg-red-500/10">
-                <Trash2 className="w-4 h-4 mr-2" /> Encerrar
-              </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 };
