@@ -71,7 +71,6 @@ export const BolaoChallengeConfig = () => {
     
     if (data) {
       setExistingChallenge(data);
-      setSelectedMatchIds(data.match_ids);
       fetchChallengeStats(data.id, data.match_ids);
     } else {
       setExistingChallenge(null);
@@ -103,49 +102,23 @@ export const BolaoChallengeConfig = () => {
     const { data: activeMatches } = await supabase
       .from("sports_matches")
       .select("*")
-      .in("id", matchIds);
+      .in("id", matchIds)
+      .order('match_time', { ascending: true });
     
     setActiveChallengeMatches(activeMatches || []);
   };
 
-  const toggleMatch = (id: string) => {
-    setSelectedMatchIds(prev => 
-      prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
-    );
-  };
-
-  const saveChallenge = async () => {
-    if (selectedMatchIds.length < 4 || selectedMatchIds.length > 6) {
-      toast.error("Selecione entre 4 e 6 jogos para o desafio.");
-      return;
-    }
-
-    setSaving(true);
+  const syncMatches = async () => {
+    setSyncing(true);
     try {
-      if (existingChallenge) {
-        // Deactivate current
-        await supabase
-          .from("bolao_challenges")
-          .update({ status: "finished" } as any)
-          .eq("id", existingChallenge.id);
-      }
-
-      const { error } = await supabase
-        .from("bolao_challenges")
-        .insert({
-          title: `DESAFIO DO DIA - ${format(new Date(), "dd/MM")}`,
-          description: "Acerte todos os placares e ganhe 30 dias grátis!",
-          match_ids: selectedMatchIds,
-          status: "active"
-        } as any);
-
+      const { data, error } = await supabase.functions.invoke('fetch-sports-matches');
       if (error) throw error;
-      toast.success("Desafio configurado com sucesso!");
+      toast.success("Bolão sincronizado com a API!");
       fetchActiveChallenge();
     } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
+      toast.error("Erro ao sincronizar: " + error.message);
     } finally {
-      setSaving(false);
+      setSyncing(false);
     }
   };
 
@@ -233,13 +206,11 @@ export const BolaoChallengeConfig = () => {
               admin_notification: adminNotification
             } as any)
             .eq("id", guess.id);
-        } else {
-           // Optional: mark as loser if all games are finished
-           // For now just keep as pending until manually verified or logic expanded
         }
       }
 
       toast.success(`${winnersCount} ganhadores identificados e artes geradas!`);
+      fetchActiveChallenge();
     } catch (error: any) {
       toast.error("Erro ao verificar ganhadores: " + error.message);
     } finally {
