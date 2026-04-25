@@ -6,13 +6,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const BOLAO_LEAGUES = [
-  71, // Brasileirão Série A
-  72, // Brasileirão Série B
-  73, // Copa do Brasil
-  13, // Libertadores
-  11, // Sul-Americana
-];
+// Priority for Bolão leagues (lower is higher priority)
+const LEAGUE_PRIORITY: Record<number, number> = {
+  71: 1,  // Brasileirão Série A
+  13: 2,  // Libertadores
+  73: 3,  // Copa do Brasil
+  11: 4,  // Sul-Americana
+  72: 5,  // Brasileirão Série B
+};
+
+const BOLAO_LEAGUES = Object.keys(LEAGUE_PRIORITY).map(Number);
 
 const OTHER_TARGET_LEAGUES = [
   2,  // Champions League
@@ -120,36 +123,38 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
       
-      // Automatic Bolão Selection
-      // Select matches from BOLAO_LEAGUES for today and tomorrow
-      const bolaoMatches = upsertData
+      // Automatic Bolão Selection - Limit to top 6 principal matches
+      const bolaoCandidates = upsertData
         .filter(m => BOLAO_LEAGUES.includes(m.league_id))
-        .sort((a, b) => new Date(a.match_time).getTime() - new Date(b.match_time).getTime());
+        .sort((a, b) => {
+          // 1. Sort by League Priority
+          const prioA = LEAGUE_PRIORITY[a.league_id] || 99;
+          const prioB = LEAGUE_PRIORITY[b.league_id] || 99;
+          if (prioA !== prioB) return prioA - prioB;
+          
+          // 2. Sort by match time (earlier first)
+          return new Date(a.match_time).getTime() - new Date(b.match_time).getTime();
+        })
+        .slice(0, 6); // LIMIT TO TOP 6
 
-      if (bolaoMatches.length > 0) {
-        const matchIds = bolaoMatches.map(m => {
-          // We need the UUID from the database, but since we just upserted, 
-          // we can use a select to get them by external_id
-          return m.external_id;
-        });
+      if (bolaoCandidates.length > 0) {
+        const externalIds = bolaoCandidates.map(m => m.external_id);
 
-        // Get UUIDs for these external IDs
         const { data: dbMatches } = await supabase
           .from("sports_matches")
           .select("id")
-          .in("external_id", matchIds);
+          .in("external_id", externalIds);
 
         const dbMatchIds = dbMatches?.map(m => m.id) || [];
 
         if (dbMatchIds.length > 0) {
-          // Update or Create Active Challenge
           const { data: activeChallenge } = await supabase
             .from("bolao_challenges")
             .select("id")
             .eq("status", "active")
             .maybeSingle();
 
-          const challengeTitle = `BOLÃO TV MAX - ${new Date().toLocaleDateString('pt-BR')}`;
+          const challengeTitle = `BOLÃO TV MAX - 6 JOGOS DE ELITE`;
           
           if (activeChallenge) {
             await supabase
@@ -165,7 +170,7 @@ Deno.serve(async (req) => {
               .from("bolao_challenges")
               .insert({
                 title: challengeTitle,
-                description: "Acerte os placares dos jogos brasileiros e ganhe prêmios!",
+                description: "Acerte os placares dos 6 principais jogos brasileiros e ganhe prêmios!",
                 match_ids: dbMatchIds,
                 status: "active"
               } as any);
