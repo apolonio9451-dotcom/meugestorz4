@@ -356,8 +356,8 @@ const BannerGenerator = () => {
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0"
                     onClick={() => openEditor(match)}
                   >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Configurar Banner
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Gerar e Baixar Banner
                   </Button>
                 </CardContent>
               </Card>
