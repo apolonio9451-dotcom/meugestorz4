@@ -126,8 +126,8 @@ export const generateBannerCanvas = async (
   const maxMatches = templateId === 3 ? 1 : (isDaily ? 6 : 1);
   const matchesToDraw = matches.slice(0, maxMatches);
   
-  const rowHeight = 320; // Increased spacing for list items
-  const startY = isSingleMatch && templateId === 3 ? 900 : 580;
+  const rowHeight = isDaily ? 220 : 320; 
+  const startY = templateId === 3 ? 900 : (isDaily ? 500 : 700);
 
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];
