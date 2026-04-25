@@ -146,54 +146,58 @@ export const generateBannerCanvas = async (
       loadImage(match.away_logo),
     ]);
 
-    // ZONA CENTRAL (10%): VS
+    // 1. ZONA VERDE (HORÁRIO) - Superior
+    const timeY = yCenter - 65;
+    const timeStr = formatBrasiliaTime(match.match_time);
     ctx.textAlign = "center";
-    ctx.font = "italic bold 56px Montserrat, sans-serif";
-    ctx.fillStyle = "#3b82f6";
-    ctx.fillText("VS", canvasCenterX, yCenter + 15);
+    ctx.font = "bold 38px Montserrat, sans-serif";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(timeStr, canvasCenterX, timeY);
 
-    // ZONA ESQUERDA (40%): [ESCUDO] + [NOME]
-    // O nome fica alinhado à direita, encostando na margem do VS
-    const leftNameRightEdge = canvasCenterX - zonePadding; 
+    // 2. ZONA CENTRAL: VS
+    ctx.textAlign = "center";
+    ctx.font = "italic bold 52px Montserrat, sans-serif";
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillText("VS", canvasCenterX, yCenter + 20);
+
+    // 3. ZONA PRETA (NOMES E ESCUDOS) - Central
+    // Escudo Casa (Extremidade Esquerda)
+    const shieldY = yCenter - (shieldSize / 2) + 5;
+    const homeShieldX = 130; 
+    if (homeShield && homeShield.width > 1) {
+      ctx.drawImage(homeShield, homeShieldX, shieldY, shieldSize, shieldSize);
+    }
+
+    // Nome Casa (Alinhado à Direita, sem encostar no VS)
+    const leftNameRightEdge = canvasCenterX - zonePadding;
     const homeNameSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 44);
     ctx.font = `bold ${homeNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.home_team.toUpperCase(), leftNameRightEdge, yCenter + 15);
+    ctx.fillText(match.home_team.toUpperCase(), leftNameRightEdge, yCenter + 20);
 
-    // Escudo Casa - Fica à esquerda do nome
-    const homeNameWidth = ctx.measureText(match.home_team.toUpperCase()).width;
-    const homeShieldX = leftNameRightEdge - homeNameWidth - shieldSize - 30;
-    if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, homeShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
-    }
-
-    // ZONA DIREITA (40%): [NOME] + [ESCUDO]
-    // O nome fica alinhado à esquerda, encostando na margem do VS
-    const rightNameLeftEdge = canvasCenterX + zonePadding; 
+    // Nome Fora (Alinhado à Esquerda, sem encostar no VS)
+    const rightNameLeftEdge = canvasCenterX + zonePadding;
     const awayNameSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 44);
     ctx.font = `bold ${awayNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.away_team.toUpperCase(), rightNameLeftEdge, yCenter + 15);
+    ctx.fillText(match.away_team.toUpperCase(), rightNameLeftEdge, yCenter + 20);
 
-    // Escudo Fora - Fica à direita do nome
-    const awayNameWidth = ctx.measureText(match.away_team.toUpperCase()).width;
-    const awayShieldX = rightNameLeftEdge + awayNameWidth + 30;
+    // Escudo Fora (Extremidade Direita)
+    const awayShieldX = width - 130 - shieldSize;
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, awayShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
+      ctx.drawImage(awayShield, awayShieldX, shieldY, shieldSize, shieldSize);
     }
 
-    // INFORMAÇÕES DINÂMICAS: HORÁRIO | TRANSMISSÃO
-    const infoY = yCenter + 85;
-    const timeStr = formatBrasiliaTime(match.match_time);
+    // 4. ZONA BRANCA (TRANSMISSÃO) - Inferior
+    const transmissionY = yCenter + 95;
     const transmission = match.channels && match.channels.length > 0 ? match.channels.join(" | ") : "ONDE ASSISTIR";
-    const infoText = `${timeStr} | ${transmission}`.toUpperCase();
     
     ctx.textAlign = "center";
-    ctx.font = "600 28px Montserrat, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.fillText(infoText, canvasCenterX, infoY);
+    ctx.font = "bold 30px Montserrat, sans-serif";
+    ctx.fillStyle = "#000033"; // Cor escura para contraste no branco
+    ctx.fillText(transmission.toUpperCase(), canvasCenterX, transmissionY);
   }
 
   // 5. FOOTER - Persistence of Design
