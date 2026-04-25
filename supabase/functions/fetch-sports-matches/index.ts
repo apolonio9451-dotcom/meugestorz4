@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Priority for Bolão leagues (lower is higher priority)
+// Ligas com maior peso para o público brasileiro
 const LEAGUE_PRIORITY: Record<number, number> = {
   71: 1,  // Brasileirão Série A
   13: 2,  // Libertadores
@@ -15,16 +15,17 @@ const LEAGUE_PRIORITY: Record<number, number> = {
   72: 5,  // Brasileirão Série B
 };
 
+// Lista de clubes "GIGANTES" e de massa para identificar clássicos e jogos de elite
+const ELITE_TEAMS = [
+  "Flamengo", "Palmeiras", "Corinthians", "São Paulo", "Grêmio", "Internacional", 
+  "Atlético Mineiro", "Cruzeiro", "Vasco da Gama", "Botafogo", "Fluminense", "Santos",
+  "Bahia", "Fortaleza", "Athletico Paranaense", "Coritiba", "Sport Recife", "Vitória"
+];
+
 const BOLAO_LEAGUES = Object.keys(LEAGUE_PRIORITY).map(Number);
 
 const OTHER_TARGET_LEAGUES = [
-  2,  // Champions League
-  3,  // Europa League
-  39, // Premier League
-  140, // La Liga
-  135, // Serie A
-  78,  // Bundesliga
-  61   // Ligue 1
+  2, 3, 39, 140, 135, 78, 61
 ];
 
 const ALL_TARGET_LEAGUES = [...BOLAO_LEAGUES, ...OTHER_TARGET_LEAGUES];
@@ -38,7 +39,6 @@ const getAutoChannels = (leagueId: number, leagueName: string) => {
   if (leagueId === 2 || name.includes("champions league")) return ["TNT", "Max", "SBT"];
   if (leagueId === 3 || name.includes("europa league")) return ["ESPN", "Star+"];
   if (leagueId === 72 || name.includes("brasileirão série b")) return ["Premiere", "SporTV", "Band"];
-  if (name.includes("premier league") || name.includes("la liga") || name.includes("serie a") || name.includes("bundesliga") || name.includes("ligue 1")) return ["ESPN", "Star+"];
   return ["TV MAX"];
 };
 
@@ -69,7 +69,6 @@ Deno.serve(async (req) => {
     const allFetchedMatches: any[] = [];
 
     for (const date of datesToFetch) {
-      console.log(`Fetching matches for date: ${date}`);
       const response = await fetch(
         `https://api-football-v1.p.rapidapi.com/v3/fixtures?date=${date}`,
         {
@@ -117,63 +116,53 @@ Deno.serve(async (req) => {
     });
 
     if (upsertData.length > 0) {
-      const { error } = await supabase
-        .from("sports_matches")
-        .upsert(upsertData, { onConflict: "external_id" });
-
-      if (error) throw error;
+      await supabase.from("sports_matches").upsert(upsertData, { onConflict: "external_id" });
       
-      // Automatic Bolão Selection - Limit to top 6 principal matches
+      // Inteligência de Seleção: Clássicos e Jogos de Elite
       const bolaoCandidates = upsertData
         .filter(m => BOLAO_LEAGUES.includes(m.league_id))
-        .sort((a, b) => {
-          // 1. Sort by League Priority
-          const prioA = LEAGUE_PRIORITY[a.league_id] || 99;
-          const prioB = LEAGUE_PRIORITY[b.league_id] || 99;
-          if (prioA !== prioB) return prioA - prioB;
+        .map(m => {
+          let score = 0;
+          // Peso da Liga
+          score += (6 - (LEAGUE_PRIORITY[m.league_id] || 99)) * 10;
           
-          // 2. Sort by match time (earlier first)
-          return new Date(a.match_time).getTime() - new Date(b.match_time).getTime();
+          // Peso de Times de Elite (Clássicos ou times de massa)
+          const homeIsElite = ELITE_TEAMS.some(name => m.home_team.includes(name));
+          const awayIsElite = ELITE_TEAMS.some(name => m.away_team.includes(name));
+          
+          if (homeIsElite && awayIsElite) score += 50; // CLÁSSICO / JOGO DE ELITE
+          else if (homeIsElite || awayIsElite) score += 20; // JOGO IMPORTANTE
+          
+          // Prioridade para Série B se envolver times grandes brigando pra subir (Elite teams in Serie B)
+          if (m.league_id === 72 && (homeIsElite || awayIsElite)) score += 15;
+
+          return { ...m, match_score: score };
         })
-        .slice(0, 6); // LIMIT TO TOP 6
+        .sort((a, b) => b.match_score - a.match_score) // Maior score primeiro
+        .slice(0, 6);
 
       if (bolaoCandidates.length > 0) {
         const externalIds = bolaoCandidates.map(m => m.external_id);
-
-        const { data: dbMatches } = await supabase
-          .from("sports_matches")
-          .select("id")
-          .in("external_id", externalIds);
-
+        const { data: dbMatches } = await supabase.from("sports_matches").select("id").in("external_id", externalIds);
         const dbMatchIds = dbMatches?.map(m => m.id) || [];
 
         if (dbMatchIds.length > 0) {
-          const { data: activeChallenge } = await supabase
-            .from("bolao_challenges")
-            .select("id")
-            .eq("status", "active")
-            .maybeSingle();
-
-          const challengeTitle = `BOLÃO TV MAX - 6 JOGOS DE ELITE`;
+          const { data: activeChallenge } = await supabase.from("bolao_challenges").select("id").eq("status", "active").maybeSingle();
+          const challengeTitle = `BOLÃO TV MAX - OS 6 GRANDES JOGOS`;
           
           if (activeChallenge) {
-            await supabase
-              .from("bolao_challenges")
-              .update({
-                title: challengeTitle,
-                match_ids: dbMatchIds,
-                updated_at: new Date().toISOString()
-              } as any)
-              .eq("id", activeChallenge.id);
+            await supabase.from("bolao_challenges").update({
+              title: challengeTitle,
+              match_ids: dbMatchIds,
+              updated_at: new Date().toISOString()
+            } as any).eq("id", activeChallenge.id);
           } else {
-            await supabase
-              .from("bolao_challenges")
-              .insert({
-                title: challengeTitle,
-                description: "Acerte os placares dos 6 principais jogos brasileiros e ganhe prêmios!",
-                match_ids: dbMatchIds,
-                status: "active"
-              } as any);
+            await supabase.from("bolao_challenges").insert({
+              title: challengeTitle,
+              description: "Os 6 confrontos mais quentes do Brasil. Acerte e ganhe!",
+              match_ids: dbMatchIds,
+              status: "active"
+            } as any);
           }
         }
       }
