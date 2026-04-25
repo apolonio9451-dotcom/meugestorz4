@@ -102,49 +102,72 @@ const BannerGenerator = () => {
   };
 
   const downloadBanner = async () => {
-    if (!bannerRef.current) return;
+    if (!selectedMatch) return;
     try {
-      const canvas = await html2canvas(bannerRef.current, {
-        useCORS: true,
-        scale: 2,
-        backgroundColor: null,
-      });
+      const matchData: MatchData = {
+        ...selectedMatch,
+        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
+      };
+      
+      const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
+      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      
       const link = document.createElement("a");
-      link.download = `banner-${selectedMatch?.home_team}-vs-${selectedMatch?.away_team}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.download = `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
+      link.href = dataUrl;
       link.click();
       toast.success("Banner baixado com sucesso!");
     } catch (error) {
+      console.error(error);
       toast.error("Erro ao gerar imagem");
     }
   };
 
   const shareOnWhatsApp = async () => {
-    if (!bannerRef.current) return;
+    if (!selectedMatch) return;
     try {
-      const canvas = await html2canvas(bannerRef.current, {
-        useCORS: true,
-        scale: 2,
-        backgroundColor: null,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], "banner.png", { type: "image/png" });
-        if (navigator.share) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: "Banner de Jogo",
-            });
-          } catch (e) {
-            toast.error("Erro ao compartilhar");
-          }
-        } else {
-          toast.info("Compartilhamento não suportado neste navegador. Baixe a imagem.");
-        }
-      });
+      const matchData: MatchData = {
+        ...selectedMatch,
+        channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "")
+      };
+      
+      const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
+      const dataUrl = await generateBannerCanvas([matchData], brandLogo, dayOfWeek);
+      
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], "banner.png", { type: "image/png" });
+      
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: "Banner de Jogo",
+        });
+      } else {
+        toast.info("Compartilhamento não suportado neste navegador. Baixe a imagem.");
+      }
     } catch (error) {
       toast.error("Erro ao preparar imagem");
+    }
+  };
+
+  const downloadDailyBanner = async () => {
+    if (matches.length === 0) return;
+    try {
+      const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
+      const dataUrl = await generateBannerCanvas(matches.map(m => ({
+        ...m,
+        channels: m.channels || []
+      })), brandLogo, dayOfWeek);
+      
+      const link = document.createElement("a");
+      link.download = `jogos-do-dia-${format(new Date(), "dd-MM")}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success("Banner geral baixado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao gerar banner geral");
     }
   };
 
