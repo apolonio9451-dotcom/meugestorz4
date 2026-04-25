@@ -125,26 +125,27 @@ export const generateBannerCanvas = async (
   const maxMatches = templateId === 3 ? 1 : 5;
   const matchesToDraw = matches.slice(0, maxMatches);
   
-  const rowHeight = 240;
-  const startY = isSingleMatch && templateId === 3 ? 850 : 550;
+  const rowHeight = 320; // Increased spacing for list items
+  const startY = isSingleMatch && templateId === 3 ? 900 : 580;
 
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];
     const y = startY + i * rowHeight;
 
     if (templateId !== 3) {
-      // Draw row background (subtle)
-      ctx.fillStyle = templateId === 2 
-        ? "rgba(168, 85, 247, 0.05)" 
-        : "rgba(255, 255, 255, 0.03)";
-      ctx.beginPath();
-      ctx.roundRect(80, y - 100, width - 160, rowHeight, 30);
-      ctx.fill();
+      // Draw row background (more distinct, closer to example)
+      const bgGradient = ctx.createLinearGradient(80, 0, width - 80, 0);
+      bgGradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+      bgGradient.addColorStop(0.5, templateId === 2 ? "rgba(168, 85, 247, 0.1)" : "rgba(255, 255, 255, 0.05)");
+      bgGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(80, y - 110, width - 160, rowHeight - 20);
       
       if (templateId === 2) {
         ctx.strokeStyle = "rgba(168, 85, 247, 0.2)";
         ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.strokeRect(80, y - 110, width - 160, rowHeight - 20);
       }
     }
 
@@ -175,40 +176,45 @@ export const generateBannerCanvas = async (
       ctx.fillStyle = "rgba(59, 130, 246, 0.8)";
       ctx.fillText("VS", centerX, y + 20);
     } else {
-      // Default list layout
-      if (homeShield && homeShield.width > 1) {
-        ctx.drawImage(homeShield, centerX - 420, y - 60, shieldSize, shieldSize);
-      }
+      // List layout based on image_5d9d11.jpg
+      // No shields here, they are drawn below beside the names
       
-      ctx.textAlign = "right";
-      ctx.font = "bold 42px Montserrat, sans-serif";
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.home_team.toUpperCase(), centerX - 120, y + 15);
-
+      // Style like image_5d9d11.jpg
       ctx.textAlign = "center";
-      ctx.font = "italic 55px Montserrat, sans-serif";
-      ctx.fillStyle = "rgba(59, 130, 246, 0.6)";
-      ctx.fillText("X", centerX, y + 15);
-
-      ctx.textAlign = "left";
-      ctx.font = "bold 42px Montserrat, sans-serif";
+      
+      // Home Name
+      ctx.font = "bold 52px Montserrat, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.away_team.toUpperCase(), centerX + 120, y + 15);
+      ctx.fillText(match.home_team.toUpperCase(), centerX - 280, y + 15);
 
+      // VS in middle
+      ctx.font = "italic 48px Montserrat, sans-serif";
+      ctx.fillStyle = "#3b82f6";
+      ctx.fillText("VS", centerX, y + 15);
+
+      // Away Name
+      ctx.font = "bold 52px Montserrat, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(match.away_team.toUpperCase(), centerX + 280, y + 15);
+
+      // Shields beside names
+      if (homeShield && homeShield.width > 1) {
+        ctx.drawImage(homeShield, centerX - 530, y - 65, 130, 130);
+      }
       if (awayShield && awayShield.width > 1) {
-        ctx.drawImage(awayShield, centerX + 300, y - 60, shieldSize, shieldSize);
+        ctx.drawImage(awayShield, centerX + 400, y - 65, 130, 130);
       }
     }
 
     // Time and Channels
     ctx.textAlign = "center";
-    ctx.font = templateId === 3 ? "bold 44px Montserrat, sans-serif" : "500 34px Montserrat, sans-serif";
-    ctx.fillStyle = templateId === 2 ? "#d8b4fe" : "#94a3b8"; 
+    ctx.font = templateId === 3 ? "bold 44px Montserrat, sans-serif" : "bold 38px Montserrat, sans-serif";
+    ctx.fillStyle = templateId === 2 ? "#d8b4fe" : "#3b82f6"; // Primary blue for transmission
     const timeStr = formatBrasiliaTime(match.match_time);
     const channelsStr = match.channels && match.channels.length > 0 
       ? ` | ${match.channels.join(" & ")}` 
       : "";
-    ctx.fillText(`${timeStr}${channelsStr}`, centerX, templateId === 3 ? y + 300 : y + 85);
+    ctx.fillText(`${timeStr}${channelsStr}`, centerX, templateId === 3 ? y + 300 : y + 110);
   }
 
   // 6. Draw Footer CTA
