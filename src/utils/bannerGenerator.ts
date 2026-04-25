@@ -101,26 +101,28 @@ export const generateBannerCanvas = async (
     footer: { y: 1780, text: "ASSINE AGORA E ASSISTA EM 4K", bgColor: "#2563eb" }
   };
 
-  // 3. Header
-  ctx.textAlign = "center";
-  ctx.fillStyle = config.title.color;
-  ctx.font = `bold ${config.title.fontSize}px Montserrat, sans-serif`;
-  
-  let titleText = config.title.text;
-  if (pageInfo && pageInfo.total > 1) {
-    titleText += ` (${pageInfo.current}/${pageInfo.total})`;
-  }
-  ctx.fillText(titleText, config.title.x, config.title.y);
-  
-  ctx.font = `italic ${config.dayOfWeek.fontSize}px Montserrat, sans-serif`;
-  ctx.fillStyle = config.dayOfWeek.color;
-  ctx.fillText(dayOfWeek.toUpperCase(), config.dayOfWeek.x, config.dayOfWeek.y);
+  // 3. Header - ONLY DRAW IF NOT CUSTOM BACKGROUND
+  if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+    ctx.textAlign = "center";
+    ctx.fillStyle = config.title.color;
+    ctx.font = `bold ${config.title.fontSize}px Montserrat, sans-serif`;
+    
+    let titleText = config.title.text;
+    if (pageInfo && pageInfo.total > 1) {
+      titleText += ` (${pageInfo.current}/${pageInfo.total})`;
+    }
+    ctx.fillText(titleText, config.title.x, config.title.y);
+    
+    ctx.font = `italic ${config.dayOfWeek.fontSize}px Montserrat, sans-serif`;
+    ctx.fillStyle = config.dayOfWeek.color;
+    ctx.fillText(dayOfWeek.toUpperCase(), config.dayOfWeek.x, config.dayOfWeek.y);
 
-  // 4. Logo
-  if (logoImg && logoImg.width > 1) {
-    const aspectRatio = logoImg.height / logoImg.width;
-    const logoHeight = config.logo.width * aspectRatio;
-    ctx.drawImage(logoImg, config.logo.x, config.logo.y, config.logo.width, logoHeight);
+    // 4. Logo
+    if (logoImg && logoImg.width > 1) {
+      const aspectRatio = logoImg.height / logoImg.width;
+      const logoHeight = config.logo.width * aspectRatio;
+      ctx.drawImage(logoImg, config.logo.x, config.logo.y, config.logo.width, logoHeight);
+    }
   }
 
   // 5. Matches
@@ -143,24 +145,24 @@ export const generateBannerCanvas = async (
     ctx.font = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
     ctx.fillStyle = "#FFFFFF";
     
-    const homeName = match.home_team.length > 15 ? match.home_team.substring(0, 15) + "..." : match.home_team;
-    const awayName = match.away_team.length > 15 ? match.away_team.substring(0, 15) + "..." : match.away_team;
+    const homeName = match.home_team.length > 12 ? match.home_team.substring(0, 12) + "..." : match.home_team;
+    const awayName = match.away_team.length > 12 ? match.away_team.substring(0, 12) + "..." : match.away_team;
 
-    ctx.fillText(homeName.toUpperCase(), centerX - 260, y + 15);
+    ctx.fillText(homeName.toUpperCase(), centerX - 240, y + 15);
     ctx.font = `italic ${config.matches.nameFontSize - 4}px Montserrat, sans-serif`;
     ctx.fillStyle = config.dayOfWeek.color;
     ctx.fillText("VS", centerX, y + 15);
     ctx.font = `bold ${config.matches.nameFontSize}px Montserrat, sans-serif`;
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(awayName.toUpperCase(), centerX + 260, y + 15);
+    ctx.fillText(awayName.toUpperCase(), centerX + 240, y + 15);
 
     // Shields
     const sSize = config.matches.shieldSize;
     if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, centerX - 480, y - 50, sSize, sSize);
+      ctx.drawImage(homeShield, centerX - 420, y - 50, sSize, sSize);
     }
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, centerX + 380, y - 50, sSize, sSize);
+      ctx.drawImage(awayShield, centerX + 310, y - 50, sSize, sSize);
     }
 
     // Time/Info
@@ -168,13 +170,15 @@ export const generateBannerCanvas = async (
     ctx.fillStyle = config.dayOfWeek.color;
     const timeStr = formatBrasiliaTime(match.match_time);
     
-    // Draw horizontal line or separator
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(centerX - 400, y + 110);
-    ctx.lineTo(centerX + 400, y + 110);
-    ctx.stroke();
+    // Draw horizontal line or separator ONLY IF NOT CUSTOM BACKGROUND
+    if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(centerX - 400, y + 110);
+      ctx.lineTo(centerX + 400, y + 110);
+      ctx.stroke();
+    }
 
     const channelsStr = match.channels && match.channels.length > 0 
       ? match.channels.join(" | ") 
@@ -189,25 +193,27 @@ export const generateBannerCanvas = async (
     ctx.fillText(channelsStr.toUpperCase(), centerX, y + 100);
   }
 
-  // 6. Footer
-  const footerY = config.footer.y;
-  ctx.textAlign = "center";
-  ctx.font = "bold 38px Montserrat, sans-serif";
-  const textWidth = ctx.measureText(config.footer.text).width;
-  const padding = 50;
-  
-  ctx.fillStyle = config.footer.bgColor;
-  const btnWidth = textWidth + padding * 2;
-  const btnHeight = 85;
-  const btnX = (width - btnWidth) / 2;
-  const btnY = footerY - 55;
-  
-  ctx.beginPath();
-  ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 42.5);
-  ctx.fill();
+  // 6. Footer - ONLY DRAW IF NOT CUSTOM BACKGROUND
+  if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+    const footerY = config.footer.y;
+    ctx.textAlign = "center";
+    ctx.font = "bold 38px Montserrat, sans-serif";
+    const textWidth = ctx.measureText(config.footer.text).width;
+    const padding = 50;
+    
+    ctx.fillStyle = config.footer.bgColor;
+    const btnWidth = textWidth + padding * 2;
+    const btnHeight = 85;
+    const btnX = (width - btnWidth) / 2;
+    const btnY = footerY - 55;
+    
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 42.5);
+    ctx.fill();
 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillText(config.footer.text, width / 2, footerY);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(config.footer.text, width / 2, footerY);
+  }
 
   return canvas.toDataURL("image/png");
 };
