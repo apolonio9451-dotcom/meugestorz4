@@ -159,10 +159,10 @@ export const generateBannerCanvas = async (
     // Shields
     const sSize = config.matches.shieldSize;
     if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, centerX - 480, y - 50, sSize, sSize);
+      ctx.drawImage(homeShield, centerX - 420, y - 50, sSize, sSize);
     }
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, centerX + 380, y - 50, sSize, sSize);
+      ctx.drawImage(awayShield, centerX + 310, y - 50, sSize, sSize);
     }
 
     // Time/Info
