@@ -4,7 +4,7 @@ import AnimatedPage from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Upload, Trash2 } from "lucide-react";
+import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Upload, Trash2, Settings, Plus, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, addHours } from "date-fns";
@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { generateBannerCanvas, MatchData } from "@/utils/bannerGenerator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { generateBannerCanvas, MatchData, TemplateConfig } from "@/utils/bannerGenerator";
 
 interface Match {
   id: string;
@@ -32,6 +33,13 @@ interface Match {
   channels: string[];
 }
 
+interface BannerTemplate {
+  id: string;
+  name: string;
+  background_url: string;
+  config: TemplateConfig;
+}
+
 const BannerGenerator = () => {
   const { effectiveCompanyId } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
@@ -39,11 +47,14 @@ const BannerGenerator = () => {
   const [fetching, setFetching] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<number>(1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("default");
+  const [templates, setTemplates] = useState<BannerTemplate[]>([]);
   const [customChannels, setCustomChannels] = useState("");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("generator");
+
   const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
