@@ -191,25 +191,27 @@ export const generateBannerCanvas = async (
     ctx.fillText(channelsStr.toUpperCase(), centerX, y + 100);
   }
 
-  // 6. Footer
-  const footerY = config.footer.y;
-  ctx.textAlign = "center";
-  ctx.font = "bold 38px Montserrat, sans-serif";
-  const textWidth = ctx.measureText(config.footer.text).width;
-  const padding = 50;
-  
-  ctx.fillStyle = config.footer.bgColor;
-  const btnWidth = textWidth + padding * 2;
-  const btnHeight = 85;
-  const btnX = (width - btnWidth) / 2;
-  const btnY = footerY - 55;
-  
-  ctx.beginPath();
-  ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 42.5);
-  ctx.fill();
+  // 6. Footer - ONLY DRAW IF NOT CUSTOM BACKGROUND
+  if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+    const footerY = config.footer.y;
+    ctx.textAlign = "center";
+    ctx.font = "bold 38px Montserrat, sans-serif";
+    const textWidth = ctx.measureText(config.footer.text).width;
+    const padding = 50;
+    
+    ctx.fillStyle = config.footer.bgColor;
+    const btnWidth = textWidth + padding * 2;
+    const btnHeight = 85;
+    const btnX = (width - btnWidth) / 2;
+    const btnY = footerY - 55;
+    
+    ctx.beginPath();
+    ctx.roundRect(btnX, btnY, btnWidth, btnHeight, 42.5);
+    ctx.fill();
 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillText(config.footer.text, width / 2, footerY);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(config.footer.text, width / 2, footerY);
+  }
 
   return canvas.toDataURL("image/png");
 };
