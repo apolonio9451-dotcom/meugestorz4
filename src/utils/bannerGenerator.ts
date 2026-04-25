@@ -123,7 +123,7 @@ export const generateBannerCanvas = async (
   // 5. Draw Matches
   const startY = 550;
   const rowHeight = 240;
-  const maxMatches = 5;
+  const maxMatches = templateId === 3 ? 1 : 5;
   const matchesToDraw = matches.slice(0, maxMatches);
 
   for (let i = 0; i < matchesToDraw.length; i++) {
