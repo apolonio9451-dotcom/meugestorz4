@@ -20,6 +20,10 @@ interface Match {
 
 export const BolaoChallengeConfig = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [selectedMatchIds, setSelectedMatchIds] = useState<string[]>([]); // Keep for legacy if needed by other components, but unused now
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false); // Keep to avoid breaking other parts of code if any
+
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
