@@ -23,12 +23,24 @@ export const BolaoChallengeConfig = () => {
   const [selectedMatchIds, setSelectedMatchIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [existingChallenge, setExistingChallenge] = useState<any>(null);
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMatches();
     fetchActiveChallenge();
+    fetchBrandLogo();
   }, []);
+
+  const fetchBrandLogo = async () => {
+    const { data } = await supabase
+      .from("company_settings")
+      .select("brand_logo_url")
+      .limit(1)
+      .maybeSingle();
+    if (data?.brand_logo_url) setBrandLogo(data.brand_logo_url);
+  };
 
   const fetchMatches = async () => {
     try {
