@@ -51,6 +51,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   Image as ImageIcon,
+  Trophy,
 } from "lucide-react";
 
 
@@ -82,6 +83,7 @@ const navItems: NavItem[] = [
       { href: "/dashboard/campaigns", label: "Datas Especiais", icon: Megaphone },
       { href: "/dashboard/winback", label: "Repescagem", icon: RotateCcw },
       { href: "/dashboard/banner-generator", label: "Gerador de Banners", icon: ImageIcon },
+      { href: "/dashboard/bolao", label: "Bolão TV MAX", icon: Trophy },
     ],
 
   },

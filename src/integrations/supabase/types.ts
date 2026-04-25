@@ -317,6 +317,90 @@ export type Database = {
           },
         ]
       }
+      bolao_challenges: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          match_ids: string[]
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          match_ids: string[]
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          match_ids?: string[]
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      bolao_guesses: {
+        Row: {
+          celebration_image_url: string | null
+          challenge_id: string
+          client_id: string | null
+          created_at: string | null
+          guesses: Json
+          id: string
+          participant_name: string
+          participant_phone: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          celebration_image_url?: string | null
+          challenge_id: string
+          client_id?: string | null
+          created_at?: string | null
+          guesses: Json
+          id?: string
+          participant_name: string
+          participant_phone: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          celebration_image_url?: string | null
+          challenge_id?: string
+          client_id?: string | null
+          created_at?: string | null
+          guesses?: Json
+          id?: string
+          participant_name?: string
+          participant_phone?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bolao_guesses_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "bolao_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bolao_guesses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_training_rules: {
         Row: {
           action_config: Json
@@ -2055,11 +2139,13 @@ export type Database = {
       sports_matches: {
         Row: {
           away_logo: string | null
+          away_score: number | null
           away_team: string
           channels: string[] | null
           created_at: string
           external_id: number | null
           home_logo: string | null
+          home_score: number | null
           home_team: string
           id: string
           league_id: number | null
@@ -2071,11 +2157,13 @@ export type Database = {
         }
         Insert: {
           away_logo?: string | null
+          away_score?: number | null
           away_team: string
           channels?: string[] | null
           created_at?: string
           external_id?: number | null
           home_logo?: string | null
+          home_score?: number | null
           home_team: string
           id?: string
           league_id?: number | null
@@ -2087,11 +2175,13 @@ export type Database = {
         }
         Update: {
           away_logo?: string | null
+          away_score?: number | null
           away_team?: string
           channels?: string[] | null
           created_at?: string
           external_id?: number | null
           home_logo?: string | null
+          home_score?: number | null
           home_team?: string
           id?: string
           league_id?: number | null
