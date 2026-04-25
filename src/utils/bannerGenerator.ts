@@ -146,72 +146,58 @@ export const generateBannerCanvas = async (
       loadImage(match.away_logo),
     ]);
 
-    // 1. ZONA VERDE (HORÁRIO) - Cobertura de limpeza e texto
-    const timeY = yCenter - 65;
-    const timeStr = formatBrasiliaTime(match.match_time);
+    // --- 5-COLUMN STRUCTURE (image_10.png) ---
     
-    // Opcional: Desenhar fundo se o template tiver texto fixo
-    // ctx.fillStyle = "#054523"; 
-    // ctx.fillRect(canvasCenterX - 100, timeY - 30, 200, 50);
-
-    ctx.textAlign = "center";
-    ctx.font = "bold 38px Montserrat, sans-serif";
+    // Column 1: League Logo & Time (Left)
+    const col1X = 60;
+    const timeStr = formatBrasiliaTime(match.match_time);
+    ctx.textAlign = "left";
+    ctx.font = "bold 36px Montserrat, sans-serif";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(timeStr, canvasCenterX, timeY);
+    ctx.fillText(timeStr, col1X + 70, yCenter + 15);
+    // Note: League logo would be drawn at col1X if match.league_logo was available
 
-    // 2. ZONA CENTRAL: VS
-    ctx.textAlign = "center";
-    ctx.font = "italic bold 52px Montserrat, sans-serif";
-    ctx.fillStyle = "#3b82f6";
-    ctx.fillText("VS", canvasCenterX, yCenter + 20);
-
-    // 3. ZONA PRETA (NOMES E ESCUDOS) - Central
-    // Cobertura de limpeza (opcional, mas garante que placeholders sumam)
-    // ctx.fillStyle = "#000000";
-    // ctx.fillRect(100, yCenter - 40, 350, 80); // Lado Esquerdo
-    // ctx.fillRect(width - 450, yCenter - 40, 350, 80); // Lado Direito
-
-    // Escudo Casa (Extremidade Esquerda)
-    const shieldY = yCenter - (shieldSize / 2) + 5;
-    const homeShieldX = 130; 
+    // Column 2: Home Team (Mandante)
+    const col2ShieldX = 260;
     if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, homeShieldX, shieldY, shieldSize, shieldSize);
+      ctx.drawImage(homeShield, col2ShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
     }
-
-    // Nome Casa (Alinhado à Direita, sem encostar no VS)
-    const leftNameRightEdge = canvasCenterX - zonePadding;
-    const homeNameSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 44);
+    const homeNameSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 38);
     ctx.font = `bold ${homeNameSize}px Montserrat, sans-serif`;
-    ctx.textAlign = "right";
+    ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.home_team.toUpperCase(), leftNameRightEdge, yCenter + 20);
+    ctx.fillText(match.home_team.toUpperCase(), col2ShieldX + shieldSize + 20, yCenter + 15);
 
-    // Nome Fora (Alinhado à Esquerda, sem encostar no VS)
-    const rightNameLeftEdge = canvasCenterX + zonePadding;
-    const awayNameSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 44);
+    // Column 3: VS (Center)
+    ctx.textAlign = "center";
+    ctx.font = "italic bold 48px Montserrat, sans-serif";
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillText("VS", canvasCenterX, yCenter + 15);
+
+    // Column 4: Away Team (Visitante)
+    const col4NameX = canvasCenterX + 60;
+    const awayNameSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 38);
     ctx.font = `bold ${awayNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.away_team.toUpperCase(), rightNameLeftEdge, yCenter + 20);
-
-    // Escudo Fora (Extremidade Direita)
-    const awayShieldX = width - 130 - shieldSize;
+    ctx.fillText(match.away_team.toUpperCase(), col4NameX, yCenter + 15);
+    
+    const awayNameWidth = ctx.measureText(match.away_team.toUpperCase()).width;
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, awayShieldX, shieldY, shieldSize, shieldSize);
+      ctx.drawImage(awayShield, col4NameX + awayNameWidth + 20, yCenter - (shieldSize / 2), shieldSize, shieldSize);
     }
 
-    // 4. ZONA BRANCA (TRANSMISSÃO) - Inferior
-    const transmissionY = yCenter + 95;
-    const transmission = match.channels && match.channels.length > 0 ? match.channels.join(" | ") : "ONDE ASSISTIR";
-    
-    // Cobertura de limpeza (opcional)
-    // ctx.fillStyle = "#FFFFFF";
-    // ctx.fillRect(canvasCenterX - 200, transmissionY - 30, 400, 50);
-
-    ctx.textAlign = "center";
-    ctx.font = "bold 30px Montserrat, sans-serif";
-    ctx.fillStyle = "#000033"; // Cor escura para contraste no branco
-    ctx.fillText(transmission.toUpperCase(), canvasCenterX, transmissionY);
+    // Column 5: Channels (Right)
+    const col5X = width - 180;
+    if (match.channels && match.channels.length > 0) {
+      ctx.textAlign = "center";
+      ctx.font = "bold 24px Montserrat, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      // Draw first 2 channels stacked if multiple
+      match.channels.slice(0, 2).forEach((channel, idx) => {
+        ctx.fillText(channel.toUpperCase(), col5X + 80, yCenter - 5 + (idx * 35));
+      });
+    }
   }
 
   // 5. FOOTER - Persistence of Design
