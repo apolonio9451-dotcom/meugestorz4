@@ -181,7 +181,7 @@ const BannerGenerator = () => {
       const dataUrl = await generateBannerCanvas(matches.map(m => ({
         ...m,
         channels: m.channels || []
-      })), brandLogo, dayOfWeek);
+      })), brandLogo, dayOfWeek, 1);
       
       const link = document.createElement("a");
       link.download = `jogos-do-dia-${format(new Date(), "dd-MM")}.png`;
