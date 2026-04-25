@@ -111,6 +111,8 @@ Deno.serve(async (req) => {
         league_logo: m.league.logo,
         channels: matchChannels,
         league_id: m.league.id,
+        home_score: m.goals.home,
+        away_score: m.goals.away,
         updated_at: new Date().toISOString(),
       };
     });
