@@ -1280,7 +1280,7 @@ Deno.serve(async (req: Request) => {
 
     // Handle non-text messages
     if (!messageText && senderPhone && companyIdParam && messageType !== "text" && messageType !== "unknown") {
-      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase, companyApiUrl, companyApiToken, {
+      const massBroadcastConversation = await recordMassBroadcastIncoming(supabase as any, companyApiUrl, companyApiToken, {
         companyId: companyIdParam,
         phone: senderPhone,
         message: `[${messageType.toUpperCase()}]`,
