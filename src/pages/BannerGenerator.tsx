@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateBannerCanvas, MatchData, TemplateConfig } from "@/utils/bannerGenerator";
+import { TemplateConfigPanel } from "@/components/TemplateConfigPanel";
+
 
 interface Match {
   id: string;
