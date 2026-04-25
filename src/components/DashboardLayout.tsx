@@ -51,6 +51,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   Image as ImageIcon,
+  Trophy,
 } from "lucide-react";
 
 
