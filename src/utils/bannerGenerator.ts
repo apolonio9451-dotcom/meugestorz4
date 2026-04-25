@@ -180,30 +180,33 @@ export const generateBannerCanvas = async (
       // List layout based on image_5d9d11.jpg
       // No shields here, they are drawn below beside the names
       
-      // Style like image_5d9d11.jpg
+      // Style like image_5d9d11.jpg - no shields drawn here for list layout
       ctx.textAlign = "center";
       
+      const homeName = match.home_team.length > 15 ? match.home_team.substring(0, 15) + "..." : match.home_team;
+      const awayName = match.away_team.length > 15 ? match.away_team.substring(0, 15) + "..." : match.away_team;
+
       // Home Name
-      ctx.font = "bold 52px Montserrat, sans-serif";
+      ctx.font = "bold 44px Montserrat, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.home_team.toUpperCase(), centerX - 280, y + 15);
+      ctx.fillText(homeName.toUpperCase(), centerX - 260, y + 15);
 
       // VS in middle
-      ctx.font = "italic 48px Montserrat, sans-serif";
+      ctx.font = "italic 40px Montserrat, sans-serif";
       ctx.fillStyle = "#3b82f6";
       ctx.fillText("VS", centerX, y + 15);
 
       // Away Name
-      ctx.font = "bold 52px Montserrat, sans-serif";
+      ctx.font = "bold 44px Montserrat, sans-serif";
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(match.away_team.toUpperCase(), centerX + 280, y + 15);
+      ctx.fillText(awayName.toUpperCase(), centerX + 260, y + 15);
 
-      // Shields beside names
+      // Shields beside names (Smaller for list)
       if (homeShield && homeShield.width > 1) {
-        ctx.drawImage(homeShield, centerX - 530, y - 65, 130, 130);
+        ctx.drawImage(homeShield, centerX - 480, y - 50, 100, 100);
       }
       if (awayShield && awayShield.width > 1) {
-        ctx.drawImage(awayShield, centerX + 400, y - 65, 130, 130);
+        ctx.drawImage(awayShield, centerX + 380, y - 50, 100, 100);
       }
     }
 
