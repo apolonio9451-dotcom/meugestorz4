@@ -4,10 +4,10 @@ import AnimatedPage from "@/components/AnimatedPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Upload, Trash2, Settings, Plus, Save } from "lucide-react";
+import { RefreshCw, Image as ImageIcon, Download, Share2, Edit2, Upload, Trash2, Settings, Plus, Save, Tv } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, addHours } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -22,7 +22,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateBannerCanvas, MatchData, TemplateConfig } from "@/utils/bannerGenerator";
 import { TemplateConfigPanel } from "@/components/TemplateConfigPanel";
-
 
 interface Match {
   id: string;
@@ -51,27 +50,24 @@ const BannerGenerator = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("default");
   const [templates, setTemplates] = useState<BannerTemplate[]>([]);
-  const [customChannels, setCustomChannels] = useState("");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("generator");
 
-  const bannerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (isEditorOpen && selectedMatch) {
       updatePreview();
     }
-  }, [isEditorOpen, selectedMatch, customChannels, brandLogo, selectedTemplateId]);
+  }, [isEditorOpen, selectedMatch, selectedTemplateId, matches]);
 
   const updatePreview = async () => {
     if (!selectedMatch) return;
     try {
       const isDaily = selectedMatch.id === "daily";
       const matchesToDraw = isDaily 
-        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
-        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
+        ? matches.slice(0, 6).map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: selectedMatch.channels || [] }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
       const currentTemplate = templates.find(t => t.id === selectedTemplateId);
@@ -98,7 +94,7 @@ const BannerGenerator = () => {
 
   const fetchTemplates = async () => {
     if (!effectiveCompanyId) return;
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("banner_templates")
       .select("*")
       .eq("company_id", effectiveCompanyId);
@@ -131,13 +127,11 @@ const BannerGenerator = () => {
 
       if (error) throw error;
       
-      // Filter by league priority and sort
       const priorityLeagues = [71, 13, 11, 73, 2, 3, 39, 140, 135, 78, 61, 72];
       const sortedMatches = (data || []).sort((a, b) => {
         const indexA = priorityLeagues.indexOf(a.league_id);
         const indexB = priorityLeagues.indexOf(b.league_id);
         
-        // If both in priority, sort by priority
         if (indexA !== -1 && indexB !== -1) {
           if (indexA !== indexB) return indexA - indexB;
         } else if (indexA !== -1) {
@@ -145,8 +139,6 @@ const BannerGenerator = () => {
         } else if (indexB !== -1) {
           return 1;
         }
-        
-        // Secondary sort by time
         return new Date(a.match_time).getTime() - new Date(b.match_time).getTime();
       });
 
@@ -166,19 +158,11 @@ const BannerGenerator = () => {
       
       toast.success(`${data.count} jogos atualizados!`);
       fetchMatches();
-      setSelectedTemplateId("default");
     } catch (error: any) {
       toast.error("Erro ao atualizar jogos: " + error.message);
     } finally {
       setFetching(false);
     }
-  };
-
-  const openEditor = (match: Match) => {
-    setSelectedMatch(match);
-    setCustomChannels(match.channels?.join(", ") || "");
-    setSelectedTemplateId("default"); 
-    setIsEditorOpen(true);
   };
 
   const downloadBanner = async () => {
@@ -190,8 +174,7 @@ const BannerGenerator = () => {
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
       
-      if (isDaily && matches.length > maxPerPage) {
-        // Multi-page logic
+      if (isDaily && matches.length > 0) {
         const totalPages = Math.ceil(matches.length / maxPerPage);
         for (let i = 0; i < totalPages; i++) {
           const start = i * maxPerPage;
@@ -212,32 +195,9 @@ const BannerGenerator = () => {
           link.download = `jogos-do-dia-${format(new Date(), "dd-MM")}-parte-${i + 1}.png`;
           link.href = dataUrl;
           link.click();
-          // Small delay to avoid browser blocking multiple downloads
           await new Promise(r => setTimeout(r, 500));
         }
         toast.success(`${totalPages} imagens geradas com sucesso!`);
-      } else {
-        const matchesToDraw = isDaily 
-          ? matches.map(m => ({ ...m, channels: m.channels || [] }))
-          : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
-        
-        const dataUrl = await generateBannerCanvas(
-          matchesToDraw, 
-          brandLogo, 
-          dayOfWeek, 
-          selectedTemplateId,
-          currentTemplate?.background_url,
-          currentTemplate?.config
-        );
-        
-        const link = document.createElement("a");
-        const filename = isDaily 
-          ? `jogos-do-dia-${format(new Date(), "dd-MM")}.png`
-          : `banner-${selectedMatch.home_team}-vs-${selectedMatch.away_team}.png`;
-        link.download = filename;
-        link.href = dataUrl;
-        link.click();
-        toast.success("Banner baixado com sucesso!");
       }
     } catch (error) {
       console.error(error);
@@ -245,14 +205,13 @@ const BannerGenerator = () => {
     }
   };
 
-
   const shareOnWhatsApp = async () => {
     if (!selectedMatch) return;
     try {
       const isDaily = selectedMatch.id === "daily";
       const matchesToDraw = isDaily 
-        ? matches.map(m => ({ ...m, channels: m.channels || [] }))
-        : [{ ...selectedMatch, channels: customChannels.split(",").map(c => c.trim()).filter(c => c !== "") }];
+        ? matches.slice(0, 6).map(m => ({ ...m, channels: m.channels || [] }))
+        : [{ ...selectedMatch, channels: selectedMatch.channels || [] }];
       
       const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
       const currentTemplate = templates.find(t => t.id === selectedTemplateId);
@@ -273,10 +232,10 @@ const BannerGenerator = () => {
       if (navigator.share) {
         await navigator.share({
           files: [file],
-          title: "Banner de Jogo",
+          title: "Banner de Jogos",
         });
       } else {
-        toast.info("Compartilhamento não suportado neste navegador. Baixe a imagem.");
+        toast.info("Compartilhamento não suportado. Baixe a imagem.");
       }
     } catch (error) {
       toast.error("Erro ao preparar imagem");
@@ -284,7 +243,10 @@ const BannerGenerator = () => {
   };
 
   const openDailyEditor = () => {
-    if (matches.length === 0) return;
+    if (matches.length === 0) {
+      toast.info("Aguarde a sincronização dos jogos.");
+      return;
+    }
     const dailyMock: Match = {
       id: "daily",
       home_team: "",
@@ -296,11 +258,8 @@ const BannerGenerator = () => {
       channels: []
     };
     setSelectedMatch(dailyMock);
-    setCustomChannels("");
-    setSelectedTemplateId("default");
     setIsEditorOpen(true);
   };
-
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -321,15 +280,13 @@ const BannerGenerator = () => {
         .from("company-assets")
         .getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
+      await supabase
         .from("company_settings")
         .update({ brand_logo_url: publicUrl } as any)
         .eq("company_id", effectiveCompanyId);
 
-      if (updateError) throw updateError;
-
       setBrandLogo(publicUrl);
-      toast.success("Logo atualizada com sucesso!");
+      toast.success("Logo atualizada!");
     } catch (error: any) {
       toast.error("Erro ao subir logo: " + error.message);
     } finally {
@@ -337,29 +294,26 @@ const BannerGenerator = () => {
     }
   };
 
+  const updateMatchChannel = (index: number, value: string) => {
+    const updatedMatches = [...matches];
+    updatedMatches[index] = { ...updatedMatches[index], channels: value.split(",").map(c => c.trim()) };
+    setMatches(updatedMatches);
+  };
+
   return (
     <DashboardLayout>
       <AnimatedPage>
-        <div className="space-y-6">
+        <div className="space-y-6 pb-20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                Gerador de Banners
+                Centro de Banners
               </h1>
               <p className="text-muted-foreground">
-                Crie banners profissionais para os jogos de hoje.
+                Selecione o seu template e gere as artes automaticamente.
               </p>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={openDailyEditor}
-                disabled={loading || matches.length === 0}
-                variant="outline"
-                className="bg-purple-600/10 border-purple-600/30 text-purple-400 hover:bg-purple-600/20"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Gerar Banner com Lista de Jogos
-              </Button>
               <Button 
                 onClick={handleRefresh} 
                 disabled={fetching}
@@ -373,218 +327,218 @@ const BannerGenerator = () => {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-zinc-900 border border-zinc-800">
-              <TabsTrigger value="generator">Gerador</TabsTrigger>
-              <TabsTrigger value="templates">Configurar Templates</TabsTrigger>
+            <TabsList className="bg-zinc-900 border border-zinc-800 p-1">
+              <TabsTrigger value="generator" className="data-[state=active]:bg-primary/20">
+                <ImageIcon className="w-4 h-4 mr-2" />
+                Modelos de Arte
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="data-[state=active]:bg-primary/20">
+                <Settings className="w-4 h-4 mr-2" />
+                Configurações
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="generator" className="space-y-6 mt-6">
-              {/* Brand Settings Section */}
-              <Card className="glass-card border-primary/20 bg-primary/5">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-primary" />
-                    Configurações de Marca
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="relative group w-32 h-32 rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center bg-zinc-900/50 overflow-hidden">
-                    {brandLogo ? (
-                      <>
-                        <img src={brandLogo} alt="Logo" className="w-full h-full object-contain p-2" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button 
-                            variant="destructive" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => setBrandLogo(null)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center p-2">
-                        <ImageIcon className="w-8 h-8 text-primary/30 mx-auto mb-1" />
-                        <span className="text-[10px] text-muted-foreground italic">Sem Logo</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 space-y-4 text-center md:text-left">
-                    <div>
-                      <h4 className="text-sm font-medium">Sua Logo Personalizada</h4>
-                      <p className="text-xs text-muted-foreground">Aparecerá automaticamente no topo dos seus banners.</p>
-                    </div>
-                    <div className="flex items-center justify-center md:justify-start gap-3">
-                      <Button 
-                        asChild 
-                        variant="outline" 
-                        size="sm" 
-                        disabled={uploadingLogo}
-                        className="bg-primary/10 border-primary/30 hover:bg-primary/20"
-                      >
-                        <label className="cursor-pointer">
-                          <Upload className="w-4 h-4 mr-2" />
-                          {uploadingLogo ? "Enviando..." : "Upload Logo"}
-                          <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                        </label>
-                      </Button>
-                      {!brandLogo && (
-                        <span className="text-[10px] text-blue-400 animate-pulse font-medium">
-                          Usando padrão TV MAX
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card className="overflow-hidden glass-card hover:border-primary/50 transition-all group relative border-2 border-blue-500/50">
+            <TabsContent value="generator" className="space-y-8 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Default Template */}
+                <Card className="overflow-hidden glass-card border-2 border-blue-500/20 hover:border-blue-500/50 transition-all group relative cursor-pointer" onClick={() => { setSelectedTemplateId("default"); openDailyEditor(); }}>
                   <div className="aspect-[9/16] relative bg-zinc-900">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-blue-900/40 to-black/80">
-                      <ImageIcon className="w-16 h-16 text-blue-400 mb-4" />
-                      <h3 className="text-xl font-bold mb-2">Padrão TV MAX</h3>
-                      <p className="text-sm text-muted-foreground mb-6">Modelo oficial com fundo de estádio e cores da marca.</p>
-                      <Button 
-                        className="w-full bg-blue-600 hover:bg-blue-700 font-bold"
-                        onClick={openDailyEditor}
-                        disabled={loading || matches.length === 0}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Gerar com este Modelo
+                    <img 
+                      src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=1080" 
+                      alt="Padrão" 
+                      className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-all duration-700" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="absolute inset-0 flex flex-col items-center justify-end p-8 text-center">
+                      <h3 className="text-2xl font-black text-white mb-2 uppercase italic tracking-tighter">Padrão TV MAX</h3>
+                      <p className="text-xs text-blue-400 font-bold mb-6 tracking-widest uppercase">Modelo de Sistema</p>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 font-black uppercase text-xs tracking-widest">
+                        Usar este Modelo
                       </Button>
                     </div>
                   </div>
                 </Card>
 
+                {/* Custom Templates */}
                 {templates.map((template) => (
-                  <Card key={template.id} className="overflow-hidden glass-card hover:border-primary/50 transition-all group relative">
+                  <Card 
+                    key={template.id} 
+                    className="overflow-hidden glass-card border-2 border-purple-500/20 hover:border-purple-500/50 transition-all group relative cursor-pointer"
+                    onClick={() => { setSelectedTemplateId(template.id); openDailyEditor(); }}
+                  >
                     <div className="aspect-[9/16] relative bg-zinc-900">
                       <img 
                         src={template.background_url} 
                         alt={template.name} 
-                        className="w-full h-full object-cover opacity-60" 
+                        className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-all duration-700" 
                       />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black/40">
-                        <h3 className="text-xl font-bold mb-2">{template.name}</h3>
-                        <p className="text-sm text-zinc-300 mb-6">Personalizado: {template.config.matches.maxPerPage} jogos por página.</p>
-                        <Button 
-                          className="w-full bg-purple-600 hover:bg-purple-700 font-bold"
-                          onClick={() => {
-                            const dailyMock: Match = {
-                              id: "daily",
-                              home_team: "",
-                              away_team: "",
-                              home_logo: "",
-                              away_logo: "",
-                              match_time: new Date().toISOString(),
-                              league_name: "Geral",
-                              channels: []
-                            };
-                            setSelectedMatch(dailyMock);
-                            setCustomChannels("");
-                            setSelectedTemplateId(template.id);
-                            setIsEditorOpen(true);
-                          }}
-                          disabled={loading || matches.length === 0}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Gerar com este Modelo
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-end p-8 text-center">
+                        <h3 className="text-2xl font-black text-white mb-2 uppercase italic tracking-tighter">{template.name}</h3>
+                        <p className="text-xs text-purple-400 font-bold mb-6 tracking-widest uppercase">Modelo Personalizado</p>
+                        <Button className="w-full bg-purple-600 hover:bg-purple-700 font-black uppercase text-xs tracking-widest">
+                          Usar este Modelo
                         </Button>
                       </div>
                     </div>
                   </Card>
                 ))}
-              </div>
 
+                {/* Add New Template Placeholder */}
+                <Card 
+                  className="aspect-[9/16] flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 bg-zinc-900/20 hover:bg-zinc-900/40 hover:border-zinc-700 transition-all cursor-pointer group"
+                  onClick={() => setActiveTab("templates")}
+                >
+                  <div className="p-6 rounded-full bg-zinc-800 group-hover:bg-zinc-700 transition-colors mb-4">
+                    <Plus className="w-10 h-10 text-zinc-500" />
+                  </div>
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Novo Template</p>
+                </Card>
+              </div>
             </TabsContent>
 
-            <TabsContent value="templates">
-              {effectiveCompanyId && (
-                <TemplateConfigPanel 
-                  companyId={effectiveCompanyId} 
-                  onTemplateCreated={fetchTemplates}
-                  templates={templates}
-                />
-              )}
+            <TabsContent value="templates" className="mt-6">
+              <TemplateConfigPanel 
+                companyId={effectiveCompanyId || ""} 
+                onTemplateCreated={fetchTemplates}
+                templates={templates}
+              />
             </TabsContent>
           </Tabs>
+        </div>
 
-          <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white">
-              <DialogHeader>
-                <DialogTitle className="text-blue-400">Personalizar Banner</DialogTitle>
-              </DialogHeader>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold text-zinc-300">Escolha o Modelo</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant={selectedTemplateId === "default" ? "default" : "outline"}
-                        className={selectedTemplateId === "default" ? "bg-blue-600 hover:bg-blue-700" : "border-zinc-700"}
-                        onClick={() => setSelectedTemplateId("default")}
-                      >
-                        Padrão TV MAX
-                      </Button>
-                      {templates.map(t => (
-                        <Button
-                          key={t.id}
-                          variant={selectedTemplateId === t.id ? "default" : "outline"}
-                          className={selectedTemplateId === t.id ? "bg-blue-600 hover:bg-blue-700" : "border-zinc-700"}
-                          onClick={() => setSelectedTemplateId(t.id)}
-                        >
-                          {t.name}
-                        </Button>
-                      ))}
-                    </div>
+        {/* Modal de Preparação e Gerenciamento */}
+        <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+          <DialogContent className="max-w-5xl bg-zinc-950 border-zinc-800 text-white max-h-[95vh] overflow-hidden flex flex-col p-0">
+            <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+              <div>
+                <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-3">
+                  <div className="p-2 bg-primary/20 rounded-lg">
+                    <Tv className="w-6 h-6 text-primary" />
                   </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold text-zinc-300">Canais de Transmissão (Separados por vírgula)</Label>
-                    <Input 
-                      value={customChannels}
-                      onChange={(e) => setCustomChannels(e.target.value)}
-                      placeholder="Ex: Globo, Premiere, SporTV"
-                      className="bg-zinc-900 border-zinc-700"
-                    />
-                    <p className="text-[10px] text-zinc-500 italic">Deixe vazio para usar a detecção automática.</p>
-                  </div>
-
-                  <div className="pt-4 border-t border-zinc-800 flex gap-3">
-                    <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={downloadBanner}>
-                      <Download className="w-4 h-4 mr-2" /> Gerar e Baixar PNG
-                    </Button>
-                    <Button variant="outline" className="border-zinc-700" onClick={shareOnWhatsApp}>
-                      <Share2 className="w-4 h-4 mr-2" /> Compartilhar
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <Label className="text-sm font-semibold text-zinc-300 mb-2 block">Prévia</Label>
-                  <div className="aspect-[9/16] bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 flex items-center justify-center">
+                  Preparar Transmissões
+                </DialogTitle>
+                <p className="text-xs text-zinc-500 font-medium mt-1 uppercase tracking-widest">
+                  {matches.length} JOGOS IDENTIFICADOS • 6 POR PÁGINA
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="border-zinc-800 hover:bg-zinc-800" onClick={() => setIsEditorOpen(false)}>
+                  FECHAR
+                </Button>
+                <Button className="bg-green-600 hover:bg-green-700 font-bold px-8 shadow-lg shadow-green-600/20" onClick={downloadBanner}>
+                  <Download className="w-4 h-4 mr-2" /> GERAR TUDO
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+              {/* Lado Esquerdo: Preview */}
+              <div className="p-8 bg-black/40 flex items-center justify-center border-r border-zinc-800">
+                <div className="w-full max-w-[320px] relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary to-purple-600 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+                  <div className="relative aspect-[9/16] bg-zinc-900 rounded-[1.5rem] overflow-hidden border-4 border-zinc-800 shadow-2xl">
                     {previewUrl ? (
-                      <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-zinc-600">
-                        <ImageIcon className="w-12 h-12" />
-                        <span>Gerando prévia...</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                        <RefreshCw className="w-10 h-10 text-zinc-700 animate-spin" />
+                        <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Gerando Prévia...</span>
                       </div>
                     )}
+                    <div className="absolute top-4 right-4">
+                      <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10">
+                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter italic">Preview Real</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+
+              {/* Lado Direito: Lista de Jogos e Edição */}
+              <div className="p-6 overflow-y-auto custom-scrollbar space-y-4">
+                <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 mb-6">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 block">Logo da Marca</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center p-2 border border-zinc-700">
+                      {brandLogo ? <img src={brandLogo} className="max-w-full max-h-full object-contain" /> : <ImageIcon className="w-5 h-5 text-zinc-600" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-zinc-300 mb-1">{brandLogo ? "Sua marca está ativa" : "Usando logo padrão TV MAX"}</p>
+                      <Button asChild variant="link" className="p-0 h-auto text-xs text-primary hover:text-primary/80">
+                        <label className="cursor-pointer">
+                          Alterar Logo
+                          <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                        </label>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Curadoria de Jogos</Label>
+                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Clique para editar</span>
+                  </div>
+                  
+                  {matches.map((match, idx) => (
+                    <div key={match.id} className="group relative p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all hover:bg-zinc-900/80">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">{match.league_name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                          <span className="text-[10px] font-black text-blue-400">{format(new Date(match.match_time), "HH:mm")}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 justify-center mb-4 px-2">
+                        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                          <img src={match.home_logo} alt="" className="w-7 h-7 object-contain" />
+                          <span className="text-[10px] font-black text-center truncate w-full uppercase">{match.home_team}</span>
+                        </div>
+                        <span className="text-[8px] font-black text-zinc-700 italic">VS</span>
+                        <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                          <img src={match.away_logo} alt="" className="w-7 h-7 object-contain" />
+                          <span className="text-[10px] font-black text-center truncate w-full uppercase">{match.away_team}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="relative">
+                        <div className="absolute -top-2 left-2 px-1.5 bg-zinc-900 text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                          Onde Assistir
+                        </div>
+                        <Input 
+                          defaultValue={match.channels?.join(", ")}
+                          placeholder="Ex: Premiere, Globo"
+                          className="h-9 text-[11px] font-bold bg-zinc-950 border-zinc-800 focus:border-primary/50 uppercase"
+                          onChange={(e) => updateMatchChannel(idx, e.target.value)}
+                        />
+                      </div>
+                      
+                      {match.channels && match.channels.length > 0 && (
+                        <div className="mt-2 flex items-center gap-1">
+                          <div className="w-1 h-1 rounded-full bg-green-500" />
+                          <span className="text-[8px] font-bold text-green-500 uppercase tracking-widest">
+                            Transmissão Detectada: {match.channels[0]}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-zinc-900/80 border-t border-zinc-800 flex justify-center gap-4">
+               <Button variant="ghost" className="text-zinc-500 text-[10px] font-black uppercase tracking-widest hover:text-white" onClick={shareOnWhatsApp}>
+                 <Share2 className="w-4 h-4 mr-2" /> Compartilhar Preview
+               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </AnimatedPage>
     </DashboardLayout>
   );
 };
 
 export default BannerGenerator;
-
