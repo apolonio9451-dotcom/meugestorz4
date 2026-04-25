@@ -123,7 +123,7 @@ const BannerGenerator = () => {
   const openEditor = (match: Match) => {
     setSelectedMatch(match);
     setCustomChannels(match.channels?.join(", ") || "");
-    setSelectedTemplate(match.id === "daily" ? 1 : 3); // Default to Card Único for single match
+    setSelectedTemplate(3); // Default to Card Único for single match edit
     setIsEditorOpen(true);
   };
 
