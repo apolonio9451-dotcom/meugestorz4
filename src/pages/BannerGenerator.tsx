@@ -229,7 +229,9 @@ const BannerGenerator = () => {
         dayOfWeek, 
         selectedTemplateId,
         currentTemplate?.background_url,
-        currentTemplate?.config
+        currentTemplate?.config,
+        undefined,
+        { hideFrames, hideHeaderBox }
       );
       
       const response = await fetch(dataUrl);
