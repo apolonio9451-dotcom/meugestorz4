@@ -91,12 +91,12 @@ export const generateBannerCanvas = async (
     dayOfWeek: { x: 540, y: 350, fontSize: 50, color: "#3b82f6" },
     logo: { x: 840, y: 60, width: 180 },
     matches: {
-      startY: 420,
-      rowHeight: 180,
+      startY: 450,
+      rowHeight: 220,
       shieldSize: 100,
       nameFontSize: 44,
       infoFontSize: 34,
-      maxPerPage: 8
+      maxPerPage: 6
     },
     footer: { y: 1740, text: "ASSINE AGORA E ASSISTA EM 4K", bgColor: "#2563eb" }
   };
