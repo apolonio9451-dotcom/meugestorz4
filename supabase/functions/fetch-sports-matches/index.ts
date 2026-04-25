@@ -60,21 +60,42 @@ Deno.serve(async (req) => {
 
     console.log(`Total matches found: ${allMatches.length}`);
 
-    const upsertData = allMatches.map((m) => ({
-      external_id: m.fixture.id,
-      home_team: m.teams.home.name,
-      away_team: m.teams.away.name,
-      home_logo: m.teams.home.logo,
-      away_logo: m.teams.away.logo,
-      match_time: m.fixture.date,
-      match_date: today,
-      league_name: m.league.name,
-      league_logo: m.league.logo,
-      // API-Football doesn't provide channels in the basic fixture response usually, 
-      // but some endpoints might. For now, we'll leave it empty or mock it if needed.
-      channels: [], 
-      updated_at: new Date().toISOString(),
-    }));
+    const getAutoChannels = (leagueName: string) => {
+      const name = leagueName.toLowerCase();
+      if (name.includes("brasileirão")) return ["Premiere", "Globo"];
+      if (name.includes("champions league")) return ["Max", "TNT"];
+      if (name.includes("libertadores")) return ["Globo", "ESPN", "Paramount+"];
+      if (name.includes("premier league")) return ["ESPN", "Star+"];
+      if (name.includes("la liga") || name.includes("serie a") || name.includes("bundesliga") || name.includes("ligue 1")) return ["ESPN", "Star+"];
+      return ["TV MAX"];
+    };
+
+    const upsertData = allMatches.map((m) => {
+      // Extract channels from API if available, otherwise use defaults
+      let matchChannels = [];
+      // Some API versions or data plans might include broadcasters
+      if (m.fixture.broadcasters && Array.isArray(m.fixture.broadcasters)) {
+        matchChannels = m.fixture.broadcasters.map((b: any) => b.name);
+      }
+      
+      if (matchChannels.length === 0) {
+        matchChannels = getAutoChannels(m.league.name);
+      }
+
+      return {
+        external_id: m.fixture.id,
+        home_team: m.teams.home.name,
+        away_team: m.teams.away.name,
+        home_logo: m.teams.home.logo,
+        away_logo: m.teams.away.logo,
+        match_time: m.fixture.date,
+        match_date: today,
+        league_name: m.league.name,
+        league_logo: m.league.logo,
+        channels: matchChannels,
+        updated_at: new Date().toISOString(),
+      };
+    });
 
     if (upsertData.length > 0) {
       const { error } = await supabase
@@ -87,9 +108,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, count: upsertData.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (err: any) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
