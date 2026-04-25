@@ -119,12 +119,12 @@ export const generateBannerCanvas = async (
     ctx.drawImage(logoImg, width - logoW - 60, 60, logoW, logoH);
   }
 
-  // 4. GRID DE JOGOS (3 Zonas Rígidas)
-  const startY = 480;
-  const rowHeight = 220;
+  // 4. GRID DE JOGOS (Cordenadas Ajustadas por Zona)
+  const startY = 520; // Ajustado para não colidir com o cabeçalho
+  const rowHeight = 210;
   const shieldSize = 100;
-  const nameMaxWidth = 350; // Aumentado para melhor legibilidade
-  const marginX = 60; // Margem das bordas
+  const nameMaxWidth = 360; 
+  const zonePadding = 80; // Espaço de segurança do centro (VS)
 
   const getAutoShrinkFontSize = (text: string, maxWidth: number, baseSize: number) => {
     ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
@@ -154,7 +154,7 @@ export const generateBannerCanvas = async (
 
     // ZONA ESQUERDA (40%): [ESCUDO] + [NOME]
     // O nome fica alinhado à direita, encostando na margem do VS
-    const leftNameRightEdge = canvasCenterX - 70; // Margem sagrada de 70px do VS
+    const leftNameRightEdge = canvasCenterX - zonePadding; 
     const homeNameSize = getAutoShrinkFontSize(match.home_team, nameMaxWidth, 44);
     ctx.font = `bold ${homeNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "right";
@@ -170,7 +170,7 @@ export const generateBannerCanvas = async (
 
     // ZONA DIREITA (40%): [NOME] + [ESCUDO]
     // O nome fica alinhado à esquerda, encostando na margem do VS
-    const rightNameLeftEdge = canvasCenterX + 70; // Margem sagrada de 70px do VS
+    const rightNameLeftEdge = canvasCenterX + zonePadding; 
     const awayNameSize = getAutoShrinkFontSize(match.away_team, nameMaxWidth, 44);
     ctx.font = `bold ${awayNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
