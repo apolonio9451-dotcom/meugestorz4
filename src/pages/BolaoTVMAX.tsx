@@ -82,7 +82,7 @@ const BolaoTVMAX = () => {
 
     setLoading(true);
     try {
-      // 1. Check if client exists in 'clients' table
+      // 1. Check if exists in 'clients' table (Active subscribers)
       const { data: clientData } = await supabase
         .from("clients")
         .select("id, name, status")
@@ -93,8 +93,22 @@ const BolaoTVMAX = () => {
         setName(clientData.name || "");
         setIsClient(clientData.status === 'active');
         checkExistingGuess(phone);
+        return;
+      }
+
+      // 2. Check if exists in 'bolao_leads' table (Returning guests)
+      const { data: leadData } = await supabase
+        .from("bolao_leads")
+        .select("name")
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (leadData) {
+        setName(leadData.name || "");
+        setIsClient(false);
+        checkExistingGuess(phone);
       } else {
-        // 2. Not a client, ask for name (Lead flow)
+        // 3. New visitor, ask for name
         setIsClient(false);
         setStep("form");
       }
