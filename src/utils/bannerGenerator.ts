@@ -85,58 +85,64 @@ export const generateBannerCanvas = async (
     ctx.fillRect(0, 0, width, height);
   }
 
-  // 2. Configuration
+  // 2. Configuration - Centered Content Area Focus
   const config: TemplateConfig = dynamicConfig || {
-    title: { x: 540, y: 220, fontSize: 160, color: "#FFFFFF", text: "HOJE NA TV" },
-    dayOfWeek: { x: 540, y: 300, fontSize: 60, color: "#3b82f6" },
+    title: { x: 540, y: 220, fontSize: 130, color: "#FFFFFF", text: "JOGOS DE HOJE" },
+    dayOfWeek: { x: 540, y: 310, fontSize: 50, color: "#3b82f6" },
     logo: { x: 840, y: 60, width: 180 },
     matches: {
-      startY: 420,
-      rowHeight: 210,
-      shieldSize: 110,
-      nameFontSize: 46,
-      infoFontSize: 34,
+      startY: 450,
+      rowHeight: 220,
+      shieldSize: 100,
+      nameFontSize: 38,
+      infoFontSize: 28,
       maxPerPage: 6
     },
     footer: { y: 1780, text: "ASSINE AGORA E ASSISTA EM 4K", bgColor: "#2563eb" }
   };
 
-  // 3. Header - ONLY DRAW IF NOT CUSTOM BACKGROUND
-  if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+  // 3. Header - Title and Date (Automatically updated)
+  // Even with backgroundUrl, we might want to draw these if they are meant to be dynamic content
+  const shouldDrawDynamicText = true; // Based on "O sistema só tem permissão para alterar os textos..."
+  
+  if (shouldDrawDynamicText) {
     ctx.textAlign = "center";
     ctx.fillStyle = config.title.color;
     ctx.font = `bold ${config.title.fontSize}px Montserrat, sans-serif`;
     
-    let titleText = config.title.text;
-    if (pageInfo && pageInfo.total > 1) {
-      titleText += ` (${pageInfo.current}/${pageInfo.total})`;
-    }
-    ctx.fillText(titleText, config.title.x, config.title.y);
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const fullTitle = `${config.title.text} - ${formattedDate}`;
+    
+    ctx.fillText(fullTitle.toUpperCase(), config.title.x, config.title.y);
     
     ctx.font = `italic ${config.dayOfWeek.fontSize}px Montserrat, sans-serif`;
     ctx.fillStyle = config.dayOfWeek.color;
     ctx.fillText(dayOfWeek.toUpperCase(), config.dayOfWeek.x, config.dayOfWeek.y);
 
-    // 4. Logo
-    if (logoImg && logoImg.width > 1) {
+    // 4. Logo - Maintain TV MAX branding if not in template
+    if (!backgroundUrl && logoImg && logoImg.width > 1) {
       const aspectRatio = logoImg.height / logoImg.width;
       const logoHeight = config.logo.width * aspectRatio;
       ctx.drawImage(logoImg, config.logo.x, config.logo.y, config.logo.width, logoHeight);
     }
   }
 
-  // 5. Matches - Rigid Layout with 3 Zones Logic
+  // 5. Matches - 5 Rigid Zones Logic (Box Model)
   const maxMatches = config.matches.maxPerPage;
+  // Filter only matches for current date if possible, otherwise use passed matches
   const matchesToDraw = matches.slice(0, maxMatches);
   
-  const shieldSize = 120; // Aumentado para 120px para melhor visibilidade
-  const rowHeight = 240; // Altura por linha
-  const startY = 420; // Posição Y inicial
+  const shieldSize = 50; // Zona A/E: Máximo 50x50px
+  const rowHeight = 220;
+  const startY = 480; 
+  const zoneWidthLimit = 120; // Zona B/D: Limite de 120px
+  const margin = 10; // Margem de segurança de 10px
 
-  const getDynamicFontSize = (text: string, maxWidth: number, baseSize: number) => {
+  const getAutoShrinkFontSize = (text: string, maxWidth: number, baseSize: number) => {
     ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
     let size = baseSize;
-    while (ctx.measureText(text.toUpperCase()).width > maxWidth && size > 14) {
+    while (ctx.measureText(text.toUpperCase()).width > maxWidth && size > 12) {
       size--;
       ctx.font = `bold ${size}px Montserrat, sans-serif`;
     }
@@ -146,70 +152,69 @@ export const generateBannerCanvas = async (
   for (let i = 0; i < matchesToDraw.length; i++) {
     const match = matchesToDraw[i];
     const yCenter = startY + i * rowHeight;
+    const canvasCenterX = width / 2;
 
     const [homeShield, awayShield] = await Promise.all([
       loadImage(match.home_logo),
       loadImage(match.away_logo),
     ]);
 
-    // 1. ZONA ESQUERDA (40% da largura = 432px)
-    // [Escudo (100px)] + [Espaço] + [Nome Time (Alinhado à Direita)]
-    const leftZoneWidth = width * 0.4;
-    const homeShieldX = 50; // Margin left
-    const homeNameMaxW = leftZoneWidth - shieldSize - 40; // Space for name
-    const homeNameEndX = leftZoneWidth - 20;
+    // ZONA C: VS (Ponto central fixo)
+    ctx.textAlign = "center";
+    ctx.font = "italic bold 42px Montserrat, sans-serif";
+    ctx.fillStyle = config.dayOfWeek.color;
+    ctx.fillText("VS", canvasCenterX, yCenter + 10);
 
-    if (homeShield && homeShield.width > 1) {
-      ctx.drawImage(homeShield, homeShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
-    }
-
-    const homeNameSize = getDynamicFontSize(match.home_team, homeNameMaxW, 42);
+    // ZONA B: Nome Casa (Limite 120px, alinhado à direita de VS)
+    const zonaB_EndX = canvasCenterX - 40; // Spacing from VS
+    const zonaB_StartX = zonaB_EndX - zoneWidthLimit;
+    
+    const homeNameSize = getAutoShrinkFontSize(match.home_team, zoneWidthLimit, 36);
     ctx.font = `bold ${homeNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "right";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.home_team.toUpperCase(), homeNameEndX, yCenter + 15);
+    ctx.fillText(match.home_team.toUpperCase(), zonaB_EndX, yCenter + 10);
 
-    // 2. ZONA CENTRAL (10% da largura = 108px)
-    // Apenas "X" centralizado
-    const centerZoneX = width * 0.45;
-    ctx.textAlign = "center";
-    ctx.font = "italic bold 48px Montserrat, sans-serif";
-    ctx.fillStyle = config.dayOfWeek.color;
-    ctx.fillText("X", width / 2, yCenter + 15);
+    // ZONA A: Escudo Casa (50x50px, à esquerda da Zona B)
+    const zonaA_X = zonaB_StartX - shieldSize - margin;
+    if (homeShield && homeShield.width > 1) {
+      ctx.drawImage(homeShield, zonaA_X, yCenter - 25, shieldSize, shieldSize);
+    }
 
-    // 3. ZONA DIREITA (40% da largura = 432px)
-    // [Nome Time (Alinhado à Esquerda)] + [Espaço] + [Escudo (100px)]
-    const rightZoneStartX = width * 0.6;
-    const awayShieldX = width - 50 - shieldSize;
-    const awayNameMaxW = leftZoneWidth - shieldSize - 40;
-    const awayNameStartX = rightZoneStartX + 20;
-
-    const awayNameSize = getDynamicFontSize(match.away_team, awayNameMaxW, 42);
+    // ZONA D: Nome Fora (Limite 120px, alinhado à esquerda de VS)
+    const zonaD_StartX = canvasCenterX + 40; // Spacing from VS
+    
+    const awayNameSize = getAutoShrinkFontSize(match.away_team, zoneWidthLimit, 36);
     ctx.font = `bold ${awayNameSize}px Montserrat, sans-serif`;
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(match.away_team.toUpperCase(), awayNameStartX, yCenter + 15);
+    ctx.fillText(match.away_team.toUpperCase(), zonaD_StartX, yCenter + 10);
 
+    // ZONA E: Escudo Fora (50x50px, à direita da Zona D)
+    const zonaE_X = zonaD_StartX + zoneWidthLimit + margin;
     if (awayShield && awayShield.width > 1) {
-      ctx.drawImage(awayShield, awayShieldX, yCenter - (shieldSize / 2), shieldSize, shieldSize);
+      ctx.drawImage(awayShield, zonaE_X, yCenter - 25, shieldSize, shieldSize);
     }
 
-    // 4. SUB-LINHA DE INFO: HORÁRIO | TRANSMISSÃO
-    const infoY = yCenter + 80;
-    const timeStr = formatBrasiliaTime(match.match_time);
+    // ANCORAGEM DE TRANSMISSÃO: Centralizado abaixo do VS
+    const infoY = yCenter + 65;
     const channelsStr = match.channels && match.channels.length > 0 
-      ? match.channels.join(" | ") 
-      : "";
+      ? match.channels[0] // Use first channel as primary transmission
+      : "TRANSMISSÃO";
     
-    const fullInfo = `${timeStr}${channelsStr ? " | " + channelsStr : ""}`.toUpperCase();
     ctx.textAlign = "center";
-    ctx.font = "bold 28px Montserrat, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.fillText(fullInfo, width / 2, infoY);
+    ctx.font = "bold 24px Montserrat, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillText(channelsStr.toUpperCase(), canvasCenterX, infoY);
+    
+    // Horário (opcional, mantido pequeno se necessário, ou omitido se o template já tiver)
+    const timeStr = formatBrasiliaTime(match.match_time);
+    ctx.font = "italic 20px Montserrat, sans-serif";
+    ctx.fillText(timeStr, canvasCenterX, infoY + 25);
   }
 
-  // 6. Footer - ONLY DRAW IF NOT CUSTOM BACKGROUND
-  if (!backgroundUrl || backgroundUrl === defaultStadiumUrl) {
+  // 6. Footer - Persistence of design
+  if (!backgroundUrl) {
     const footerY = config.footer.y;
     ctx.textAlign = "center";
     ctx.font = "bold 38px Montserrat, sans-serif";
