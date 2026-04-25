@@ -395,7 +395,34 @@ const BannerGenerator = () => {
             </DialogHeader>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-zinc-300">Escolha o Modelo</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { id: 1, name: "Lista Vertical", desc: "Clássico TV MAX" },
+                      { id: 2, name: "Moderno Neon", desc: "Estilo Gamer" },
+                      { id: 3, name: "Card Único", desc: "Destaque" }
+                    ].map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => setSelectedTemplate(tpl.id)}
+                        className={`p-3 rounded-lg border-2 transition-all text-left space-y-1 ${
+                          selectedTemplate === tpl.id 
+                            ? "border-blue-500 bg-blue-500/10" 
+                            : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
+                        }`}
+                      >
+                        <div className={`text-[10px] font-bold uppercase ${selectedTemplate === tpl.id ? "text-blue-400" : "text-zinc-500"}`}>
+                          Modelo {tpl.id}
+                        </div>
+                        <div className="text-xs font-semibold">{tpl.name}</div>
+                        <div className="text-[9px] text-zinc-500 line-clamp-1">{tpl.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="channels">Canais de Transmissão</Label>
                   <Input 
@@ -412,8 +439,8 @@ const BannerGenerator = () => {
                   <h4 className="text-sm font-semibold text-blue-400">Dicas TV MAX</h4>
                   <ul className="text-xs space-y-2 text-zinc-400">
                     <li>• O template é otimizado para Status de WhatsApp (9:16).</li>
-                    <li>• Use canais conhecidos para atrair mais clientes.</li>
-                    <li>• O banner já inclui seu CTA fixo de 4K.</li>
+                    <li>• O Modelo 1 é ideal para listas. O Modelo 3 para jogos grandes.</li>
+                    <li>• O banner já inclui sua marca personalizada no topo.</li>
                   </ul>
                 </div>
               </div>
