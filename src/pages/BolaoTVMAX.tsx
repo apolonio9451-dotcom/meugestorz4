@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Trophy, Send, CheckCircle2, Lock, Smartphone, User, History, Share2, MessageSquare } from "lucide-react";
+import { Trophy, Send, CheckCircle2, Lock, Smartphone, User, History, Share2, MessageSquare, Clock } from "lucide-center";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import AnimatedPage from "@/components/AnimatedPage";
