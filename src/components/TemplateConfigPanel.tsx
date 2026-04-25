@@ -71,12 +71,12 @@ export const TemplateConfigPanel = ({ companyId, onTemplateCreated, templates }:
       return;
     }
 
-    const { error } = await supabase.from("banner_templates").insert({
+    const { error } = await supabase.from("banner_templates").insert([{
       company_id: companyId,
       name: newTemplate.name,
       background_url: newTemplate.background_url,
-      config: newTemplate.config
-    });
+      config: newTemplate.config as any
+    }]);
 
     if (error) {
       toast.error("Erro ao salvar template: " + error.message);
