@@ -43,13 +43,13 @@ const BolaoTVMAX = () => {
   }, []);
 
   const fetchSupportPhone = async () => {
-    // Get from company_settings
-    const { data } = await supabase.rpc("get_support_whatsapp_public"); // I might need a public RPC or just query settings if RLS allows
-    if (!data) {
-        const { data: settings } = await supabase.from('company_settings').select('support_whatsapp').limit(1).maybeSingle();
-        if (settings?.support_whatsapp) setSupportPhone(settings.support_whatsapp);
-    } else {
-        setSupportPhone(data as string);
+    try {
+      const { data: settings } = await supabase.from('company_settings').select('support_whatsapp').limit(1).maybeSingle();
+      if (settings?.support_whatsapp) {
+        setSupportPhone(settings.support_whatsapp.replace(/\D/g, ''));
+      }
+    } catch (e) {
+      console.error("Error fetching support phone:", e);
     }
   };
 
