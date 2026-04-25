@@ -50,7 +50,7 @@ const BannerGenerator = () => {
     if (isEditorOpen && selectedMatch) {
       updatePreview();
     }
-  }, [isEditorOpen, selectedMatch, customChannels, brandLogo]);
+  }, [isEditorOpen, selectedMatch, customChannels, brandLogo, selectedTemplate]);
 
   const updatePreview = async () => {
     if (!selectedMatch) return;
