@@ -82,33 +82,22 @@ const BolaoTVMAX = () => {
 
     setLoading(true);
     try {
-      // 1. Check if exists in 'clients' table (Active subscribers)
-      const { data: clientData } = await supabase
-        .from("clients")
-        .select("id, name, status")
-        .eq("phone", phone)
-        .maybeSingle();
+      // Normalize phone before search
+      const cleanPhone = phone.replace(/\D/g, '');
+      
+      const { data, error: rpcError } = await supabase.rpc('check_bolao_access' as any, { 
+        p_phone: cleanPhone 
+      });
 
-      if (clientData) {
-        setName(clientData.name || "");
-        setIsClient(clientData.status === 'active');
-        checkExistingGuess(phone);
-        return;
-      }
+      if (rpcError) throw rpcError;
 
-      // 2. Check if exists in 'bolao_leads' table (Returning guests)
-      const { data: leadData } = await supabase
-        .from("bolao_leads")
-        .select("name")
-        .eq("phone", phone)
-        .maybeSingle();
-
-      if (leadData) {
-        setName(leadData.name || "");
-        setIsClient(false);
-        checkExistingGuess(phone);
+      if (data) {
+        setName(data.name || "");
+        setIsClient(data.is_client || false);
+        setPhone(cleanPhone); // Save normalized phone
+        checkExistingGuess(cleanPhone);
       } else {
-        // 3. New visitor, ask for name
+        // Not a client or lead, ask for name
         setIsClient(false);
         setStep("form");
       }
@@ -126,7 +115,7 @@ const BolaoTVMAX = () => {
       .from("bolao_guesses")
       .select("*")
       .eq("challenge_id", challenge.id)
-      .eq("participant_phone", phoneNumber)
+      .eq("participant_phone", phoneNumber.replace(/\D/g, ''))
       .maybeSingle();
 
     if (data) {
@@ -147,8 +136,10 @@ const BolaoTVMAX = () => {
     setLoading(true);
     try {
       // Save lead
-      await supabase.from("bolao_leads" as any).upsert({ name, phone });
-      checkExistingGuess(phone);
+      const cleanPhone = phone.replace(/\D/g, '');
+      await supabase.from("bolao_leads" as any).upsert({ name, phone: cleanPhone });
+      setPhone(cleanPhone);
+      checkExistingGuess(cleanPhone);
     } catch (error) {
       toast.error("Erro ao registrar.");
     } finally {
@@ -188,7 +179,7 @@ const BolaoTVMAX = () => {
         .from("bolao_guesses")
         .insert({
           challenge_id: challenge.id,
-          participant_phone: phone,
+          participant_phone: phone.replace(/\D/g, ''),
           participant_name: name,
           guesses: formattedGuesses,
           status: "pending",
