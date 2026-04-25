@@ -26,6 +26,9 @@ export const BolaoChallengeConfig = () => {
   const [checking, setChecking] = useState(false);
   const [existingChallenge, setExistingChallenge] = useState<any>(null);
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [participantCount, setParticipantCount] = useState(0);
+  const [winnersCount, setWinnersCount] = useState(0);
+  const [activeChallengeMatches, setActiveChallengeMatches] = useState<any[]>([]);
 
   useEffect(() => {
     fetchMatches();
