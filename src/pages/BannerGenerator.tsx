@@ -176,24 +176,22 @@ const BannerGenerator = () => {
     }
   };
 
-  const downloadDailyBanner = async () => {
+  const openDailyEditor = () => {
     if (matches.length === 0) return;
-    try {
-      const dayOfWeek = format(new Date(), "EEEE", { locale: ptBR });
-      const dataUrl = await generateBannerCanvas(matches.map(m => ({
-        ...m,
-        channels: m.channels || []
-      })), brandLogo, dayOfWeek, 1);
-      
-      const link = document.createElement("a");
-      link.download = `jogos-do-dia-${format(new Date(), "dd-MM")}.png`;
-      link.href = dataUrl;
-      link.click();
-      toast.success("Banner geral baixado com sucesso!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao gerar banner geral");
-    }
+    const dailyMock: Match = {
+      id: "daily",
+      home_team: "",
+      away_team: "",
+      home_logo: "",
+      away_logo: "",
+      match_time: new Date().toISOString(),
+      league_name: "Geral",
+      channels: []
+    };
+    setSelectedMatch(dailyMock);
+    setCustomChannels("");
+    setSelectedTemplate(1);
+    setIsEditorOpen(true);
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
