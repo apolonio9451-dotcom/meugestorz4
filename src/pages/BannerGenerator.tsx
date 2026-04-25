@@ -54,12 +54,14 @@ const BannerGenerator = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("generator");
+  const [hideFrames, setHideFrames] = useState(false);
+  const [hideHeaderBox, setHideHeaderBox] = useState(false);
 
   useEffect(() => {
     if (isEditorOpen && selectedMatch) {
       updatePreview();
     }
-  }, [isEditorOpen, selectedMatch, selectedTemplateId, matches]);
+  }, [isEditorOpen, selectedMatch, selectedTemplateId, matches, hideFrames, hideHeaderBox]);
 
   const updatePreview = async () => {
     if (!selectedMatch) return;
@@ -81,7 +83,8 @@ const BannerGenerator = () => {
         selectedTemplateId,
         currentTemplate?.background_url,
         currentTemplate?.config,
-        isDaily ? { current: 1, total: Math.ceil(matches.length / maxPerPage) } : undefined
+        isDaily ? { current: 1, total: Math.ceil(matches.length / maxPerPage) } : undefined,
+        { hideFrames, hideHeaderBox }
       );
       setPreviewUrl(dataUrl);
     } catch (error) {
@@ -191,7 +194,8 @@ const BannerGenerator = () => {
             selectedTemplateId,
             currentTemplate?.background_url,
             currentTemplate?.config,
-            { current: i + 1, total: totalPages }
+            { current: i + 1, total: totalPages },
+            { hideFrames, hideHeaderBox }
           );
           
           const link = document.createElement("a");
@@ -225,7 +229,9 @@ const BannerGenerator = () => {
         dayOfWeek, 
         selectedTemplateId,
         currentTemplate?.background_url,
-        currentTemplate?.config
+        currentTemplate?.config,
+        undefined,
+        { hideFrames, hideHeaderBox }
       );
       
       const response = await fetch(dataUrl);
@@ -460,20 +466,45 @@ const BannerGenerator = () => {
 
               {/* Lado Direito: Lista de Jogos e Edição */}
               <div className="p-6 overflow-y-auto custom-scrollbar space-y-4">
-                <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 mb-6">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 block">Logo da Marca</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center p-2 border border-zinc-700">
-                      {brandLogo ? <img src={brandLogo} className="max-w-full max-h-full object-contain" /> : <ImageIcon className="w-5 h-5 text-zinc-600" />}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 block">Logo da Marca</Label>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center p-2 border border-zinc-700">
+                        {brandLogo ? <img src={brandLogo} className="max-w-full max-h-full object-contain" /> : <ImageIcon className="w-4 h-4 text-zinc-600" />}
+                      </div>
+                      <div className="flex-1">
+                        <Button asChild variant="link" className="p-0 h-auto text-[10px] text-primary hover:text-primary/80 uppercase font-bold">
+                          <label className="cursor-pointer">
+                            Alterar
+                            <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                          </label>
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-zinc-300 mb-1">{brandLogo ? "Sua marca está ativa" : "Usando logo padrão TV MAX"}</p>
-                      <Button asChild variant="link" className="p-0 h-auto text-xs text-primary hover:text-primary/80">
-                        <label className="cursor-pointer">
-                          Alterar Logo
-                          <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                        </label>
-                      </Button>
+                  </div>
+
+                  <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 flex flex-col justify-center gap-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Opções Visuais</Label>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          checked={hideFrames} 
+                          onChange={(e) => setHideFrames(e.target.checked)}
+                          className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-primary focus:ring-primary"
+                        />
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-200 transition-colors uppercase">Ocultar Molduras</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          checked={hideHeaderBox} 
+                          onChange={(e) => setHideHeaderBox(e.target.checked)}
+                          className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-primary focus:ring-primary"
+                        />
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-200 transition-colors uppercase">Ocultar Caixa Título</span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -512,30 +543,14 @@ const BannerGenerator = () => {
                         </div>
                         <Input 
                           defaultValue={match.channels?.join(", ")}
-                          placeholder="Ex: Premiere, Globo"
-                          className="h-9 text-[11px] font-bold bg-zinc-950 border-zinc-800 focus:border-primary/50 uppercase"
                           onChange={(e) => updateMatchChannel(idx, e.target.value)}
+                          className="h-10 bg-zinc-950 border-zinc-800 focus:border-primary/50 text-[10px] font-bold uppercase tracking-widest"
                         />
                       </div>
-                      
-                      {match.channels && match.channels.length > 0 && (
-                        <div className="mt-2 flex items-center gap-1">
-                          <div className="w-1 h-1 rounded-full bg-green-500" />
-                          <span className="text-[8px] font-bold text-green-500 uppercase tracking-widest">
-                            Transmissão Detectada: {match.channels[0]}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-            
-            <div className="p-4 bg-zinc-900/80 border-t border-zinc-800 flex justify-center gap-4">
-               <Button variant="ghost" className="text-zinc-500 text-[10px] font-black uppercase tracking-widest hover:text-white" onClick={shareOnWhatsApp}>
-                 <Share2 className="w-4 h-4 mr-2" /> Compartilhar Preview
-               </Button>
             </div>
           </DialogContent>
         </Dialog>

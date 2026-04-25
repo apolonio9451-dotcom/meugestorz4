@@ -32,7 +32,8 @@ export const generateBannerCanvas = async (
   templateId: number | string = 1,
   backgroundUrl?: string,
   dynamicConfig?: TemplateConfig,
-  pageInfo?: { current: number; total: number }
+  pageInfo?: { current: number; total: number },
+  customSettings?: { hideFrames?: boolean; hideHeaderBox?: boolean }
 ): Promise<string> => {
   const width = 1080;
   const height = 1920; // 9:16 Aspect Ratio (Exact Template Dimension)
@@ -108,10 +109,12 @@ export const generateBannerCanvas = async (
   const year = today.getFullYear();
   const fullDateStr = `JOGOS DE HOJE - ${dayName}, ${dayNum} DE ${year}`;
 
-  // Header cleaning box
-  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-  ctx.fillRect(50, headerY - 80, width - 100, 160);
-
+  // Header cleaning box (only if requested)
+  if (!customSettings?.hideHeaderBox) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(50, headerY - 80, width - 100, 160);
+  }
+  
   ctx.font = "bold 70px Montserrat, sans-serif";
   ctx.fillStyle = "#FFFFFF";
   ctx.fillText(fullDateStr, width / 2, headerY + 15);
@@ -158,22 +161,24 @@ export const generateBannerCanvas = async (
       match.league_logo ? loadImage(match.league_logo) : Promise.resolve(null),
     ]);
 
-    // Draw row "Frame/Molde" (Neon Glow Effect)
-    const frameWidth = width - 100;
-    const frameHeight = rowHeight - 20;
-    const frameX = 50;
-    const frameY = yCenter - (frameHeight / 2);
+    // Draw row "Frame/Molde" (Only if not hidden)
+    if (!customSettings?.hideFrames) {
+      const frameWidth = width - 100;
+      const frameHeight = rowHeight - 20;
+      const frameX = 50;
+      const frameY = yCenter - (frameHeight / 2);
 
-    // Frame cleaning
-    ctx.fillStyle = "rgba(10, 10, 30, 0.8)";
-    ctx.beginPath();
-    ctx.roundRect(frameX, frameY, frameWidth, frameHeight, 15);
-    ctx.fill();
+      // Frame cleaning
+      ctx.fillStyle = "rgba(10, 10, 30, 0.8)";
+      ctx.beginPath();
+      ctx.roundRect(frameX, frameY, frameWidth, frameHeight, 15);
+      ctx.fill();
 
-    // Neon border
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; // Blue neon
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      // Neon border
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; // Blue neon
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     // --- COLUMN 1: LEAGUE & TIME ---
     const col1X = 80;
