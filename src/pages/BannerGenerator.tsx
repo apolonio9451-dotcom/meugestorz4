@@ -253,7 +253,7 @@ const BannerGenerator = () => {
               className="bg-purple-600/10 border-purple-600/30 text-purple-400 hover:bg-purple-600/20"
             >
               <Download className="w-4 h-4 mr-2" />
-              Banner do Dia
+              Gerar Banner com Lista de Jogos
             </Button>
             <Button 
               onClick={handleRefresh} 
