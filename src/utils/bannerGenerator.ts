@@ -137,6 +137,16 @@ export const generateBannerCanvas = async (
   const leagueLogoSize = 60;
   const nameMaxWidth = 250;
 
+  const getAutoShrinkFontSize = (text: string, maxWidth: number, baseSize: number) => {
+    ctx.font = `bold ${baseSize}px Montserrat, sans-serif`;
+    let size = baseSize;
+    while (ctx.measureText(text.toUpperCase()).width > maxWidth && size > 16) {
+      size--;
+      ctx.font = `bold ${size}px Montserrat, sans-serif`;
+    }
+    return size;
+  };
+
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i];
     const yCenter = startY + i * rowHeight;
