@@ -89,27 +89,27 @@ export const generateBannerCanvas = async (
     ctx.fillRect(0, 0, width, height);
   }
 
-  // 2. HEADER - Clean and Legible
+  // 2. HEADER - "JOGOS DE HOJE" + DATA
   const headerY = 220;
   ctx.textAlign = "center";
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 110px Montserrat, sans-serif";
+  ctx.font = "bold 90px Montserrat, sans-serif";
   
-  let mainTitle = "JOGOS DO DIA";
+  const today = new Date();
+  const dayName = today.toLocaleDateString('pt-BR', { weekday: 'long' }).toUpperCase();
+  const dayNum = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  
+  let mainTitle = `JOGOS DE HOJE - ${dayName}, ${dayNum}`;
   if (pageInfo && pageInfo.total > 1) {
     mainTitle += ` (${pageInfo.current}/${pageInfo.total})`;
   }
-  ctx.fillText(mainTitle, width / 2, headerY);
-
-  // Date and Day of Week - Automated
-  const today = new Date();
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
-  const formattedDate = today.toLocaleDateString('pt-BR', options).toUpperCase();
-  const subTitle = `${dayOfWeek.toUpperCase()}, ${formattedDate}`;
   
-  ctx.font = "500 42px Montserrat, sans-serif";
-  ctx.fillStyle = "#3b82f6"; // Primary blue for highlight
-  ctx.fillText(subTitle, width / 2, headerY + 70);
+  // Limpar área do cabeçalho caso o template tenha texto fixo
+  ctx.fillStyle = "rgba(0, 0, 0, 0.8)"; // Cobertura escura para placeholders
+  ctx.fillRect(100, headerY - 100, width - 200, 200);
+  
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillText(mainTitle, width / 2, headerY);
 
   // 3. LOGO TV MAX
   if (logoImg && logoImg.width > 1) {
