@@ -36,7 +36,7 @@ const GeneralSettings = lazy(() => import("@/pages/GeneralSettings"));
 const Campaigns = lazy(() => import("@/pages/Campaigns"));
 const BannerGenerator = lazy(() => import("@/pages/BannerGenerator"));
 const BolaoAdmin = lazy(() => import("@/pages/BolaoAdmin"));
-const CustomerPortal = lazy(() => import("@/pages/CustomerPortal"));
+const BolaoTVMAX = lazy(() => import("@/pages/BolaoTVMAX"));
 
 
 const PageLoader = () => (
@@ -90,6 +90,8 @@ const App = () => (
             <Route path="/dashboard/banner-generator" element={<DashboardRoute><BannerGenerator /></DashboardRoute>} />
             <Route path="/dashboard/bolao" element={<DashboardRoute><BolaoAdmin /></DashboardRoute>} />
             <Route path="/portal-cliente" element={<CustomerPortal />} />
+            <Route path="/palpites" element={<BolaoTVMAX />} />
+            <Route path="/bolaotvmax" element={<BolaoTVMAX />} />
 
             
             <Route path="/dashboard/resellers" element={<DashboardRoute><PlanGate feature="Revendedores"><Resellers /></PlanGate></DashboardRoute>} />

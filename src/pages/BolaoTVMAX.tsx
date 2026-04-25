@@ -113,7 +113,7 @@ const BolaoTVMAX = () => {
     setLoading(true);
     try {
       // Save lead
-      await supabase.from("bolao_leads").upsert({ name, phone });
+      await supabase.from("bolao_leads" as any).upsert({ name, phone });
       checkExistingGuess(phone);
     } catch (error) {
       toast.error("Erro ao registrar.");
