@@ -39,6 +39,7 @@ const BannerGenerator = () => {
   const [fetching, setFetching] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<number>(1);
   const [customChannels, setCustomChannels] = useState("");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
