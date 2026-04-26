@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
     console.log(`[whatsapp-manage] Resolved Company ID: ${resolvedCompanyId}`);
     console.log(`[whatsapp-manage] User ID: ${user.id}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
+    const systemName = "Uazapi"; // Definindo o nome do sistema conforme a documentação
 
     if (adminTokenCandidates.length === 0) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
 
@@ -168,10 +169,15 @@ Deno.serve(async (req) => {
                 };
                 if (config.method !== "GET") {
                   fetchOptions.body = JSON.stringify({ 
+                    token: adminToken,
                     name: finalInstanceName, 
-                    instanceName: finalInstanceName,
-                    instance: finalInstanceName,
-                    systemName: "Meu Gestor" 
+                    deviceName: "Uazapi",
+                    systemName: "Uazapi",
+                    system_name: "Uazapi",
+                    system: "Uazapi",
+                    profileName: "Uazapi",
+                    browser: "chrome",
+                    fingerprintProfile: "chrome"
                   });
                 }
 
@@ -216,12 +222,27 @@ Deno.serve(async (req) => {
       
       // 1. Set Webhook first
       try {
-        await fetch(`${baseUrl}/instance/set-webhook`, {
+        const webhookPayload = {
+          url: webhookUrl,
+          enabled: true,
+          active: true,
+          byApi: true,
+          addUrlEvents: true,
+          addUrlTypesMessages: true,
+          excludeMessages: ["wasSentByApi", "isGroupYes"],
+          events: [
+            "connection", "messages", "messages_update", "presence",
+            "call", "contacts", "groups", "labels", "chats",
+            "chat_labels", "blocks", "leads", "history", "sender",
+          ],
+        };
+        
+        console.log(`[whatsapp-manage] Registering webhook at ${baseUrl}/webhook`);
+        await fetch(`${baseUrl}/webhook`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": token },
-          body: JSON.stringify({ url: webhookUrl, enabled: true }),
+          body: JSON.stringify(webhookPayload),
         });
-        console.log(`[whatsapp-manage] Webhook set request sent to ${baseUrl}/instance/set-webhook`);
       } catch (e: any) {
         console.warn(`[whatsapp-manage] Failed to set webhook automatically:`, e.message);
       }
