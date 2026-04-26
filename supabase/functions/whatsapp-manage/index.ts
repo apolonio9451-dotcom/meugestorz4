@@ -87,19 +87,16 @@ Deno.serve(async (req) => {
     const baseUrlCandidates = uniqueUrlCandidates(
       apiSettings?.uazapi_base_url,
       apiSettings?.api_url,
-      Deno.env.get("WA_API_URL"),
-      Deno.env.get("EVOLUTI_API_URL"),
       "https://ipazua.uazapi.com",
+      Deno.env.get("WA_API_URL"),
       "https://api.uazapi.com",
       "https://free.uazapi.com",
     );
     let baseUrl = baseUrlCandidates[0];
     const adminTokenCandidates = uniqueTokenCandidates(
       Deno.env.get("UAZAPI_ADMIN_TOKEN"),
-      Deno.env.get("WA_ADMIN_TOKEN"),
-      Deno.env.get("BOLINHA_API_TOKEN"),
-      Deno.env.get("EVOLUTI_TOKEN"),
       apiSettings?.api_token,
+      Deno.env.get("WA_ADMIN_TOKEN"),
     );
     console.log(`[whatsapp-manage] baseUrlCandidates=${JSON.stringify(baseUrlCandidates)}`);
     console.log(`[whatsapp-manage] Admin token candidates=${adminTokenCandidates.map((token) => `${token.substring(0, 5)}...(${token.length})`).join(", ") || "none"}`);
