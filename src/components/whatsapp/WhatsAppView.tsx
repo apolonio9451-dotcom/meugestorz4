@@ -194,10 +194,14 @@ export default function WhatsAppView() {
   }, [companyId]);
 
   const fetchProfilePicture = useCallback(async () => {
-    const data = await callManage("profile-picture");
-    if (data?.profile_picture) setProfilePic(data.profile_picture);
-    if (data?.profile_name) setProfileName(data.profile_name);
-    if (data?.phone) setProfilePhone(data.phone);
+    try {
+      const data = await callManage("profile-picture");
+      if (data?.profile_picture) setProfilePic(data.profile_picture);
+      if (data?.profile_name) setProfileName(data.profile_name);
+      if (data?.phone) setProfilePhone(data.phone);
+    } catch (e) {
+      console.warn("Failed to fetch profile picture", e);
+    }
   }, [callManage]);
 
   const fetchQrCode = useCallback(async () => {
