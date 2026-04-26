@@ -152,6 +152,7 @@ Deno.serve(async (req) => {
               { name: "Header Authorization Bearer", method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
               { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
+              { name: "Header Authorization", method: "POST", headers: { "Content-Type": "application/json", "Authorization": adminToken } },
               { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
               { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
