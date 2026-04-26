@@ -313,6 +313,8 @@ Deno.serve(async (req) => {
         const tokens = await initInstance();
         instanceToken = tokens.instanceToken;
         generalToken = tokens.token;
+        // Register webhook immediately after creation
+        await registerWebhook(instanceToken);
       }
 
       const payload = {
