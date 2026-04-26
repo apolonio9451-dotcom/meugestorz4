@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
             qrData = await res.json();
             if (qrData.qrcode || qrData.base64) break;
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error(`Failed to fetch from ${endpoint}:`, e.message);
         }
       }
