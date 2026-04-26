@@ -17,6 +17,44 @@ async function resolveAuthorizedCompanyId(adminClient: any, userId: string, requ
   return memberships[0].company_id;
 }
 
+function cleanToken(value: string | null | undefined) {
+  const token = String(value || "").trim();
+  if (!token || token.length <= 5 || token.includes("curl") || token.startsWith("http")) return "";
+  return token;
+}
+
+function uniqueTokenCandidates(...tokens: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const value of tokens) {
+    const token = cleanToken(value);
+    if (token && !seen.has(token)) {
+      seen.add(token);
+      candidates.push(token);
+    }
+  }
+  return candidates;
+}
+
+function cleanUrl(value: string | null | undefined) {
+  const url = String(value || "").trim().replace(/\/+$/, "");
+  if (!url || !url.startsWith("http")) return "";
+  return url;
+}
+
+function uniqueUrlCandidates(...urls: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const value of urls) {
+    const url = cleanUrl(value);
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      candidates.push(url);
+    }
+  }
+  return candidates;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -42,18 +80,31 @@ Deno.serve(async (req) => {
     // Load API settings (admintoken) for the company
     const { data: apiSettings } = await adminClient
       .from("api_settings")
-      .select("api_url, api_token, instance_name")
+      .select("api_url, api_token, instance_name, uazapi_base_url")
       .eq("company_id", resolvedCompanyId)
       .maybeSingle();
 
-    const baseUrl = (apiSettings?.api_url || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-    // Prioritize the secret env var (managed by Lovable)
-    const envAdminToken = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
-    const adminToken = envAdminToken || (apiSettings?.api_token || "").trim();
-    console.log(`[whatsapp-manage] Using adminToken (len=${adminToken.length}, prefix=${adminToken.substring(0, 5)}...) from ${envAdminToken ? 'ENV' : 'DB'}`);
+    const baseUrlCandidates = uniqueUrlCandidates(
+      apiSettings?.uazapi_base_url,
+      apiSettings?.api_url,
+      Deno.env.get("WA_API_URL"),
+      Deno.env.get("EVOLUTI_API_URL"),
+      "https://ipazua.uazapi.com",
+      "https://api.uazapi.com",
+      "https://free.uazapi.com",
+    );
+    let baseUrl = baseUrlCandidates[0];
+    const adminTokenCandidates = uniqueTokenCandidates(
+      Deno.env.get("UAZAPI_ADMIN_TOKEN"),
+      Deno.env.get("WA_ADMIN_TOKEN"),
+      Deno.env.get("BOLINHA_API_TOKEN"),
+      Deno.env.get("EVOLUTI_TOKEN"),
+      apiSettings?.api_token,
+    );
+    console.log(`[whatsapp-manage] Admin token candidates=${adminTokenCandidates.map((token) => `${token.substring(0, 5)}...(${token.length})`).join(", ") || "none"}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
-    if (!adminToken) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
+    if (adminTokenCandidates.length === 0) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
 
     // Load existing instance from DB (we use instance_token for instance-level operations)
     const { data: existingInstance } = await adminClient
@@ -71,42 +122,32 @@ Deno.serve(async (req) => {
     // ---------- INIT (create instance with admintoken) ----------
     async function initInstance(): Promise<string> {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
-      let res = await fetch(`${baseUrl}/instance/init`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "admintoken": adminToken },
-        body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
-      });
-      
-      let text = await res.text();
-      console.log(`[whatsapp-manage] /instance/init -> ${res.status}: ${text.substring(0, 300)}`);
+      let lastError = "Unauthorized";
 
-      if (!res.ok) {
-        console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
-        res = await fetch(`${baseUrl}/instance/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` },
-          body: JSON.stringify({ instanceName: finalInstanceName }),
-        });
-        text = await res.text();
-        console.log(`[whatsapp-manage] /instance/create -> ${res.status}: ${text.substring(0, 300)}`);
-      }
-      if (!res.ok) {
-        console.warn(`[whatsapp-manage] admin/create failed (${res.status}), trying /instance/init with 'apikey'`);
-        res = await fetch(`${baseUrl}/instance/init`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "apikey": adminToken },
-          body: JSON.stringify({ name: finalInstanceName }),
-        });
-        text = await res.text();
-        console.log(`[whatsapp-manage] /instance/init apikey -> ${res.status}: ${text.substring(0, 300)}`);
+      for (const candidateBaseUrl of baseUrlCandidates) {
+        for (const adminToken of adminTokenCandidates) {
+          const res = await fetch(`${candidateBaseUrl}/instance/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "admintoken": adminToken },
+            body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+          });
+          const text = await res.text();
+          let data: any = {};
+          try { data = JSON.parse(text); } catch {}
+          console.log(`[whatsapp-manage] ${candidateBaseUrl}/instance/create (${adminToken.substring(0, 5)}...) -> ${res.status}: ${text.substring(0, 300)}`);
+
+          if (res.ok) {
+            baseUrl = candidateBaseUrl;
+            const newToken = data.token || data.instance?.token || data.data?.token || "";
+            if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
+            return newToken;
+          }
+
+          lastError = data.message || data.error || text || `HTTP ${res.status}`;
+        }
       }
 
-      let data: any = {};
-      try { data = JSON.parse(text); } catch {}
-      if (!res.ok) throw new Error(`Falha ao inicializar instância: ${data.message || data.error || text}`);
-      const newToken = data.token || data.instance?.token || data.data?.token || "";
-      if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
-      return newToken;
+      throw new Error(`Falha ao inicializar instância: ${lastError}. Confirme se o Token de Administrador pertence a um destes servidores: ${baseUrlCandidates.join(", ")}.`);
     }
 
     // ---------- CONNECT (returns QR base64) ----------
@@ -220,9 +261,9 @@ Deno.serve(async (req) => {
 
     if (action === "delete") {
       if (instanceToken) {
-        await fetch(`${baseUrl}/instance/${instanceToken}`, {
+        await fetch(`${baseUrl}/instance`, {
           method: "DELETE",
-          headers: { "admintoken": adminToken },
+          headers: { "token": instanceToken },
         }).catch(() => null);
       }
       await adminClient.from("whatsapp_instances").delete().eq("user_id", user.id);
