@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     
     if (!resolvedCompanyId) throw new Error("No company access");
 
-    const { action, instance_name, server_url, token, force_new } = body;
+    const { action, force_new } = body;
 
     // Load API settings for the company
     const { data: apiSettings } = await adminClient
@@ -53,11 +53,11 @@ Deno.serve(async (req) => {
       .eq("company_id", resolvedCompanyId)
       .maybeSingle();
 
-    const baseUrl = apiSettings?.api_url || server_url || "https://ipazua.uazapi.com";
-    const apiToken = apiSettings?.api_token || token || "Meu gestor";
-    const finalInstanceName = instance_name || apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
+    const baseUrl = apiSettings?.api_url?.trim().replace(/\/$/, "") || "https://ipazua.uazapi.com";
+    const apiToken = apiSettings?.api_token || "Meu gestor";
+    const finalInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
-    if (action === "create" || action === "get-or-create") {
+    if (action === "create" || action === "get-or-create" || action === "reconnect") {
       // Check if instance already exists in DB
       const { data: existingInstance } = await adminClient
         .from("whatsapp_instances")
@@ -65,34 +65,45 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (existingInstance && !force_new) {
-        // Just return the existing one
+      if (existingInstance && !force_new && action !== "reconnect") {
         return new Response(JSON.stringify({ success: true, instance: existingInstance }), { 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });
       }
 
-      // If we need to create/recreate on the remote server
       const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${user.id}`;
       
-      console.log(`[whatsapp-manage] Creating/reconnecting instance ${finalInstanceName} at ${baseUrl}`);
+      console.log(`[whatsapp-manage] Re-creating/reconnecting instance ${finalInstanceName} at ${baseUrl}`);
       
-      // UA-ZAPI call to create/start instance
-      const createRes = await fetch(`${baseUrl}/instance/create`, {
+      // Try to start/create instance
+      const createRes = await fetch(`${baseUrl}/instance/init`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiToken}`
         },
         body: JSON.stringify({
-          instanceName: finalInstanceName,
-          token: apiToken,
+          key: finalInstanceName,
+          webhook: true,
           webhookUrl: webhookUrl
         })
-      });
+      }).catch(() => null);
 
-      const createData = await createRes.json();
-      console.log(`[whatsapp-manage] API Response:`, createData);
+      if (!createRes || !createRes.ok) {
+         // Try /instance/create if /init fails (depends on UA-ZAPI version)
+         await fetch(`${baseUrl}/instance/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiToken}`
+          },
+          body: JSON.stringify({
+            instanceName: finalInstanceName,
+            token: apiToken,
+            webhookUrl: webhookUrl
+          })
+        }).catch(() => null);
+      }
 
       // Update or insert in DB
       const instancePayload = {
@@ -101,7 +112,7 @@ Deno.serve(async (req) => {
         server_url: baseUrl,
         token: apiToken,
         instance_token: apiToken,
-        status: "disconnected",
+        status: "connecting",
         is_connected: false,
         webhook_url: webhookUrl
       };
@@ -110,6 +121,23 @@ Deno.serve(async (req) => {
         await adminClient.from("whatsapp_instances").update(instancePayload).eq("id", existingInstance.id);
       } else {
         await adminClient.from("whatsapp_instances").insert(instancePayload);
+      }
+
+      // Fetch QR immediately if this was a reconnect
+      if (action === "reconnect") {
+        const qrRes = await fetch(`${baseUrl}/instance/qrbase64?key=${finalInstanceName}`, {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${apiToken}` }
+        }).catch(() => null);
+
+        if (qrRes && qrRes.ok) {
+          const qrData = await qrRes.json();
+          return new Response(JSON.stringify({ 
+            success: true, 
+            qrcode: qrData.qrcode || qrData.base64,
+            connected: qrData.connected || false
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       }
 
       const { data: updatedInstance } = await adminClient
@@ -123,26 +151,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "qrcode" || action === "reconnect") {
-      console.log(`[whatsapp-manage] Fetching QR Code for ${finalInstanceName}`);
+    if (action === "qrcode") {
+      console.log(`[whatsapp-manage] Fetching QR Code for ${finalInstanceName} via UA-ZAPI`);
       
-      const qrRes = await fetch(`${baseUrl}/instance/qrcode?instanceName=${finalInstanceName}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${apiToken}`
-        }
-      });
+      // Try UA-ZAPI QR endpoints
+      const endpoints = [
+        `${baseUrl}/instance/qrbase64?key=${finalInstanceName}`,
+        `${baseUrl}/instance/qrcode?instanceName=${finalInstanceName}`,
+        `${baseUrl}/instance/qr?key=${finalInstanceName}`
+      ];
 
-      if (!qrRes.ok) {
-        const errorData = await qrRes.json().catch(() => ({}));
-        throw new Error(errorData.message || "Erro ao obter QR Code da API");
+      let qrData = null;
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${apiToken}` }
+          });
+          if (res.ok) {
+            qrData = await res.json();
+            if (qrData.qrcode || qrData.base64) break;
+          }
+        } catch (e) {
+          console.error(`Failed to fetch from ${endpoint}:`, e.message);
+        }
       }
 
-      const qrData = await qrRes.json();
+      if (!qrData || (!qrData.qrcode && !qrData.base64)) {
+        throw new Error("Não foi possível gerar o QR Code. Verifique se a URL e o Token da API estão corretos em 'Configurações'.");
+      }
       
       return new Response(JSON.stringify({ 
         success: true, 
-        qrcode: qrData.base64 || qrData.qrcode,
+        qrcode: qrData.qrcode || qrData.base64,
         connected: qrData.connected || false
       }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -150,39 +191,32 @@ Deno.serve(async (req) => {
     }
 
     if (action === "profile-picture") {
-      const picRes = await fetch(`${baseUrl}/instance/profilePicture?instanceName=${finalInstanceName}`, {
+      const picRes = await fetch(`${baseUrl}/instance/info?key=${finalInstanceName}`, {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${apiToken}`
-        }
-      });
-      const picData = await picRes.json().catch(() => ({}));
+        headers: { "Authorization": `Bearer ${apiToken}` }
+      }).catch(() => null);
+      
+      const picData = picRes && picRes.ok ? await picRes.json() : {};
       return new Response(JSON.stringify(picData), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "disconnect") {
-      await fetch(`${baseUrl}/instance/logout?instanceName=${finalInstanceName}`, {
+      await fetch(`${baseUrl}/instance/logout?key=${finalInstanceName}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${apiToken}` }
-      });
+      }).catch(() => null);
       
       await adminClient.from("whatsapp_instances").update({ is_connected: false, status: "disconnected" }).eq("user_id", user.id);
-      
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "delete") {
-      await fetch(`${baseUrl}/instance/delete?instanceName=${finalInstanceName}`, {
+      await fetch(`${baseUrl}/instance/delete?key=${finalInstanceName}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${apiToken}` }
-      });
+      }).catch(() => null);
 
-      const { error } = await adminClient
-        .from("whatsapp_instances")
-        .delete()
-        .eq("user_id", user.id);
-      
-      if (error) throw error;
+      await adminClient.from("whatsapp_instances").delete().eq("user_id", user.id);
       return new Response(JSON.stringify({ success: true, deleted: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
