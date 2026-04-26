@@ -94,42 +94,29 @@ Deno.serve(async (req) => {
     // ---------- INIT (create instance with admintoken) ----------
     async function initInstance(): Promise<string> {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
-      let res = await fetch(`${baseUrl}/instance/init`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "admintoken": adminToken },
-        body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
-      });
-      
-      let text = await res.text();
-      console.log(`[whatsapp-manage] /instance/init -> ${res.status}: ${text.substring(0, 300)}`);
+      let lastError = "Unauthorized";
 
-      if (!res.ok) {
-        console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
-        res = await fetch(`${baseUrl}/instance/create`, {
+      for (const adminToken of adminTokenCandidates) {
+        const res = await fetch(`${baseUrl}/instance/create`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` },
-          body: JSON.stringify({ instanceName: finalInstanceName }),
+          headers: { "Content-Type": "application/json", "admintoken": adminToken },
+          body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
         });
-        text = await res.text();
-        console.log(`[whatsapp-manage] /instance/create -> ${res.status}: ${text.substring(0, 300)}`);
-      }
-      if (!res.ok) {
-        console.warn(`[whatsapp-manage] admin/create failed (${res.status}), trying /instance/init with 'apikey'`);
-        res = await fetch(`${baseUrl}/instance/init`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "apikey": adminToken },
-          body: JSON.stringify({ name: finalInstanceName }),
-        });
-        text = await res.text();
-        console.log(`[whatsapp-manage] /instance/init apikey -> ${res.status}: ${text.substring(0, 300)}`);
+        const text = await res.text();
+        let data: any = {};
+        try { data = JSON.parse(text); } catch {}
+        console.log(`[whatsapp-manage] /instance/create (${adminToken.substring(0, 5)}...) -> ${res.status}: ${text.substring(0, 300)}`);
+
+        if (res.ok) {
+          const newToken = data.token || data.instance?.token || data.data?.token || "";
+          if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
+          return newToken;
+        }
+
+        lastError = data.message || data.error || text || `HTTP ${res.status}`;
       }
 
-      let data: any = {};
-      try { data = JSON.parse(text); } catch {}
-      if (!res.ok) throw new Error(`Falha ao inicializar instância: ${data.message || data.error || text}`);
-      const newToken = data.token || data.instance?.token || data.data?.token || "";
-      if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
-      return newToken;
+      throw new Error(`Falha ao inicializar instância: ${lastError}. Confirme se o Token de Administrador pertence ao servidor ${baseUrl}.`);
     }
 
     // ---------- CONNECT (returns QR base64) ----------
