@@ -124,27 +124,30 @@ Deno.serve(async (req) => {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
       let lastError = "Unauthorized";
 
-      for (const adminToken of adminTokenCandidates) {
-        const res = await fetch(`${baseUrl}/instance/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "admintoken": adminToken },
-          body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
-        });
-        const text = await res.text();
-        let data: any = {};
-        try { data = JSON.parse(text); } catch {}
-        console.log(`[whatsapp-manage] /instance/create (${adminToken.substring(0, 5)}...) -> ${res.status}: ${text.substring(0, 300)}`);
+      for (const candidateBaseUrl of baseUrlCandidates) {
+        for (const adminToken of adminTokenCandidates) {
+          const res = await fetch(`${candidateBaseUrl}/instance/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "admintoken": adminToken },
+            body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+          });
+          const text = await res.text();
+          let data: any = {};
+          try { data = JSON.parse(text); } catch {}
+          console.log(`[whatsapp-manage] ${candidateBaseUrl}/instance/create (${adminToken.substring(0, 5)}...) -> ${res.status}: ${text.substring(0, 300)}`);
 
-        if (res.ok) {
-          const newToken = data.token || data.instance?.token || data.data?.token || "";
-          if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
-          return newToken;
+          if (res.ok) {
+            baseUrl = candidateBaseUrl;
+            const newToken = data.token || data.instance?.token || data.data?.token || "";
+            if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
+            return newToken;
+          }
+
+          lastError = data.message || data.error || text || `HTTP ${res.status}`;
         }
-
-        lastError = data.message || data.error || text || `HTTP ${res.status}`;
       }
 
-      throw new Error(`Falha ao inicializar instância: ${lastError}. Confirme se o Token de Administrador pertence ao servidor ${baseUrl}.`);
+      throw new Error(`Falha ao inicializar instância: ${lastError}. Confirme se o Token de Administrador pertence a um destes servidores: ${baseUrlCandidates.join(", ")}.`);
     }
 
     // ---------- CONNECT (returns QR base64) ----------
