@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
       Deno.env.get("EVOLUTI_TOKEN"),
       apiSettings?.api_token,
     );
+    console.log(`[whatsapp-manage] baseUrlCandidates=${JSON.stringify(baseUrlCandidates)}`);
     console.log(`[whatsapp-manage] Admin token candidates=${adminTokenCandidates.map((token) => `${token.substring(0, 5)}...(${token.length})`).join(", ") || "none"}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
