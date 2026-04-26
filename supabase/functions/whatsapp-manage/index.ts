@@ -108,8 +108,8 @@ Deno.serve(async (req) => {
     );
     let baseUrl = baseUrlCandidates[0];
     const adminTokenCandidates = uniqueTokenCandidates(
-      Deno.env.get("UAZAPI_ADMIN_TOKEN"),
       apiSettings?.api_token,
+      Deno.env.get("UAZAPI_ADMIN_TOKEN"),
       Deno.env.get("WA_ADMIN_TOKEN"),
     );
     console.log(`[whatsapp-manage] baseUrlCandidates=${JSON.stringify(baseUrlCandidates)}`);
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/init", "/instance/create", "/instance/add", "/instance/new"];
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
@@ -149,8 +149,8 @@ Deno.serve(async (req) => {
               { name: "Header Authorization Bearer", method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
               { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
-              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
+              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
               { name: "GET init with admintoken", method: "GET", headers: { "admintoken": adminToken } },
               { name: "GET init with token", method: "GET", headers: { "token": adminToken } }
