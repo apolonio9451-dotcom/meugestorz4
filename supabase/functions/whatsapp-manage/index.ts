@@ -192,11 +192,10 @@ Deno.serve(async (req) => {
 
                 if (res.ok) {
                   baseUrl = candidateBaseUrl;
-                if (res.ok) {
-                  baseUrl = candidateBaseUrl;
                   const instanceTokenFromApi = data["Instance Token"] || data.instance_token || data.instance?.token || data.data?.instance_token;
                   const generalToken = data.token || data.hash || data.data?.token;
                   
+                  // Se a API retornar dois, usamos os dois. Se retornar apenas um, usamos o mesmo para ambos.
                   const finalInstanceToken = instanceTokenFromApi || generalToken || (data.status === "success" && data.instance?.id) || finalInstanceName;
                   const finalGeneralToken = generalToken || instanceTokenFromApi || finalInstanceName;
 
@@ -208,7 +207,6 @@ Deno.serve(async (req) => {
                   if (data.status === "created" || data.message?.includes("already exists")) {
                      return { instanceToken: finalInstanceName, token: finalInstanceName }; 
                   }
-                }
                 }
                 
                 if (res.status !== 404 && res.status !== 405) {
