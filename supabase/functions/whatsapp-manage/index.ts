@@ -101,8 +101,8 @@ Deno.serve(async (req) => {
     const baseUrlCandidates = uniqueUrlCandidates(
       apiSettings?.uazapi_base_url,
       apiSettings?.api_url,
-      "https://free.uazapi.com",
       "https://ipazua.uazapi.com",
+      "https://free.uazapi.com",
       Deno.env.get("WA_API_URL"),
       "https://api.uazapi.com",
     );
