@@ -140,34 +140,43 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/create", "/instance/init", "/instance/add"];
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
             const configs = [
-              { name: "Header admintoken", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
-              { name: "Header Authorization Bearer", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
-              { name: "Header apikey", headers: { "Content-Type": "application/json", "apikey": adminToken } },
-              { name: "Query Param admintoken", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
-              { name: "Query Param token", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
-              { name: "Header token", headers: { "Content-Type": "application/json", "token": adminToken } },
-              { name: "Header X-API-Key", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } }
+              { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
+              { name: "Header Authorization Bearer", method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
+              { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
+              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
+              { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
+              { name: "Header token", method: "POST", headers: { "Content-Type": "application/json", "token": adminToken } },
+              { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
+              // Some older versions use GET for init?
+              { name: "GET init with admintoken", method: "GET", headers: { "admintoken": adminToken } },
+              { name: "GET init with token", method: "GET", headers: { "token": adminToken } }
             ];
 
             for (const config of configs) {
+              if (endpoint === "/instance/status" || endpoint === "/instance/list") continue; 
               try {
                 const finalUrl = config.query ? `${url}${config.query}` : url;
-                console.log(`[whatsapp-manage] Trying ${finalUrl} (${config.name}) - Token: ${adminToken.substring(0, 5)}...`);
+                console.log(`[whatsapp-manage] Trying ${config.method} ${finalUrl} (${config.name}) - Token: ${adminToken.substring(0, 5)}...`);
                 
-                const res = await fetch(finalUrl, {
-                  method: "POST",
+                const fetchOptions: any = {
+                  method: config.method,
                   headers: config.headers,
-                  body: JSON.stringify({ 
+                };
+                if (config.method !== "GET") {
+                  fetchOptions.body = JSON.stringify({ 
                     name: finalInstanceName, 
                     instanceName: finalInstanceName,
+                    instance: finalInstanceName,
                     systemName: "Meu Gestor" 
-                  }),
-                });
+                  });
+                }
+
+                const res = await fetch(finalUrl, fetchOptions);
                 
                 const text = await res.text();
                 let data: any = {};
@@ -177,14 +186,18 @@ Deno.serve(async (req) => {
 
                 if (res.ok) {
                   baseUrl = candidateBaseUrl;
-                  const newToken = data.token || data.instance?.token || data.data?.token || data.hash || "";
+                  const newToken = data.token || data.instance?.token || data.data?.token || data.hash || (data.status === "success" && data.instance?.id);
                   if (newToken) {
                     console.log(`[whatsapp-manage] Success! Instance created.`);
                     return newToken;
                   }
+                  // If no token but ok, maybe it's already created or we use the name as token
+                  if (data.status === "created" || data.message?.includes("already exists")) {
+                     return finalInstanceName; 
+                  }
                 }
                 
-                if (res.status !== 404) {
+                if (res.status !== 404 && res.status !== 405) {
                   lastError = data.message || data.error || text || `HTTP ${res.status}`;
                 }
               } catch (e: any) {
