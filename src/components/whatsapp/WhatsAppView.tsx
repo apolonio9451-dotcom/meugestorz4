@@ -421,7 +421,7 @@ export default function WhatsAppView() {
             {getStatusBadge()}
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {!instance ? (
             <div className="text-center py-8 space-y-4">
               <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
