@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
                   const finalGeneralToken = generalToken || instanceTokenFromApi || finalInstanceName;
 
                   if (finalInstanceToken) {
-                    console.log(`[whatsapp-manage] Success! Instance created.`);
+                    console.log(`[whatsapp-manage] Success! Instance created. InstanceToken: ${finalInstanceToken.substring(0, 5)}...`);
                     return { instanceToken: finalInstanceToken, token: finalGeneralToken };
                   }
                   
@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
       const text = await res.text();
       let data: any = {};
       try { data = JSON.parse(text); } catch {}
-      console.log(`[whatsapp-manage] /instance/connect -> ${res.status}: ${text.substring(0, 200)}`);
+      console.log(`[whatsapp-manage] /instance/connect -> ${res.status}: ${text.substring(0, 500)}`);
       
       if (!res.ok) {
         // Retry logic if instance was not found or something happened
@@ -279,8 +279,12 @@ Deno.serve(async (req) => {
       }
 
       const inst = data.instance || data;
+      // Detailed logging for QR detection
+      const qrcode = inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || data.base64 || "";
+      console.log(`[whatsapp-manage] QR Code detected (first 20 chars): ${qrcode.substring(0, 20)}`);
+      
       return {
-        qrcode: inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || "",
+        qrcode,
         connected: inst.status === "connected" || inst.connected === true,
       };
     }
