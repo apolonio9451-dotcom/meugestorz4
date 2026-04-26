@@ -360,7 +360,10 @@ export default function WhatsAppView() {
   }, [user?.id, fetchProfilePicture]);
 
   useEffect(() => {
-    loadInstance();
+    // Apenas carrega se não houver instância ou se estiver tentando sincronizar pela primeira vez
+    if (!instance) {
+      loadInstance();
+    }
   }, [loadInstance]);
 
   useEffect(() => {
