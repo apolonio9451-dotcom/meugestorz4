@@ -212,11 +212,24 @@ Deno.serve(async (req) => {
 
     // ---------- CONNECT (returns QR base64) ----------
     async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
-      console.log(`[whatsapp-manage] Connecting instance to get QR`);
+      console.log(`[whatsapp-manage] Connecting instance to get QR | Webhook: ${webhookUrl}`);
+      
+      // 1. Set Webhook first
+      try {
+        await fetch(`${baseUrl}/instance/set-webhook`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": token },
+          body: JSON.stringify({ url: webhookUrl, enabled: true }),
+        });
+        console.log(`[whatsapp-manage] Webhook set request sent to ${baseUrl}/instance/set-webhook`);
+      } catch (e: any) {
+        console.warn(`[whatsapp-manage] Failed to set webhook automatically:`, e.message);
+      }
+
       const res = await fetch(`${baseUrl}/instance/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ webhookUrl }),
       });
       const text = await res.text();
       let data: any = {};
