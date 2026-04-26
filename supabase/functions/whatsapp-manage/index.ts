@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ url: webhookUrl, enabled: true }),
         });
         console.log(`[whatsapp-manage] Webhook set request sent to ${baseUrl}/instance/set-webhook`);
-      } catch (e) {
+      } catch (e: any) {
         console.warn(`[whatsapp-manage] Failed to set webhook automatically:`, e.message);
       }
 
