@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     // Prioritize the secret env var (managed by Lovable)
     const envAdminToken = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
     const adminToken = envAdminToken || (apiSettings?.api_token || "").trim();
-    console.log(`[whatsapp-manage] Using adminToken (len=${adminToken.length}, prefix=${adminToken.substring(0, 5)}...)`);
+    console.log(`[whatsapp-manage] Using adminToken (len=${adminToken.length}, prefix=${adminToken.substring(0, 5)}...) from ${envAdminToken ? 'ENV' : 'DB'}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
     if (!adminToken) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
