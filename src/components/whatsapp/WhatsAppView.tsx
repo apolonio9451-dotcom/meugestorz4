@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error";
+type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error" | "initializing";
 
 function formatPhoneNumber(raw: string): string {
   const digits = raw.replace(/\D/g, "");
