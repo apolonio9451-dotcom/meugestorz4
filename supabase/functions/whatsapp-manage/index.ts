@@ -119,8 +119,8 @@ Deno.serve(async (req) => {
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
     const systemName = "Uazapi"; // Definindo o nome do sistema conforme a documentação
 
-    // Se não hacer token admin, tratamos o token fornecido como o próprio instance_token
-    const skipInit = adminTokenCandidates.length === 0 || (apiSettings?.api_token === apiSettings?.instance_token && apiSettings?.api_token !== "");
+    // Se não houver token admin, tratamos o token fornecido como o próprio instance_token
+    const skipInit = adminTokenCandidates.length === 0;
 
     // Load existing instance from DB (we use instance_token for instance-level operations)
     const { data: existingInstance } = await adminClient
@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
           instanceToken = tokens.instanceToken;
           generalToken = tokens.token;
         } catch (e) {
-          console.warn("[whatsapp-manage] Failed to init instance, checking if current token works as instance token", e.message);
+          console.warn("[whatsapp-manage] Failed to init instance, checking if current token works as instance token", (e as any).message);
           // Se falhou o init mas temos um token em api_settings, vamos tentar usá-lo como o token da própria instância
           if (apiSettings?.api_token) {
             instanceToken = apiSettings.api_token;
