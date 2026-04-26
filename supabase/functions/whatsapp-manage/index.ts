@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
       const res = await fetch(`${baseUrl}/instance/init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "token": adminToken },
+        headers: { "Content-Type": "application/json", "admintoken": adminToken },
         body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
       });
       const text = await res.text();
