@@ -202,6 +202,7 @@ export default function WhatsAppView() {
 
   const fetchQrCode = useCallback(async () => {
     setActionLoading("qrcode");
+    setQrCode(null); // Clear old QR while loading
     const data = await callManage("qrcode");
 
     if (data?.connected) {
@@ -214,10 +215,12 @@ export default function WhatsAppView() {
     } else if (data?.qrcode) {
       setQrCode(data.qrcode);
       setPolling(true);
+    } else {
+      toast.error("Não foi possível gerar o QR Code. Verifique se o Token Admin está correto nas configurações.");
     }
 
     setActionLoading(null);
-  }, [callManage]);
+  }, [callManage, fetchProfilePicture]);
 
   const handleReconnect = useCallback(async () => {
     setActionLoading("reconnect");
