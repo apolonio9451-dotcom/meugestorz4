@@ -301,7 +301,12 @@ Deno.serve(async (req) => {
     async function getStatus(token: string): Promise<{ connected: boolean; phone?: string; profileName?: string; profilePic?: string }> {
       const res = await fetch(`${baseUrl}/instance/status`, {
         method: "GET",
-        headers: { "token": token },
+        headers: { 
+          "token": token,
+          "Authorization": `Bearer ${token}`,
+          "apikey": token,
+          "admintoken": token
+        },
       });
       const text = await res.text();
       let data: any = {};
