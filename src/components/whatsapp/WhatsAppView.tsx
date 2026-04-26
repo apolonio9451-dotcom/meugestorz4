@@ -221,6 +221,8 @@ export default function WhatsAppView() {
     setActionLoading("qrcode");
     setQrCode(null); // Clear old QR while loading
     const data = await callManage("qrcode");
+    
+    console.log("[WhatsApp] QR Code data received:", data ? { ...data, qrcode: data.qrcode ? data.qrcode.substring(0, 20) + "..." : null } : null);
 
     if (data?.connected) {
       setInstance((prev) =>
@@ -230,10 +232,15 @@ export default function WhatsAppView() {
       fetchProfilePicture();
       toast.success("WhatsApp já está conectado!");
     } else if (data?.qrcode) {
-      setQrCode(data.qrcode);
+      // Ensure the QR string is correctly formatted as base64 image if it isn't already
+      let qrString = data.qrcode;
+      if (qrString && !qrString.startsWith("data:image")) {
+        qrString = `data:image/png;base64,${qrString}`;
+      }
+      setQrCode(qrString);
       setPolling(true);
     } else {
-      toast.error("Não foi possível gerar o QR Code. Verifique se o Token Admin está correto nas configurações.");
+      toast.error("Não foi possível gerar o QR Code. Verifique se o Token Admin está correto nas configurações ou se o servidor está online.");
     }
 
     setActionLoading(null);
@@ -643,8 +650,11 @@ export default function WhatsAppView() {
               ) : (
                 <div className="text-center py-12 space-y-4">
                   <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-                  <p className="text-muted-foreground">
-                    Gerando conexão segura com a API...
+                  <p className="text-muted-foreground animate-pulse">
+                    Gerando sessão segura...
+                  </p>
+                  <p className="text-xs text-muted-foreground italic">
+                    Isso pode levar alguns segundos dependendo do servidor.
                   </p>
                 </div>
               )}
