@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
 
     let instanceToken: string = existingInstance?.instance_token || "";
     let generalToken: string = existingInstance?.token || "";
+    const finalInstanceName = existingInstance?.instance_name || desiredInstanceName;
     const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${user.id}`;
 
     console.log(`[whatsapp-manage] action=${action} | instance=${finalInstanceName} | server=${baseUrl} | hasInstanceToken=${!!instanceToken}`);
