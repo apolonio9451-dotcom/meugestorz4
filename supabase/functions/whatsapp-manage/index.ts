@@ -352,6 +352,7 @@ Deno.serve(async (req) => {
         const tokens = await initInstance();
         instanceToken = tokens.instanceToken;
         generalToken = tokens.token;
+        await registerWebhook(instanceToken);
         
         // Save these tokens to DB immediately since we just created them
         const payload = {
