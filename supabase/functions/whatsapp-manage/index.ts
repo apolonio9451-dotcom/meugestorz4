@@ -47,7 +47,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const baseUrl = (apiSettings?.api_url || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-    const adminToken = (apiSettings?.api_token || Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
+    // Prefer the server-side env secret (always valid) over per-company api_token (may be stale)
+    const envAdminToken = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
+    const adminToken = envAdminToken || (apiSettings?.api_token || "").trim();
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
     if (!adminToken) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
