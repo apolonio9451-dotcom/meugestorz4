@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const baseUrl = (apiSettings?.api_url || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-    // Prefer the server-side env secret (always valid) over per-company api_token (may be stale)
+    // Prioritize the secret env var (managed by Lovable)
     const envAdminToken = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
     const adminToken = envAdminToken || (apiSettings?.api_token || "").trim();
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
