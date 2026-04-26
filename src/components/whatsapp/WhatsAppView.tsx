@@ -437,8 +437,15 @@ export default function WhatsAppView() {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-blue-700">Configuração de Servidor</p>
                 <p className="text-xs text-blue-600/80">
-                  O sistema está configurado para o servidor: <strong>{apiUrl || "https://ipazua.uazapi.com"}</strong>.
-                  Certifique-se de que o token informado em "Configurações" é o <strong>Admin Token</strong> deste servidor.
+                  Servidor: <strong>{apiUrl || "https://ipazua.uazapi.com"}</strong>
+                </p>
+                {apiToken && (
+                  <p className="text-xs text-blue-600/80 flex items-center gap-1">
+                    Token Admin: <code className="bg-blue-500/20 px-1 rounded">{apiToken.substring(0, 4)}***{apiToken.slice(-4)}</code>
+                  </p>
+                )}
+                <p className="text-[10px] text-blue-500/60 mt-1 italic">
+                  Certifique-se de que este é o <strong>Admin Token</strong> do servidor acima.
                 </p>
               </div>
             </div>
