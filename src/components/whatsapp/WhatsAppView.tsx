@@ -375,7 +375,7 @@ export default function WhatsAppView() {
   }, [loadInstance]);
 
   useEffect(() => {
-    if (!polling || !instance || instance.is_connected) return;
+    if (!polling || !instance || instance.is_connected || instance.status === 'connected') return;
 
     pollingRef.current = window.setInterval(() => {
       checkStatus();
