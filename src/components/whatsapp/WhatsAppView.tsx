@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+// hook removed to avoid error
 
 type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error" | "initializing";
 
@@ -412,7 +413,7 @@ export default function WhatsAppView() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 pb-20">
       {/* WhatsApp Instance Card */}
       <Card>
         <CardHeader>
@@ -430,6 +431,19 @@ export default function WhatsAppView() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-700">Configuração de Servidor</p>
+                <p className="text-xs text-blue-600/80">
+                  O sistema está configurado para o servidor: <strong>{apiUrl || "https://ipazua.uazapi.com"}</strong>.
+                  Certifique-se de que o token informado em "Configurações" é o <strong>Admin Token</strong> deste servidor.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {!instance ? (
             <div className="text-center py-8 space-y-4">
               <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
