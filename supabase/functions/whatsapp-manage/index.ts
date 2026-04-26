@@ -84,22 +84,21 @@ Deno.serve(async (req) => {
         console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
         res = await fetch(`${baseUrl}/instance/create`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "admintoken": adminToken, "token": adminToken, "Authorization": `Bearer ${adminToken}` },
-          body: JSON.stringify({ instanceName: finalInstanceName, token: adminToken }),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` },
+          body: JSON.stringify({ instanceName: finalInstanceName }),
         });
         text = await res.text();
         console.log(`[whatsapp-manage] /instance/create -> ${res.status}: ${text.substring(0, 300)}`);
       }
       if (!res.ok) {
-        // Fallback to 'token' header for some providers
-        console.warn(`[whatsapp-manage] admin/create failed (${res.status}), trying fallback 'token' header`);
+        console.warn(`[whatsapp-manage] admin/create failed (${res.status}), trying /instance/init with 'apikey'`);
         res = await fetch(`${baseUrl}/instance/init`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "token": adminToken },
-          body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+          headers: { "Content-Type": "application/json", "apikey": adminToken },
+          body: JSON.stringify({ name: finalInstanceName }),
         });
         text = await res.text();
-        console.log(`[whatsapp-manage] /instance/init fallback -> ${res.status}: ${text.substring(0, 300)}`);
+        console.log(`[whatsapp-manage] /instance/init apikey -> ${res.status}: ${text.substring(0, 300)}`);
       }
 
       let data: any = {};
