@@ -36,6 +36,25 @@ function uniqueTokenCandidates(...tokens: Array<string | null | undefined>) {
   return candidates;
 }
 
+function cleanUrl(value: string | null | undefined) {
+  const url = String(value || "").trim().replace(/\/+$/, "");
+  if (!url || !url.startsWith("http")) return "";
+  return url;
+}
+
+function uniqueUrlCandidates(...urls: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const value of urls) {
+    const url = cleanUrl(value);
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      candidates.push(url);
+    }
+  }
+  return candidates;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -61,11 +80,20 @@ Deno.serve(async (req) => {
     // Load API settings (admintoken) for the company
     const { data: apiSettings } = await adminClient
       .from("api_settings")
-      .select("api_url, api_token, instance_name")
+      .select("api_url, api_token, instance_name, uazapi_base_url")
       .eq("company_id", resolvedCompanyId)
       .maybeSingle();
 
-    const baseUrl = (apiSettings?.api_url || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
+    const baseUrlCandidates = uniqueUrlCandidates(
+      apiSettings?.uazapi_base_url,
+      apiSettings?.api_url,
+      Deno.env.get("WA_API_URL"),
+      Deno.env.get("EVOLUTI_API_URL"),
+      "https://ipazua.uazapi.com",
+      "https://api.uazapi.com",
+      "https://free.uazapi.com",
+    );
+    let baseUrl = baseUrlCandidates[0];
     const adminTokenCandidates = uniqueTokenCandidates(
       Deno.env.get("UAZAPI_ADMIN_TOKEN"),
       Deno.env.get("WA_ADMIN_TOKEN"),
