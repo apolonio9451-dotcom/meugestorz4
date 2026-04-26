@@ -119,7 +119,8 @@ Deno.serve(async (req) => {
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
     const systemName = "Uazapi"; // Definindo o nome do sistema conforme a documentação
 
-    if (adminTokenCandidates.length === 0) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
+    // Se não hacer token admin, tratamos o token fornecido como o próprio instance_token
+    const skipInit = adminTokenCandidates.length === 0 || (apiSettings?.api_token === apiSettings?.instance_token && apiSettings?.api_token !== "");
 
     // Load existing instance from DB (we use instance_token for instance-level operations)
     const { data: existingInstance } = await adminClient
@@ -309,12 +310,23 @@ Deno.serve(async (req) => {
 
     // ---------- ACTIONS ----------
     if (action === "get-or-create" || action === "create") {
-      // Create new instance if needed
+      // Se não houver token e não pudermos criar (sem admin token), tentamos usar o que temos
       if (!instanceToken || force_new) {
-        const tokens = await initInstance();
-        instanceToken = tokens.instanceToken;
-        generalToken = tokens.token;
-        // Register webhook immediately after creation
+        try {
+          const tokens = await initInstance();
+          instanceToken = tokens.instanceToken;
+          generalToken = tokens.token;
+        } catch (e) {
+          console.warn("[whatsapp-manage] Failed to init instance, checking if current token works as instance token", e.message);
+          // Se falhou o init mas temos um token em api_settings, vamos tentar usá-lo como o token da própria instância
+          if (apiSettings?.api_token) {
+            instanceToken = apiSettings.api_token;
+            generalToken = apiSettings.api_token;
+          } else {
+            throw e;
+          }
+        }
+        // Register webhook immediately after creation or fallback
         await registerWebhook(instanceToken);
       }
 
@@ -348,11 +360,20 @@ Deno.serve(async (req) => {
       });
     }
 
-      if (action === "qrcode" || action === "reconnect") {
+    if (action === "qrcode" || action === "reconnect") {
       if (!instanceToken) {
-        const tokens = await initInstance();
-        instanceToken = tokens.instanceToken;
-        generalToken = tokens.token;
+        try {
+          const tokens = await initInstance();
+          instanceToken = tokens.instanceToken;
+          generalToken = tokens.token;
+        } catch (e) {
+          if (apiSettings?.api_token) {
+            instanceToken = apiSettings.api_token;
+            generalToken = apiSettings.api_token;
+          } else {
+            throw e;
+          }
+        }
         await registerWebhook(instanceToken);
         
         // Save these tokens to DB immediately since we just created them
