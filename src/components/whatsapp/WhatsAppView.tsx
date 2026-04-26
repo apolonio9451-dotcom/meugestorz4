@@ -439,7 +439,7 @@ export default function WhatsAppView() {
                   <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
                 </div>
               )}
-              <div className="bg-emerald-500/10 border-2 border-emerald-500/40 rounded-xl p-6 text-center space-y-4">
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-8 text-center space-y-4 shadow-sm">
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative">
                     <Avatar className="w-24 h-24 border-[3px] border-emerald-500 shadow-lg shadow-emerald-500/20">
