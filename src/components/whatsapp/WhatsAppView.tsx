@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useSettings } from "@/hooks/use-settings";
+// hook removed to avoid error
 
 type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error" | "initializing";
 
@@ -73,7 +73,6 @@ export default function WhatsAppView() {
   const [savingToken, setSavingToken] = useState(false);
   const [tokenLoaded, setTokenLoaded] = useState(false);
   const [existingSettingsId, setExistingSettingsId] = useState<string | null>(null);
-  const { settings } = useSettings(companyId || "");
 
   const [profilePic, setProfilePic] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
@@ -438,7 +437,7 @@ export default function WhatsAppView() {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-blue-700">Configuração de Servidor</p>
                 <p className="text-xs text-blue-600/80">
-                  O sistema está configurado para o servidor: <strong>{settings?.api_url || "https://ipazua.uazapi.com"}</strong>.
+                  O sistema está configurado para o servidor: <strong>{apiUrl || "https://ipazua.uazapi.com"}</strong>.
                   Certifique-se de que o token informado em "Configurações" é o <strong>Admin Token</strong> deste servidor.
                 </p>
               </div>
