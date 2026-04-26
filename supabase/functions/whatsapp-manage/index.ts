@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
               if (res.status !== 404) {
                 lastError = data.message || data.error || text || `HTTP ${res.status}`;
               }
-            } catch (e) {
+            } catch (e: any) {
               console.error(`[whatsapp-manage] Fetch error:`, e.message);
             }
           }
