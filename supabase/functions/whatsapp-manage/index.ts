@@ -152,6 +152,7 @@ Deno.serve(async (req) => {
               { name: "Header Authorization Bearer", method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
               { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
+              { name: "Header Authorization", method: "POST", headers: { "Content-Type": "application/json", "Authorization": adminToken } },
               { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
               { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
@@ -262,7 +263,13 @@ Deno.serve(async (req) => {
 
       const res = await fetch(`${baseUrl}/instance/connect`, {
         method: "GET",
-        headers: { "token": token },
+        headers: { 
+          "token": token,
+          "Authorization": `Bearer ${token}`,
+          "apikey": token,
+          "admintoken": token,
+          "Authorization-Header": token
+        },
       });
       const text = await res.text();
       let data: any = {};
@@ -294,7 +301,12 @@ Deno.serve(async (req) => {
     async function getStatus(token: string): Promise<{ connected: boolean; phone?: string; profileName?: string; profilePic?: string }> {
       const res = await fetch(`${baseUrl}/instance/status`, {
         method: "GET",
-        headers: { "token": token },
+        headers: { 
+          "token": token,
+          "Authorization": `Bearer ${token}`,
+          "apikey": token,
+          "admintoken": token
+        },
       });
       const text = await res.text();
       let data: any = {};
