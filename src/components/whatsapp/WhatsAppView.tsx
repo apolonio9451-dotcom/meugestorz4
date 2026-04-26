@@ -503,7 +503,7 @@ export default function WhatsAppView() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full gap-2 text-amber-500 hover:bg-amber-500/10 border-amber-500/30"
+                  className="w-full gap-2 border-amber-500/20 text-amber-600 hover:bg-amber-50"
                   onClick={handleDisconnect}
                   disabled={!!actionLoading}
                 >
@@ -512,7 +512,7 @@ export default function WhatsAppView() {
                   ) : (
                     <WifiOff className="w-4 h-4" />
                   )}
-                  Desconectar Temporariamente
+                  Desconectar WhatsApp
                 </Button>
                 <Button
                   variant="outline"
