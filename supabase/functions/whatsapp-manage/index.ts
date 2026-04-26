@@ -128,23 +128,28 @@ Deno.serve(async (req) => {
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
-            // Try different authentication styles
             const configs = [
               { name: "Header admintoken", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
               { name: "Header Authorization Bearer", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
               { name: "Header apikey", headers: { "Content-Type": "application/json", "apikey": adminToken } },
-              { name: "Query Param admintoken", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` }
+              { name: "Query Param admintoken", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
+              { name: "Query Param token", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
+              { name: "Header token", headers: { "Content-Type": "application/json", "token": adminToken } }
             ];
 
             for (const config of configs) {
               try {
                 const finalUrl = config.query ? `${url}${config.query}` : url;
-                console.log(`[whatsapp-manage] Trying ${finalUrl} (${config.name})`);
+                console.log(`[whatsapp-manage] Trying ${finalUrl} (${config.name}) - Token: ${adminToken.substring(0, 5)}...`);
                 
                 const res = await fetch(finalUrl, {
                   method: "POST",
                   headers: config.headers,
-                  body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+                  body: JSON.stringify({ 
+                    name: finalInstanceName, 
+                    instanceName: finalInstanceName,
+                    systemName: "Meu Gestor" 
+                  }),
                 });
                 
                 const text = await res.text();
@@ -155,7 +160,7 @@ Deno.serve(async (req) => {
 
                 if (res.ok) {
                   baseUrl = candidateBaseUrl;
-                  const newToken = data.token || data.instance?.token || data.data?.token || "";
+                  const newToken = data.token || data.instance?.token || data.data?.token || data.hash || "";
                   if (newToken) {
                     console.log(`[whatsapp-manage] Success! Instance created.`);
                     return newToken;
