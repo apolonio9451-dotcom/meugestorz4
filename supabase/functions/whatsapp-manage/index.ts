@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
         res = await fetch(`${baseUrl}/instance/create`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "admintoken": adminToken },
+          headers: { "Content-Type": "application/json", "admintoken": adminToken, "token": adminToken, "Authorization": `Bearer ${adminToken}` },
           body: JSON.stringify({ instanceName: finalInstanceName, token: adminToken }),
         });
         text = await res.text();
