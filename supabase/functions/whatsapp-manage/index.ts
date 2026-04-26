@@ -99,9 +99,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const baseUrlCandidates = uniqueUrlCandidates(
-      "https://ipazua.uazapi.com",
-      apiSettings?.uazapi_base_url,
       apiSettings?.api_url,
+      apiSettings?.uazapi_base_url,
+      "https://ipazua.uazapi.com",
       "https://free.uazapi.com",
       Deno.env.get("WA_API_URL"),
       "https://api.uazapi.com",
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new"];
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new", "/instance/instance/create"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
@@ -260,9 +260,8 @@ Deno.serve(async (req) => {
       await registerWebhook(token);
 
       const res = await fetch(`${baseUrl}/instance/connect`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ webhookUrl }),
+        method: "GET",
+        headers: { "token": token },
       });
       const text = await res.text();
       let data: any = {};
