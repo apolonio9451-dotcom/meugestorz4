@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, admintoken, token",
 };
 
 async function resolveAuthorizedCompanyId(adminClient: any, userId: string, requestedCompanyId?: string) {
@@ -47,9 +47,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const baseUrl = (apiSettings?.api_url || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-    // Prefer the server-side env secret (always valid) over per-company api_token (may be stale)
+    // Prioritize the secret env var (managed by Lovable)
     const envAdminToken = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
     const adminToken = envAdminToken || (apiSettings?.api_token || "").trim();
+    console.log(`[whatsapp-manage] Using adminToken (len=${adminToken.length}, prefix=${adminToken.substring(0, 5)}...) from ${envAdminToken ? 'ENV' : 'DB'}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
     if (!adminToken) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
@@ -70,15 +71,39 @@ Deno.serve(async (req) => {
     // ---------- INIT (create instance with admintoken) ----------
     async function initInstance(): Promise<string> {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
-      const res = await fetch(`${baseUrl}/instance/init`, {
+      let res = await fetch(`${baseUrl}/instance/init`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "admintoken": adminToken },
         body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
       });
-      const text = await res.text();
+      
+      let text = await res.text();
+      console.log(`[whatsapp-manage] /instance/init -> ${res.status}: ${text.substring(0, 300)}`);
+
+      if (!res.ok) {
+        console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
+        res = await fetch(`${baseUrl}/instance/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "admintoken": adminToken, "token": adminToken, "Authorization": `Bearer ${adminToken}` },
+          body: JSON.stringify({ instanceName: finalInstanceName, token: adminToken }),
+        });
+        text = await res.text();
+        console.log(`[whatsapp-manage] /instance/create -> ${res.status}: ${text.substring(0, 300)}`);
+      }
+      if (!res.ok) {
+        // Fallback to 'token' header for some providers
+        console.warn(`[whatsapp-manage] admin/create failed (${res.status}), trying fallback 'token' header`);
+        res = await fetch(`${baseUrl}/instance/init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": adminToken },
+          body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+        });
+        text = await res.text();
+        console.log(`[whatsapp-manage] /instance/init fallback -> ${res.status}: ${text.substring(0, 300)}`);
+      }
+
       let data: any = {};
       try { data = JSON.parse(text); } catch {}
-      console.log(`[whatsapp-manage] /instance/init -> ${res.status}: ${text.substring(0, 300)}`);
       if (!res.ok) throw new Error(`Falha ao inicializar instância: ${data.message || data.error || text}`);
       const newToken = data.token || data.instance?.token || data.data?.token || "";
       if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
