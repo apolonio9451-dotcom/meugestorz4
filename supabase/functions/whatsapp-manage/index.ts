@@ -126,46 +126,56 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          // Some versions use header "admintoken", others use "Authorization", some use query param
-          // Trying header "admintoken" first as it's common in UazAPI docs
-          const configs = [
-            { headers: { "Content-Type": "application/json", "admintoken": adminToken }, url: `${candidateBaseUrl}/instance/create` },
-            { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` }, url: `${candidateBaseUrl}/instance/create` },
-            { headers: { "Content-Type": "application/json" }, url: `${candidateBaseUrl}/instance/create?admintoken=${adminToken}` },
-            { headers: { "Content-Type": "application/json", "admintoken": adminToken }, url: `${candidateBaseUrl}/instance/init` }, // Older versions use /instance/init
-            { headers: { "Content-Type": "application/json" }, url: `${candidateBaseUrl}/instance/init?admintoken=${adminToken}` }
-          ];
+          const endpoints = ["/instance/create", "/instance/init"];
+          for (const endpoint of endpoints) {
+            const url = `${candidateBaseUrl}${endpoint}`;
+            
+            // Try different authentication styles
+            const configs = [
+              { name: "Header admintoken", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
+              { name: "Header Authorization Bearer", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
+              { name: "Header apikey", headers: { "Content-Type": "application/json", "apikey": adminToken } },
+              { name: "Query Param admintoken", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` }
+            ];
 
-          for (const config of configs) {
-            try {
-              const res = await fetch(config.url, {
-                method: "POST",
-                headers: config.headers,
-                body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
-              });
-              const text = await res.text();
-              let data: any = {};
-              try { data = JSON.parse(text); } catch {}
-              
-              console.log(`[whatsapp-manage] ${config.url} (${adminToken.substring(0, 5)}...) -> ${res.status}`);
+            for (const config of configs) {
+              try {
+                const finalUrl = config.query ? `${url}${config.query}` : url;
+                console.log(`[whatsapp-manage] Trying ${finalUrl} (${config.name})`);
+                
+                const res = await fetch(finalUrl, {
+                  method: "POST",
+                  headers: config.headers,
+                  body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+                });
+                
+                const text = await res.text();
+                let data: any = {};
+                try { data = JSON.parse(text); } catch {}
+                
+                console.log(`[whatsapp-manage] Result: ${res.status} | Body: ${text.substring(0, 100)}`);
 
-              if (res.ok) {
-                baseUrl = candidateBaseUrl;
-                const newToken = data.token || data.instance?.token || data.data?.token || "";
-                if (newToken) return newToken;
+                if (res.ok) {
+                  baseUrl = candidateBaseUrl;
+                  const newToken = data.token || data.instance?.token || data.data?.token || "";
+                  if (newToken) {
+                    console.log(`[whatsapp-manage] Success! Instance created.`);
+                    return newToken;
+                  }
+                }
+                
+                if (res.status !== 404) {
+                  lastError = data.message || data.error || text || `HTTP ${res.status}`;
+                }
+              } catch (e: any) {
+                console.error(`[whatsapp-manage] Error during fetch:`, e.message);
               }
-              
-              if (res.status !== 404) {
-                lastError = data.message || data.error || text || `HTTP ${res.status}`;
-              }
-            } catch (e: any) {
-              console.error(`[whatsapp-manage] Fetch error:`, e.message);
             }
           }
         }
       }
 
-      throw new Error(`Falha ao inicializar instância: ${lastError}. Verifique se o Token Admin está correto e se o servidor uazapi está acessível.`);
+      throw new Error(`Falha ao inicializar instância: ${lastError}. Verifique se o Token Admin está correto.`);
     }
 
     // ---------- CONNECT (returns QR base64) ----------
