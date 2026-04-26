@@ -99,9 +99,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const baseUrlCandidates = uniqueUrlCandidates(
+      "https://ipazua.uazapi.com",
       apiSettings?.uazapi_base_url,
       apiSettings?.api_url,
-      "https://ipazua.uazapi.com",
       "https://free.uazapi.com",
       Deno.env.get("WA_API_URL"),
       "https://api.uazapi.com",
@@ -235,10 +235,20 @@ Deno.serve(async (req) => {
       let data: any = {};
       try { data = JSON.parse(text); } catch {}
       console.log(`[whatsapp-manage] /instance/connect -> ${res.status}: ${text.substring(0, 200)}`);
-      if (!res.ok) throw new Error(`Falha ao conectar: ${data.message || data.error || text}`);
+      
+      if (!res.ok) {
+        // Retry logic if instance was not found or something happened
+        if (res.status === 404 || text.toLowerCase().includes("not found")) {
+           console.log("[whatsapp-manage] Instance not found on connect, re-initializing...");
+           const newToken = await initInstance();
+           return connectInstance(newToken);
+        }
+        throw new Error(`Falha ao conectar: ${data.message || data.error || text}`);
+      }
+
       const inst = data.instance || data;
       return {
-        qrcode: inst.qrcode || inst.qr || data.qrcode || "",
+        qrcode: inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || "",
         connected: inst.status === "connected" || inst.connected === true,
       };
     }

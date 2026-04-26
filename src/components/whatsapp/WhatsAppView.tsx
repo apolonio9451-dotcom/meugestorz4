@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error";
+type InstanceStatus = "created" | "connecting" | "connected" | "disconnected" | "error" | "initializing";
 
 function formatPhoneNumber(raw: string): string {
   const digits = raw.replace(/\D/g, "");
@@ -194,14 +194,19 @@ export default function WhatsAppView() {
   }, [companyId]);
 
   const fetchProfilePicture = useCallback(async () => {
-    const data = await callManage("profile-picture");
-    if (data?.profile_picture) setProfilePic(data.profile_picture);
-    if (data?.profile_name) setProfileName(data.profile_name);
-    if (data?.phone) setProfilePhone(data.phone);
+    try {
+      const data = await callManage("profile-picture");
+      if (data?.profile_picture) setProfilePic(data.profile_picture);
+      if (data?.profile_name) setProfileName(data.profile_name);
+      if (data?.phone) setProfilePhone(data.phone);
+    } catch (e) {
+      console.warn("Failed to fetch profile picture", e);
+    }
   }, [callManage]);
 
   const fetchQrCode = useCallback(async () => {
     setActionLoading("qrcode");
+    setQrCode(null); // Clear old QR while loading
     const data = await callManage("qrcode");
 
     if (data?.connected) {
@@ -214,10 +219,12 @@ export default function WhatsAppView() {
     } else if (data?.qrcode) {
       setQrCode(data.qrcode);
       setPolling(true);
+    } else {
+      toast.error("Não foi possível gerar o QR Code. Verifique se o Token Admin está correto nas configurações.");
     }
 
     setActionLoading(null);
-  }, [callManage]);
+  }, [callManage, fetchProfilePicture]);
 
   const handleReconnect = useCallback(async () => {
     setActionLoading("reconnect");
@@ -309,15 +316,19 @@ export default function WhatsAppView() {
   };
 
   const checkStatus = useCallback(async () => {
-    const data = await callManage("get-or-create");
-    if (data?.instance) {
-      setInstance(data.instance);
-      if (data.instance.is_connected) {
-        setPolling(false);
-        setQrCode(null);
-        toast.success("WhatsApp conectado!");
-        fetchProfilePicture();
+    try {
+      const data = await callManage("get-or-create");
+      if (data?.instance) {
+        setInstance(data.instance);
+        if (data.instance.is_connected && data.instance.status === "connected") {
+          setPolling(false);
+          setQrCode(null);
+          toast.success("WhatsApp conectado com sucesso!");
+          fetchProfilePicture();
+        }
       }
+    } catch (e) {
+      console.error("Error checking status", e);
     }
   }, [callManage, fetchProfilePicture]);
 
@@ -357,15 +368,18 @@ export default function WhatsAppView() {
   }, [user?.id, fetchProfilePicture]);
 
   useEffect(() => {
-    loadInstance();
+    // Apenas carrega se não houver instância ou se estiver tentando sincronizar pela primeira vez
+    if (!instance) {
+      loadInstance();
+    }
   }, [loadInstance]);
 
   useEffect(() => {
-    if (!polling || !instance || instance.is_connected) return;
+    if (!polling || !instance || instance.is_connected || instance.status === 'connected') return;
 
     pollingRef.current = window.setInterval(() => {
       checkStatus();
-    }, 15000);
+    }, 10000);
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -415,7 +429,7 @@ export default function WhatsAppView() {
             {getStatusBadge()}
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {!instance ? (
             <div className="text-center py-8 space-y-4">
               <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
@@ -433,7 +447,7 @@ export default function WhatsAppView() {
                   <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
                 </div>
               )}
-              <div className="bg-emerald-500/10 border-2 border-emerald-500/40 rounded-xl p-6 text-center space-y-4">
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-8 text-center space-y-4 shadow-sm">
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative">
                     <Avatar className="w-24 h-24 border-[3px] border-emerald-500 shadow-lg shadow-emerald-500/20">
@@ -493,7 +507,7 @@ export default function WhatsAppView() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full gap-2 text-amber-500 hover:bg-amber-500/10 border-amber-500/30"
+                  className="w-full gap-2 border-amber-500/20 text-amber-600 hover:bg-amber-50"
                   onClick={handleDisconnect}
                   disabled={!!actionLoading}
                 >
@@ -502,7 +516,7 @@ export default function WhatsAppView() {
                   ) : (
                     <WifiOff className="w-4 h-4" />
                   )}
-                  Desconectar Temporariamente
+                  Desconectar WhatsApp
                 </Button>
                 <Button
                   variant="outline"
