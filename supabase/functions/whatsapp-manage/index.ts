@@ -71,11 +71,20 @@ Deno.serve(async (req) => {
     // ---------- INIT (create instance with admintoken) ----------
     async function initInstance(): Promise<string> {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
-      const res = await fetch(`${baseUrl}/instance/init`, {
+      let res = await fetch(`${baseUrl}/instance/init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "token": adminToken, "Authorization": `Bearer ${adminToken}`, "admintoken": adminToken },
+        headers: { "Content-Type": "application/json", "token": adminToken },
         body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
       });
+      
+      if (!res.ok) {
+        console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
+        res = await fetch(`${baseUrl}/instance/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": adminToken },
+          body: JSON.stringify({ instanceName: finalInstanceName, token: adminToken }),
+        });
+      }
       const text = await res.text();
       let data: any = {};
       try { data = JSON.parse(text); } catch {}
