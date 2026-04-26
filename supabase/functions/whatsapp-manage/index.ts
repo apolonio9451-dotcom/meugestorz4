@@ -129,13 +129,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     let instanceToken: string = existingInstance?.instance_token || "";
+    let generalToken: string = existingInstance?.token || "";
     const finalInstanceName = existingInstance?.instance_name || desiredInstanceName;
     const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${user.id}`;
 
     console.log(`[whatsapp-manage] action=${action} | instance=${finalInstanceName} | server=${baseUrl} | hasInstanceToken=${!!instanceToken}`);
 
     // ---------- INIT (create instance with admintoken) ----------
-    async function initInstance(): Promise<string> {
+    async function initInstance(): Promise<{ instanceToken: string; token: string }> {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}" using baseUrls: ${baseUrlCandidates.join(", ")}`);
       let lastError = "Unauthorized";
 
@@ -191,15 +192,23 @@ Deno.serve(async (req) => {
 
                 if (res.ok) {
                   baseUrl = candidateBaseUrl;
-                  const newToken = data.token || data.instance?.token || data.data?.token || data.hash || (data.status === "success" && data.instance?.id);
-                  if (newToken) {
+                if (res.ok) {
+                  baseUrl = candidateBaseUrl;
+                  const instanceTokenFromApi = data["Instance Token"] || data.instance_token || data.instance?.token || data.data?.instance_token;
+                  const generalToken = data.token || data.hash || data.data?.token;
+                  
+                  const finalInstanceToken = instanceTokenFromApi || generalToken || (data.status === "success" && data.instance?.id) || finalInstanceName;
+                  const finalGeneralToken = generalToken || instanceTokenFromApi || finalInstanceName;
+
+                  if (finalInstanceToken) {
                     console.log(`[whatsapp-manage] Success! Instance created.`);
-                    return newToken;
+                    return { instanceToken: finalInstanceToken, token: finalGeneralToken };
                   }
-                  // If no token but ok, maybe it's already created or we use the name as token
+                  
                   if (data.status === "created" || data.message?.includes("already exists")) {
-                     return finalInstanceName; 
+                     return { instanceToken: finalInstanceName, token: finalInstanceName }; 
                   }
+                }
                 }
                 
                 if (res.status !== 404 && res.status !== 405) {
@@ -216,36 +225,41 @@ Deno.serve(async (req) => {
       throw new Error(`Falha ao inicializar instância: ${lastError}. Verifique se o Token Admin está correto.`);
     }
 
-    // ---------- CONNECT (returns QR base64) ----------
-    async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
-      console.log(`[whatsapp-manage] Connecting instance to get QR | Webhook: ${webhookUrl}`);
+    // ---------- WEBHOOK ----------
+    async function registerWebhook(token: string) {
+      console.log(`[whatsapp-manage] Registering webhook at ${baseUrl}/webhook | Webhook: ${webhookUrl}`);
+      const webhookPayload = {
+        url: webhookUrl,
+        enabled: true,
+        active: true,
+        byApi: true,
+        addUrlEvents: true,
+        addUrlTypesMessages: true,
+        excludeMessages: ["wasSentByApi", "isGroupYes"],
+        events: [
+          "connection", "messages", "messages_update", "presence",
+          "call", "contacts", "groups", "labels", "chats",
+          "chat_labels", "blocks", "leads", "history", "sender",
+        ],
+      };
       
-      // 1. Set Webhook first
       try {
-        const webhookPayload = {
-          url: webhookUrl,
-          enabled: true,
-          active: true,
-          byApi: true,
-          addUrlEvents: true,
-          addUrlTypesMessages: true,
-          excludeMessages: ["wasSentByApi", "isGroupYes"],
-          events: [
-            "connection", "messages", "messages_update", "presence",
-            "call", "contacts", "groups", "labels", "chats",
-            "chat_labels", "blocks", "leads", "history", "sender",
-          ],
-        };
-        
-        console.log(`[whatsapp-manage] Registering webhook at ${baseUrl}/webhook`);
         await fetch(`${baseUrl}/webhook`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": token },
           body: JSON.stringify(webhookPayload),
         });
       } catch (e: any) {
-        console.warn(`[whatsapp-manage] Failed to set webhook automatically:`, e.message);
+        console.warn(`[whatsapp-manage] Failed to set webhook:`, e.message);
       }
+    }
+
+    // ---------- CONNECT (returns QR base64) ----------
+    async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
+      console.log(`[whatsapp-manage] Connecting instance to get QR`);
+      
+      // Ensure webhook is set before connecting
+      await registerWebhook(token);
 
       const res = await fetch(`${baseUrl}/instance/connect`, {
         method: "POST",
@@ -261,7 +275,7 @@ Deno.serve(async (req) => {
         // Retry logic if instance was not found or something happened
         if (res.status === 404 || text.toLowerCase().includes("not found")) {
            console.log("[whatsapp-manage] Instance not found on connect, re-initializing...");
-           const newToken = await initInstance();
+           const { instanceToken: newToken } = await initInstance();
            return connectInstance(newToken);
         }
         throw new Error(`Falha ao conectar: ${data.message || data.error || text}`);
@@ -296,14 +310,18 @@ Deno.serve(async (req) => {
     if (action === "get-or-create" || action === "create") {
       // Create new instance if needed
       if (!instanceToken || force_new) {
-        instanceToken = await initInstance();
+        const tokens = await initInstance();
+        instanceToken = tokens.instanceToken;
+        generalToken = tokens.token;
+        // Register webhook immediately after creation
+        await registerWebhook(instanceToken);
       }
 
       const payload = {
         user_id: user.id,
         instance_name: finalInstanceName,
         server_url: baseUrl,
-        token: instanceToken,
+        token: generalToken,
         instance_token: instanceToken,
         status: "disconnected",
         is_connected: false,
@@ -329,8 +347,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "qrcode" || action === "reconnect") {
-      if (!instanceToken) instanceToken = await initInstance();
+      if (action === "qrcode" || action === "reconnect") {
+      if (!instanceToken) {
+        const tokens = await initInstance();
+        instanceToken = tokens.instanceToken;
+        generalToken = tokens.token;
+        await registerWebhook(instanceToken);
+        
+        // Save these tokens to DB immediately since we just created them
+        const payload = {
+          user_id: user.id,
+          instance_name: finalInstanceName,
+          server_url: baseUrl,
+          token: generalToken,
+          instance_token: instanceToken,
+          status: "disconnected",
+          is_connected: false,
+          webhook_url: webhookUrl,
+        };
+        if (existingInstance) {
+          await adminClient.from("whatsapp_instances").update(payload).eq("id", existingInstance.id);
+        } else {
+          await adminClient.from("whatsapp_instances").insert(payload);
+        }
+      }
       const result = await connectInstance(instanceToken);
       if (result.connected) {
         await adminClient.from("whatsapp_instances").update({ is_connected: true, status: "connected" }).eq("user_id", user.id);
