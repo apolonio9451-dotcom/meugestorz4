@@ -73,22 +73,37 @@ Deno.serve(async (req) => {
       console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
       let res = await fetch(`${baseUrl}/instance/init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "token": adminToken },
+        headers: { "Content-Type": "application/json", "admintoken": adminToken },
         body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
       });
       
+      let text = await res.text();
+      console.log(`[whatsapp-manage] /instance/init -> ${res.status}: ${text.substring(0, 300)}`);
+
       if (!res.ok) {
         console.warn(`[whatsapp-manage] /init failed (${res.status}), trying /instance/create`);
         res = await fetch(`${baseUrl}/instance/create`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "token": adminToken },
+          headers: { "Content-Type": "application/json", "admintoken": adminToken },
           body: JSON.stringify({ instanceName: finalInstanceName, token: adminToken }),
         });
+        text = await res.text();
+        console.log(`[whatsapp-manage] /instance/create -> ${res.status}: ${text.substring(0, 300)}`);
       }
-      const text = await res.text();
+      if (!res.ok) {
+        // Fallback to 'token' header for some providers
+        console.warn(`[whatsapp-manage] admin/create failed (${res.status}), trying fallback 'token' header`);
+        res = await fetch(`${baseUrl}/instance/init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": adminToken },
+          body: JSON.stringify({ name: finalInstanceName, systemName: "Meu Gestor" }),
+        });
+        text = await res.text();
+        console.log(`[whatsapp-manage] /instance/init fallback -> ${res.status}: ${text.substring(0, 300)}`);
+      }
+
       let data: any = {};
       try { data = JSON.parse(text); } catch {}
-      console.log(`[whatsapp-manage] /instance/init -> ${res.status}: ${text.substring(0, 300)}`);
       if (!res.ok) throw new Error(`Falha ao inicializar instância: ${data.message || data.error || text}`);
       const newToken = data.token || data.instance?.token || data.data?.token || "";
       if (!newToken) throw new Error("Instância criada mas token não retornado pela API.");
