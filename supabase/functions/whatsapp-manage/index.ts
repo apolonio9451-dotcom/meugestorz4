@@ -230,9 +230,9 @@ Deno.serve(async (req) => {
 
     if (action === "delete") {
       if (instanceToken) {
-        await fetch(`${baseUrl}/instance/${instanceToken}`, {
+        await fetch(`${baseUrl}/instance`, {
           method: "DELETE",
-          headers: { "admintoken": adminToken },
+          headers: { "token": instanceToken },
         }).catch(() => null);
       }
       await adminClient.from("whatsapp_instances").delete().eq("user_id", user.id);
