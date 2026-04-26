@@ -145,14 +145,13 @@ Deno.serve(async (req) => {
             const url = `${candidateBaseUrl}${endpoint}`;
             
             const configs = [
-              { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
               { name: "Header Authorization Bearer", method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
+              { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
               { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
               { name: "Header token", method: "POST", headers: { "Content-Type": "application/json", "token": adminToken } },
               { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
-              // Some older versions use GET for init?
               { name: "GET init with admintoken", method: "GET", headers: { "admintoken": adminToken } },
               { name: "GET init with token", method: "GET", headers: { "token": adminToken } }
             ];
