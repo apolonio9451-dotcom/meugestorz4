@@ -100,6 +100,8 @@ Deno.serve(async (req) => {
     );
     console.log(`[whatsapp-manage] baseUrlCandidates=${JSON.stringify(baseUrlCandidates)}`);
     console.log(`[whatsapp-manage] Admin token candidates=${adminTokenCandidates.map((token) => `${token.substring(0, 5)}...(${token.length})`).join(", ") || "none"}`);
+    console.log(`[whatsapp-manage] Resolved Company ID: ${resolvedCompanyId}`);
+    console.log(`[whatsapp-manage] User ID: ${user.id}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
     if (adminTokenCandidates.length === 0) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
