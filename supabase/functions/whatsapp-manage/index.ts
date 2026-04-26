@@ -263,7 +263,13 @@ Deno.serve(async (req) => {
 
       const res = await fetch(`${baseUrl}/instance/connect`, {
         method: "GET",
-        headers: { "token": token },
+        headers: { 
+          "token": token,
+          "Authorization": `Bearer ${token}`,
+          "apikey": token,
+          "admintoken": token,
+          "Authorization-Header": token
+        },
       });
       const text = await res.text();
       let data: any = {};
