@@ -368,7 +368,7 @@ export default function WhatsAppView() {
 
     pollingRef.current = window.setInterval(() => {
       checkStatus();
-    }, 15000);
+    }, 10000);
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
