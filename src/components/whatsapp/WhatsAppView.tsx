@@ -441,7 +441,7 @@ export default function WhatsAppView() {
                 </p>
                 {apiToken && (
                   <p className="text-xs text-blue-600/80 flex items-center gap-1">
-                    Token Admin: <code className="bg-blue-500/20 px-1 rounded">{apiToken.substring(0, 4)}***{apiToken.slice(-4)}</code>
+                    Token Admin: <code className="bg-blue-500/20 px-1 rounded break-all">{apiToken}</code>
                   </p>
                 )}
                 <p className="text-[10px] text-blue-500/60 mt-1 italic">
