@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
 
     // ---------- INIT (create instance with admintoken) ----------
     async function initInstance(): Promise<string> {
-      console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}"`);
+      console.log(`[whatsapp-manage] Initializing new instance "${finalInstanceName}" using baseUrls: ${baseUrlCandidates.join(", ")}`);
       let lastError = "Unauthorized";
 
       for (const candidateBaseUrl of baseUrlCandidates) {
