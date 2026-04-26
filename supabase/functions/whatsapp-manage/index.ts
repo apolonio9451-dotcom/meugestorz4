@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/create", "/instance/init"];
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
@@ -150,7 +150,8 @@ Deno.serve(async (req) => {
               { name: "Header apikey", headers: { "Content-Type": "application/json", "apikey": adminToken } },
               { name: "Query Param admintoken", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Query Param token", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
-              { name: "Header token", headers: { "Content-Type": "application/json", "token": adminToken } }
+              { name: "Header token", headers: { "Content-Type": "application/json", "token": adminToken } },
+              { name: "Header X-API-Key", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } }
             ];
 
             for (const config of configs) {
