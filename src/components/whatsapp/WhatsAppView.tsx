@@ -495,9 +495,15 @@ export default function WhatsAppView() {
               <p className="text-muted-foreground">
                 Ocorreu um erro ao carregar sua instância.
               </p>
-              <Button onClick={() => loadInstance({ clearCache: true, forceNew: true })}>
-                Tentar Novamente
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => loadInstance({ clearCache: true, forceNew: true })} className="w-full">
+                  Tentar Novamente
+                </Button>
+                <Button variant="outline" onClick={handleReconnect} className="w-full gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Reconectar Instância
+                </Button>
+              </div>
             </div>
           ) : instance.is_connected ? (
             <div className="space-y-6">
