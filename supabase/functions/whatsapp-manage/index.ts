@@ -57,8 +57,9 @@ Deno.serve(async (req) => {
     const apiToken = apiSettings?.api_token || "Meu gestor";
     const finalInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
+    console.log(`[whatsapp-manage] Action: ${action} | Instance: ${finalInstanceName} | Server: ${baseUrl}`);
+
     if (action === "create" || action === "get-or-create" || action === "reconnect") {
-      // Check if instance already exists in DB
       const { data: existingInstance } = await adminClient
         .from("whatsapp_instances")
         .select("*")
@@ -73,10 +74,10 @@ Deno.serve(async (req) => {
 
       const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${user.id}`;
       
-      console.log(`[whatsapp-manage] Re-creating/reconnecting instance ${finalInstanceName} at ${baseUrl}`);
+      // UA-ZAPI uses /instance/init to initialize an instance
+      console.log(`[whatsapp-manage] Initializing instance ${finalInstanceName}`);
       
-      // Try to start/create instance
-      const createRes = await fetch(`${baseUrl}/instance/init`, {
+      const initRes = await fetch(`${baseUrl}/instance/init`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -87,22 +88,14 @@ Deno.serve(async (req) => {
           webhook: true,
           webhookUrl: webhookUrl
         })
-      }).catch(() => null);
+      }).catch(e => {
+        console.error("[whatsapp-manage] Init fetch error:", e.message);
+        return null;
+      });
 
-      if (!createRes || !createRes.ok) {
-         // Try /instance/create if /init fails (depends on UA-ZAPI version)
-         await fetch(`${baseUrl}/instance/create`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiToken}`
-          },
-          body: JSON.stringify({
-            instanceName: finalInstanceName,
-            token: apiToken,
-            webhookUrl: webhookUrl
-          })
-        }).catch(() => null);
+      if (initRes) {
+        const initData = await initRes.json().catch(() => ({}));
+        console.log(`[whatsapp-manage] Init API response:`, initData);
       }
 
       // Update or insert in DB
@@ -123,23 +116,6 @@ Deno.serve(async (req) => {
         await adminClient.from("whatsapp_instances").insert(instancePayload);
       }
 
-      // Fetch QR immediately if this was a reconnect
-      if (action === "reconnect") {
-        const qrRes = await fetch(`${baseUrl}/instance/qrbase64?key=${finalInstanceName}`, {
-          method: "GET",
-          headers: { "Authorization": `Bearer ${apiToken}` }
-        }).catch(() => null);
-
-        if (qrRes && qrRes.ok) {
-          const qrData = await qrRes.json();
-          return new Response(JSON.stringify({ 
-            success: true, 
-            qrcode: qrData.qrcode || qrData.base64,
-            connected: qrData.connected || false
-          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        }
-      }
-
       const { data: updatedInstance } = await adminClient
         .from("whatsapp_instances")
         .select("*")
@@ -152,33 +128,38 @@ Deno.serve(async (req) => {
     }
 
     if (action === "qrcode") {
-      console.log(`[whatsapp-manage] Fetching QR Code for ${finalInstanceName} via UA-ZAPI`);
-      
-      // Try UA-ZAPI QR endpoints
+      // For UA-ZAPI, /instance/qrbase64 is the common endpoint for QR as base64
       const endpoints = [
-        `${baseUrl}/instance/qrbase64?key=${finalInstanceName}`,
-        `${baseUrl}/instance/qrcode?instanceName=${finalInstanceName}`,
-        `${baseUrl}/instance/qr?key=${finalInstanceName}`
+        { url: `${baseUrl}/instance/qrbase64?key=${finalInstanceName}`, method: "GET" },
+        { url: `${baseUrl}/instance/qrcode?instanceName=${finalInstanceName}`, method: "GET" },
+        { url: `${baseUrl}/instance/qr?key=${finalInstanceName}`, method: "GET" }
       ];
 
       let qrData = null;
       for (const endpoint of endpoints) {
         try {
-          const res = await fetch(endpoint, {
-            method: "GET",
+          console.log(`[whatsapp-manage] Trying QR endpoint: ${endpoint.url}`);
+          const res = await fetch(endpoint.url, {
+            method: endpoint.method,
             headers: { "Authorization": `Bearer ${apiToken}` }
           });
+          
           if (res.ok) {
             qrData = await res.json();
+            console.log(`[whatsapp-manage] Success at ${endpoint.url}`);
             if (qrData.qrcode || qrData.base64) break;
+          } else {
+            const errBody = await res.text();
+            console.warn(`[whatsapp-manage] Failed ${endpoint.url}: ${res.status} ${errBody}`);
           }
         } catch (e: any) {
-          console.error(`Failed to fetch from ${endpoint}:`, e.message);
+          console.error(`[whatsapp-manage] Error fetching from ${endpoint.url}:`, e.message);
         }
       }
 
       if (!qrData || (!qrData.qrcode && !qrData.base64)) {
-        throw new Error("Não foi possível gerar o QR Code. Verifique se a URL e o Token da API estão corretos em 'Configurações'.");
+        // If we still don't have a QR, maybe the instance isn't started?
+        throw new Error("Não foi possível gerar o QR Code. Verifique se a URL e o Token da API estão corretos em 'Configurações' ou se a instância está ativa.");
       }
       
       return new Response(JSON.stringify({ 
@@ -224,7 +205,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    console.error(`[whatsapp-manage] Error:`, err.message);
+    console.error(`[whatsapp-manage] Global Error:`, err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
