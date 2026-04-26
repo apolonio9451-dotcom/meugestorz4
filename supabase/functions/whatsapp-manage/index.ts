@@ -225,36 +225,41 @@ Deno.serve(async (req) => {
       throw new Error(`Falha ao inicializar instância: ${lastError}. Verifique se o Token Admin está correto.`);
     }
 
-    // ---------- CONNECT (returns QR base64) ----------
-    async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
-      console.log(`[whatsapp-manage] Connecting instance to get QR | Webhook: ${webhookUrl}`);
+    // ---------- WEBHOOK ----------
+    async function registerWebhook(token: string) {
+      console.log(`[whatsapp-manage] Registering webhook at ${baseUrl}/webhook | Webhook: ${webhookUrl}`);
+      const webhookPayload = {
+        url: webhookUrl,
+        enabled: true,
+        active: true,
+        byApi: true,
+        addUrlEvents: true,
+        addUrlTypesMessages: true,
+        excludeMessages: ["wasSentByApi", "isGroupYes"],
+        events: [
+          "connection", "messages", "messages_update", "presence",
+          "call", "contacts", "groups", "labels", "chats",
+          "chat_labels", "blocks", "leads", "history", "sender",
+        ],
+      };
       
-      // 1. Set Webhook first
       try {
-        const webhookPayload = {
-          url: webhookUrl,
-          enabled: true,
-          active: true,
-          byApi: true,
-          addUrlEvents: true,
-          addUrlTypesMessages: true,
-          excludeMessages: ["wasSentByApi", "isGroupYes"],
-          events: [
-            "connection", "messages", "messages_update", "presence",
-            "call", "contacts", "groups", "labels", "chats",
-            "chat_labels", "blocks", "leads", "history", "sender",
-          ],
-        };
-        
-        console.log(`[whatsapp-manage] Registering webhook at ${baseUrl}/webhook`);
         await fetch(`${baseUrl}/webhook`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": token },
           body: JSON.stringify(webhookPayload),
         });
       } catch (e: any) {
-        console.warn(`[whatsapp-manage] Failed to set webhook automatically:`, e.message);
+        console.warn(`[whatsapp-manage] Failed to set webhook:`, e.message);
       }
+    }
+
+    // ---------- CONNECT (returns QR base64) ----------
+    async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
+      console.log(`[whatsapp-manage] Connecting instance to get QR`);
+      
+      // Ensure webhook is set before connecting
+      await registerWebhook(token);
 
       const res = await fetch(`${baseUrl}/instance/connect`, {
         method: "POST",
