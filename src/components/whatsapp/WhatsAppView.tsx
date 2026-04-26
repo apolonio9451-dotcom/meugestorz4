@@ -316,15 +316,19 @@ export default function WhatsAppView() {
   };
 
   const checkStatus = useCallback(async () => {
-    const data = await callManage("get-or-create");
-    if (data?.instance) {
-      setInstance(data.instance);
-      if (data.instance.is_connected) {
-        setPolling(false);
-        setQrCode(null);
-        toast.success("WhatsApp conectado!");
-        fetchProfilePicture();
+    try {
+      const data = await callManage("get-or-create");
+      if (data?.instance) {
+        setInstance(data.instance);
+        if (data.instance.is_connected && data.instance.status === "connected") {
+          setPolling(false);
+          setQrCode(null);
+          toast.success("WhatsApp conectado com sucesso!");
+          fetchProfilePicture();
+        }
       }
+    } catch (e) {
+      console.error("Error checking status", e);
     }
   }, [callManage, fetchProfilePicture]);
 
