@@ -116,13 +116,22 @@ export default function WhatsAppView() {
 
   const handleSaveToken = async () => {
     if (!companyId) return;
+    if (!apiUrl.trim() || !apiToken.trim()) {
+      toast.error("Por favor, preencha o servidor e o token.");
+      return;
+    }
+
     setSavingToken(true);
     try {
+      const formattedUrl = apiUrl.trim().replace(/\/$/, "");
+      const formattedToken = apiToken.trim();
+
       const payload = {
         company_id: companyId,
-        api_url: apiUrl.trim().replace(/\/$/, ""),
-        api_token: apiToken.trim(),
+        api_url: formattedUrl,
+        api_token: formattedToken,
       };
+
       let error;
       if (existingSettingsId) {
         ({ error } = await supabase.from("api_settings" as any).update(payload).eq("id", existingSettingsId));
@@ -138,7 +147,10 @@ export default function WhatsAppView() {
         body: { action: "reset-error-queue", companyId },
       });
 
-      toast.success("Token salvo com sucesso! Fila de erros resetada.");
+      toast.success("Token configurado com sucesso! Agora você pode conectar sua instância.");
+      
+      // Force reload instance with new token
+      loadInstance({ forceNew: true, clearCache: true });
     } catch (err: any) {
       toast.error(err?.message || "Erro ao salvar token");
     } finally {
@@ -431,22 +443,48 @@ export default function WhatsAppView() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-6 mb-4 space-y-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-700">Configuração de Servidor</p>
-                <p className="text-xs text-blue-600/80">
-                  Servidor: <strong>{apiUrl || "https://ipazua.uazapi.com"}</strong>
-                </p>
-                {apiToken && (
-                  <p className="text-xs text-blue-600/80 flex items-center gap-1">
-                    Token Admin: <code className="bg-blue-500/20 px-1 rounded break-all">{apiToken}</code>
+              <Key className="w-5 h-5 text-amber-600 mt-1" />
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-amber-900">Configuração de Credenciais</h4>
+                  <p className="text-xs text-amber-800/80">
+                    Insira o servidor e o Token Admin para gerenciar as instâncias.
                   </p>
-                )}
-                <p className="text-[10px] text-blue-500/60 mt-1 italic">
-                  Certifique-se de que este é o <strong>Admin Token</strong> do servidor acima.
-                </p>
+                </div>
+                
+                <div className="grid gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="api_url" className="text-xs font-semibold text-amber-900">URL do Servidor</Label>
+                    <Input 
+                      id="api_url"
+                      placeholder="https://ipazua.uazapi.com" 
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      className="bg-white/50 border-amber-200 focus:border-amber-500 h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="api_token" className="text-xs font-semibold text-amber-900">Token Admin</Label>
+                    <Input 
+                      id="api_token"
+                      placeholder="Seu Admin Token aqui" 
+                      type="password"
+                      value={apiToken}
+                      onChange={(e) => setApiToken(e.target.value)}
+                      className="bg-white/50 border-amber-200 focus:border-amber-500 h-9 text-sm font-mono"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleSaveToken} 
+                    disabled={savingToken}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white h-9 text-sm"
+                  >
+                    {savingToken ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    Salvar e Validar Token
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
