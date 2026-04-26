@@ -17,6 +17,25 @@ async function resolveAuthorizedCompanyId(adminClient: any, userId: string, requ
   return memberships[0].company_id;
 }
 
+function cleanToken(value: string | null | undefined) {
+  const token = String(value || "").trim();
+  if (!token || token.length <= 5 || token.includes("curl") || token.startsWith("http")) return "";
+  return token;
+}
+
+function uniqueTokenCandidates(...tokens: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const value of tokens) {
+    const token = cleanToken(value);
+    if (token && !seen.has(token)) {
+      seen.add(token);
+      candidates.push(token);
+    }
+  }
+  return candidates;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -47,13 +66,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const baseUrl = (apiSettings?.api_url || "https://ipazua.uazapi.com").trim().replace(/\/$/, "");
-    // Prioritize the secret env var (managed by Lovable)
-    const envAdminToken = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
-    const adminToken = envAdminToken || (apiSettings?.api_token || "").trim();
-    console.log(`[whatsapp-manage] Using adminToken (len=${adminToken.length}, prefix=${adminToken.substring(0, 5)}...) from ${envAdminToken ? 'ENV' : 'DB'}`);
+    const adminTokenCandidates = uniqueTokenCandidates(
+      Deno.env.get("UAZAPI_ADMIN_TOKEN"),
+      Deno.env.get("WA_ADMIN_TOKEN"),
+      Deno.env.get("BOLINHA_API_TOKEN"),
+      Deno.env.get("EVOLUTI_TOKEN"),
+      apiSettings?.api_token,
+    );
+    console.log(`[whatsapp-manage] Admin token candidates=${adminTokenCandidates.map((token) => `${token.substring(0, 5)}...(${token.length})`).join(", ") || "none"}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
 
-    if (!adminToken) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
+    if (adminTokenCandidates.length === 0) throw new Error("Token de administração da API não configurado em 'Configurações > Instância'.");
 
     // Load existing instance from DB (we use instance_token for instance-level operations)
     const { data: existingInstance } = await adminClient
