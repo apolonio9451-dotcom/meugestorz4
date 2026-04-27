@@ -110,10 +110,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[whatsapp-manage] Erro:`, error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      status: error.message.includes("Unauthorized") ? 401 : 400,
+      status: String(error.message).includes("Unauthorized") ? 401 : 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
