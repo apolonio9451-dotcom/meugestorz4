@@ -2392,8 +2392,10 @@ export type Database = {
           device_name: string | null
           id: string
           instance_token: string
+          is_connected: boolean | null
           name: string
           server_url: string
+          status: string | null
           updated_at: string | null
           user_id: string
         }
@@ -2403,8 +2405,10 @@ export type Database = {
           device_name?: string | null
           id?: string
           instance_token: string
+          is_connected?: boolean | null
           name: string
           server_url: string
+          status?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -2414,8 +2418,10 @@ export type Database = {
           device_name?: string | null
           id?: string
           instance_token?: string
+          is_connected?: boolean | null
           name?: string
           server_url?: string
+          status?: string | null
           updated_at?: string | null
           user_id?: string
         }
