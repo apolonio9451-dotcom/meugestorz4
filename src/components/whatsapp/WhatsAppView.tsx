@@ -12,11 +12,13 @@ import {
   RefreshCw,
   Loader2,
   QrCode,
+  CheckCircle2,
   Save,
   User,
   Trash2,
   Copy,
   ExternalLink,
+  WifiOff,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
