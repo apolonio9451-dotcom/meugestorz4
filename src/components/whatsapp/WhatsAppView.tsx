@@ -67,8 +67,8 @@ export default function WhatsAppView() {
 
   const handleSave = async () => {
     if (!user) return;
-    if (!instanceName.trim() || !instanceToken.trim()) {
-      toast.error("Preencha o nome e o token da instância.");
+    if (!instanceToken.trim()) {
+      toast.error("Preencha o token da instância.");
       return;
     }
 
@@ -76,7 +76,7 @@ export default function WhatsAppView() {
     try {
       const payload = {
         user_id: user.id,
-        name: instanceName,
+        name: "Minha Instância", // Nome padrão interno
         instance_token: instanceToken,
         server_url: SERVER_URL,
       };
@@ -160,15 +160,27 @@ export default function WhatsAppView() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-primary" />
-            Configuração WhatsApi
-          </CardTitle>
-          <CardDescription>
-            Configure sua instância manualmente para integrar com o sistema.
-          </CardDescription>
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-primary" />
+                Status do WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Configure sua instância para integrar com o sistema.
+              </CardDescription>
+            </div>
+            {instance && (
+              <Badge 
+                variant={instance.is_connected ? "default" : "destructive"}
+                className={instance.is_connected ? "bg-emerald-500 hover:bg-emerald-600" : ""}
+              >
+                {instance.is_connected ? "Conectado" : "Desconectado"}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 p-4 border rounded-lg bg-muted/20">
@@ -189,14 +201,7 @@ export default function WhatsAppView() {
           </div>
 
           <div className="grid gap-4 pt-4">
-            <div className="space-y-2">
-              <Label>Nome da Instância</Label>
-              <Input 
-                placeholder="Ex: minha-instancia" 
-                value={instanceName} 
-                onChange={e => setInstanceName(e.target.value)}
-              />
-            </div>
+            {/* Campo Nome removido como solicitado */}
             <div className="space-y-2">
               <Label>Token da Instância (Instance Token)</Label>
               <Input 
@@ -214,16 +219,14 @@ export default function WhatsAppView() {
 
           {instance && (
             <div className="pt-6 border-t space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between bg-muted/20 p-4 rounded-lg border">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback><User /></AvatarFallback>
-                  </Avatar>
+                  <div className={`p-2 rounded-full ${instance.is_connected ? "bg-emerald-500/10" : "bg-destructive/10"}`}>
+                    <Smartphone className={`w-5 h-5 ${instance.is_connected ? "text-emerald-500" : "text-destructive"}`} />
+                  </div>
                   <div>
-                    <p className="font-medium">{instance.name}</p>
-                    <Badge variant={instance.is_connected ? "default" : "secondary"}>
-                      {instance.is_connected ? "Status: Conectado" : "Status: Desconectado"}
-                    </Badge>
+                    <p className="text-sm font-medium">Instância configurada</p>
+                    <p className="text-xs text-muted-foreground font-mono">{instance.instance_token.substring(0, 8)}...</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
