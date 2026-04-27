@@ -240,7 +240,8 @@ export default function WhatsAppView() {
       setQrCode(qrString);
       setPolling(true);
     } else {
-      toast.error("Não foi possível gerar o QR Code. Verifique se o Token Admin está correto nas configurações ou se o servidor está online.");
+      const errorMsg = data?.error || "Não foi possível gerar o QR Code. Verifique se o servidor está online ou se as credenciais estão corretas.";
+      toast.error(errorMsg);
     }
 
     setActionLoading(null);
