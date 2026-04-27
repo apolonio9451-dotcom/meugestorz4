@@ -86,7 +86,7 @@ function resolveApiToken(dbToken?: string | null): string {
 async function getCompanyInstanceToken(
   supabase: any,
   companyId: string,
-): Promise<string> {
+): Promise<{ token: string; serverUrl: string }> {
   const { data: memberships } = await supabase
     .from("company_memberships")
     .select("user_id")
@@ -95,18 +95,21 @@ async function getCompanyInstanceToken(
     .limit(20);
 
   const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
-  if (!userIds.length) return "";
+  if (!userIds.length) return { token: "", serverUrl: "" };
 
   const { data: instance } = await supabase
-    .from("whatsapp_instances")
-    .select("instance_token")
+    .from("whats_api")
+    .select("instance_token, server_url")
     .in("user_id", userIds)
     .eq("is_connected", true)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  return String((instance as any)?.instance_token || "").trim();
+  return { 
+    token: String((instance as any)?.instance_token || "").trim(),
+    serverUrl: String((instance as any)?.server_url || "").trim()
+  };
 }
 
 async function fetchLatestCampaignCredentials(
