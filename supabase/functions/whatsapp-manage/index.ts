@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
     console.log(`[whatsapp-manage] Resolved Company ID: ${resolvedCompanyId}`);
     console.log(`[whatsapp-manage] User ID: ${user.id}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
-    const systemName = "Uazapi"; // Definindo o nome do sistema conforme a documentação
+    const systemName = "Uazapi";
+    const instanceName = desiredInstanceName; // Standardizing name variable
 
     // Se não houver token admin, tratamos o token fornecido como o próprio instance_token
     const skipInit = adminTokenCandidates.length === 0;
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new", "/instance/instance/create"];
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new", "/instance/instance/create", "/admin/instance/create"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
@@ -153,10 +154,12 @@ Deno.serve(async (req) => {
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
               { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
               { name: "Header Authorization", method: "POST", headers: { "Content-Type": "application/json", "Authorization": adminToken } },
-              { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
-              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
+              { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
+              { name: "Query Param apikey", method: "POST", headers: { "Content-Type": "application/json" }, query: `?apikey=${adminToken}` },
+              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "GET init with admintoken", method: "GET", headers: { "admintoken": adminToken } },
+              { name: "GET init with apikey", method: "GET", headers: { "apikey": adminToken } },
               { name: "GET init with token", method: "GET", headers: { "token": adminToken } }
             ];
 
@@ -173,14 +176,19 @@ Deno.serve(async (req) => {
                 if (config.method !== "GET") {
                   fetchOptions.body = JSON.stringify({ 
                     token: adminToken,
+                    apikey: adminToken,
+                    admintoken: adminToken,
                     name: finalInstanceName, 
+                    instanceName: finalInstanceName,
+                    instance_name: finalInstanceName,
                     deviceName: "Uazapi",
                     systemName: "Uazapi",
                     system_name: "Uazapi",
                     system: "Uazapi",
                     profileName: "Uazapi",
                     browser: "chrome",
-                    fingerprintProfile: "chrome"
+                    fingerprintProfile: "chrome",
+                    qrcode: true
                   });
                 }
 
@@ -246,7 +254,13 @@ Deno.serve(async (req) => {
       try {
         await fetch(`${baseUrl}/webhook`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "token": token },
+          headers: { 
+            "Content-Type": "application/json", 
+            "token": token,
+            "apikey": token,
+            "admintoken": token,
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify(webhookPayload),
         });
       } catch (e: any) {
@@ -256,45 +270,66 @@ Deno.serve(async (req) => {
 
     // ---------- CONNECT (returns QR base64) ----------
     async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
-      console.log(`[whatsapp-manage] Connecting instance to get QR`);
+      console.log(`[whatsapp-manage] Connecting instance to get QR using token: ${token.substring(0, 5)}...`);
       
       // Ensure webhook is set before connecting
       await registerWebhook(token);
 
-      const res = await fetch(`${baseUrl}/instance/connect`, {
-        method: "GET",
-        headers: { 
-          "token": token,
-          "Authorization": `Bearer ${token}`,
-          "apikey": token,
-          "admintoken": token,
-          "Authorization-Header": token
-        },
-      });
-      const text = await res.text();
-      let data: any = {};
-      try { data = JSON.parse(text); } catch {}
-      console.log(`[whatsapp-manage] /instance/connect -> ${res.status}: ${text.substring(0, 500)}`);
-      
-      if (!res.ok) {
-        // Retry logic if instance was not found or something happened
-        if (res.status === 404 || text.toLowerCase().includes("not found")) {
-           console.log("[whatsapp-manage] Instance not found on connect, re-initializing...");
-           const { instanceToken: newToken } = await initInstance();
-           return connectInstance(newToken);
+      const endpoints = ["/instance/connect", "/instance/qrcode", "/instance/qr", "/instance/connect/base64"];
+      let lastError = "";
+
+      for (const endpoint of endpoints) {
+        try {
+          const url = `${baseUrl}${endpoint}`;
+          console.log(`[whatsapp-manage] Trying ${url}`);
+          
+          const res = await fetch(url, {
+            method: "GET",
+            headers: { 
+              "token": token,
+              "apikey": token,
+              "Authorization": `Bearer ${token}`,
+              "admintoken": token,
+              "Authorization-Header": token,
+              "X-API-Key": token
+            },
+          });
+
+          const text = await res.text();
+          let data: any = {};
+          try { data = JSON.parse(text); } catch {}
+          
+          console.log(`[whatsapp-manage] ${endpoint} -> ${res.status}: ${text.substring(0, 100)}`);
+
+          if (res.ok) {
+            const inst = data.instance || data;
+            const qrcode = inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || data.base64 || data.qrCode || (typeof data === "string" && data.startsWith("data:image") ? data : "");
+            
+            if (qrcode) {
+              console.log(`[whatsapp-manage] QR Code found! (length: ${qrcode.length})`);
+              return {
+                qrcode,
+                connected: inst.status === "connected" || inst.connected === true,
+              };
+            }
+          }
+          
+          if (res.status !== 404) {
+            lastError = data.message || data.error || text || `HTTP ${res.status}`;
+          }
+        } catch (e: any) {
+          console.error(`[whatsapp-manage] Error connecting to ${endpoint}:`, e.message);
         }
-        throw new Error(`Falha ao conectar: ${data.message || data.error || text}`);
       }
 
-      const inst = data.instance || data;
-      // Detailed logging for QR detection
-      const qrcode = inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || data.base64 || "";
-      console.log(`[whatsapp-manage] QR Code detected (first 20 chars): ${qrcode.substring(0, 20)}`);
+      // If all endpoints failed and we haven't found a QR code
+      if (lastError.toLowerCase().includes("not found") || lastError.toLowerCase().includes("inexistente")) {
+         console.log("[whatsapp-manage] Instance not found on connect, re-initializing...");
+         const { instanceToken: newToken } = await initInstance();
+         return connectInstance(newToken);
+      }
       
-      return {
-        qrcode,
-        connected: inst.status === "connected" || inst.connected === true,
-      };
+      throw new Error(`Falha ao obter QR Code: ${lastError || "Resposta desconhecida do servidor"}`);
     }
 
     // ---------- STATUS ----------
@@ -303,9 +338,10 @@ Deno.serve(async (req) => {
         method: "GET",
         headers: { 
           "token": token,
-          "Authorization": `Bearer ${token}`,
           "apikey": token,
-          "admintoken": token
+          "Authorization": `Bearer ${token}`,
+          "admintoken": token,
+          "X-API-Key": token
         },
       });
       const text = await res.text();
@@ -313,10 +349,10 @@ Deno.serve(async (req) => {
       try { data = JSON.parse(text); } catch {}
       const inst = data.instance || data;
       return {
-        connected: inst.status === "connected",
-        phone: inst.owner || inst.profileNumber || inst.wid,
-        profileName: inst.profileName || inst.name,
-        profilePic: inst.profilePicUrl || inst.profilePic,
+        connected: inst.status === "connected" || inst.state === "CONNECTED" || inst.connected === true,
+        phone: inst.owner || inst.profileNumber || inst.wid || inst.ownerJid,
+        profileName: inst.profileName || inst.name || inst.instanceName,
+        profilePic: inst.profilePicUrl || inst.profilePic || inst.profile_pic,
       };
     }
 
