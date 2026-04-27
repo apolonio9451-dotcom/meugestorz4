@@ -601,11 +601,11 @@ export default function Campaigns() {
         if (signal.aborted) break;
 
         // Re-check master switch every iteration (kill switch)
-        const { data: liveApi } = await supabase
+        const { data: liveApi } = await (supabase
           .from("api_settings")
           .select("campaigns_engine_enabled")
           .eq("company_id", effectiveCompanyId)
-          .maybeSingle();
+          .maybeSingle() as any);
         if (!(liveApi as any)?.campaigns_engine_enabled) {
           toast.error("Mecanismo desligado durante o envio. Parando...");
           break;
