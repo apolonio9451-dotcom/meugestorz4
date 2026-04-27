@@ -14,101 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      api_settings: {
-        Row: {
-          api_token: string
-          api_url: string
-          auto_send_hour: number
-          auto_send_minute: number
-          broadcast_api_token: string
-          broadcast_api_url: string
-          broadcast_instance_name: string
-          bulk_send_enabled: boolean
-          campaigns_admin_test_phone: string
-          campaigns_engine_enabled: boolean
-          company_id: string
-          created_at: string
-          football_api_key: string | null
-          id: string
-          instance_name: string
-          overdue_charge_pause_days: number
-          overdue_charge_pause_enabled: boolean
-          overdue_cycle_cooldown_days: number
-          overdue_inactive_after_days: number
-          overdue_max_cycles: number
-          overdue_sends_per_cycle: number
-          pix_key: string
-          send_interval_seconds: number
-          uazapi_base_url: string
-          updated_at: string
-          winback_paused: boolean
-        }
-        Insert: {
-          api_token?: string
-          api_url?: string
-          auto_send_hour?: number
-          auto_send_minute?: number
-          broadcast_api_token?: string
-          broadcast_api_url?: string
-          broadcast_instance_name?: string
-          bulk_send_enabled?: boolean
-          campaigns_admin_test_phone?: string
-          campaigns_engine_enabled?: boolean
-          company_id: string
-          created_at?: string
-          football_api_key?: string | null
-          id?: string
-          instance_name?: string
-          overdue_charge_pause_days?: number
-          overdue_charge_pause_enabled?: boolean
-          overdue_cycle_cooldown_days?: number
-          overdue_inactive_after_days?: number
-          overdue_max_cycles?: number
-          overdue_sends_per_cycle?: number
-          pix_key?: string
-          send_interval_seconds?: number
-          uazapi_base_url?: string
-          updated_at?: string
-          winback_paused?: boolean
-        }
-        Update: {
-          api_token?: string
-          api_url?: string
-          auto_send_hour?: number
-          auto_send_minute?: number
-          broadcast_api_token?: string
-          broadcast_api_url?: string
-          broadcast_instance_name?: string
-          bulk_send_enabled?: boolean
-          campaigns_admin_test_phone?: string
-          campaigns_engine_enabled?: boolean
-          company_id?: string
-          created_at?: string
-          football_api_key?: string | null
-          id?: string
-          instance_name?: string
-          overdue_charge_pause_days?: number
-          overdue_charge_pause_enabled?: boolean
-          overdue_cycle_cooldown_days?: number
-          overdue_inactive_after_days?: number
-          overdue_max_cycles?: number
-          overdue_sends_per_cycle?: number
-          pix_key?: string
-          send_interval_seconds?: number
-          uazapi_base_url?: string
-          updated_at?: string
-          winback_paused?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_settings_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: true
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       auto_send_category_settings: {
         Row: {
           category: string
@@ -2387,8 +2292,8 @@ export type Database = {
       }
       whats_api: {
         Row: {
-          api_token: string
-          created_at: string | null
+          api_token: string | null
+          created_at: string
           device_name: string | null
           id: string
           instance_token: string
@@ -2396,25 +2301,25 @@ export type Database = {
           name: string
           server_url: string
           status: string | null
-          updated_at: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
-          api_token: string
-          created_at?: string | null
+          api_token?: string | null
+          created_at?: string
           device_name?: string | null
           id?: string
           instance_token: string
           is_connected?: boolean | null
           name: string
-          server_url: string
+          server_url?: string
           status?: string | null
-          updated_at?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          api_token?: string
-          created_at?: string | null
+          api_token?: string | null
+          created_at?: string
           device_name?: string | null
           id?: string
           instance_token?: string
@@ -2422,7 +2327,7 @@ export type Database = {
           name?: string
           server_url?: string
           status?: string | null
-          updated_at?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
