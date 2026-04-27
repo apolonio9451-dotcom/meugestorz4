@@ -399,9 +399,10 @@ export default function WhatsAppView() {
 
   useEffect(() => {
     // Apenas carrega se não houver instância ou se estiver tentando sincronizar pela primeira vez
-    if (!instance) {
-      loadInstance();
-    }
+    // Auto load removed as requested - user now clicks "Create Instance"
+    // if (!instance) {
+    //   loadInstance();
+    // }
   }, [loadInstance]);
 
   useEffect(() => {
@@ -508,190 +509,216 @@ export default function WhatsAppView() {
 
           {!instance ? (
             <div className="text-center py-8 space-y-4">
-              <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
-              <p className="text-muted-foreground">
-                Ocorreu um erro ao carregar sua instância.
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => loadInstance({ clearCache: true, forceNew: true })} className="w-full">
-                  Tentar Novamente
-                </Button>
-                <Button variant="outline" onClick={handleReconnect} className="w-full gap-2">
-                  <RefreshCw className="w-4 h-4" />
-                  Reconectar Instância
-                </Button>
+              <Smartphone className="w-12 h-12 text-muted-foreground mx-auto" />
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  Você ainda não possui uma instância de WhatsApp criada.
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  Clique no botão abaixo para gerar uma nova instância e começar a usar.
+                </p>
               </div>
+              <Button 
+                onClick={() => loadInstance({ clearCache: true, forceNew: true })} 
+                className="w-full gap-2"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                Criar Instância
+              </Button>
             </div>
-          ) : instance.is_connected ? (
-            <div className="space-y-6">
-              {apiValidationError && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-center">
-                  <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
-                </div>
-              )}
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-8 text-center space-y-4 shadow-sm">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <Avatar className="w-24 h-24 border-[3px] border-emerald-500 shadow-lg shadow-emerald-500/20">
-                      {profilePic ? (
-                        <AvatarImage src={profilePic} alt="WhatsApp Profile" />
-                      ) : null}
-                      <AvatarFallback className="bg-emerald-500/20 text-emerald-600">
-                        <User className="w-10 h-10" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-background">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                </div>
-
-                {profileName && (
-                  <h3 className="text-xl font-bold text-foreground">{profileName}</h3>
-                )}
-
-                {profilePhone && (
-                  <p className="text-lg font-mono font-semibold text-emerald-500 tracking-wide">
-                    {formatPhoneNumber(profilePhone.replace(/@.*/, ""))}
-                  </p>
-                )}
-
-                <div className="text-sm text-muted-foreground space-y-0.5">
-                  <p>
-                    <strong className="text-foreground/80">Dispositivo:</strong> {instance.device_name}
-                  </p>
-                  <p className="flex items-center justify-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Ativo e pronto para uso
-                  </p>
-                  {instance.last_connection_at && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Última atividade:{" "}
-                      {new Date(instance.last_connection_at).toLocaleString()}
-                    </p>
-                  )}
-                </div>
+          ) : !instance.is_connected && !qrCode ? (
+            <div className="text-center py-8 space-y-4">
+              <WifiOff className="w-12 h-12 text-amber-500 mx-auto" />
+              <div className="space-y-2">
+                <p className="font-medium">Instância pronta, mas desconectada</p>
+                <p className="text-sm text-muted-foreground">
+                  Sua instância "{instance.instance_name}" foi criada com sucesso.
+                </p>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="secondary"
-                  className="w-full gap-2"
-                  onClick={handleReconnect}
-                  disabled={!!actionLoading}
-                >
-                  {actionLoading === "reconnect" ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  Reconectar Instância
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 border-amber-500/20 text-amber-600 hover:bg-amber-50"
-                  onClick={handleDisconnect}
-                  disabled={!!actionLoading}
-                >
-                  {actionLoading === "disconnect" ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <WifiOff className="w-4 h-4" />
-                  )}
-                  Desconectar WhatsApp
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 text-destructive hover:bg-destructive/10 border-destructive/30"
-                  onClick={() => setShowDeleteDialog(true)}
-                  disabled={!!actionLoading}
-                >
-                  {actionLoading === "delete" ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                  Remover Instância Permanentemente
-                </Button>
-              </div>
+              <Button 
+                onClick={fetchQrCode} 
+                className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "qrcode" ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                Conectar na Instância (Gerar QR Code)
+              </Button>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-6 py-4">
-              {qrCode ? (
-                <>
-                  <div className="text-center space-y-2">
-                    <h3 className="font-semibold flex items-center justify-center gap-2">
-                      <QrCode className="w-5 h-5" />
-                      Escaneie o QR Code abaixo
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Abra o WhatsApp no seu celular {">"} Dispositivos
-                      Conectados {">"} Conectar um dispositivo.
-                    </p>
+            <div className="space-y-6">
+              {instance.is_connected ? (
+                <div className="space-y-6">
+                  {apiValidationError && (
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-center">
+                      <p className="text-sm text-destructive font-medium">{apiValidationError}</p>
+                    </div>
+                  )}
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-8 text-center space-y-4 shadow-sm">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="w-24 h-24 border-[3px] border-emerald-500 shadow-lg shadow-emerald-500/20">
+                          {profilePic ? (
+                            <AvatarImage src={profilePic} alt="WhatsApp Profile" />
+                          ) : null}
+                          <AvatarFallback className="bg-emerald-500/20 text-emerald-600">
+                            <User className="w-10 h-10" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-background">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {profileName && (
+                      <h3 className="text-xl font-bold text-foreground">{profileName}</h3>
+                    )}
+
+                    {profilePhone && (
+                      <p className="text-lg font-mono font-semibold text-emerald-500 tracking-wide">
+                        {formatPhoneNumber(profilePhone.replace(/@.*/, ""))}
+                      </p>
+                    )}
+
+                    <div className="text-sm text-muted-foreground space-y-0.5">
+                      <p>
+                        <strong className="text-foreground/80">Dispositivo:</strong> {instance.device_name}
+                      </p>
+                      <p className="flex items-center justify-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        Ativo e pronto para uso
+                      </p>
+                      {instance.last_connection_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Última atividade:{" "}
+                          {new Date(instance.last_connection_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="bg-white p-4 rounded-2xl shadow-xl border border-border/50">
-                    <img
-                      src={qrCode}
-                      alt="WhatsApp QR Code"
-                      className="w-64 h-64 object-contain"
-                    />
-                  </div>
-
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-xs text-muted-foreground flex items-center gap-2 animate-pulse">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Aguardando leitura do código...
-                    </p>
+                  <div className="flex flex-col gap-2">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs gap-2"
-                      onClick={fetchQrCode}
+                      variant="secondary"
+                      className="w-full gap-2"
+                      onClick={handleReconnect}
                       disabled={!!actionLoading}
                     >
-                      <RefreshCw
-                        className={`w-3 h-3 ${actionLoading === "qrcode" ? "animate-spin" : ""}`}
-                      />
-                      Gerar novo código
+                      {actionLoading === "reconnect" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      Reconectar Instância
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 border-amber-500/20 text-amber-600 hover:bg-amber-50"
+                      onClick={handleDisconnect}
+                      disabled={!!actionLoading}
+                    >
+                      {actionLoading === "disconnect" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <WifiOff className="w-4 h-4" />
+                      )}
+                      Desconectar WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 text-destructive hover:bg-destructive/10 border-destructive/30"
+                      onClick={() => setShowDeleteDialog(true)}
+                      disabled={!!actionLoading}
+                    >
+                      {actionLoading === "delete" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      Remover Instância Permanentemente
                     </Button>
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="text-center py-12 space-y-4">
-                  <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-                  <p className="text-muted-foreground animate-pulse">
-                    Gerando sessão segura...
-                  </p>
-                  <p className="text-xs text-muted-foreground italic">
-                    Isso pode levar alguns segundos dependendo do servidor.
-                  </p>
+                <div className="flex flex-col items-center gap-6 py-4">
+                  {qrCode ? (
+                    <>
+                      <div className="text-center space-y-2">
+                        <h3 className="font-semibold flex items-center justify-center gap-2">
+                          <QrCode className="w-5 h-5" />
+                          Escaneie o QR Code abaixo
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Abra o WhatsApp no seu celular {">"} Dispositivos
+                          Conectados {">"} Conectar um dispositivo.
+                        </p>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl shadow-xl border border-border/50">
+                        <img
+                          src={qrCode}
+                          alt="WhatsApp QR Code"
+                          className="w-64 h-64 object-contain"
+                        />
+                      </div>
+
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-xs text-muted-foreground flex items-center gap-2 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Aguardando leitura do código...
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-2"
+                          onClick={fetchQrCode}
+                          disabled={!!actionLoading}
+                        >
+                          <RefreshCw
+                            className={`w-3 h-3 ${actionLoading === "qrcode" ? "animate-spin" : ""}`}
+                          />
+                          Gerar novo código
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-12 space-y-4">
+                      <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+                      <p className="text-muted-foreground animate-pulse">
+                        Gerando sessão segura...
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">
+                        Isso pode levar alguns segundos dependendo do servidor.
+                      </p>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={handleReconnect}
+                    disabled={!!actionLoading}
+                  >
+                    {actionLoading === "reconnect" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    Reconectar Instância
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs gap-1"
+                    onClick={() => setShowDeleteDialog(true)}
+                    disabled={!!actionLoading}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Cancelar e remover instância
+                  </Button>
                 </div>
               )}
-
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={handleReconnect}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === "reconnect" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                Reconectar Instância
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs gap-1"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={!!actionLoading}
-              >
-                <Trash2 className="w-3 h-3" />
-                Cancelar e remover instância
-              </Button>
             </div>
           )}
         </CardContent>
