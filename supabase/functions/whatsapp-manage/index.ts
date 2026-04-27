@@ -50,11 +50,11 @@ Deno.serve(async (req) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Falha ao criar instância no uazapi: ${errorText}`);
+        throw new Error(`Falha ao criar instância no WhatsApi: ${errorText}`);
       }
 
       const result = await response.json();
-      // Retorno esperado do uazapi: { server_url, "Instance Token", token, instance: { name, device_name } }
+      // Retorno esperado do WhatsApi: { server_url, "Instance Token", token, instance: { name, device_name } }
       
       const { data: newInstance, error: insertError } = await adminClient
         .from("whats_api")
