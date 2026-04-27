@@ -67,8 +67,8 @@ export default function WhatsAppView() {
 
   const handleSave = async () => {
     if (!user) return;
-    if (!instanceName.trim() || !instanceToken.trim()) {
-      toast.error("Preencha o nome e o token da instância.");
+    if (!instanceToken.trim()) {
+      toast.error("Preencha o token da instância.");
       return;
     }
 
@@ -76,7 +76,7 @@ export default function WhatsAppView() {
     try {
       const payload = {
         user_id: user.id,
-        name: instanceName,
+        name: "Minha Instância", // Nome padrão interno
         instance_token: instanceToken,
         server_url: SERVER_URL,
       };
@@ -189,14 +189,7 @@ export default function WhatsAppView() {
           </div>
 
           <div className="grid gap-4 pt-4">
-            <div className="space-y-2">
-              <Label>Nome da Instância</Label>
-              <Input 
-                placeholder="Ex: minha-instancia" 
-                value={instanceName} 
-                onChange={e => setInstanceName(e.target.value)}
-              />
-            </div>
+            {/* Campo Nome removido como solicitado */}
             <div className="space-y-2">
               <Label>Token da Instância (Instance Token)</Label>
               <Input 
