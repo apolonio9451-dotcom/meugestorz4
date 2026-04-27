@@ -86,7 +86,7 @@ export default function WhatsAppView() {
 
       if (error || data?.error) throw new Error(data?.error || error?.message);
       
-      toast.success("Configurações salvas e Webhook injetado!");
+      toast.success("Configurações salvas!");
       loadData();
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar");
@@ -177,22 +177,7 @@ export default function WhatsAppView() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 p-4 border rounded-lg bg-muted/20">
-            <div className="space-y-2">
-              <Label className="flex items-center justify-between">
-                URL do Webhook para sua instância
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(finalWebhookUrl)}>
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </Label>
-              <div className="flex gap-2">
-                <Input readOnly value={finalWebhookUrl} className="bg-background text-xs font-mono" />
-              </div>
-              <p className="text-[10px] text-muted-foreground italic">
-                Copie este link e cole no campo "Webhook" das configurações da sua instância externa.
-              </p>
-            </div>
-          </div>
+          {/* Webhook info removed as requested */}
 
           <div className="grid gap-4 pt-4">
             {/* Campo Nome removido como solicitado */}
