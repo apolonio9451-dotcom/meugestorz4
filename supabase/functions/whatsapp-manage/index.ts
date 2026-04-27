@@ -44,6 +44,27 @@ Deno.serve(async (req) => {
         : await adminClient.from("whats_api").insert({ user_id: user.id, name, instance_token, server_url: FIXED_SERVER_URL }).select().single();
       
       if (error) throw error;
+
+      // Injeta o webhook automaticamente na instância externa
+      const webhookUrl = `https://grlwciflaotripbumhve.supabase.co/functions/v1/whatsapp-webhook?user_id=${user.id}`;
+      try {
+        console.log(`[whatsapp-manage] Injetando webhook: ${webhookUrl}`);
+        await fetch(`${FIXED_SERVER_URL}/instance/webhook`, {
+          method: "POST",
+          headers: { 
+            "token": instance_token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            url: webhookUrl,
+            enabled: true,
+            events: ["message.received", "message.sent", "connection.update"]
+          })
+        });
+      } catch (e: any) {
+        console.warn(`[whatsapp-manage] Falha ao injetar webhook:`, e.message);
+      }
+
       return new Response(JSON.stringify({ success: true, instance: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
