@@ -17,9 +17,9 @@ export default function SupportCountdown({ companyId }: Props) {
     const fetchData = async () => {
       const [apiResult, clientsResult] = await Promise.all([
         supabase
-          .from("api_settings")
-          .select("api_url, api_token")
-          .eq("company_id", companyId)
+          .from("whats_api" as any)
+          .select("instance_token")
+          .limit(1)
           .maybeSingle(),
         supabase
           .from("clients")
@@ -28,7 +28,7 @@ export default function SupportCountdown({ companyId }: Props) {
           .not("support_started_at", "is", null),
       ]);
 
-      setApiConfigured(!!(apiResult.data?.api_url && apiResult.data?.api_token));
+      setApiConfigured(!!apiResult.data?.instance_token);
 
       // Find the nearest 48h deadline among support clients
       if (clientsResult.data && clientsResult.data.length > 0) {
