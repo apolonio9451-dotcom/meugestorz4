@@ -332,9 +332,10 @@ Deno.serve(async (req) => {
         method: "GET",
         headers: { 
           "token": token,
-          "Authorization": `Bearer ${token}`,
           "apikey": token,
-          "admintoken": token
+          "Authorization": `Bearer ${token}`,
+          "admintoken": token,
+          "X-API-Key": token
         },
       });
       const text = await res.text();
@@ -342,10 +343,10 @@ Deno.serve(async (req) => {
       try { data = JSON.parse(text); } catch {}
       const inst = data.instance || data;
       return {
-        connected: inst.status === "connected",
-        phone: inst.owner || inst.profileNumber || inst.wid,
-        profileName: inst.profileName || inst.name,
-        profilePic: inst.profilePicUrl || inst.profilePic,
+        connected: inst.status === "connected" || inst.state === "CONNECTED" || inst.connected === true,
+        phone: inst.owner || inst.profileNumber || inst.wid || inst.ownerJid,
+        profileName: inst.profileName || inst.name || inst.instanceName,
+        profilePic: inst.profilePicUrl || inst.profilePic || inst.profile_pic,
       };
     }
 
