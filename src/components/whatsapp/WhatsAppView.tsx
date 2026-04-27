@@ -155,11 +155,8 @@ export default function WhatsAppView() {
     );
   }
 
-  const webhookUrl = `${window.location.origin.replace('preview--', 'functions--')}/functions/v1/whatsapp-webhook?user_id=${user?.id}`;
-  // Fallback if not on preview
-  const finalWebhookUrl = webhookUrl.includes('lovable.app') 
-    ? `https://grlwciflaotripbumhve.supabase.co/functions/v1/whatsapp-webhook?user_id=${user?.id}`
-    : webhookUrl;
+  const baseFuncUrl = "https://grlwciflaotripbumhve.supabase.co/functions/v1";
+  const finalWebhookUrl = `${baseFuncUrl}/whatsapp-webhook?user_id=${user?.id}`;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
