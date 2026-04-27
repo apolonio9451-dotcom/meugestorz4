@@ -51,30 +51,56 @@ Deno.serve(async (req) => {
 
     const { server_url, instance_token } = whatsApiInstance;
 
-    if (action === "qrcode" || action === "reconnect" || action === "get-or-create") {
-      // Tentar primeiro com /instance/connect, se der 404, tentar sem o prefixo /instance
-      let connectRes = await fetch(`${server_url}/instance/connect`, {
-        method: "GET",
-        headers: { "token": instance_token }
-      });
+    if (action === "qrcode" || action === "reconnect" || action === "get-or-create" || action === "status") {
+      // Tentar verificar status por vários endpoints possíveis na uazapi/whatsapi
+      const checkEndpoints = [
+        `${server_url}/instance/connect`,
+        `${server_url}/connect`,
+        `${server_url}/instance/status`,
+        `${server_url}/status`
+      ];
 
-      if (connectRes.status === 404) {
-        connectRes = await fetch(`${server_url}/connect`, {
-          method: "GET",
-          headers: { "token": instance_token }
-        });
+      let connectData: any = null;
+      let isConnected = false;
+      let qrcode = null;
+      let lastError = "Não foi possível validar o status";
+
+      for (const endpoint of checkEndpoints) {
+        try {
+          console.log(`[whatsapp-manage] Verificando: ${endpoint}`);
+          const res = await fetch(endpoint, {
+            method: "GET",
+            headers: { "token": instance_token }
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            console.log(`[whatsapp-manage] Resposta de ${endpoint}:`, JSON.stringify(data).substring(0, 200));
+            
+            // Lógica de detecção de conexão (abrangente para uazapi)
+            const status = (data.instance?.status || data.status || data.state || "").toUpperCase();
+            if (status === "CONNECTED" || status === "OPEN" || data.connected === true) {
+              isConnected = true;
+            }
+            
+            qrcode = data.qrcode || data.base64 || data.instance?.qrcode;
+            connectData = data;
+            break; // Encontrou um endpoint válido que respondeu
+          } else {
+            const errText = await res.text();
+            lastError = `API Error (${res.status}): ${errText}`;
+          }
+        } catch (e: any) {
+          console.warn(`[whatsapp-manage] Falha ao chamar ${endpoint}:`, e.message);
+        }
       }
 
-      if (!connectRes.ok) {
-        const errorText = await connectRes.text();
-        return new Response(JSON.stringify({ success: false, error: errorText }), {
+      // Se nenhum endpoint funcionou mas temos uma instância, vamos manter o status anterior ou setar erro
+      if (connectData === null && action !== "get-or-create") {
+        return new Response(JSON.stringify({ success: false, error: lastError }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
-
-      const connectData = await connectRes.json();
-      const isConnected = connectData.instance?.status === "connected" || connectData.connected === true || connectData.state === "CONNECTED";
-      const qrcode = connectData.qrcode || connectData.base64 || connectData.instance?.qrcode;
 
       await adminClient
         .from("whats_api")
