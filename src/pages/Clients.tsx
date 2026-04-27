@@ -1677,46 +1677,123 @@ export default function Clients() {
                 key={client.id}
                 className={`rounded-xl border bg-card relative overflow-hidden transition-all duration-300 ${neonColor}`}
               >
-                {/* Header: Name + badge + menu */}
-                <div className="px-3.5 pt-3.5 pb-2 sm:px-4 sm:pt-4">
-                  <div className="flex items-start justify-between gap-2">
+                <div className="p-3 sm:p-4">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Main Info Section */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="font-display font-bold text-foreground text-sm leading-tight truncate">{client.name}</h3>
                         {days !== null && getExpiryBadge(days, isChargePaused)}
-                        {mainFilter === "status" && statusSubFilter === "followup" && (() => {
-                          const ad = getClientActiveDays(client.id);
-                          if (ad === null) return null;
-                          if (ad >= 15) {
-                            return (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-cyan-400/15 text-cyan-400 border border-cyan-400/30">
-                                ✅ Pronto p/ envio
-                              </span>
-                            );
-                          }
-                          const remaining = 15 - ad;
-                          return (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-muted/40 text-muted-foreground border border-border/50">
-                              ⏳ Faltam {remaining}d
-                            </span>
-                          );
-                        })()}
+                        {client.iptv_user && (
+                          <span className="text-[10px] text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded">@{client.iptv_user}</span>
+                        )}
+                        {clientMacKeys.length > 0 && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => setMacModalClientId(client.id)}>
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
-                      {client.iptv_user && (
-                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">@{client.iptv_user}</p>
+                      
+                      {/* Detailed Data Row */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
+                        {client.whatsapp && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <MessageCircle className="w-3 h-3 text-emerald-400" />
+                            {client.whatsapp}
+                          </div>
+                        )}
+                        {client.server && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Globe className="w-3 h-3 text-blue-400" />
+                            <span className="font-medium text-foreground">{client.server}</span>
+                          </div>
+                        )}
+                        {sub && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Package className="w-3 h-3 text-primary" />
+                            <span className="font-semibold text-primary">{sub.plan_name}</span>
+                            <span className="bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 font-bold text-primary">
+                              R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
+                            </span>
+                          </div>
+                        )}
+                        {sub && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="w-3 h-3 text-amber-400" />
+                            <span>Vencimento:</span>
+                            <span className={cn(
+                              "font-bold",
+                              days !== null && days < 0 ? "text-destructive" : "text-foreground"
+                            )}>
+                              {format(parseISO(sub.end_date), "dd/MM/yyyy")}
+                            </span>
+                            {days !== null && (
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                                days < 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-400"
+                              )}>
+                                {getDaysLabel(days)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {client.referred_by && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Handshake className="w-3 h-3 text-violet-400" />
+                            {client.referred_by}
+                          </div>
+                        )}
+                        {client.iptv_password && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Key className="w-3 h-3 text-amber-500" />
+                            <span className="bg-muted/50 px-1.5 py-0.5 rounded font-mono text-[10px]">{client.iptv_password}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Pause status display */}
+                      {(isPausedManually || isPausedByOverdueLimit) && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold",
+                            isPausedManually 
+                              ? "border-warning/30 bg-warning/10 text-warning" 
+                              : "border-border/60 bg-muted/60 text-muted-foreground"
+                          )}>
+                            {isPausedManually ? <VolumeX className="h-3 w-3" /> : <BellOff className="h-3 w-3" />}
+                            {pauseStatusLabel}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* App badges */}
+                      {clientMacKeys.some(mk => mk.app_name) && (
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          {clientMacKeys.map((mk, i) => mk.app_name && (
+                            <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5 gap-1">
+                              <TvMinimal className="w-2.5 h-2.5" /> {mk.app_name}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {clientMacKeys.length > 0 && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setMacModalClientId(client.id)}>
-                          <Eye className="w-[18px] h-[18px]" />
-                        </Button>
-                      )}
+
+                    {/* Desktop Date Bar (Condensed) */}
+                    {days !== null && sub && (
+                      <div className="hidden md:block w-32 shrink-0">
+                        <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isChargePaused))}>
+                          <div className={`h-full rounded-full transition-all ${getBarColor(days, isChargePaused)}`} style={{ width: `${getBarPercent(days)}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions Menu (Always visible) */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-border/50 hover:bg-muted"><MoreVertical className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onClick={() => openDialog(client)}><Pencil className="w-3.5 h-3.5 mr-2" /> Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {client.status === "excluded" ? (
@@ -1730,7 +1807,6 @@ export default function Clients() {
                             </>
                           ) : (
                             <>
-                              <DropdownMenuLabel className="px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Cobrança</DropdownMenuLabel>
                               <DropdownMenuItem
                                 disabled={pauseUpdatingClientId === client.id}
                                 onClick={() => setChargePauseDialog({
@@ -1742,7 +1818,7 @@ export default function Clients() {
                                   chargePauseUntil: client.charge_pause_until ?? null,
                                 })}
                               >
-                                <BellOff className="w-3.5 h-3.5 mr-2" /> {isPausedManually ? "Editar pausa manual" : "Pausar cobrança..."}
+                                <BellOff className="w-3.5 h-3.5 mr-2" /> {isPausedManually ? "Editar pausa" : "Pausar cobrança"}
                               </DropdownMenuItem>
                               {canResumeCharge && (
                                 <DropdownMenuItem
@@ -1753,40 +1829,17 @@ export default function Clients() {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
-                              {mainFilter === "status" && statusSubFilter === "suporte" ? (
-                                <DropdownMenuItem onClick={async () => {
-                                  const { error } = await supabase.from("clients").update({ support_started_at: null } as any).eq("id", client.id);
-                                  if (error) toast.error("Erro ao finalizar suporte");
-                                  else {
-                                    toast.success(`Suporte finalizado para ${client.name}`);
-                                    await logActivity("suporte_finalizado", client.name, client.id, "Check-up de satisfação realizado");
-                                    fetchClients(); fetchActivityLogs();
-                                  }
-                                }}><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> Finalizar Suporte</DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem onClick={async () => {
-                                  const { error } = await supabase.from("clients").update({ support_started_at: new Date().toISOString() } as any).eq("id", client.id);
-                                  if (error) toast.error("Erro ao enviar para suporte");
-                                  else {
-                                    toast.success(`${client.name} enviado para Suporte`);
-                                    await logActivity("suporte", client.name, client.id, "Cliente encaminhado para check-up de suporte");
-                                    fetchClients(); fetchActivityLogs();
-                                  }
-                                }}><HeadsetIcon className="w-3.5 h-3.5 mr-2" /> Enviar para Suporte</DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={async () => {
                                 const sub = subscriptions[client.id];
-                                if (!sub) { toast.error("Cliente sem assinatura para marcar pendente"); return; }
+                                if (!sub) { toast.error("Sem assinatura"); return; }
                                 const newStatus = sub.payment_status === "pending" ? "paid" : "pending";
                                 const { error } = await supabase.from("client_subscriptions").update({ payment_status: newStatus }).eq("id", sub.id);
-                                if (error) { toast.error("Erro ao atualizar status de pagamento"); return; }
-                                toast.success(newStatus === "pending" ? `${client.name} marcado como pendente` : `${client.name} removido dos pendentes`);
-                                await logActivity(newStatus === "pending" ? "pagamento_pendente" : "pagamento_confirmado", client.name, client.id);
-                                fetchSubscriptions(); fetchActivityLogs();
+                                if (error) return;
+                                toast.success(newStatus === "pending" ? "Marcado pendente" : "Confirmado");
+                                fetchSubscriptions();
                               }}>
                                 <DollarSign className="w-3.5 h-3.5 mr-2 text-amber-500" />
-                                {subscriptions[client.id]?.payment_status === "pending" ? "Remover Pendente" : "Pagamento Pendente"}
+                                {subscriptions[client.id]?.payment_status === "pending" ? "Remover Pendente" : "Marcar Pendente"}
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(client.id)}><Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir</DropdownMenuItem>
                             </>
@@ -1797,90 +1850,11 @@ export default function Clients() {
                   </div>
                 </div>
 
-                {/* Details section */}
-                <div className="px-3.5 pb-2 sm:px-4 space-y-2">
-                  {/* Info chips row */}
-                  <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                    {client.server && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
-                        <Globe className="w-2.5 h-2.5" /> {client.server}
-                      </span>
-                    )}
-                    {sub && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary font-semibold border border-primary/15">
-                        <Package className="w-2.5 h-2.5" /> {sub.plan_name} · R$ {Number(sub.amount).toFixed(2).replace(".", ",")}
-                      </span>
-                    )}
-                    {client.referred_by && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground font-medium">
-                        <Handshake className="w-2.5 h-2.5" /> {client.referred_by}
-                      </span>
-                    )}
-                  </div>
-
-                  {isPausedManually && manualPauseInfo && (
-                    <div className="flex justify-center pt-1">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-warning/30 bg-warning/15 px-3 py-1 text-[11px] font-semibold text-warning shadow-[0_0_18px_hsl(var(--warning)/0.18)]">
-                        <VolumeX className="h-3.5 w-3.5" />
-                        {getManualChargePauseLabel(client.charge_pause_until, client.charge_pause_note)}
-                      </span>
-                    </div>
-                  )}
-
-                  {isPausedByOverdueLimit && !isPausedManually && (
-                    <div className="flex justify-center pt-1">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/60 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                        <BellOff className="h-3.5 w-3.5" />
-                        Cobrança automática pausada
-                      </span>
-                    </div>
-                  )}
-
-                  {/* App names */}
-                  {clientMacKeys.some(mk => mk.app_name) && (
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {clientMacKeys.map((mk, i) => mk.app_name && (
-                        <Badge key={mk.id || i} variant="outline" className="text-[9px] h-5 bg-muted/30 text-muted-foreground border-border/40 font-medium px-1.5 gap-1">
-                          <TvMinimal className="w-2.5 h-2.5" /> {mk.app_name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Progress bar + date */}
-                {days !== null && sub && (
-                  <div className="px-3.5 pb-2 sm:px-4">
-                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getBarTrackColor(days, isChargePaused))}>
-                      <div className={`h-full rounded-full transition-all ${getBarColor(days, isChargePaused)}`} style={{ width: `${getBarPercent(days)}%` }} />
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-3">
-                      <span className={cn(
-                        "text-[10px] font-medium",
-                        isPausedManually || isPausedByOverdueLimit
-                          ? "text-muted-foreground"
-                          : days < 0
-                            ? "text-destructive"
-                            : days === 0 || days <= 7
-                              ? "text-warning"
-                              : "text-emerald-400"
-                      )}>
-                        {isPausedManually && manualPauseInfo
-                          ? `Pausa iniciada em: ${format(manualPauseInfo.startDate, "dd/MM/yyyy")}`
-                          : isPausedByOverdueLimit
-                            ? "Cobrança automática pausada"
-                            : getDaysLabel(days)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-medium">
-                        {format(parseISO(sub.end_date), "dd/MM/yyyy")}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
                 {/* Individual 48h countdown for support clients */}
                 {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at && (
-                  <SupportCardCountdown supportStartedAt={(client as any).support_started_at} />
+                  <div className="border-t border-border/30 bg-muted/20 px-4 py-2">
+                    <SupportCardCountdown supportStartedAt={(client as any).support_started_at} />
+                  </div>
                 )}
 
                 {/* Action button */}
