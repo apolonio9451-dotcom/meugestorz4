@@ -464,9 +464,9 @@ export default function WhatsAppView() {
               <Key className="w-5 h-5 text-amber-600 mt-1" />
               <div className="flex-1 space-y-4">
                 <div>
-                  <h4 className="text-sm font-bold text-amber-900">Configuração de Credenciais</h4>
+                  <h4 className="text-sm font-bold text-amber-900">Integração WhatsApi</h4>
                   <p className="text-xs text-amber-800/80">
-                    Insira o servidor e o Token Admin para gerenciar as instâncias.
+                    Insira as credenciais para gerenciar sua instância do WhatsApp.
                   </p>
                 </div>
                 
