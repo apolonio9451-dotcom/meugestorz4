@@ -15,6 +15,8 @@ import {
   Save,
   User,
   Trash2,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
