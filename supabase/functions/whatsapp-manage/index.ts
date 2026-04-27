@@ -264,45 +264,66 @@ Deno.serve(async (req) => {
 
     // ---------- CONNECT (returns QR base64) ----------
     async function connectInstance(token: string): Promise<{ qrcode?: string; connected?: boolean }> {
-      console.log(`[whatsapp-manage] Connecting instance to get QR`);
+      console.log(`[whatsapp-manage] Connecting instance to get QR using token: ${token.substring(0, 5)}...`);
       
       // Ensure webhook is set before connecting
       await registerWebhook(token);
 
-      const res = await fetch(`${baseUrl}/instance/connect`, {
-        method: "GET",
-        headers: { 
-          "token": token,
-          "Authorization": `Bearer ${token}`,
-          "apikey": token,
-          "admintoken": token,
-          "Authorization-Header": token
-        },
-      });
-      const text = await res.text();
-      let data: any = {};
-      try { data = JSON.parse(text); } catch {}
-      console.log(`[whatsapp-manage] /instance/connect -> ${res.status}: ${text.substring(0, 500)}`);
-      
-      if (!res.ok) {
-        // Retry logic if instance was not found or something happened
-        if (res.status === 404 || text.toLowerCase().includes("not found")) {
-           console.log("[whatsapp-manage] Instance not found on connect, re-initializing...");
-           const { instanceToken: newToken } = await initInstance();
-           return connectInstance(newToken);
+      const endpoints = ["/instance/connect", "/instance/qrcode", "/instance/qr", "/instance/connect/base64"];
+      let lastError = "";
+
+      for (const endpoint of endpoints) {
+        try {
+          const url = `${baseUrl}${endpoint}`;
+          console.log(`[whatsapp-manage] Trying ${url}`);
+          
+          const res = await fetch(url, {
+            method: "GET",
+            headers: { 
+              "token": token,
+              "apikey": token,
+              "Authorization": `Bearer ${token}`,
+              "admintoken": token,
+              "Authorization-Header": token,
+              "X-API-Key": token
+            },
+          });
+
+          const text = await res.text();
+          let data: any = {};
+          try { data = JSON.parse(text); } catch {}
+          
+          console.log(`[whatsapp-manage] ${endpoint} -> ${res.status}: ${text.substring(0, 100)}`);
+
+          if (res.ok) {
+            const inst = data.instance || data;
+            const qrcode = inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || data.base64 || data.qrCode || (typeof data === "string" && data.startsWith("data:image") ? data : "");
+            
+            if (qrcode) {
+              console.log(`[whatsapp-manage] QR Code found! (length: ${qrcode.length})`);
+              return {
+                qrcode,
+                connected: inst.status === "connected" || inst.connected === true,
+              };
+            }
+          }
+          
+          if (res.status !== 404) {
+            lastError = data.message || data.error || text || `HTTP ${res.status}`;
+          }
+        } catch (e: any) {
+          console.error(`[whatsapp-manage] Error connecting to ${endpoint}:`, e.message);
         }
-        throw new Error(`Falha ao conectar: ${data.message || data.error || text}`);
       }
 
-      const inst = data.instance || data;
-      // Detailed logging for QR detection
-      const qrcode = inst.qrcode || inst.qr || data.qrcode || inst.data?.qrcode || data.base64 || "";
-      console.log(`[whatsapp-manage] QR Code detected (first 20 chars): ${qrcode.substring(0, 20)}`);
+      // If all endpoints failed and we haven't found a QR code
+      if (lastError.toLowerCase().includes("not found") || lastError.toLowerCase().includes("inexistente")) {
+         console.log("[whatsapp-manage] Instance not found on connect, re-initializing...");
+         const { instanceToken: newToken } = await initInstance();
+         return connectInstance(newToken);
+      }
       
-      return {
-        qrcode,
-        connected: inst.status === "connected" || inst.connected === true,
-      };
+      throw new Error(`Falha ao obter QR Code: ${lastError || "Resposta desconhecida do servidor"}`);
     }
 
     // ---------- STATUS ----------
