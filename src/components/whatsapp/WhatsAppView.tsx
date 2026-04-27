@@ -163,7 +163,7 @@ export default function WhatsAppView() {
                 Status do WhatsApp
               </CardTitle>
               <CardDescription>
-                Configure sua instância para integrar com o sistema.
+                Verifique se a sua instância externa está ativa no sistema.
               </CardDescription>
             </div>
             {instance && (
