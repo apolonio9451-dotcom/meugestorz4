@@ -219,16 +219,14 @@ export default function WhatsAppView() {
 
           {instance && (
             <div className="pt-6 border-t space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between bg-muted/20 p-4 rounded-lg border">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback><User /></AvatarFallback>
-                  </Avatar>
+                  <div className={`p-2 rounded-full ${instance.is_connected ? "bg-emerald-500/10" : "bg-destructive/10"}`}>
+                    <Smartphone className={`w-5 h-5 ${instance.is_connected ? "text-emerald-500" : "text-destructive"}`} />
+                  </div>
                   <div>
-                    <p className="font-medium">{instance.name}</p>
-                    <Badge variant={instance.is_connected ? "default" : "secondary"}>
-                      {instance.is_connected ? "Status: Conectado" : "Status: Desconectado"}
-                    </Badge>
+                    <p className="text-sm font-medium">Instância configurada</p>
+                    <p className="text-xs text-muted-foreground font-mono">{instance.instance_token.substring(0, 8)}...</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
