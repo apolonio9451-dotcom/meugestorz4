@@ -33,7 +33,7 @@ const SportsSettingsSection = ({ companyId }: SportsSettingsSectionProps) => {
 
       if (error) throw error;
       if (data) {
-        setApiKey(data.football_api_key || "");
+        setApiKey((data as any).football_api_key || "");
       }
     } catch (error: any) {
       console.error("Error fetching sports settings:", error);
@@ -51,7 +51,7 @@ const SportsSettingsSection = ({ companyId }: SportsSettingsSectionProps) => {
         .update({ 
           football_api_key: apiKey,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq("company_id", companyId);
 
       if (error) throw error;

@@ -194,7 +194,7 @@ const sleep = (ms: number, signal?: AbortSignal) =>
   });
 
 export default function Campaigns() {
-  const { effectiveCompanyId } = useAuth();
+  const { effectiveCompanyId, user } = useAuth();
   const [presets, setPresets] = useState<Record<string, Preset>>({});
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<CampaignDate | null>(null);
@@ -280,11 +280,11 @@ export default function Campaigns() {
 
   const loadEngineSettings = async () => {
     if (!effectiveCompanyId) return;
-    const { data } = await supabase
+    const { data } = await (supabase
       .from("api_settings")
       .select("campaigns_engine_enabled, campaigns_admin_test_phone")
       .eq("company_id", effectiveCompanyId)
-      .maybeSingle();
+      .maybeSingle() as any);
     if (data) {
       setEngineEnabled(!!(data as any).campaigns_engine_enabled);
       setAdminTestPhone((data as any).campaigns_admin_test_phone || "");
@@ -336,10 +336,10 @@ export default function Campaigns() {
     if (!effectiveCompanyId) return;
     setSavingEngine(true);
     setEngineEnabled(next);
-    const { error } = await supabase
+    const { error } = await (supabase
       .from("api_settings")
       .update({ campaigns_engine_enabled: next } as any)
-      .eq("company_id", effectiveCompanyId);
+      .eq("company_id", effectiveCompanyId) as any);
     setSavingEngine(false);
     if (error) {
       toast.error("Erro ao alterar mecanismo");
@@ -433,21 +433,19 @@ export default function Campaigns() {
     setSaving(false);
   };
 
-  // Get API config + perform a single send via uazapi
   const getApiConfig = async () => {
-    if (!effectiveCompanyId) return null;
-    const { data: api } = await supabase
-      .from("api_settings")
-      .select("api_url, api_token, instance_name, uazapi_base_url, campaigns_engine_enabled")
-      .eq("company_id", effectiveCompanyId)
-      .maybeSingle();
-    const baseUrl = api?.uazapi_base_url || api?.api_url;
-    const token = api?.api_token;
-    if (!baseUrl || !token) {
-      toast.error("Configure a API do WhatsApp em Configurações > Instância");
+    if (!user) return null;
+    const { data: results } = await (supabase
+      .from("whats_api" as any)
+      .select("instance_token, server_url")
+      .eq("user_id", user.id) as any);
+    
+    if (!results || results.length === 0) {
+      toast.error("Configure o WhatsApp em Configurações > WhatsApp");
       return null;
     }
-    return { baseUrl, token, engineOn: !!(api as any)?.campaigns_engine_enabled };
+    const api = results[0];
+    return { baseUrl: api.server_url, token: api.instance_token, engineOn: engineEnabled };
   };
 
   const sendOne = async (
@@ -603,11 +601,11 @@ export default function Campaigns() {
         if (signal.aborted) break;
 
         // Re-check master switch every iteration (kill switch)
-        const { data: liveApi } = await supabase
+        const { data: liveApi } = await (supabase
           .from("api_settings")
           .select("campaigns_engine_enabled")
           .eq("company_id", effectiveCompanyId)
-          .maybeSingle();
+          .maybeSingle() as any);
         if (!(liveApi as any)?.campaigns_engine_enabled) {
           toast.error("Mecanismo desligado durante o envio. Parando...");
           break;
