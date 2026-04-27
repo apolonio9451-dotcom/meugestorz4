@@ -76,19 +76,17 @@ export default function WhatsAppView() {
 
     setActionLoading("save");
     try {
-      const payload = {
-        user_id: user.id,
-        name: "Minha Instância", // Nome padrão interno
-        instance_token: instanceToken,
-        server_url: SERVER_URL,
-      };
+      const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { 
+          action: "save-config",
+          instance_token: instanceToken,
+          name: "Minha Instância"
+        }
+      });
 
-      const { error } = instance
-        ? await supabase.from("whats_api" as any).update(payload).eq("id", instance.id)
-        : await supabase.from("whats_api" as any).insert(payload);
-
-      if (error) throw error;
-      toast.success("Configurações salvas!");
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      
+      toast.success("Configurações salvas e Webhook injetado!");
       loadData();
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar");
