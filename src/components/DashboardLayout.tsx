@@ -40,12 +40,10 @@ import {
   Settings,
   KeyRound,
   ShieldCheck,
-  
   Clock,
   MessageCircle,
   FlaskConical,
   Bot,
-  
   Zap,
   Lock,
   AlertTriangle,
@@ -53,6 +51,7 @@ import {
   Image as ImageIcon,
   Trophy,
   Share2,
+  Database,
 } from "lucide-react";
 
 
