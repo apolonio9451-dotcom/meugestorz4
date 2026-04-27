@@ -76,22 +76,40 @@ Deno.serve(async (req) => {
     const { server_url, instance_token } = whatsApiInstance;
 
     // 3. Lógica de ações (QR Code, Status, etc.)
-    if (action === "qrcode" || action === "reconnect") {
-      console.log(`[whatsapp-manage] Obtendo QR Code para ${server_url}`);
+    if (action === "qrcode" || action === "reconnect" || action === "get-or-create") {
+      console.log(`[whatsapp-manage] Verificando status/QR Code para ${server_url}`);
       
-      // Tentar conectar para obter QR Code
       const connectRes = await fetch(`${server_url}/instance/connect`, {
         method: "GET",
         headers: { "token": instance_token }
       });
 
       const connectData = await connectRes.json();
+      const isConnected = connectData.instance?.status === "connected" || connectData.connected === true;
       const qrcode = connectData.instance?.qrcode || connectData.qrcode || connectData.base64;
+
+      // Atualizar status no banco
+      await adminClient
+        .from("whats_api")
+        .update({ 
+          is_connected: isConnected,
+          status: isConnected ? "connected" : "disconnected"
+        })
+        .eq("id", whatsApiInstance.id);
+
+      if (action === "get-or-create") {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          instance: { ...whatsApiInstance, is_connected: isConnected, status: isConnected ? "connected" : "disconnected" } 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
 
       return new Response(JSON.stringify({
         success: true,
         qrcode: qrcode,
-        connected: connectData.instance?.status === "connected" || connectData.connected === true,
+        connected: isConnected,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -101,6 +119,16 @@ Deno.serve(async (req) => {
         headers: { "token": instance_token }
       });
       const statusData = await statusRes.json();
+      const isConnected = statusData.instance?.status === "connected" || statusData.state === "CONNECTED";
+      
+      await adminClient
+        .from("whats_api")
+        .update({ 
+          is_connected: isConnected,
+          status: isConnected ? "connected" : "disconnected"
+        })
+        .eq("id", whatsApiInstance.id);
+
       return new Response(JSON.stringify({ success: true, status: statusData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
