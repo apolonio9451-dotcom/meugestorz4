@@ -254,7 +254,13 @@ Deno.serve(async (req) => {
       try {
         await fetch(`${baseUrl}/webhook`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "token": token },
+          headers: { 
+            "Content-Type": "application/json", 
+            "token": token,
+            "apikey": token,
+            "admintoken": token,
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify(webhookPayload),
         });
       } catch (e: any) {
