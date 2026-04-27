@@ -475,17 +475,17 @@ export default function WhatsAppView() {
                     <Label htmlFor="api_url" className="text-xs font-semibold text-amber-900">URL do Servidor</Label>
                     <Input 
                       id="api_url"
-                      placeholder="https://ipazua.uazapi.com" 
+                      placeholder="https://sua-url-whatsapi.com" 
                       value={apiUrl}
                       onChange={(e) => setApiUrl(e.target.value)}
                       className="bg-white/50 border-amber-200 focus:border-amber-500 h-9 text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="api_token" className="text-xs font-semibold text-amber-900">Token Admin</Label>
+                    <Label htmlFor="api_token" className="text-xs font-semibold text-amber-900">Token da API</Label>
                     <Input 
                       id="api_token"
-                      placeholder="Seu Admin Token aqui" 
+                      placeholder="Seu Token completo aqui" 
                       type="password"
                       value={apiToken}
                       onChange={(e) => setApiToken(e.target.value)}
