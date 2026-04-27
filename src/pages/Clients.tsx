@@ -1859,7 +1859,7 @@ export default function Clients() {
 
                 {/* Action button */}
                 {client.whatsapp && (
-                  <div className="border-t border-border/30">
+                  <div className="border-t border-border/30 bg-muted/10">
                     {mainFilter === "status" && statusSubFilter === "suporte" && (client as any).support_started_at ? (
                       <div className="flex">
                         <a
