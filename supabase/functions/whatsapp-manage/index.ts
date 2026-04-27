@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
     console.log(`[whatsapp-manage] Resolved Company ID: ${resolvedCompanyId}`);
     console.log(`[whatsapp-manage] User ID: ${user.id}`);
     const desiredInstanceName = apiSettings?.instance_name || `instancia-${user.id.substring(0, 8)}`;
-    const systemName = "Uazapi"; // Definindo o nome do sistema conforme a documentação
+    const systemName = "Uazapi";
+    const instanceName = desiredInstanceName; // Standardizing name variable
 
     // Se não houver token admin, tratamos o token fornecido como o próprio instance_token
     const skipInit = adminTokenCandidates.length === 0;
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new", "/instance/instance/create"];
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new", "/instance/instance/create", "/admin/instance/create"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
@@ -153,10 +154,12 @@ Deno.serve(async (req) => {
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
               { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
               { name: "Header Authorization", method: "POST", headers: { "Content-Type": "application/json", "Authorization": adminToken } },
-              { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
-              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
+              { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
+              { name: "Query Param apikey", method: "POST", headers: { "Content-Type": "application/json" }, query: `?apikey=${adminToken}` },
+              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
               { name: "GET init with admintoken", method: "GET", headers: { "admintoken": adminToken } },
+              { name: "GET init with apikey", method: "GET", headers: { "apikey": adminToken } },
               { name: "GET init with token", method: "GET", headers: { "token": adminToken } }
             ];
 
@@ -173,14 +176,19 @@ Deno.serve(async (req) => {
                 if (config.method !== "GET") {
                   fetchOptions.body = JSON.stringify({ 
                     token: adminToken,
+                    apikey: adminToken,
+                    admintoken: adminToken,
                     name: finalInstanceName, 
+                    instanceName: finalInstanceName,
+                    instance_name: finalInstanceName,
                     deviceName: "Uazapi",
                     systemName: "Uazapi",
                     system_name: "Uazapi",
                     system: "Uazapi",
                     profileName: "Uazapi",
                     browser: "chrome",
-                    fingerprintProfile: "chrome"
+                    fingerprintProfile: "chrome",
+                    qrcode: true
                   });
                 }
 
