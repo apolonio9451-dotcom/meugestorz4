@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,14 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Smartphone,
-  WifiOff,
   RefreshCw,
   Loader2,
   QrCode,
-  CheckCircle2,
   Save,
   User,
   Trash2,
 } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const SERVER_URL = "https://ipazua.uazapi.com";
 
@@ -40,21 +38,23 @@ export default function WhatsAppView() {
   
   const [instanceName, setInstanceName] = useState("");
   const [instanceToken, setInstanceToken] = useState("");
-  const [profilePic, setProfilePic] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+    // Bypass TS error for whats_api table
+    const { data: results } = await (supabase
       .from("whats_api" as any)
       .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id) as any);
 
-    if (data) {
+    if (results && results.length > 0) {
+      const data = results[0];
       setInstance(data as WhatsAppInstance);
-      setInstanceName(data.name);
-      setInstanceToken(data.instance_token);
+      setInstanceName(data.name || "");
+      setInstanceToken(data.instance_token || "");
+    } else {
+      setInstance(null);
     }
     setLoading(false);
   }, [user]);
