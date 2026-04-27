@@ -151,7 +151,7 @@ function resolveApiToken(dbToken: string | null | undefined): string {
   return "";
 }
 
-async function getCompanyInstanceToken(supabase: any, companyId: string): Promise<string> {
+async function getCompanyInstanceToken(supabase: any, companyId: string): Promise<{ token: string; serverUrl: string }> {
   const { data: memberships } = await supabase
     .from("company_memberships")
     .select("user_id")
@@ -160,29 +160,36 @@ async function getCompanyInstanceToken(supabase: any, companyId: string): Promis
     .limit(20);
 
   const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
-  if (!userIds.length) return "";
+  if (!userIds.length) return { token: "", serverUrl: "" };
 
   const { data: connectedInstance } = await supabase
-    .from("whatsapp_instances")
-    .select("instance_token")
+    .from("whats_api")
+    .select("instance_token, server_url")
     .in("user_id", userIds)
     .eq("is_connected", true)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const connectedToken = String((connectedInstance as any)?.instance_token || "").trim();
-  if (connectedToken) return connectedToken;
+  if (connectedInstance) {
+    return { 
+      token: String(connectedInstance.instance_token || "").trim(),
+      serverUrl: String(connectedInstance.server_url || "").trim()
+    };
+  }
 
   const { data: latestInstance } = await supabase
-    .from("whatsapp_instances")
-    .select("instance_token, status, updated_at")
+    .from("whats_api")
+    .select("instance_token, server_url")
     .in("user_id", userIds)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  return String((latestInstance as any)?.instance_token || "").trim();
+  return {
+    token: String(latestInstance?.instance_token || "").trim(),
+    serverUrl: String(latestInstance?.server_url || "").trim()
+  };
 }
 
 const AUTH_TOKEN_INVALID_MESSAGE = SESSION_EXPIRED_MESSAGE;
