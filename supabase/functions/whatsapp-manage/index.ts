@@ -128,6 +128,18 @@ Deno.serve(async (req) => {
         headers: { "token": instance_token }
       });
 
+      if (!connectRes.ok) {
+        const errorText = await connectRes.text();
+        console.error(`[whatsapp-manage] Erro ao conectar instância: ${errorText}`);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: `Erro na API externa: ${errorText}` 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200 // Return 200 so the frontend can handle the error message in the body
+        });
+      }
+
       const connectData = await connectRes.json();
       const isConnected = connectData.instance?.status === "connected" || connectData.connected === true;
       const qrcode = connectData.instance?.qrcode || connectData.qrcode || connectData.base64;
