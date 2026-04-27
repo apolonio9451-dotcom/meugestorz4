@@ -88,7 +88,7 @@ export default function AutoSendCategoryToggles({ companyId, planType, onUpgrade
 
       const map: Record<string, boolean> = {};
       autoSendCategories.forEach((c) => {
-        const found = catResult.data?.find((d: any) => d.category === c.key);
+        const found = (catResult.data || []).find((d: any) => d.category === c.key);
         map[c.key] = found ? found.is_active : true;
       });
       setActiveCategories(map);
