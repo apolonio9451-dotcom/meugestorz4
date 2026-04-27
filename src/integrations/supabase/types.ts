@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_settings: {
+        Row: {
+          api_token: string | null
+          api_url: string | null
+          auto_send_hour: number | null
+          auto_send_minute: number | null
+          campaigns_admin_test_phone: string | null
+          campaigns_engine_enabled: boolean | null
+          company_id: string
+          created_at: string
+          football_api_key: string | null
+          id: string
+          instance_name: string | null
+          overdue_charge_pause_days: number | null
+          overdue_charge_pause_enabled: boolean | null
+          send_interval_seconds: number | null
+          uazapi_base_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_token?: string | null
+          api_url?: string | null
+          auto_send_hour?: number | null
+          auto_send_minute?: number | null
+          campaigns_admin_test_phone?: string | null
+          campaigns_engine_enabled?: boolean | null
+          company_id: string
+          created_at?: string
+          football_api_key?: string | null
+          id?: string
+          instance_name?: string | null
+          overdue_charge_pause_days?: number | null
+          overdue_charge_pause_enabled?: boolean | null
+          send_interval_seconds?: number | null
+          uazapi_base_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_token?: string | null
+          api_url?: string | null
+          auto_send_hour?: number | null
+          auto_send_minute?: number | null
+          campaigns_admin_test_phone?: string | null
+          campaigns_engine_enabled?: boolean | null
+          company_id?: string
+          created_at?: string
+          football_api_key?: string | null
+          id?: string
+          instance_name?: string | null
+          overdue_charge_pause_days?: number | null
+          overdue_charge_pause_enabled?: boolean | null
+          send_interval_seconds?: number | null
+          uazapi_base_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       auto_send_category_settings: {
         Row: {
           category: string
