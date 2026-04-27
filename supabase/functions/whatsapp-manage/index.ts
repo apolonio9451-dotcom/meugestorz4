@@ -38,14 +38,25 @@ Deno.serve(async (req) => {
     // 2. Se não existir, criar usando o endpoint externo
     if (!whatsApiInstance) {
       console.log(`[whatsapp-manage] Criando nova instância para usuário ${user.id}`);
+      const instanceName = `instancia-${user.id.substring(0, 8)}`;
+      const deviceName = "Meu Gestor";
+
+      const createPayload = {
+        token: DEFAULT_API_TOKEN,
+        name: instanceName,
+        deviceName: deviceName,
+        systemName: deviceName,
+        system_name: deviceName,
+        system: deviceName,
+        profileName: deviceName,
+        browser: "chrome",
+        fingerprintProfile: "chrome",
+      };
+
       const response = await fetch(EXTERNAL_CREATE_INSTANCE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: DEFAULT_API_TOKEN,
-          name: `instancia-${user.id.substring(0, 8)}`,
-          deviceName: "Meu Gestor"
-        })
+        body: JSON.stringify(createPayload)
       });
 
       if (!response.ok) {
@@ -54,17 +65,50 @@ Deno.serve(async (req) => {
       }
 
       const result = await response.json();
-      // Retorno esperado do WhatsApi: { server_url, "Instance Token", token, instance: { name, device_name } }
+      const serverUrl = result.server_url;
+      const instanceToken = result["Instance Token"];
+      
+      // 2.1 Registrar Webhook automaticamente
+      const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?user_id=${user.id}`;
+      console.log(`[whatsapp-manage] Registrando webhook: ${webhookUrl}`);
+      
+      try {
+        await fetch(`${serverUrl}/webhook`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "token": instanceToken,
+          },
+          body: JSON.stringify({
+            url: webhookUrl,
+            enabled: true,
+            active: true,
+            byApi: true,
+            addUrlEvents: true,
+            addUrlTypesMessages: true,
+            excludeMessages: ["wasSentByApi", "isGroupYes"],
+            events: [
+              "connection", "messages", "messages_update", "presence",
+              "call", "contacts", "groups", "labels", "chats",
+              "chat_labels", "blocks", "leads", "history", "sender",
+            ],
+          }),
+        });
+      } catch (e: any) {
+        console.warn(`[whatsapp-manage] Falha ao registrar webhook:`, e.message);
+      }
       
       const { data: newInstance, error: insertError } = await adminClient
         .from("whats_api")
         .insert({
           user_id: user.id,
-          name: result.instance?.name || `instancia-${user.id.substring(0, 8)}`,
-          device_name: result.instance?.device_name || "Meu Gestor",
-          server_url: result.server_url,
-          instance_token: result["Instance Token"],
-          api_token: DEFAULT_API_TOKEN
+          name: result.instance?.name || instanceName,
+          device_name: result.instance?.device_name || deviceName,
+          server_url: serverUrl,
+          instance_token: instanceToken,
+          api_token: DEFAULT_API_TOKEN,
+          status: 'created',
+          is_connected: false
         })
         .select()
         .single();
@@ -130,6 +174,27 @@ Deno.serve(async (req) => {
         .eq("id", whatsApiInstance.id);
 
       return new Response(JSON.stringify({ success: true, status: statusData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    if (action === "delete") {
+      console.log(`[whatsapp-manage] Deletando instância para usuário ${user.id}`);
+      try {
+        await fetch(`${server_url}/instance`, {
+          method: "DELETE",
+          headers: { "token": instance_token },
+        });
+      } catch (e: any) {
+        console.error("[whatsapp-manage] Falha ao deletar na API externa:", e.message);
+      }
+
+      await adminClient
+        .from("whats_api")
+        .delete()
+        .eq("user_id", user.id);
+
+      return new Response(JSON.stringify({ success: true, deleted: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }

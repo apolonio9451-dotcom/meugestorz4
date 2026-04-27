@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
 
     if (isConnected) {
       await adminClient
-        .from("whatsapp_instances")
+        .from("whats_api")
         .update({
           status: "connected",
           is_connected: true,
@@ -53,7 +53,7 @@ Deno.serve(async (req: Request) => {
       console.log(`[whatsapp-webhook] User ${userId} → connected`);
     } else if (isDisconnected) {
       await adminClient
-        .from("whatsapp_instances")
+        .from("whats_api")
         .update({ status: "disconnected", is_connected: false })
         .eq("user_id", userId);
       console.log(`[whatsapp-webhook] User ${userId} → disconnected`);
