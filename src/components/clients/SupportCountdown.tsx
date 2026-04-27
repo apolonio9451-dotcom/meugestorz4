@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Zap, Timer } from "lucide-react";
 
@@ -15,28 +15,28 @@ export default function SupportCountdown({ companyId }: Props) {
     if (!companyId) return;
 
     const fetchData = async () => {
-      const [apiResult, clientsResult] = await Promise.all([
-        supabase
-          .from("whats_api" as any)
-          .select("instance_token")
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("clients")
-          .select("support_started_at")
-          .eq("company_id", companyId)
-          .not("support_started_at", "is", null),
-      ]);
+      // Use any to bypass TS error after dropping table
+      const { data: apiData } = await (supabase
+        .from("whats_api" as any)
+        .select("instance_token")
+        .limit(1) as any);
+      
+      const { data: clientsData } = await supabase
+        .from("clients")
+        .select("support_started_at")
+        .eq("company_id", companyId)
+        .not("support_started_at", "is", null);
 
-      setApiConfigured(!!apiResult.data?.instance_token);
+      const api = apiData && apiData.length > 0 ? apiData[0] : null;
+      setApiConfigured(!!api?.instance_token);
 
       // Find the nearest 48h deadline among support clients
-      if (clientsResult.data && clientsResult.data.length > 0) {
+      if (clientsData && clientsData.length > 0) {
         const now = Date.now();
         const HOURS_48 = 48 * 60 * 60 * 1000;
         let nearest: Date | null = null;
 
-        for (const c of clientsResult.data) {
+        for (const c of clientsData) {
           const started = new Date((c as any).support_started_at).getTime();
           const deadline = new Date(started + HOURS_48);
           // Only consider future deadlines, or pick the most recent past one
@@ -47,7 +47,7 @@ export default function SupportCountdown({ companyId }: Props) {
 
         // Find the next upcoming deadline
         let nextUpcoming: Date | null = null;
-        for (const c of clientsResult.data) {
+        for (const c of clientsData) {
           const started = new Date((c as any).support_started_at).getTime();
           const deadline = new Date(started + HOURS_48);
           if (deadline.getTime() > now) {
