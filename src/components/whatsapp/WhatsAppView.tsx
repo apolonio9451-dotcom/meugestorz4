@@ -399,9 +399,10 @@ export default function WhatsAppView() {
 
   useEffect(() => {
     // Apenas carrega se não houver instância ou se estiver tentando sincronizar pela primeira vez
-    if (!instance) {
-      loadInstance();
-    }
+    // Auto load removed as requested - user now clicks "Create Instance"
+    // if (!instance) {
+    //   loadInstance();
+    // }
   }, [loadInstance]);
 
   useEffect(() => {
@@ -508,21 +509,47 @@ export default function WhatsAppView() {
 
           {!instance ? (
             <div className="text-center py-8 space-y-4">
-              <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
-              <p className="text-muted-foreground">
-                Ocorreu um erro ao carregar sua instância.
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => loadInstance({ clearCache: true, forceNew: true })} className="w-full">
-                  Tentar Novamente
-                </Button>
-                <Button variant="outline" onClick={handleReconnect} className="w-full gap-2">
-                  <RefreshCw className="w-4 h-4" />
-                  Reconectar Instância
-                </Button>
+              <Smartphone className="w-12 h-12 text-muted-foreground mx-auto" />
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  Você ainda não possui uma instância de WhatsApp criada.
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  Clique no botão abaixo para gerar uma nova instância e começar a usar.
+                </p>
               </div>
+              <Button 
+                onClick={() => loadInstance({ clearCache: true, forceNew: true })} 
+                className="w-full gap-2"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                Criar Instância
+              </Button>
             </div>
-          ) : instance.is_connected ? (
+          ) : !instance.is_connected && !qrCode ? (
+            <div className="text-center py-8 space-y-4">
+              <WifiOff className="w-12 h-12 text-amber-500 mx-auto" />
+              <div className="space-y-2">
+                <p className="font-medium">Instância pronta, mas desconectada</p>
+                <p className="text-sm text-muted-foreground">
+                  Sua instância "{instance.instance_name}" foi criada com sucesso.
+                </p>
+              </div>
+              <Button 
+                onClick={fetchQrCode} 
+                className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "qrcode" ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                Conectar na Instância (Gerar QR Code)
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Existing QR Code or Connected view */}
+            </div>
+          )}
             <div className="space-y-6">
               {apiValidationError && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-center">
