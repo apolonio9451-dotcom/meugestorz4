@@ -294,6 +294,7 @@ export default function WhatsAppView() {
         // Trust DB status directly — no validate-connection override
         if (data.instance.is_connected) {
           fetchProfilePicture();
+        }
         // Don't auto-fetch QR here as we want the user to click the button
         // await fetchQrCode();
       }
