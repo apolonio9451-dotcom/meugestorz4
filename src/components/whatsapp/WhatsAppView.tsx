@@ -12,11 +12,13 @@ import {
   RefreshCw,
   Loader2,
   QrCode,
+  CheckCircle2,
   Save,
   User,
   Trash2,
   Copy,
   ExternalLink,
+  WifiOff,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -100,21 +102,15 @@ export default function WhatsAppView() {
     setActionLoading("status");
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "qrcode" }
+        body: { action: "status" } // Alterado para "status" conforme pedido para apenas verificar
       });
 
       if (error || data?.error) throw new Error(data?.error || error?.message);
 
       if (data.connected) {
         toast.success("WhatsApp Conectado!");
-        setQrCode(null);
-      } else if (data.qrcode) {
-        // A API retorna base64 puro ou com o prefixo data:image/png;base64,
-        let qrcodeBase64 = data.qrcode;
-        if (!qrcodeBase64.startsWith("data:image")) {
-          qrcodeBase64 = `data:image/png;base64,${qrcodeBase64}`;
-        }
-        setQrCode(qrcodeBase64);
+      } else {
+        toast.error("WhatsApp Desconectado.");
       }
       loadData();
     } catch (err: any) {
@@ -169,7 +165,7 @@ export default function WhatsAppView() {
                 Status do WhatsApp
               </CardTitle>
               <CardDescription>
-                Configure sua instância para integrar com o sistema.
+                Verifique se a sua instância externa está ativa no sistema.
               </CardDescription>
             </div>
             {instance && (
@@ -240,22 +236,21 @@ export default function WhatsAppView() {
               </div>
 
               {!instance.is_connected && (
-                <div className="flex flex-col items-center gap-4 bg-muted/30 p-6 rounded-lg">
-                  {qrCode ? (
-                    <>
-                      <img src={qrCode} alt="QR Code" className="w-48 h-48 bg-white p-2 rounded shadow-sm" />
-                      <p className="text-xs text-muted-foreground animate-pulse text-center">
-                        Escaneie com seu WhatsApp para conectar
-                      </p>
-                    </>
-                  ) : (
-                    <div className="text-center">
-                      <Button onClick={checkStatus} className="gap-2">
-                        <QrCode className="w-4 h-4" />
-                        Validar Conexão / Gerar QR Code
-                      </Button>
-                    </div>
-                  )}
+                <div className="flex flex-col items-center gap-4 bg-destructive/5 p-6 rounded-lg border border-destructive/10 text-center">
+                  <div className="p-3 bg-destructive/10 rounded-full">
+                    <WifiOff className="w-6 h-6 text-destructive" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-destructive">WhatsApp Desconectado</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sua instância externa não está enviando sinal. <br/>
+                      Conecte-a no seu painel externo para ativar as automações.
+                    </p>
+                  </div>
+                  <Button onClick={checkStatus} variant="outline" className="gap-2 mt-2">
+                    <RefreshCw className="w-4 h-4" />
+                    Verificar Novamente
+                  </Button>
                 </div>
               )}
             </div>
