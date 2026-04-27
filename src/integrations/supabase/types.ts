@@ -2385,6 +2385,48 @@ export type Database = {
           },
         ]
       }
+      whats_api: {
+        Row: {
+          api_token: string
+          created_at: string | null
+          device_name: string | null
+          id: string
+          instance_token: string
+          is_connected: boolean | null
+          name: string
+          server_url: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          api_token: string
+          created_at?: string | null
+          device_name?: string | null
+          id?: string
+          instance_token: string
+          is_connected?: boolean | null
+          name: string
+          server_url: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          created_at?: string | null
+          device_name?: string | null
+          id?: string
+          instance_token?: string
+          is_connected?: boolean | null
+          name?: string
+          server_url?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_instances: {
         Row: {
           created_at: string

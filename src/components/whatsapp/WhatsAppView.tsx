@@ -357,13 +357,13 @@ export default function WhatsAppView() {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel(`whatsapp-instance-${user.id}`)
+      .channel(`whats-api-instance-${user.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'whatsapp_instances',
+          table: 'whats_api',
           filter: `user_id=eq.${user.id}`,
         },
         (payload: any) => {
@@ -371,10 +371,19 @@ export default function WhatsAppView() {
           if (row) {
             setInstance(prev => prev ? {
               ...prev,
-              is_connected: row.is_connected === true,
-              status: row.status || prev.status,
-            } : prev);
-            if (row.is_connected && row.status === 'connected') {
+              id: row.id,
+              instance_name: row.name,
+              device_name: row.device_name || '',
+              is_connected: row.is_connected === true || row.status === 'connected',
+              status: row.status || 'disconnected',
+            } : {
+              id: row.id,
+              instance_name: row.name,
+              device_name: row.device_name || '',
+              is_connected: row.is_connected === true || row.status === 'connected',
+              status: row.status || 'disconnected',
+            });
+            if (row.is_connected || row.status === 'connected') {
               setPolling(false);
               setQrCode(null);
               fetchProfilePicture();
