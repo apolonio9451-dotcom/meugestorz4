@@ -263,8 +263,9 @@ async function fetchLatestDispatchConfig(
   const row = (data || {}) as any;
   const dbToken = String(row.api_token || "").trim();
 
-  // Get instance_token from whatsapp_instances (the actual uazapi token)
-  const instanceToken = await getCompanyInstanceToken(supabase, companyId);
+  // Get instance_token from whats_api
+  const instance = await getCompanyInstanceToken(supabase, companyId);
+  const instanceToken = instance.token;
 
   // Priority: instance_token (uazapi native) > api_settings.api_token > env fallback
   let resolvedToken = "";
@@ -284,25 +285,8 @@ async function fetchLatestDispatchConfig(
 
   // Also resolve API URL from instance server_url if not set in api_settings
   let resolvedUrl = resolveApiUrl(row.api_url);
-  if (!resolvedUrl && instanceToken.length > 5) {
-    // Try to get server_url from instance
-    const { data: memberships } = await supabase
-      .from("company_memberships")
-      .select("user_id")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: true })
-      .limit(20);
-    const userIds = (memberships || []).map((m: any) => m.user_id).filter(Boolean);
-    if (userIds.length) {
-      const { data: inst } = await supabase
-        .from("whatsapp_instances")
-        .select("server_url")
-        .in("user_id", userIds)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      resolvedUrl = String(inst?.server_url || "").trim().replace(/\/$/, "");
-    }
+  if (!resolvedUrl && instance.serverUrl) {
+    resolvedUrl = instance.serverUrl;
   }
 
   console.log(`[auto-send] Token resolved: instanceToken=${instanceToken.length > 0 ? instanceToken.substring(0, 8) + '...' : 'none'}, dbToken=${dbToken.length > 0 ? dbToken.substring(0, 8) + '...' : 'none'}, using=${resolvedToken.substring(0, 8)}...`);
