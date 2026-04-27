@@ -160,15 +160,27 @@ export default function WhatsAppView() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-primary" />
-            Configuração WhatsApi
-          </CardTitle>
-          <CardDescription>
-            Configure sua instância manualmente para integrar com o sistema.
-          </CardDescription>
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-primary" />
+                Status do WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Configure sua instância para integrar com o sistema.
+              </CardDescription>
+            </div>
+            {instance && (
+              <Badge 
+                variant={instance.is_connected ? "default" : "destructive"}
+                className={instance.is_connected ? "bg-emerald-500 hover:bg-emerald-600" : ""}
+              >
+                {instance.is_connected ? "Conectado" : "Desconectado"}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 p-4 border rounded-lg bg-muted/20">
