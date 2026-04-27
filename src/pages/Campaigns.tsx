@@ -336,10 +336,10 @@ export default function Campaigns() {
     if (!effectiveCompanyId) return;
     setSavingEngine(true);
     setEngineEnabled(next);
-    const { error } = await supabase
+    const { error } = await (supabase
       .from("api_settings")
       .update({ campaigns_engine_enabled: next } as any)
-      .eq("company_id", effectiveCompanyId);
+      .eq("company_id", effectiveCompanyId) as any);
     setSavingEngine(false);
     if (error) {
       toast.error("Erro ao alterar mecanismo");
