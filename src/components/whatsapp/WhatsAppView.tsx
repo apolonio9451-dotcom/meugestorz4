@@ -140,6 +140,11 @@ export default function WhatsAppView() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiado para a área de transferência!");
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center p-12">
@@ -148,8 +153,14 @@ export default function WhatsAppView() {
     );
   }
 
+  const webhookUrl = `${window.location.origin.replace('preview--', 'functions--')}/functions/v1/whatsapp-webhook?user_id=${user?.id}`;
+  // Fallback if not on preview
+  const finalWebhookUrl = webhookUrl.includes('lovable.app') 
+    ? `https://grlwciflaotripbumhve.supabase.co/functions/v1/whatsapp-webhook?user_id=${user?.id}`
+    : webhookUrl;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 pb-12">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -157,11 +168,28 @@ export default function WhatsAppView() {
             Configuração WhatsApi
           </CardTitle>
           <CardDescription>
-            Conecte uma instância existente usando o token fornecido pela plataforma.
+            Configure sua instância manualmente para integrar com o sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4">
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 p-4 border rounded-lg bg-muted/20">
+            <div className="space-y-2">
+              <Label className="flex items-center justify-between">
+                URL do Webhook para sua instância
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(finalWebhookUrl)}>
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </Label>
+              <div className="flex gap-2">
+                <Input readOnly value={finalWebhookUrl} className="bg-background text-xs font-mono" />
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">
+                Copie este link e cole no campo "Webhook" das configurações da sua instância externa.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 pt-4">
             <div className="space-y-2">
               <Label>Nome da Instância</Label>
               <Input 
@@ -171,22 +199,22 @@ export default function WhatsAppView() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Token da Instância</Label>
+              <Label>Token da Instância (Instance Token)</Label>
               <Input 
                 type="password"
-                placeholder="Token da sua instância" 
+                placeholder="Insira o Token da sua instância externa" 
                 value={instanceToken} 
                 onChange={e => setInstanceToken(e.target.value)}
               />
             </div>
             <Button onClick={handleSave} disabled={!!actionLoading} className="w-full">
               {actionLoading === "save" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-              Salvar Configurações
+              Salvar Token no Sistema
             </Button>
           </div>
 
           {instance && (
-            <div className="pt-6 border-t mt-6 space-y-6">
+            <div className="pt-6 border-t space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar>
@@ -195,7 +223,7 @@ export default function WhatsAppView() {
                   <div>
                     <p className="font-medium">{instance.name}</p>
                     <Badge variant={instance.is_connected ? "default" : "secondary"}>
-                      {instance.is_connected ? "Conectado" : "Desconectado"}
+                      {instance.is_connected ? "Status: Conectado" : "Status: Desconectado"}
                     </Badge>
                   </div>
                 </div>
@@ -213,16 +241,21 @@ export default function WhatsAppView() {
                 <div className="flex flex-col items-center gap-4 bg-muted/30 p-6 rounded-lg">
                   {qrCode ? (
                     <>
-                      <img src={qrCode} alt="QR Code" className="w-48 h-48 bg-white p-2 rounded" />
+                      <img src={qrCode} alt="QR Code" className="w-48 h-48 bg-white p-2 rounded shadow-sm" />
                       <p className="text-xs text-muted-foreground animate-pulse text-center">
-                        Escaneie para conectar seu WhatsApp
+                        Escaneie com seu WhatsApp para conectar
                       </p>
                     </>
                   ) : (
-                    <Button onClick={checkStatus} className="gap-2">
-                      <QrCode className="w-4 h-4" />
-                      Gerar QR Code
-                    </Button>
+                    <div className="text-center space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Sua instância está salva. Você pode gerar o QR Code aqui ou conectar direto pelo seu painel externo.
+                      </p>
+                      <Button onClick={checkStatus} className="gap-2">
+                        <QrCode className="w-4 h-4" />
+                        Gerar QR Code Agora
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
