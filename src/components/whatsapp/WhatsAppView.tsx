@@ -100,21 +100,15 @@ export default function WhatsAppView() {
     setActionLoading("status");
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
-        body: { action: "qrcode" }
+        body: { action: "status" } // Alterado para "status" conforme pedido para apenas verificar
       });
 
       if (error || data?.error) throw new Error(data?.error || error?.message);
 
       if (data.connected) {
         toast.success("WhatsApp Conectado!");
-        setQrCode(null);
-      } else if (data.qrcode) {
-        // A API retorna base64 puro ou com o prefixo data:image/png;base64,
-        let qrcodeBase64 = data.qrcode;
-        if (!qrcodeBase64.startsWith("data:image")) {
-          qrcodeBase64 = `data:image/png;base64,${qrcodeBase64}`;
-        }
-        setQrCode(qrcodeBase64);
+      } else {
+        toast.error("WhatsApp Desconectado.");
       }
       loadData();
     } catch (err: any) {
