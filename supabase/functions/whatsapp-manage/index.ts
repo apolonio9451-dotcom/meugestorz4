@@ -52,10 +52,18 @@ Deno.serve(async (req) => {
     const { server_url, instance_token } = whatsApiInstance;
 
     if (action === "qrcode" || action === "reconnect" || action === "get-or-create") {
-      const connectRes = await fetch(`${server_url}/instance/connect`, {
+      // Tentar primeiro com /instance/connect, se der 404, tentar sem o prefixo /instance
+      let connectRes = await fetch(`${server_url}/instance/connect`, {
         method: "GET",
         headers: { "token": instance_token }
       });
+
+      if (connectRes.status === 404) {
+        connectRes = await fetch(`${server_url}/connect`, {
+          method: "GET",
+          headers: { "token": instance_token }
+        });
+      }
 
       if (!connectRes.ok) {
         const errorText = await connectRes.text();
