@@ -294,9 +294,8 @@ export default function WhatsAppView() {
         // Trust DB status directly — no validate-connection override
         if (data.instance.is_connected) {
           fetchProfilePicture();
-        } else {
-          await fetchQrCode();
-        }
+        // Don't auto-fetch QR here as we want the user to click the button
+        // await fetchQrCode();
       }
 
       setLoading(false);
@@ -398,12 +397,14 @@ export default function WhatsAppView() {
   }, [user?.id, fetchProfilePicture]);
 
   useEffect(() => {
-    // Apenas carrega se não houver instância ou se estiver tentando sincronizar pela primeira vez
-    // Auto load removed as requested - user now clicks "Create Instance"
-    // if (!instance) {
-    //   loadInstance();
-    // }
-  }, [loadInstance]);
+    // Carrega o estado inicial da instância (se existir)
+    const init = async () => {
+      setLoading(true);
+      await loadInstance();
+      setLoading(false);
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     if (!polling || !instance || instance.is_connected || instance.status === 'connected') return;
