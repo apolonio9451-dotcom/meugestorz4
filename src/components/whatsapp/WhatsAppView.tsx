@@ -249,13 +249,10 @@ export default function WhatsAppView() {
                       </p>
                     </>
                   ) : (
-                    <div className="text-center space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Sua instância está salva. Você pode gerar o QR Code aqui ou conectar direto pelo seu painel externo.
-                      </p>
+                    <div className="text-center">
                       <Button onClick={checkStatus} className="gap-2">
                         <QrCode className="w-4 h-4" />
-                        Gerar QR Code Agora
+                        Validar Conexão / Gerar QR Code
                       </Button>
                     </div>
                   )}
