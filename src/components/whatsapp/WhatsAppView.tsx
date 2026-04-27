@@ -97,28 +97,26 @@ export default function WhatsAppView() {
     if (!instance) return;
     setActionLoading("status");
     try {
-      const res = await fetch(`${SERVER_URL}/instance/connect`, {
-        method: "GET",
-        headers: { "token": instance.instance_token }
+      const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "qrcode" }
       });
-      const data = await res.json();
-      const connected = data.instance?.status === "connected" || data.connected === true;
-      const qrcode = data.instance?.qrcode || data.qrcode || data.base64;
 
-      await supabase
-        .from("whats_api" as any)
-        .update({ is_connected: connected, status: connected ? "connected" : "disconnected" })
-        .eq("id", instance.id);
+      if (error || data?.error) throw new Error(data?.error || error?.message);
 
-      if (connected) {
+      if (data.connected) {
         toast.success("WhatsApp Conectado!");
         setQrCode(null);
-      } else if (qrcode) {
-        setQrCode(qrcode.startsWith("data:image") ? qrcode : `data:image/png;base64,${qrcode}`);
+      } else if (data.qrcode) {
+        // A API retorna base64 puro ou com o prefixo data:image/png;base64,
+        let qrcodeBase64 = data.qrcode;
+        if (!qrcodeBase64.startsWith("data:image")) {
+          qrcodeBase64 = `data:image/png;base64,${qrcodeBase64}`;
+        }
+        setQrCode(qrcodeBase64);
       }
       loadData();
-    } catch (err) {
-      toast.error("Erro ao verificar status");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao verificar status");
     } finally {
       setActionLoading(null);
     }

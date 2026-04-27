@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
       }
 
       const connectData = await connectRes.json();
-      const isConnected = connectData.instance?.status === "connected" || connectData.connected === true;
-      const qrcode = connectData.instance?.qrcode || connectData.qrcode || connectData.base64;
+      const isConnected = connectData.instance?.status === "connected" || connectData.connected === true || connectData.state === "CONNECTED";
+      const qrcode = connectData.qrcode || connectData.base64 || connectData.instance?.qrcode;
 
       await adminClient
         .from("whats_api")
