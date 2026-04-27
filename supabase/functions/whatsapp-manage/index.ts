@@ -144,78 +144,53 @@ Deno.serve(async (req) => {
 
       for (const candidateBaseUrl of baseUrlCandidates) {
         for (const adminToken of adminTokenCandidates) {
-          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new", "/instance/instance/create", "/admin/instance/create"];
+          // Uazapi standard endpoint for creation is /instance/create or /instance/init
+          const endpoints = ["/instance/create", "/instance/init", "/instance/add", "/instance/new"];
           for (const endpoint of endpoints) {
             const url = `${candidateBaseUrl}${endpoint}`;
             
+            // Try different authentication styles
             const configs = [
-              { name: "Header token", method: "POST", headers: { "Content-Type": "application/json", "token": adminToken } },
+              { name: "Header token (Uazapi)", method: "POST", headers: { "Content-Type": "application/json", "token": adminToken } },
               { name: "Header Authorization Bearer", method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${adminToken}` } },
               { name: "Header apikey", method: "POST", headers: { "Content-Type": "application/json", "apikey": adminToken } },
-              { name: "Header admintoken", method: "POST", headers: { "Content-Type": "application/json", "admintoken": adminToken } },
-              { name: "Header Authorization", method: "POST", headers: { "Content-Type": "application/json", "Authorization": adminToken } },
-              { name: "Header X-API-Key", method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": adminToken } },
-              { name: "Query Param token", method: "POST", headers: { "Content-Type": "application/json" }, query: `?token=${adminToken}` },
-              { name: "Query Param apikey", method: "POST", headers: { "Content-Type": "application/json" }, query: `?apikey=${adminToken}` },
-              { name: "Query Param admintoken", method: "POST", headers: { "Content-Type": "application/json" }, query: `?admintoken=${adminToken}` },
-              { name: "GET init with admintoken", method: "GET", headers: { "admintoken": adminToken } },
-              { name: "GET init with apikey", method: "GET", headers: { "apikey": adminToken } },
-              { name: "GET init with token", method: "GET", headers: { "token": adminToken } }
             ];
 
             for (const config of configs) {
-              if (endpoint === "/instance/status" || endpoint === "/instance/list") continue; 
               try {
-                const finalUrl = config.query ? `${url}${config.query}` : url;
-                console.log(`[whatsapp-manage] Trying ${config.method} ${finalUrl} (${config.name}) - Token: ${adminToken.substring(0, 5)}...`);
-                
                 const fetchOptions: any = {
                   method: config.method,
                   headers: config.headers,
                 };
-                if (config.method !== "GET") {
-                  fetchOptions.body = JSON.stringify({ 
-                    token: adminToken,
-                    apikey: adminToken,
-                    admintoken: adminToken,
-                    name: finalInstanceName, 
-                    instanceName: finalInstanceName,
-                    instance_name: finalInstanceName,
-                    deviceName: "Uazapi",
-                    systemName: "Uazapi",
-                    system_name: "Uazapi",
-                    system: "Uazapi",
-                    profileName: "Uazapi",
-                    browser: "chrome",
-                    fingerprintProfile: "chrome",
-                    qrcode: true
-                  });
-                }
-
-                const res = await fetch(finalUrl, fetchOptions);
                 
+                fetchOptions.body = JSON.stringify({ 
+                  token: adminToken,
+                  name: finalInstanceName, 
+                  instanceName: finalInstanceName,
+                  instance_name: finalInstanceName,
+                  deviceName: "MeuApp",
+                  systemName: "MeuApp",
+                });
+
+                const res = await fetch(url, fetchOptions);
                 const text = await res.text();
                 let data: any = {};
                 try { data = JSON.parse(text); } catch {}
                 
-                console.log(`[whatsapp-manage] Result: ${res.status} | Body: ${text.substring(0, 100)}`);
+                console.log(`[whatsapp-manage] Init: ${res.status} | URL: ${url} | ${config.name}`);
 
                 if (res.ok) {
                   baseUrl = candidateBaseUrl;
+                  // Handle Uazapi specific response format provided by the user
                   const instanceTokenFromApi = data["Instance Token"] || data.instance_token || data.instance?.token || data.data?.instance_token;
                   const generalToken = data.token || data.hash || data.data?.token;
                   
-                  // Se a API retornar dois, usamos os dois. Se retornar apenas um, usamos o mesmo para ambos.
                   const finalInstanceToken = instanceTokenFromApi || generalToken || (data.status === "success" && data.instance?.id) || finalInstanceName;
                   const finalGeneralToken = generalToken || instanceTokenFromApi || finalInstanceName;
 
                   if (finalInstanceToken) {
-                    console.log(`[whatsapp-manage] Success! Instance created. InstanceToken: ${finalInstanceToken.substring(0, 5)}...`);
+                    console.log(`[whatsapp-manage] Success! Instance created.`);
                     return { instanceToken: finalInstanceToken, token: finalGeneralToken };
-                  }
-                  
-                  if (data.status === "created" || data.message?.includes("already exists")) {
-                     return { instanceToken: finalInstanceName, token: finalInstanceName }; 
                   }
                 }
                 
