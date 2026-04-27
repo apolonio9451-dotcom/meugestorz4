@@ -12,7 +12,7 @@ import { SlotDatePicker } from "@/components/ui/slot-date-picker";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send, PauseCircle, PlayCircle, Loader2, Filter } from "lucide-react";
+import { Plus, Search, MoreVertical, Pencil, Trash2, Clock, Key, X, DollarSign, RefreshCw, MessageCircle, LayoutGrid, Activity, AlertTriangle, History, Handshake, Eye, HeadsetIcon, CheckCircle2, Globe, Package, TvMinimal, BellOff, VolumeX, Send, PauseCircle, PlayCircle, Loader2, Filter, Download } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { addDays, addMonths, differenceInCalendarDays, format, parse, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1148,6 +1148,27 @@ export default function Clients() {
                 </SelectContent>
               </Select>
             )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full shrink-0 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+              title="Baixar Backup JSON"
+              onClick={() => {
+                const dataStr = JSON.stringify(clients, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `backup-clientes-${format(new Date(), "dd-MM-yyyy")}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.success("Backup JSON iniciado!");
+              }}
+            >
+              <Download className="w-4 h-4" />
+            </Button>
             <DialogTrigger asChild>
               <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => openDialog()}><Plus className="w-5 h-5" /></Button>
             </DialogTrigger>
