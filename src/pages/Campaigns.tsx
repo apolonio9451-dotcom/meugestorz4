@@ -280,11 +280,11 @@ export default function Campaigns() {
 
   const loadEngineSettings = async () => {
     if (!effectiveCompanyId) return;
-    const { data } = await supabase
+    const { data } = await (supabase
       .from("api_settings")
       .select("campaigns_engine_enabled, campaigns_admin_test_phone")
       .eq("company_id", effectiveCompanyId)
-      .maybeSingle();
+      .maybeSingle() as any);
     if (data) {
       setEngineEnabled(!!(data as any).campaigns_engine_enabled);
       setAdminTestPhone((data as any).campaigns_admin_test_phone || "");
