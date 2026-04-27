@@ -38,6 +38,7 @@ const BannerGenerator = lazy(() => import("@/pages/BannerGenerator"));
 const BolaoAdmin = lazy(() => import("@/pages/BolaoAdmin"));
 const BolaoTVMAX = lazy(() => import("@/pages/BolaoTVMAX"));
 const CustomerPortal = lazy(() => import("@/pages/CustomerPortal"));
+const Backup = lazy(() => import("@/pages/Backup"));
 
 
 const PageLoader = () => (
@@ -104,7 +105,8 @@ const App = () => (
             <Route path="/dashboard/chatbot" element={<DashboardRoute><PlanGate feature="Agente IA"><Chatbot /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/reseller-panel" element={<DashboardRoute><PlanGate feature="Painel de Revenda"><ResellerPanel /></PlanGate></DashboardRoute>} />
             <Route path="/dashboard/profile" element={<DashboardRoute><Profile /></DashboardRoute>} />
-            
+            <Route path="/dashboard/backup" element={<DashboardRoute><Backup /></DashboardRoute>} />
+
             <Route path="/trial/:token" element={<TrialAccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

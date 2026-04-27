@@ -40,12 +40,10 @@ import {
   Settings,
   KeyRound,
   ShieldCheck,
-  
   Clock,
   MessageCircle,
   FlaskConical,
   Bot,
-  
   Zap,
   Lock,
   AlertTriangle,
@@ -53,6 +51,7 @@ import {
   Image as ImageIcon,
   Trophy,
   Share2,
+  Database,
 } from "lucide-react";
 
 
@@ -100,6 +99,8 @@ const navItems: NavItem[] = [
       { href: "/dashboard/messages", label: "Mensagens", icon: Megaphone },
       { href: "/dashboard/settings", label: "Instância", icon: Zap },
       { href: "/dashboard/general-settings", label: "Geral", icon: SlidersHorizontal },
+      { href: "/dashboard/backup", label: "Backup", icon: Database },
+
     ],
   },
 ];
