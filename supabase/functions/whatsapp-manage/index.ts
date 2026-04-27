@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
             const errText = await res.text();
             lastError = `API Error (${res.status}): ${errText}`;
           }
-        } catch (e) {
+        } catch (e: any) {
           console.warn(`[whatsapp-manage] Falha ao chamar ${endpoint}:`, e.message);
         }
       }
