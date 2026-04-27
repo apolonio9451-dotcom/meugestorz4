@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Settings as SettingsIcon, Shield, User, Bell } from "lucide-react";
+import { Settings as SettingsIcon, Shield, User, Bell, Wifi } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import WhatsAppView from "@/components/whatsapp/WhatsAppView";
 
 export default function Settings() {
   const { loading } = useAuth();
@@ -18,8 +19,12 @@ export default function Settings() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[450px] mb-8">
+      <Tabs defaultValue="whatsapp" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-[600px] mb-8">
+          <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+            <Wifi className="h-4 w-4" />
+            WhatsApp
+          </TabsTrigger>
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Perfil
@@ -33,6 +38,10 @@ export default function Settings() {
             Segurança
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="whatsapp">
+          <WhatsAppView />
+        </TabsContent>
 
         <TabsContent value="profile">
           <Card>
