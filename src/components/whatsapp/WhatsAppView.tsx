@@ -464,9 +464,9 @@ export default function WhatsAppView() {
               <Key className="w-5 h-5 text-amber-600 mt-1" />
               <div className="flex-1 space-y-4">
                 <div>
-                  <h4 className="text-sm font-bold text-amber-900">Configuração de Credenciais</h4>
+                  <h4 className="text-sm font-bold text-amber-900">Integração WhatsApi</h4>
                   <p className="text-xs text-amber-800/80">
-                    Insira o servidor e o Token Admin para gerenciar as instâncias.
+                    Insira as credenciais para gerenciar sua instância do WhatsApp.
                   </p>
                 </div>
                 
@@ -475,17 +475,17 @@ export default function WhatsAppView() {
                     <Label htmlFor="api_url" className="text-xs font-semibold text-amber-900">URL do Servidor</Label>
                     <Input 
                       id="api_url"
-                      placeholder="https://ipazua.uazapi.com" 
+                      placeholder="https://sua-url-whatsapi.com" 
                       value={apiUrl}
                       onChange={(e) => setApiUrl(e.target.value)}
                       className="bg-white/50 border-amber-200 focus:border-amber-500 h-9 text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="api_token" className="text-xs font-semibold text-amber-900">Token Admin</Label>
+                    <Label htmlFor="api_token" className="text-xs font-semibold text-amber-900">Token da API</Label>
                     <Input 
                       id="api_token"
-                      placeholder="Seu Admin Token aqui" 
+                      placeholder="Seu Token completo aqui" 
                       type="password"
                       value={apiToken}
                       onChange={(e) => setApiToken(e.target.value)}
