@@ -123,10 +123,10 @@ async function fetchLatestCampaignCredentials(
     .maybeSingle();
 
   const row = (data || {}) as any;
-  const instanceToken = await getCompanyInstanceToken(supabase, companyId);
+  const instance = await getCompanyInstanceToken(supabase, companyId);
   return {
-    apiUrl: resolveApiUrl(row.broadcast_api_url || row.api_url),
-    apiToken: instanceToken || resolveApiToken(row.broadcast_api_token || row.api_token),
+    apiUrl: instance.serverUrl || resolveApiUrl(row.broadcast_api_url || row.api_url),
+    apiToken: instance.token || resolveApiToken(row.broadcast_api_token || row.api_token),
   };
 }
 
