@@ -1152,19 +1152,39 @@ export default function Clients() {
               variant="outline"
               size="icon"
               className="h-9 w-9 rounded-full shrink-0 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
-              title="Baixar Backup JSON"
+              title="Baixar Backup CSV"
               onClick={() => {
-                const dataStr = JSON.stringify(clients, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
+                const headers = ["ID", "Nome", "WhatsApp", "Servidor", "Usuário IPTV", "Senha IPTV", "Vencimento", "Plano", "Valor", "Status", "Referência", "Notas", "Criado em"];
+                const rows = clients.map(client => {
+                  const sub = subscriptions[client.id];
+                  return [
+                    client.id,
+                    `"${(client.name || "").replace(/"/g, '""')}"`,
+                    client.whatsapp || "",
+                    `"${(client.server || "").replace(/"/g, '""')}"`,
+                    `"${(client.iptv_user || "").replace(/"/g, '""')}"`,
+                    `"${(client.iptv_password || "").replace(/"/g, '""')}"`,
+                    sub ? format(parseISO(sub.end_date), "dd/MM/yyyy") : "",
+                    `"${(sub?.plan_name || "").replace(/"/g, '""')}"`,
+                    sub?.amount || 0,
+                    client.status,
+                    `"${(client.referred_by || "").replace(/"/g, '""')}"`,
+                    `"${(client.notes || "").replace(/"/g, '""')}"`,
+                    format(parseISO(client.created_at), "dd/MM/yyyy HH:mm")
+                  ];
+                });
+                
+                const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `backup-clientes-${format(new Date(), "dd-MM-yyyy")}.json`;
+                link.download = `backup-clientes-${format(new Date(), "dd-MM-yyyy")}.csv`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                toast.success("Backup JSON iniciado!");
+                toast.success("Backup CSV iniciado!");
               }}
             >
               <Download className="w-4 h-4" />
