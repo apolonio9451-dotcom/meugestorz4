@@ -116,6 +116,31 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "pause" || action === "restart") {
+      const endpoint = `${server_url}/instance/${action}`;
+      try {
+        console.log(`[whatsapp-manage] Executando ${action} em: ${endpoint}`);
+        const res = await fetch(endpoint, {
+          method: "GET",
+          headers: { "token": instance_token }
+        });
+        
+        const data = await res.json().catch(() => ({}));
+        
+        return new Response(JSON.stringify({ 
+          success: res.ok, 
+          action, 
+          data 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      } catch (e: any) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     if (action === "delete") {
       await adminClient.from("whats_api").delete().eq("user_id", user.id);
       return new Response(JSON.stringify({ success: true, deleted: true }), {
