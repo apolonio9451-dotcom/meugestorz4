@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Save, Info, Loader2 } from "lucide-react";
+import { Save, Info, Loader2, Play, Pause, RefreshCw } from "lucide-react";
 import { defaultMessageTemplates } from "@/lib/defaultMessageTemplates";
 import AutoSendLogs from "@/components/messages/AutoSendLogs";
 import AutoSendCategoryToggles from "@/components/messages/AutoSendCategoryToggles";
@@ -101,8 +101,28 @@ export default function Messages() {
   const [pixKey, setPixKey] = useState("");
   const [savingPix, setSavingPix] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [whatsappConnected, setWhatsappConnected] = useState<boolean | null>(null);
+  const [checkingWhatsapp, setCheckingWhatsapp] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const shouldShowUpgradeUI = !loading && planType !== "pro";
+
+  const checkWhatsappStatus = useCallback(async () => {
+    if (!user) return;
+    setCheckingWhatsapp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: "status" }
+      });
+      if (!error && data) {
+        setWhatsappConnected(data.connected);
+      }
+    } catch (err) {
+      console.error("Error checking whatsapp:", err);
+    } finally {
+      setCheckingWhatsapp(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user || !authCompanyId) return;
@@ -130,7 +150,34 @@ export default function Messages() {
       setTemplates(map);
     };
     fetchCompanyAndTemplates();
-  }, [user, authCompanyId]);
+    checkWhatsappStatus();
+  }, [user, authCompanyId, checkWhatsappStatus]);
+
+  const handlePauseRestart = async (action: "pause" | "restart") => {
+    if (!user) return;
+    setActionLoading(action);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-manage", {
+        body: { action: action === "pause" ? "pause" : "restart" }
+      });
+      
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      
+      toast({ 
+        title: action === "pause" ? "Instância Pausada" : "Instância Reiniciada",
+        description: action === "pause" ? "As automações foram pausadas." : "As automações foram retomadas."
+      });
+      checkWhatsappStatus();
+    } catch (err: any) {
+      toast({ 
+        title: "Erro", 
+        description: err.message || "Erro ao processar comando", 
+        variant: "destructive" 
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleSave = async (categoryKey: string) => {
     if (!companyId) return;
@@ -222,7 +269,46 @@ export default function Messages() {
             Templates enviados ao clicar em "Cobrar".
           </p>
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5 mr-2 px-3 py-1.5 bg-muted/40 rounded-lg border border-border/50">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${whatsappConnected ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]"}`} />
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                {checkingWhatsapp ? "Verificando..." : whatsappConnected ? "API Online" : "API Offline"}
+              </span>
+            </div>
+            <div className="h-4 w-[1px] bg-border mx-1" />
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+                onClick={() => handlePauseRestart("restart")}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "restart" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                onClick={() => handlePauseRestart("pause")}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === "pause" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Pause className="h-3.5 w-3.5 fill-current" />}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-muted-foreground"
+                onClick={checkWhatsappStatus}
+                disabled={checkingWhatsapp}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${checkingWhatsapp ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </div>
+
           <TestSendButton companyId={companyId} />
           <Dialog>
             <DialogTrigger asChild>
